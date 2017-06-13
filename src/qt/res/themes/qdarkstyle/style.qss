@@ -44,13 +44,13 @@ QWidget
 
 QWidget:item:hover
 {
-    background-color: #18465d;
+    background-color: #959595;
     color: #eff0f1;
 }
 
 QWidget:item:selected
 {
-    background-color: #18465d;
+    background-color: #959595;
 }
 
 QCheckBox
@@ -79,7 +79,7 @@ QGroupBox::indicator
 
 QCheckBox::indicator:unchecked
 {
-    image: url(:/qss_icons/rc/checkbox_unchecked.png);
+    image: url(:/qss_icons/rc/uncheckbox.png);
 }
 
 QCheckBox::indicator:unchecked:hover,
@@ -90,12 +90,12 @@ QGroupBox::indicator:unchecked:focus,
 QGroupBox::indicator:unchecked:pressed
 {
   border: none;
-    image: url(:/qss_icons/rc/checkbox_unchecked_focus.png);
+    image: url(:/qss_icons/rc/uncheckbox.png);
 }
 
 QCheckBox::indicator:checked
 {
-    image: url(:/qss_icons/rc/checkbox_checked.png);
+    image: url(:/qss_icons/rc/checkbox.png);
 }
 
 QCheckBox::indicator:checked:hover,
@@ -106,7 +106,7 @@ QGroupBox::indicator:checked:focus,
 QGroupBox::indicator:checked:pressed
 {
   border: none;
-    image: url(:/qss_icons/rc/checkbox_checked_focus.png);
+    image: url(:/qss_icons/rc/checkbox.png);
 }
 
 
@@ -662,7 +662,7 @@ QComboBox QAbstractItemView
     background-color: #232629;
     border-radius: 2px;
     border: 1px solid #76797C;
-    selection-background-color: #18465d;
+    selection-background-color: #959595;
 }
 
 QComboBox::drop-down
@@ -800,7 +800,7 @@ QTabBar::tab:top:!selected
     border: 1px solid #76797C;
     border-bottom: 1px transparent black;
     border-top-left-radius: 2px;
-    border-top-right-radius: 2px;    
+    border-top-right-radius: 2px;
 }
 
 QTabBar::tab:top:!selected:hover {
@@ -969,13 +969,13 @@ QTreeView::branch:open:has-children:has-siblings:hover  {
     }
 
 QListView::item:!selected:hover, QTreeView::item:!selected:hover  {
-    background: #18465d;
+    background: #959595;
     outline: 0;
     color: #eff0f1
 }
 
 QListView::item:selected:hover, QTreeView::item:selected:hover  {
-    background: #287399;
+    background: #959595;
     color: #eff0f1;
 }
 
@@ -1090,12 +1090,12 @@ QTableView, QHeaderView
 }
 
 QTableView::item:pressed, QListView::item:pressed, QTreeView::item:pressed  {
-    background: #18465d;
+    background: #959595;
     color: #eff0f1;
 }
 
 QTableView::item:selected:active, QTreeView::item:selected:active, QListView::item:selected:active  {
-    background: #287399;
+    background: #959595;
     color: #eff0f1;
 }
 
@@ -1143,7 +1143,7 @@ QHeaderView::section::horizontal
 QHeaderView::section:checked
  {
     color: white;
-    background-color: #334e5e;
+    background-color: #c2bb13;
  }
 
  /* style the sort indicator */
@@ -1216,7 +1216,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: #05B8CC;
+    background-color: #7e7e7e;
 }
 
 QDateEdit

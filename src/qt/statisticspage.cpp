@@ -71,88 +71,88 @@ void StatisticsPage::updateStatistics()
 
     if(nHeight > heightPrevious)
     {
-        ui->heightBox->setText("<b><font color=\"lightgreen\">" + height + "</font></b>");
+        ui->heightBox->setText("<b><font color=\"yellow\">" + height + "</font></b>");
     } else {
-		ui->heightBox->setText("<b><font color=\"lightblue\">" + height + "</font></b>");
+		ui->heightBox->setText("<b><font color=\"orange\">" + height + "</font></b>");
     }
 
     if(0 > stakeminPrevious)
     {
-        ui->minBox->setText("<b><font color=\"lightgreen\">" + stakemin + "</font></b>");
+        ui->minBox->setText("<b><font color=\"yellow\">" + stakemin + "</font></b>");
     } else {
-    ui->minBox->setText("<b><font color=\"lightblue\">" + stakemin + "</font></b>");
+    ui->minBox->setText("<b><font color=\"orange\">" + stakemin + "</font></b>");
     }
     if(0 > stakemaxPrevious)
     {
-        ui->maxBox->setText("<b><font color=\"lightgreen\">" + stakemax + "</font></b>");
+        ui->maxBox->setText("<b><font color=\"yellow\">" + stakemax + "</font></b>");
     } else {
-    ui->maxBox->setText("<b><font color=\"lightblue\">" + stakemax + "</font></b>");
+    ui->maxBox->setText("<b><font color=\"orange\">" + stakemax + "</font></b>");
     }
 
     if(phase != stakecPrevious)
     {
-        ui->cBox->setText("<b><font color=\"lightgreen\">" + phase + "</font></b>");
+        ui->cBox->setText("<b><font color=\"yellow\">" + phase + "</font></b>");
     } else {
-    ui->cBox->setText("<b><font color=\"lightblue\">" + phase + "</font></b>");
+    ui->cBox->setText("<b><font color=\"orange\">" + phase + "</font></b>");
     }
     
     if(subsidy != rewardPrevious)
     {
-        ui->rewardBox->setText("<b><font color=\"lightgreen\">" + subsidy + "</font></b>");
+        ui->rewardBox->setText("<b><font color=\"yellow\">" + subsidy + "</font></b>");
     } else {
-    ui->rewardBox->setText("<b><font color=\"lightblue\">" + subsidy + "</font></b>");
+    ui->rewardBox->setText("<b><font color=\"orange\">" + subsidy + "</font></b>");
     }
     
     if(pHardness > hardnessPrevious)
     {
-        ui->diffBox->setText("<b><font color=\"lightgreen\">" + hardness + "</font></b>");        
+        ui->diffBox->setText("<b><font color=\"yellow\">" + hardness + "</font></b>");        
     } else if(pHardness < hardnessPrevious) {
-        ui->diffBox->setText("<b><font color=\"lightred\">" + hardness + "</font></b>");
+        ui->diffBox->setText("<b><font color=\"red\">" + hardness + "</font></b>");
     } else {
-        ui->diffBox->setText("<b><font color=\"lightblue\">" + hardness + "</font></b>");        
+        ui->diffBox->setText("<b><font color=\"orange\">" + hardness + "</font></b>");        
     }
 
     if(pHardness2 > hardnessPrevious2)
     {
-        ui->diffBox2->setText("<b><font color=\"lightgreen\">" + hardness2 + "</font></b>");
+        ui->diffBox2->setText("<b><font color=\"yellow\">" + hardness2 + "</font></b>");
     } else if(pHardness2 < hardnessPrevious2) {
-        ui->diffBox2->setText("<b><font color=\"lightred\">" + hardness2 + "</font></b>");
+        ui->diffBox2->setText("<b><font color=\"red\">" + hardness2 + "</font></b>");
     } else {
-        ui->diffBox2->setText("<b><font color=\"lightblue\">" + hardness2 + "</font></b>");
+        ui->diffBox2->setText("<b><font color=\"orange\">" + hardness2 + "</font></b>");
     }
     
     if(pPawrate2 > netPawratePrevious)
     {
-        ui->pawrateBox->setText("<b><font color=\"lightgreen\">" + pawrate + " MH/s</font></b>");
+        ui->pawrateBox->setText("<b><font color=\"yellow\">" + pawrate + " MH/s</font></b>");
     } else if(pPawrate2 < netPawratePrevious) {
-        ui->pawrateBox->setText("<b><font color=\"lightred\">" + pawrate + " MH/s</font></b>");
+        ui->pawrateBox->setText("<b><font color=\"red\">" + pawrate + " MH/s</font></b>");
     } else {
-        ui->pawrateBox->setText("<b><font color=\"lightblue\">" + pawrate + " MH/s</font></b>");
+        ui->pawrateBox->setText("<b><font color=\"orange\">" + pawrate + " MH/s</font></b>");
     }
 
     if(Qlpawrate != pawratePrevious)
     {
-        ui->localBox->setText("<b><font color=\"lightgreen\">" + Qlpawrate + "</font></b>");
+        ui->localBox->setText("<b><font color=\"yellow\">" + Qlpawrate + "</font></b>");
     } else {
-    ui->localBox->setText("<b><font color=\"lightblue\">" + Qlpawrate + "</font></b>");
+    ui->localBox->setText("<b><font color=\"orange\">" + Qlpawrate + "</font></b>");
     }
     
     if(peers > connectionPrevious)
     {
-        ui->connectionBox->setText("<b><font color=\"lightgreen\">" + QPeers + "</font></b>");             
+        ui->connectionBox->setText("<b><font color=\"yellow\">" + QPeers + "</font></b>");             
     } else if(peers < connectionPrevious) {
-        ui->connectionBox->setText("<b><font color=\"lightred\">" + QPeers + "</font></b>");        
+        ui->connectionBox->setText("<b><font color=\"red\">" + QPeers + "</font></b>");        
     } else {
-        ui->connectionBox->setText("<b><font color=\"lightblue\">" + QPeers + "</font></b>");  
+        ui->connectionBox->setText("<b><font color=\"orange\">" + QPeers + "</font></b>");  
     }
 
     if(volume > volumePrevious)
     {
-        ui->volumeBox->setText("<b><font color=\"lightgreen\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"yellow\">" + qVolume + " DNR" + "</font></b>");
     } else if(volume < volumePrevious) {
-        ui->volumeBox->setText("<b><font color=\"lightred\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"red\">" + qVolume + " DNR" + "</font></b>");
     } else {
-        ui->volumeBox->setText("<b><font color=\"lightblue\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"orange\">" + qVolume + " DNR" + "</font></b>");
     }
 	
     updatePrevious(nHeight, nMinWeight, nNetworkWeight, phase, subsidy, pHardness, pHardness2, pPawrate2, Qlpawrate, peers, volume);
