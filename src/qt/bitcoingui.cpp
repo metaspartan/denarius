@@ -91,16 +91,16 @@ text-align: left;\
 padding-bottom:5px;\
 }\
 QToolButton:pressed {\
-background-color: #565656;\
+background-color: #31363B;\
 border: 1px solid silver;\
 }\
 QToolButton:hover {\
-background-color: #565656;\
+background-color: #31363B;\
 border: 1px solid #707070;\
 }"
 #define HORIZONTAL_TOOLBAR_STYLESHEET "QToolBar {\
     border: 1px solid #707070;\
-    background: 1px solid #565656;\
+    background: 1px solid #31363B;\
     font-weight: bold;\
 }"
 
