@@ -2453,9 +2453,9 @@ bool LoadBlockIndex(bool fAllowNew)
         if (!fAllowNew)
             return false;
 
-        const char* pszTimestamp = "http://www.coindesk.com/bitcoin-price-crosses-3000-milestone-set-new-time-high/";
+        const char* pszTimestamp = "http://www.coindesk.com/flippening-will-ether-pass-bitcoin-will-mean/";
         CTransaction txNew;
-        txNew.nTime = 1497333870;
+        txNew.nTime = 1497362038;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -2465,13 +2465,13 @@ bool LoadBlockIndex(bool fAllowNew)
         block.vtx.push_back(txNew);
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
-        block.nTime    = 1497333870;
+        block.nTime    = 1497362038;
         block.nVersion = 1;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
-		block.nNonce   = 482547;
+		block.nNonce   = 442375;
 		if(fTestNet)
         {
-            block.nNonce   = 0;
+            block.nNonce   = 49164;
         }
         if (false && (block.GetHash() != hashGenesisBlock)) {
 
@@ -2496,7 +2496,7 @@ bool LoadBlockIndex(bool fAllowNew)
         
         
         //// debug print
-        assert(block.hashMerkleRoot == uint256("0x0f1895628d7a0b75df5c9572237cf015efa3075a1c40e680d9f874946453098b"));
+        assert(block.hashMerkleRoot == uint256("0x3a627410d126def4fcc8e49712ded84b78842c22f8e40239bfbc36cedd4c8ee8"));
         block.print();
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
