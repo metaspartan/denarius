@@ -1,30 +1,37 @@
+![logo](http://i.imgur.com/gIe5vnw.png)
 
-Denarius development tree
+Intro
+==========================
+Denarius is an anonymous, untraceable and secure hybrid cryptocurrency. 
 
-Denarius is a PoW-based/PoS-based X11 cryptocurrency.
+Ticker: DNR
 
-X11 consists of the top eleven best hashing algorithms of the 21st century. X11 is utilized in the popular DASH cryptocurrency.
+Denarius [DNR] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
 
-Denarius features a completely custom QT wallet with Stealth Addresses, Encrypted P2P Messaging, Block Explorer, and Statistics.
+10,000,000 DNR will be created in about 3 years during the PoW phase. Denarius has a 10% Premine of 1,000,000 DNR for bounties, distribution, and marketing.
 
-Denarius's market ticker is DNR
+Specifications
+==========================
+* Total number of coins: 10,000,000 DNR
+* Ideal block time: 30 seconds
+* Stake interest: 6% annual static inflation
+* Confirmations: 7 blocks
+* Maturity: 30 blocks (15 minutes)
+* Min stake age: 8 hours
 
-Denarius addresses on the mainnet start with T and stealth addresses start with a lowercase s
+Technology
+==========================
+* Stealth addresses
+* Encrypted Messaging
+* Fast 30 Second Block Times
+* New Tribus PoW Algorithm comprising of 3 NIST5 algos
+* Full decentralization
 
-Total of ~12 million DNR total
+LINKS
+==========================
+* Official Website(https://denarius.io/)
+* My Twitter(https://twitter.com/carsenjk)
 
-1.2m DNR Premine (10%)
-
-Block Reward of 1 DNR per block and halves every 6 months (~250,000 blocks)
-
-First 160 blocks are 0.5 DNR Block Reward
-
-Block Time is 60 seconds and 10 confirmations
-
-RPC PORT: 22669
-P2P PORT: 23669
-
-### Disclaimer! DNR - Denarius has NO Endorsement, Affiliation, or Partnership with The Tor Project. Questions regarding the Tor protocol can be directed to them.
 
 Development process
 ===========================
