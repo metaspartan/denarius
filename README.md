@@ -1,4 +1,10 @@
+# Denarius [DNR]
+Tribus Algo PoW/PoS Hybrid Cryptocurrency
+
 ![logo](http://i.imgur.com/gIe5vnw.png)
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+[![Join the chat at https://gitter.im/denariusproject/Lobby](https://badges.gitter.im/carsenk/denarius.svg)](https://gitter.im/denariusproject/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 
 Intro
 ==========================
