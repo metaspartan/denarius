@@ -21,7 +21,7 @@ Specifications
 * Total number of coins: 10,000,000 DNR
 * Ideal block time: 30 seconds
 * Stake interest: 6% annual static inflation
-* Confirmations: 7 blocks
+* Confirmations: 10 blocks
 * Maturity: 30 blocks (15 minutes)
 * Min stake age: 8 hours
 
@@ -31,6 +31,7 @@ Technology
 * Encrypted Messaging
 * Fast 30 Second Block Times
 * New Tribus PoW Algorithm comprising of 3 NIST5 algos
+* Tribus PoW/PoS Hybrid
 * Full decentralization
 
 LINKS
