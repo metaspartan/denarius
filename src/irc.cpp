@@ -303,17 +303,17 @@ void ThreadIRCSeed2(void* parg)
 
         if (fTestNet)
         {
-            Send(hSocket, "JOIN #sdcoinTEST\r");
-            Send(hSocket, "WHO #sdcoinTEST\r");
+            Send(hSocket, "JOIN #denarius-TEST\r");
+            Send(hSocket, "WHO #denarius-TEST\r");
         } else
         {
-            // randomly join #denarius00-#denarius05
+            // randomly join #denariusnode00-#denariusnode05 disabled on launch
             //int channel_number = GetRandInt(5);
 
             // Channel number is always 0 for initial release
             int channel_number = 0;
-            Send(hSocket, strprintf("JOIN #sdcoin%02d\r", channel_number).c_str());
-            Send(hSocket, strprintf("WHO #sdcoin%02d\r", channel_number).c_str());
+            Send(hSocket, strprintf("JOIN #denariusnode%02d\r", channel_number).c_str());
+            Send(hSocket, strprintf("WHO #denariusnode%02d\r", channel_number).c_str());
         }
 
         int64_t nStart = GetTime();
