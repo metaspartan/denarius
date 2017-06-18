@@ -74,7 +74,7 @@ fi
 case "$TARGET_OS" in
     Darwin)
         PLATFORM=OS_MACOSX
-        COMMON_FLAGS="$MEMCMP_FLAG -DOS_MACOSX"
+        COMMON_FLAGS="$MEMCMP_FLAG -DOS_MACOSX -arch x86_64 -mmacosx-version-min=10.7"
         PLATFORM_SHARED_EXT=dylib
         [ -z "$INSTALL_PATH" ] && INSTALL_PATH=`pwd`
         PLATFORM_SHARED_LDFLAGS="-dynamiclib -install_name $INSTALL_PATH/"

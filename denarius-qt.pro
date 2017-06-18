@@ -17,22 +17,38 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 # Windows Dep Libraries, Uncomment lines 20 through 34 to compile Win.
-BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
-BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
-BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
-BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
-MINIUPNPC_INCLUDE_PATH=C:/deps/
-MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
-LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
-LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
-QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
-QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-LIBEVENT_INCLUDE_PATH=C:/MinGW/include
-LIBEVENT_LIB_PATH=C:/MinGW/lib
+#BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
+#BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
+#BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+#BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
+#BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
+#OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
+#OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+#MINIUPNPC_INCLUDE_PATH=C:/deps/
+#MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+#LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
+#LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
+#QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
+#QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+#LIBEVENT_INCLUDE_PATH=C:/MinGW/include
+#LIBEVENT_LIB_PATH=C:/MinGW/lib
 #LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
+
+# OSX Dep Libraries, uncomment line 38 through 53 to compile OSX
+#MINIUPNPC_LIB_PATH=/usr/local/opt/miniupnpc/lib
+#MINIUPNPC_INCLUDE_PATH=/usr/local/opt/miniupnpc/include
+#OPENSSL_LIB_PATH=/usr/local/opt/openssl/lib
+#OPENSSL_INCLUDE_PATH=/usr/local/opt/openssl/include
+#LIBEVENT_LIB_PATH=/usr/local/opt/libevent/lib
+#LIBEVENT_INCLUDE_PATH=/usr/local/opt/libevent/include
+#BDB_LIB_PATH=/usr/local/opt/berkeley-db@4/lib
+#BDB_INCLUDE_PATH=/usr/local/opt/berkeley-db@4/include
+#BOOST_LIB_PATH=/usr/local/opt/boost/lib/
+#BOOST_INCLUDE_PATH=/usr/local/opt/boost/include
+#LIBPNG_LIB_PATH=/usr/local/opt/libpng/lib
+#LIBPNG_INCLUDE_PATH=/usr/local/opt/libpng/include
+#QRENCODE_LIB_PATH=/usr/local/opt/qrencode/lib
+#QRENCODE_INCLUDE_PATH=/usr/local/opt/qrencode/include
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -50,8 +66,8 @@ UI_DIR = build
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
-    # Mac: compile for maximum compatibility (10.5, 32-bit)
-    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.5 -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.5.sdk
+    # Mac: compile for maximum compatibility (10.6, 32-bit)
+    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.6 -arch x86_64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk
 
     !windows:!macx {
         # Linux: static link
@@ -544,21 +560,25 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
     LIBS += -lrt
 }
 
-macx:HEADERS += src/qt/macdockiconhandler.h
-macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
+macx:HEADERS += src/qt/macdockiconhandler.h src/qt/macnotificationhandler.h
+macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm src/qt/macnotificationhandler.mm
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
 macx:ICON = src/qt/res/icons/denarius.icns
-macx:TARGET = "denarius-Qt"
+macx:TARGET = "Denarius"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
+macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
+
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
 LIBS += -levent -lz
+
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
