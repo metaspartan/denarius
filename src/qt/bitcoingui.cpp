@@ -577,7 +577,7 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addAction(quitAction);
 #endif
 
-    notificator = new Notificator(qApp->applicationName(), trayIcon);
+    notificator = new Notificator(qApp->applicationName(), trayIcon, this);
 }
 
 #ifndef Q_OS_MAC
