@@ -1,11 +1,16 @@
-#ifndef NOTIFICADNR_H
-#define NOTIFICADNR_H
+#ifndef BITCOIN_QT_NOTIFICATOR_H
+#define BITCOIN_QT_NOTIFICATOR_H
 
-#include <QObject>
+#if defined(HAVE_CONFIG_H)
+#include "bitcoin-config.h"
+#endif
+
 #include <QIcon>
+#include <QObject>
 
 QT_BEGIN_NAMESPACE
 class QSystemTrayIcon;
+
 #ifdef USE_DBUS
 class QDBusInterface;
 #endif
@@ -19,7 +24,7 @@ public:
     /** Create a new notificator.
        @note Ownership of trayIcon is not transferred to this object.
     */
-    Notificator(const QString &programName=QString(), QSystemTrayIcon *trayIcon=0, QWidget *parent=0);
+    Notificator(const QString &programName, QSystemTrayIcon *trayIcon, QWidget *parent);
     ~Notificator();
 
     // Message class
@@ -50,7 +55,8 @@ private:
         Freedesktop, /**< Use DBus org.freedesktop.Notifications */
         QSystemTray, /**< Use QSystemTray::showMessage */
         Growl12,        /**< Use the Growl 1.2 notification system (Mac only) */
-        Growl13        /**< Use the Growl 1.3 notification system (Mac only) */
+        Growl13,        /**< Use the Growl 1.3 notification system (Mac only) */
+        UserNotificationCenter      /**< Use the 10.8+ User Notification Center (Mac only) */
     };
     QString programName;
     Mode mode;
@@ -63,7 +69,8 @@ private:
     void notifySystray(Class cls, const QString &title, const QString &text, const QIcon &icon, int millisTimeout);
 #ifdef Q_OS_MAC
     void notifyGrowl(Class cls, const QString &title, const QString &text, const QIcon &icon);
+    void notifyMacUserNotificationCenter(Class cls, const QString &title, const QString &text, const QIcon &icon);
 #endif
 };
 
-#endif // NOTIFICADNR_H
+#endif // BITCOIN_NOTIFICATOR_H
