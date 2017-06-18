@@ -24,7 +24,7 @@
 // https://wiki.ubuntu.com/NotificationDevelopmentGuidelines recommends at least 128
 const int FREEDESKTOP_NOTIFICATION_ICON_SIZE = 128;
 
-Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, QWidget *parent):
+Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, QWidget *parent) :
     QObject(parent),
     parent(parent),
     programName(programName),
@@ -40,7 +40,7 @@ Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, 
     }
 #ifdef USE_DBUS
     interface = new QDBusInterface("org.freedesktop.Notifications",
-          "/org/freedesktop/Notifications", "org.freedesktop.Notifications");
+        "/org/freedesktop/Notifications", "org.freedesktop.Notifications");
     if(interface->isValid())
     {
         mode = Freedesktop;

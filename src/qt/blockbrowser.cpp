@@ -51,8 +51,8 @@ const CBlockIndex* getBlockIndex(int height)
 
 std::string getBlockHash(int Height)
 {
-    if(Height > pindexBest->nHeight) { return "00000dc8fda5e75ae235fda6829ddceaf5cdc6e5e551c71b704ab111ab7c1fcb"; }
-    if(Height < 0) { return "00000dc8fda5e75ae235fda6829ddceaf5cdc6e5e551c71b704ab111ab7c1fcb"; }
+    if(Height > pindexBest->nHeight) { return "00000d5dbbda01621cfc16bbc1f9bf3264d641a5dbf0de89fd0182c2c4828fcd"; }
+    if(Height < 0) { return "00000d5dbbda01621cfc16bbc1f9bf3264d641a5dbf0de89fd0182c2c4828fcd"; }
     int desiredheight;
     desiredheight = Height;
     if (desiredheight < 0 || desiredheight > nBestHeight)
@@ -192,7 +192,7 @@ std::string getOutputs(std::string txid)
     CTransaction tx;
     uint256 hashBlock = 0;
     if (!GetTransaction(hash, tx, hashBlock))
-        return "fail";
+        return "None";
 
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
     ssTx << tx;
@@ -225,7 +225,7 @@ std::string getInputs(std::string txid)
     CTransaction tx;
     uint256 hashBlock = 0;
     if (!GetTransaction(hash, tx, hashBlock))
-        return "fail";
+        return "None";
 
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
     ssTx << tx;
@@ -239,7 +239,7 @@ std::string getInputs(std::string txid)
         CTransaction wtxPrev;
         uint256 hashBlock = 0;
         if (!GetTransaction(hash, wtxPrev, hashBlock))
-             return "fail";
+             return "None";
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
         ssTx << wtxPrev;

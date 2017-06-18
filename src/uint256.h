@@ -341,13 +341,13 @@ public:
         return (GetHex());
     }
 
-    unsigned char* begin() const
-    {
+    unsigned char* begin()
+    const {
         return (unsigned char*)&pn[0];
     }
 
-    unsigned char* end() const
-    {
+    unsigned char* end()
+    const {
         return (unsigned char*)&pn[WIDTH];
     }
 

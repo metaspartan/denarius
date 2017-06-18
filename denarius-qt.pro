@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = denarius-qt
+TARGET = Denarius
 VERSION = 1.0.0
 INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
