@@ -57,10 +57,26 @@ void StatisticsPage::updateStatistics()
     }
     else if (pindexBest->nHeight > 3000000)
     {
-        phase = "PoS";
+        phase = "PoS (6% per year variable)";
     }
 
     QString subsidy = "";
+	if (pindexBest->nHeight < 1000000)
+    {
+        subsidy = "3 DNR per block";
+    }
+	else if (pindexBest->nHeight < 2000000)
+    {
+        subsidy = "4 DNR per block";
+    }
+	else if (pindexBest->nHeight < 3000000)
+    {
+        subsidy = "3 DNR per block";
+    }
+    else if (pindexBest->nHeight > 3000000)
+    {
+        subsidy = "Full PoS";
+    }
     QString hardness = QString::number(pHardness, 'f', 6);
     QString hardness2 = QString::number(pHardness2, 'f', 6);
     QString pawrate = QString::number(pPawrate2, 'f', 3);

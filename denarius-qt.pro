@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = denarius-qt
+TARGET = Denarius
 VERSION = 1.0.0
 INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
@@ -549,7 +549,7 @@ macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
 macx:ICON = src/qt/res/icons/denarius.icns
-macx:TARGET = "denarius-Qt"
+macx:TARGET = "Denarius"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
