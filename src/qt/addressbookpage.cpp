@@ -97,8 +97,19 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :
 
     connect(ui->tableView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
 
+    // Show QR Code on double click
+    connect(ui->tableView, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(onRowDoubleClicked(const QModelIndex&)));
+
     // Pass through accept action from button box
     connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+}
+
+void AddressBookPage::onRowDoubleClicked(const QModelIndex &idx)
+{
+        if(idx.column() > 0)
+        {
+            on_showQRCode_clicked();
+        }
 }
 
 AddressBookPage::~AddressBookPage()
