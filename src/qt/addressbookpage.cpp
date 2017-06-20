@@ -85,7 +85,8 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :
     {
         contextMenu->addAction(signMessageAction);
         // Show QR Code on double click when in receiving tab
-        connect(ui->tableView, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(onRowDoubleClicked(const QModelIndex&)));
+        if (mode == ForEditing)
+            connect(ui->tableView, SIGNAL(doubleClicked(const QModelIndex&)), this, SLOT(onRowDoubleClicked(const QModelIndex&)));
     }
     else if(tab == SendingTab)
         contextMenu->addAction(verifyMessageAction);
