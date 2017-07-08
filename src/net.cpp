@@ -75,6 +75,9 @@ CCriticalSection cs_setservAddNodeAddresses;
 
 static CSemaphore *semOutbound = NULL;
 
+NodeId nLastNodeId = 0;
+CCriticalSection cs_nLastNodeId;
+
 void AddOneShot(string strDest)
 {
     LOCK(cs_vOneShots);

@@ -9,11 +9,11 @@
 #include "ui_interface.h"
 #include "base58.h"
 #include "json_spirit.h"
+#include "init.h"
 
 #include <QSet>
 #include <QTimer>
 #include <QDateTime>
-#include <QSortFilterProxyModel>
 #include <QClipboard>
 #include <QMessageBox>
 #include <QMenu>
@@ -24,8 +24,8 @@ Q_DECLARE_METATYPE(std::vector<unsigned char>);
 
 QList<QString> ambiguous; /**< Specifies Ambiguous addresses */
 
-const QString MessageModel::Sent = "Sent";
-const QString MessageModel::Received = "Received";
+const QString MessageModel::Sent = "S";
+const QString MessageModel::Received = "R";
 
 struct MessageTableEntryLessThan
 {
@@ -47,15 +47,13 @@ public:
     void refreshMessageTable()
     {
         cachedMessageTable.clear();
-        
+
         if (parent->getWalletModel()->getEncryptionStatus() == WalletModel::Locked)
-        {
             // -- messages are stored encrypted, can't load them without the private keys
             return;
-        };
 
         {
-            LOCK(cs_smsgDB);
+            LOCK2(pwalletMain->cs_wallet, cs_smsgDB);
 
             SecMsgDB dbSmsg;
 
@@ -70,6 +68,8 @@ public:
             SecMsgStored smsgStored;
             MessageData msg;
             QString label;
+            QString labelTo;
+            QString groupPrefix = QString::fromStdString("group_");
             QDateTime sent_datetime;
             QDateTime received_datetime;
 
@@ -80,20 +80,49 @@ public:
                 uint32_t nPayload = smsgStored.vchMessage.size() - SMSG_HDR_LEN;
                 if (SecureMsgDecrypt(false, smsgStored.sAddrTo, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
                 {
+                    if (fDebugSmsg)
+                        LogPrintf("refreshMessageTable: secureMsgDecrypt succesful\n");
+
                     label = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(msg.sFromAddress));
+                    labelTo = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(smsgStored.sAddrTo)); //returns "" if not found.
+
+                    if (fDebugSmsg)
+                    {
+                        LogPrintf("refreshMessageTable: addressTo: %s\n", smsgStored.sAddrTo);
+                        LogPrintf("refreshMessageTable: addressFrom: %s\n", msg.sFromAddress);
+                    }
+
+                    std::string publicKey;
+                    int duplicateMessageFromOutBox = SecureMsgGetLocalPublicKey(msg.sFromAddress, publicKey);
+
+                    if((labelTo.startsWith(groupPrefix)) && (duplicateMessageFromOutBox == 0)) {
+                        //a message has been received to our group but it was one of our own. Just don't process this at all.
+                        if(fDebugSmsg)
+                            LogPrintf("refreshMessageTable: groupchat message, but duplicate. Label: %s, LabelTo: %s, SecureMsgGetLocalPublicKey: %i\n", label.toStdString(), labelTo.toStdString(), duplicateMessageFromOutBox);
+                        continue;
+                    } else if(labelTo.startsWith(groupPrefix) && (duplicateMessageFromOutBox == 4)) {
+                        //a message has been received to our group and it was NOT one of our own. Yet retrieving the public key of it was succesful.
+                        if(fDebugSmsg)
+                            LogPrintf("refreshMessageTable: grouchat message and it was not a duplicate. Label: %s, LabelTo: %s, SecureMsgGetLocalPublicKey: %i\n", label.toStdString(), labelTo.toStdString(), duplicateMessageFromOutBox);
+                    } else {
+                        if(fDebugSmsg)
+                           LogPrintf("refreshMessageTable: not groupchat. Label: %s, LabelTo: %s, SecureMsgGetLocalPublicKey: %i\n", label.toStdString(), labelTo.toStdString(), duplicateMessageFromOutBox);
+                    }
 
                     sent_datetime    .setTime_t(msg.timestamp);
                     received_datetime.setTime_t(smsgStored.timeReceived);
-                    
+
                     memcpy(&vchKey[0], chKey, 18);
 
                     addMessageEntry(MessageTableEntry(vchKey,
                                                       MessageTableEntry::Received,
                                                       label,
+                                                      labelTo,
                                                       QString::fromStdString(smsgStored.sAddrTo),
                                                       QString::fromStdString(msg.sFromAddress),
                                                       sent_datetime,
                                                       received_datetime,
+                                                      !(smsgStored.status & SMSG_MASK_UNREAD),
                                                       (char*)&msg.vchMessage[0]),
                                     true);
                 }
@@ -101,7 +130,7 @@ public:
 
             delete it;
 
-            sPrefix = "nm";
+            sPrefix = "sm";
             it = dbSmsg.pdb->NewIterator(leveldb::ReadOptions());
             while (dbSmsg.NextSmesg(it, sPrefix, chKey, smsgStored))
             {
@@ -109,19 +138,25 @@ public:
                 if (SecureMsgDecrypt(false, smsgStored.sAddrOutbox, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
                 {
                     label = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(smsgStored.sAddrTo));
+                    labelTo = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(msg.sFromAddress));
+
+                    if(fDebugSmsg)
+                        LogPrintf("refreshMessageTable: sendMessage: label: %s, labelTo: %s\n", label.toStdString(), labelTo.toStdString());
 
                     sent_datetime    .setTime_t(msg.timestamp);
                     received_datetime.setTime_t(smsgStored.timeReceived);
-                    
+
                     memcpy(&vchKey[0], chKey, 18);
 
                     addMessageEntry(MessageTableEntry(vchKey,
                                                       MessageTableEntry::Sent,
                                                       label,
+                                                      labelTo,
                                                       QString::fromStdString(smsgStored.sAddrTo),
                                                       QString::fromStdString(msg.sFromAddress),
                                                       sent_datetime,
                                                       received_datetime,
+                                                      !(smsgStored.status & SMSG_MASK_UNREAD),
                                                       (char*)&msg.vchMessage[0]),
                                     true);
                 }
@@ -137,6 +172,8 @@ public:
         SecMsgStored smsgStored = inboxHdr;
         MessageData msg;
         QString label;
+        QString labelTo;
+        QString groupPrefix = QString::fromStdString("group_");
         QDateTime sent_datetime;
         QDateTime received_datetime;
 
@@ -144,13 +181,36 @@ public:
         if (SecureMsgDecrypt(false, smsgStored.sAddrTo, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
         {
             label = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(msg.sFromAddress));
+            labelTo = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(smsgStored.sAddrTo)); //returns "" if not found.
+
+            if(fDebugSmsg)
+                LogPrintf("newMessage: secureMsgDecrypt succesful\n");
+                LogPrintf("newMessage: addressTo: %s\n", smsgStored.sAddrTo);
+
+            std::string publicKey;
+            int duplicateMessageFromOutBox = SecureMsgGetLocalPublicKey(msg.sFromAddress, publicKey);
+
+            if((labelTo.startsWith(groupPrefix)) && (duplicateMessageFromOutBox == 0)) {
+                //a message has been received to our group but it was one of our own. Just don't process this at all.
+                //MAY CAUSE LOOP?
+                if(fDebugSmsg)
+                    LogPrintf("newMessage: groupchat message, but duplicate.");
+                return;
+            } else if(labelTo.startsWith(groupPrefix) && (duplicateMessageFromOutBox == 4)) {
+                //a message has been received to our group and it was NOT one of our own. Yet retrieving the public key of it was succesful.
+                if(fDebugSmsg)
+                    LogPrintf("newMessage: grouchat message and it was not a duplicate. Label: %s, LabelTo: %s, SecureMsgGetLocalPublicKey: %i\n", label.toStdString(), labelTo.toStdString(), duplicateMessageFromOutBox);
+            } else {
+                if(fDebugSmsg)
+                    LogPrintf("newMessage: not groupchat. Label: %s, LabelTo: %s, SecureMsgGetLocalPublicKey: %i\n", label.toStdString(), labelTo.toStdString(), duplicateMessageFromOutBox);
+            }
 
             sent_datetime    .setTime_t(msg.timestamp);
             received_datetime.setTime_t(smsgStored.timeReceived);
 
             std::string sPrefix("im");
             SecureMessage* psmsg = (SecureMessage*) &smsgStored.vchMessage[0];
-            
+
             std::vector<unsigned char> vchKey;
             vchKey.resize(18);
             memcpy(&vchKey[0],  sPrefix.data(),  2);
@@ -160,10 +220,12 @@ public:
             addMessageEntry(MessageTableEntry(vchKey,
                                               MessageTableEntry::Received,
                                               label,
+                                              labelTo,
                                               QString::fromStdString(smsgStored.sAddrTo),
                                               QString::fromStdString(msg.sFromAddress),
                                               sent_datetime,
                                               received_datetime,
+                                              !(smsgStored.status & SMSG_MASK_UNREAD),
                                               (char*)&msg.vchMessage[0]),
                             false);
         }
@@ -175,6 +237,7 @@ public:
         SecMsgStored smsgStored = outboxHdr;
         MessageData msg;
         QString label;
+        QString labelTo;
         QDateTime sent_datetime;
         QDateTime received_datetime;
 
@@ -182,11 +245,15 @@ public:
         if (SecureMsgDecrypt(false, smsgStored.sAddrOutbox, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
         {
             label = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(smsgStored.sAddrTo));
+            labelTo = parent->getWalletModel()->getAddressTableModel()->labelForAddress(QString::fromStdString(msg.sFromAddress));
+
+            if(fDebugSmsg)
+                LogPrintf("newOutboxMessage: Label: %s, LabelTo: %s\n", label.toStdString(), labelTo.toStdString());
 
             sent_datetime    .setTime_t(msg.timestamp);
             received_datetime.setTime_t(smsgStored.timeReceived);
 
-            std::string sPrefix("nm");
+            std::string sPrefix("sm");
             SecureMessage* psmsg = (SecureMessage*) &smsgStored.vchMessage[0];
             std::vector<unsigned char> vchKey;
             vchKey.resize(18);
@@ -197,43 +264,42 @@ public:
             addMessageEntry(MessageTableEntry(vchKey,
                                               MessageTableEntry::Sent,
                                               label,
+                                              labelTo,
                                               QString::fromStdString(smsgStored.sAddrTo),
                                               QString::fromStdString(msg.sFromAddress),
                                               sent_datetime,
                                               received_datetime,
+                                              !(smsgStored.status & SMSG_MASK_UNREAD),
                                               (char*)&msg.vchMessage[0]),
                             false);
         }
     }
 
-    void walletUnlocked()
+    bool markAsRead(const int& idx)
     {
-        // -- wallet is unlocked, can get at the private keys now
-        refreshMessageTable();
-        
-        parent->reset(); // reload table view
-        
-        if (parent->proxyModel)
-        {
-            parent->proxyModel->setFilterRole(false);
-            parent->proxyModel->setFilterFixedString("");
-            parent->resetFilter();
-            parent->proxyModel->setFilterRole(MessageModel::Ambiguous);
-            parent->proxyModel->setFilterFixedString("true");
-        }
-        
-        //invalidateFilter()
-    }
-    
-    void setEncryptionStatus(int status)
-    {
-        if (status == WalletModel::Locked)
-        {
-            // -- Wallet is locked, clear secure message display.
-            cachedMessageTable.clear();
+        MessageTableEntry *rec = index(idx);
 
-            parent->reset(); // reload table view
-        };
+        if(!rec || rec->read)
+            // Can only mark one row at a time, and cannot mark rows not in model.
+            return false;
+
+        {
+            LOCK(cs_smsgDB);
+            SecMsgDB dbSmsg;
+
+            if (!dbSmsg.Open("cr+"))
+                //throw runtime_error("Could not open DB.");
+                return false;
+
+            SecMsgStored smsgStored;
+            dbSmsg.ReadSmesg(&rec->chKey[0], smsgStored);
+
+            smsgStored.status &= ~SMSG_MASK_UNREAD;
+            dbSmsg.WriteSmesg(&rec->chKey[0], smsgStored);
+            rec->read = !(smsgStored.status & SMSG_MASK_UNREAD);
+        }
+
+        return true;
     };
 
     MessageTableEntry *index(int idx)
@@ -308,9 +374,7 @@ MessageModel::MessageModel(CWallet *wallet, WalletModel *walletModel, QObject *p
     QAbstractTableModel(parent), wallet(wallet), walletModel(walletModel), optionsModel(0), priv(0)
 {
     columns << tr("Type") << tr("Sent Date Time") << tr("Received Date Time") << tr("Label") << tr("To Address") << tr("From Address") << tr("Message");
-    
-    proxyModel = NULL;
-    
+
     optionsModel = walletModel->getOptionsModel();
 
     priv = new MessageTablePriv(this);
@@ -321,34 +385,8 @@ MessageModel::MessageModel(CWallet *wallet, WalletModel *walletModel, QObject *p
 
 MessageModel::~MessageModel()
 {
-    if (proxyModel)
-        delete proxyModel;
-    
     delete priv;
     unsubscribeFromCoreSignals();
-}
-
-bool MessageModel::getAddressOrPubkey(QString &address, QString &pubkey) const
-{
-    CBitcoinAddress addressParsed(address.toStdString());
-
-    if(addressParsed.IsValid()) {
-        CKeyID  destinationAddress;
-        CPubKey destinationKey;
-
-        addressParsed.GetKeyID(destinationAddress);
-
-        if (SecureMsgGetStoredKey(destinationAddress, destinationKey) != 0
-            && SecureMsgGetLocalKey(destinationAddress, destinationKey) != 0) // test if it's a local key
-            return false;
-
-        address = destinationAddress.ToString().c_str();
-        pubkey = EncodeBase58(destinationKey.Raw()).c_str();
-
-        return true;
-    }
-
-    return false;
 }
 
 WalletModel *MessageModel::getWalletModel()
@@ -361,79 +399,29 @@ OptionsModel *MessageModel::getOptionsModel()
     return optionsModel;
 }
 
-MessageModel::StatusCode MessageModel::sendMessages(const QList<SendMessagesRecipient> &recipients, const QString &addressFrom)
+MessageModel::StatusCode MessageModel::sendMessage(const QString &address, const QString &message, const QString &addressFrom)
 {
+    if(!walletModel->validateAddress(address))
+        return InvalidAddress;
 
-    QSet<QString> setAddress;
+    if(message == "")
+        return MessageCreationFailed;
 
-    if(recipients.empty())
-        return OK;
+    std::string sendTo = address.toStdString();
+    std::string msg    = message.toStdString();
+    std::string from   = addressFrom.toStdString();
 
-    // Pre-check input data for validity
-    foreach(const SendMessagesRecipient &rcp, recipients)
+    std::string sError;
+    if (SecureMsgSend(from, sendTo, msg, sError) != 0)
     {
-        if(!walletModel->validateAddress(rcp.address))
-            return InvalidAddress;
+        QMessageBox::warning(NULL, tr("Send Secure Message"),
+            tr("Send failed: %1.").arg(sError.c_str()),
+            QMessageBox::Ok, QMessageBox::Ok);
 
-        if(rcp.message == "")
-            return MessageCreationFailed;
-
-        std::string sendTo  = rcp.address.toStdString();
-        std::string pubkey  = rcp.pubkey.toStdString();
-        std::string message = rcp.message.toStdString();
-        std::string addFrom = addressFrom.toStdString();
-
-        SecureMsgAddAddress(sendTo, pubkey);
-        setAddress.insert(rcp.address);
-        
-        std::string sError;
-        if (SecureMsgSend(addFrom, sendTo, message, sError) != 0)
-        {
-            QMessageBox::warning(NULL, tr("Send Secure Message"),
-                tr("Send failed: %1.").arg(sError.c_str()),
-                QMessageBox::Ok, QMessageBox::Ok);
-            
-            return FailedErrorShown;
-        };
-
-        // Add addresses / update labels that we've sent to to the address book
-        std::string strAddress = rcp.address.toStdString();
-        CTxDestination dest = CBitcoinAddress(strAddress).Get();
-        std::string strLabel = rcp.label.toStdString();
-        {
-            LOCK(wallet->cs_wallet);
-
-            std::map<CTxDestination, std::string>::iterator mi = wallet->mapAddressBook.find(dest);
-
-            // Check if we have a new address or an updated label
-            if (mi == wallet->mapAddressBook.end() || mi->second != strLabel)
-            {
-                wallet->SetAddressBookName(dest, strLabel);
-            }
-        }
-    }
-
-    if(recipients.size() > setAddress.size())
-        return DuplicateAddress;
+        return FailedErrorShown;
+    };
 
     return OK;
-}
-
-MessageModel::StatusCode MessageModel::sendMessages(const QList<SendMessagesRecipient> &recipients)
-{
-    return sendMessages(recipients, "anon");
-}
-
-int MessageModel::rowCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent);
-    return priv->cachedMessageTable.size();
-}
-
-int MessageModel::columnCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent);
-    return columns.length();
 }
 
 QVariant MessageModel::data(const QModelIndex &index, int role) const
@@ -445,24 +433,18 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
 
     switch(role)
     {
-    /*
-    case Qt::DecorationRole:
-        switch(index.column())
-        {
-            return txStatusDecoration(rec);
-        case ToAddress:
-            return txAddressDecoration(rec);
-        }
-        break;*/
+
     case Qt::DisplayRole:
         switch(index.column())
         {
-            case Label:	           return (rec->label.isEmpty() ? tr("(no label)") : rec->label);
-            case ToAddress:	       return rec->to_address;
+            case Label:            return (rec->label.isEmpty() ? tr("(no label)") : rec->label);
+            case LabelTo:          return (rec->labelTo.isEmpty() ? tr("(no label)") : rec->labelTo);
+            case ToAddress:        return rec->to_address;
             case FromAddress:      return rec->from_address;
             case SentDateTime:     return rec->sent_datetime;
             case ReceivedDateTime: return rec->received_datetime;
             case Message:          return rec->message;
+            case Read:             return rec->read;
             case TypeInt:          return rec->type;
             case HTML:             return rec->received_datetime.toString() + "<br>"  + (rec->label.isEmpty() ? rec->from_address : rec->label)  + "<br>" + rec->message;
             case Type:
@@ -472,8 +454,13 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
                     case MessageTableEntry::Received: return Received;
                     default: break;
                 }
-            case Key:               return QVariant::fromValue(rec->chKey);
+            case Key: return (rec->type == MessageTableEntry::Sent ? Sent : Received) + rec->from_address + QString::number(rec->sent_datetime.toTime_t());
         }
+        break;
+
+    case Qt::EditRole:
+        if(index.column() == Key)
+            return (rec->type == MessageTableEntry::Sent ? Sent : Received) + rec->from_address + QString::number(rec->sent_datetime.toTime_t());
         break;
 
     case KeyRole:           return QVariant::fromValue(rec->chKey);
@@ -486,6 +473,7 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
     case LabelRole:         return rec->label;
     case MessageRole:       return rec->message;
     case ShortMessageRole:  return rec->message; // TODO: Short message
+    case ReadRole:          return rec->read;
     case HTMLRole:          return rec->received_datetime.toString() + "<br>"  + (rec->label.isEmpty() ? rec->from_address : rec->label)  + "<br>" + rec->message;
     case Ambiguous:
         int it;
@@ -529,7 +517,6 @@ bool MessageModel::removeRows(int row, int count, const QModelIndex & parent)
     MessageTableEntry *rec = priv->index(row);
     if(count != 1 || !rec)
         // Can only remove one row at a time, and cannot remove rows not in model.
-        // Also refuse to remove receiving addresses.
         return false;
 
     {
@@ -550,6 +537,16 @@ bool MessageModel::removeRows(int row, int count, const QModelIndex & parent)
     return true;
 }
 
+int MessageModel::rowCount(const QModelIndex &parent) const
+{
+    return priv->cachedMessageTable.length();
+}
+
+int MessageModel::columnCount(const QModelIndex &parent) const
+{
+    return columns.length();
+}
+
 void MessageModel::resetFilter()
 {
     ambiguous.clear();
@@ -566,21 +563,34 @@ void MessageModel::newOutboxMessage(const SecMsgStored &smsgOutbox)
     priv->newOutboxMessage(smsgOutbox);
 }
 
-
-void MessageModel::walletUnlocked()
-{
-    priv->walletUnlocked();
-}
-
 void MessageModel::setEncryptionStatus(int status)
 {
-    priv->setEncryptionStatus(status);
+     // We're only interested in NotifySecMsgWalletUnlocked when unlocked, as its called after new messagse are processed
+    if(status == WalletModel::Unlocked && QObject::sender()!=NULL)
+        return;
+
+    priv->refreshMessageTable();
+
+    reset(); // reload table view
 }
 
+bool MessageModel::markMessageAsRead(const QString &key) const
+{
+    return priv->markAsRead(lookupMessage(key));
+}
+
+int MessageModel::lookupMessage(const QString &key) const
+{
+    QModelIndexList lst = match(index(0, Key, QModelIndex()), Qt::EditRole, key, 1, Qt::MatchExactly);
+    if(lst.isEmpty())
+        return -1;
+    else
+        return lst.at(0).row();
+}
 
 static void NotifySecMsgInbox(MessageModel *messageModel, SecMsgStored inboxHdr)
 {
-    // Too noisy: OutputDebugStringF("NotifySecMsgInboxChanged %s\n", message);
+    // Too noisy: LogPrintf("NotifySecMsgInboxChanged %s\n", message);
     QMetaObject::invokeMethod(messageModel, "newMessage", Qt::QueuedConnection,
                               Q_ARG(SecMsgStored, inboxHdr));
 }
@@ -593,7 +603,7 @@ static void NotifySecMsgOutbox(MessageModel *messageModel, SecMsgStored outboxHd
 
 static void NotifySecMsgWallet(MessageModel *messageModel)
 {
-    QMetaObject::invokeMethod(messageModel, "walletUnlocked", Qt::QueuedConnection);
+    messageModel->setEncryptionStatus(WalletModel::Unlocked);
 }
 
 void MessageModel::subscribeToCoreSignals()
@@ -604,7 +614,7 @@ void MessageModel::subscribeToCoreSignals()
     NotifySecMsgInboxChanged.connect(boost::bind(NotifySecMsgInbox, this, _1));
     NotifySecMsgOutboxChanged.connect(boost::bind(NotifySecMsgOutbox, this, _1));
     NotifySecMsgWalletUnlocked.connect(boost::bind(NotifySecMsgWallet, this));
-    
+
     connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
 }
 
@@ -614,6 +624,6 @@ void MessageModel::unsubscribeFromCoreSignals()
     NotifySecMsgInboxChanged.disconnect(boost::bind(NotifySecMsgInbox, this, _1));
     NotifySecMsgOutboxChanged.disconnect(boost::bind(NotifySecMsgOutbox, this, _1));
     NotifySecMsgWalletUnlocked.disconnect(boost::bind(NotifySecMsgWallet, this));
-    
+
     disconnect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
 }

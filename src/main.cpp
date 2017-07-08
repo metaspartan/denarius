@@ -183,7 +183,11 @@ void ResendWalletTransactions(bool fForce)
 
 
 
-
+bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats)
+{
+    // TODO:
+    return false;
+}
 
 
 

@@ -24,6 +24,11 @@ class CNode;
 class CBlockIndex;
 extern int nBestHeight;
 
+typedef int NodeId;
+
+extern NodeId nLastNodeId;
+extern CCriticalSection cs_nLastNodeId;
+
 
 /** Time between pings automatically sent out for latency probing and keepalive (in seconds). */
 static const int PING_INTERVAL = 2 * 60;
@@ -131,11 +136,19 @@ extern CCriticalSection cs_mapRelay;
 extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 
 
-
+class CNodeStateStats
+{
+public:
+    int nMisbehavior;
+    int nSyncHeight;
+    int nCommonHeight;
+    std::vector<int> vHeightInFlight;
+};
 
 class CNodeStats
 {
 public:
+    NodeId nodeid;
     uint64_t nServices;
     int64_t nLastSend;
     int64_t nLastRecv;
@@ -258,6 +271,7 @@ public:
     bool fDisconnect;
     CSemaphoreGrant grantOutbound;
     int nRefCount;
+	NodeId id;
 protected:
 
     // Denial-of-service detection/prevention
@@ -267,6 +281,9 @@ protected:
     int nMisbehavior;
 
 public:
+    NodeId GetId() const {
+      return id;
+    }
     std::map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
     uint256 hashContinue;
@@ -335,6 +352,11 @@ public:
         nPingUsecStart = 0;
         nPingUsecTime = 0;
         fPingQueued = false;
+		
+		{
+            LOCK(cs_nLastNodeId);
+            id = nLastNodeId++;
+        }
 
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
