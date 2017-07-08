@@ -60,6 +60,13 @@ static const int64_t CENT = 1000000;
   #define PRIpdx    "Ix"
   #define PRIpdu    "Iu"
   #define PRIpdd    "Id"
+  /* fixes printf format strings for mingw builds */
+  #undef PRId64
+  #define PRId64 "I64d"
+  #undef PRIu64
+  #define PRIu64 "I64u"
+  #undef PRIx64
+  #define PRIx64 "I64x"
 #else /* C99 standard */
   #define PRIszx    "zx"
   #define PRIszu    "zu"
