@@ -39,7 +39,6 @@ signals:
 public slots:
     void parseNetworkResponse(QNetworkReply *finished );
     void randomChuckNorrisJoke();
-    void randomChuckNorrisJoke2();
     void bittrex();
     void poloniex();
     void egaldo();

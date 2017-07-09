@@ -17,21 +17,21 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 # Windows Dep Libraries, Uncomment lines 20 through 34 to compile Win.
-BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
-BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
-BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
-BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
-MINIUPNPC_INCLUDE_PATH=C:/deps/
-MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
-LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
-LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
-QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
-QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-LIBEVENT_INCLUDE_PATH=C:/MinGW/include
-LIBEVENT_LIB_PATH=C:/MinGW/lib
+#BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
+#BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
+#BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+#BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
+#BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
+#OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
+#OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+#MINIUPNPC_INCLUDE_PATH=C:/deps/
+#MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+#LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
+#LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
+#QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
+#QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+#LIBEVENT_INCLUDE_PATH=C:/MinGW/include
+#LIBEVENT_LIB_PATH=C:/MinGW/lib
 #LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 
 # OSX Dep Libraries, uncomment line 38 through 53 to compile OSX
