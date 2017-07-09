@@ -304,7 +304,7 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 	
-	poolAction = new QAction(QIcon(":/icons/stats"), tr("&Market"), this);
+	poolAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     poolAction->setToolTip(tr("Market Data"));
     poolAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
     poolAction->setCheckable(true);
@@ -964,7 +964,6 @@ void BitcoinGUI::gotoChatPage()
 	
 	exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-	connect(exportAction, SIGNAL(triggered()), chatWindow, SLOT(exportClicked()));
 	
 }
 

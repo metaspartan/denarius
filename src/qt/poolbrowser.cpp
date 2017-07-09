@@ -55,21 +55,6 @@ PoolBrowser::PoolBrowser(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(400, 420);
-    ui->customPlot->addGraph();
-    ui->customPlot->setBackground(QBrush(QColor("#edf1f7")));
-    ui->customPlot2->addGraph();
-    ui->customPlot2->addGraph();
-    ui->customPlot2->setBackground(QBrush(QColor("#edf1f7")));
-    ui->customPlot_2->addGraph();
-    ui->customPlot_2->setBackground(QBrush(QColor("#edf1f7")));
-    ui->customPlot2_2->addGraph();
-    ui->customPlot2_2->addGraph();
-    ui->customPlot2_2->setBackground(QBrush(QColor("#edf1f7")));
-    ui->customPlot_3->addGraph();
-    ui->customPlot_3->setBackground(QBrush(QColor("#edf1f7")));
-    ui->customPlot2_3->addGraph();
-    ui->customPlot2_3->addGraph();
-    ui->customPlot2_3->setBackground(QBrush(QColor("#edf1f7")));
 
 
 randomChuckNorrisJoke();
@@ -84,7 +69,7 @@ void PoolBrowser::egaldo()
     QString temps = ui->egals->text();
     double totald = lastuG * temps.toDouble();
     double totaldq = bitcoing.toDouble() * temps.toDouble();
-    ui->egald->setText(QString::number(totald) + " $ / "+QString::number(totaldq)+" BTC");
+    ui->egald->setText("$ "+QString::number(totald)+" / "+QString::number(totaldq)+" BTC");
 
 }
 
@@ -101,7 +86,7 @@ void PoolBrowser::poloniex()
 
 void PoolBrowser::randomChuckNorrisJoke()
 {
-    ui->Ok->setVisible(true);
+	getRequest(kBaseUrl);
     getRequest(kBaseUrl1);
 }
 
@@ -138,7 +123,7 @@ if (what == kBaseUrl1) //bitcoinprice
     } else if (bitcoin < bitcoinp) {
         ui->bitcoin->setText("<font color=\"red\">" + bitcoin + " $</font>");
         } else {
-    ui->bitcoin->setText(bitcoin + " $");
+    ui->bitcoin->setText("$ "+bitcoin);
     }
 
     bitcoinp = bitcoin;
