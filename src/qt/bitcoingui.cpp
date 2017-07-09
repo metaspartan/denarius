@@ -304,7 +304,7 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 	
-	poolAction = new QAction(QIcon(":/icons/ex"), tr("&Market"), this);
+	poolAction = new QAction(QIcon(":/icons/stats"), tr("&Market"), this);
     poolAction->setToolTip(tr("Market Data"));
     poolAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
     poolAction->setCheckable(true);
@@ -458,8 +458,10 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(historyAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
-	mainToolbar->addAction(statisticsAction);
-	mainToolbar->addAction(blockAction);
+    mainToolbar->addAction(statisticsAction);
+    mainToolbar->addAction(blockAction);
+    mainToolbar->addAction(poolAction);
+    mainToolbar->addAction(chatAction);
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -528,10 +530,10 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         receiveCoinsPage->setModel(walletModel->getAddressTableModel());
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
-		statisticsPage->setModel(clientModel);
-		blockBrowser->setModel(clientModel);
-		poolBrowser->setModel(clientModel);
-		chatWindow->setModel(clientModel);
+	statisticsPage->setModel(clientModel);
+	blockBrowser->setModel(clientModel);
+	poolBrowser->setModel(clientModel);
+	chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));

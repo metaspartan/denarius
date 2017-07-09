@@ -38,11 +38,10 @@ signals:
 
 public slots:
     void parseNetworkResponse(QNetworkReply *finished );
-    void randomChuckNorrisJoke();
-    void bittrex();
+    void coinex();
     void poloniex();
+    void randomChuckNorrisJoke();
     void egaldo();
-    void overv();
 
 private:
     QNetworkAccessManager m_nam;
