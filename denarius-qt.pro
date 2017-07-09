@@ -17,21 +17,21 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 # Windows Dep Libraries, Uncomment lines 20 through 34 to compile Win.
-#BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
-#BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-#BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
-#BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
-#BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-#OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-#OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
-#MINIUPNPC_INCLUDE_PATH=C:/deps/
-#MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
-#LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
-#LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
-#QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
-#QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-#LIBEVENT_INCLUDE_PATH=C:/MinGW/include
-#LIBEVENT_LIB_PATH=C:/MinGW/lib
+BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
+BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
+BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
+BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
+OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
+OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+MINIUPNPC_INCLUDE_PATH=C:/deps/
+MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
+LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
+QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
+QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+LIBEVENT_INCLUDE_PATH=C:/MinGW/include
+LIBEVENT_LIB_PATH=C:/MinGW/lib
 #LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 
 # OSX Dep Libraries, uncomment line 38 through 53 to compile OSX
@@ -277,6 +277,10 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/trafficgraphwidget.h \
 	src/qt/blockbrowser.h \
 	src/qt/statisticspage.h \
+	src/qt/poolbrowser.h \
+	src/qt/chatwindow.h \
+	src/qt/serveur.h \
+	src/qt/qcustomplot.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -309,6 +313,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
 	src/qt/statisticspage.cpp \
 	src/qt/blockbrowser.cpp \
+	src/qt/poolbrowser.cpp \
+	src/qt/chatwindow.cpp \
+	src/qt/serveur.cpp \
+	src/qt/qcustomplot.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -478,6 +486,8 @@ FORMS += \
     src/qt/forms/messagepage.ui \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
+	src/qt/forms/poolbrowser.ui \
+	src/qt/forms/chatwindow.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
