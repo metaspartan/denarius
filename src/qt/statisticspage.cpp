@@ -47,7 +47,7 @@ void StatisticsPage::updateStatistics()
     pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
     uint64_t nNetworkWeight = GetPoSKernelPS();
     int64_t volume = ((pindexBest->nMoneySupply)/100000000);
-	int64_t marketcap = dollarg.toDouble() * volume;
+	int64_t marketcap = dnrmarket.toDouble();
     int peers = this->model->getNumConnections();
     pPawrate2 = (double)pPawrate;
     QString height = QString::number(nHeight);
@@ -133,11 +133,11 @@ void StatisticsPage::updateStatistics()
 	
     if(marketcap > marketcapPrevious)
     {
-        ui->marketcap->setText("<font color=\"green\">" + QString::number(marketcap) + " $</font>");
+        ui->marketcap->setText("<b><font color=\"yellow\">$" + QString::number(marketcap) + " USD</font></b>");
     } else if(marketcap < marketcapPrevious) {
-        ui->marketcap->setText("<font color=\"red\">" + QString::number(marketcap) + " $</font>");
+        ui->marketcap->setText("<b><font color=\"red\">$" + QString::number(marketcap) + " USD</font></b>");
     } else {
-        ui->marketcap->setText(QString::number(marketcap) + " $");
+        ui->marketcap->setText("<b><font color=\"orange\">$"+QString::number(marketcap)+" USD</font></b>");
     }
 
     if(pHardness2 > hardnessPrevious2)

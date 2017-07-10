@@ -26,6 +26,7 @@ double denarius2;
 double dnrmc2;
 double dnrbtc2;
 QString bitcoing;
+QString dnrmarket;
 QString dollarg;
 int mode=1;
 int o = 0;
@@ -51,7 +52,7 @@ void MarketBrowser::update()
     QString temps = ui->egals->text();
     double totald = dollarg.toDouble() * temps.toDouble();
     double totaldq = bitcoing.toDouble() * temps.toDouble();
-    ui->egald->setText("$ "+QString::number(totald)+" / "+QString::number(totaldq)+" BTC");
+    ui->egald->setText("$ "+QString::number(totald)+" USD or "+QString::number(totaldq)+" BTC");
 
 }
 
@@ -93,7 +94,7 @@ if (what == kBaseUrl) // Denarius Price
 	
     if(denarius > denariusp)
     {
-        ui->denarius->setText("<font color=\"green\">$" + denarius + "</font>");
+        ui->denarius->setText("<font color=\"yellow\">$" + denarius + "</font>");
     } else if (denarius < denariusp) {
         ui->denarius->setText("<font color=\"red\">$" + denarius + "</font>");
         } else {
@@ -113,7 +114,7 @@ if (what == kBaseUrl1) // Bitcoin Price
     bitcoin = QString::number(bitcoin2);
     if(bitcoin > bitcoinp)
     {
-        ui->bitcoin->setText("<font color=\"green\">$" + bitcoin + " USD</font>");
+        ui->bitcoin->setText("<font color=\"yellow\">$" + bitcoin + " USD</font>");
     } else if (bitcoin < bitcoinp) {
         ui->bitcoin->setText("<font color=\"red\">$" + bitcoin + " USD</font>");
         } else {
@@ -133,7 +134,7 @@ if (what == kBaseUrl2) // Denarius Market Cap
 	
     if(dnrmc > dnrmcp)
     {
-        ui->dnrmc->setText("<font color=\"green\">$" + dnrmc + "</font>");
+        ui->dnrmc->setText("<font color=\"yellow\">$" + dnrmc + "</font>");
     } else if (dnrmc < dnrmcp) {
         ui->dnrmc->setText("<font color=\"red\">$" + dnrmc + "</font>");
         } else {
@@ -141,6 +142,7 @@ if (what == kBaseUrl2) // Denarius Market Cap
     }
 
     dnrmcp = dnrmc;
+	dnrmarket = dnrmc;
 }
 
 if (what == kBaseUrl3) // Denarius BTC Price
@@ -153,11 +155,11 @@ if (what == kBaseUrl3) // Denarius BTC Price
 	
     if(dnrbtc > dnrbtcp)
     {
-        ui->dnrbtc->setText("<font color=\"green\">$" + dnrbtc + "</font>");
+        ui->dnrbtc->setText("<font color=\"yellow\">" + dnrbtc + " BTC</font>");
     } else if (dnrbtc < dnrbtcp) {
-        ui->dnrbtc->setText("<font color=\"red\">$" + dnrbtc + "</font>");
+        ui->dnrbtc->setText("<font color=\"red\">" + dnrbtc + " BTC</font>");
         } else {
-    ui->dnrbtc->setText("$"+dnrbtc+" USD");
+    ui->dnrbtc->setText(dnrbtc+" BTC");
     }
 
     dnrbtcp = dnrbtc;
