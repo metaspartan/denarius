@@ -115,7 +115,7 @@ private:
     QAction *overviewAction;
 	QAction *statisticsAction;
 	QAction *blockAction;
-	QAction *poolAction;
+	QAction *marketAction;
     QAction *chatAction;
     QAction *historyAction;
     QAction *quitAction;

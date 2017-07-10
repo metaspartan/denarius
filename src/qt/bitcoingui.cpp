@@ -304,11 +304,11 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 	
-	poolAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
-    poolAction->setToolTip(tr("Market Data"));
-    poolAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
-    poolAction->setCheckable(true);
-    tabGroup->addAction(poolAction);
+	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
+    marketAction->setToolTip(tr("Market Data"));
+    marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+    marketAction->setCheckable(true);
+    tabGroup->addAction(marketAction);
 	
 	chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
     chatAction->setToolTip(tr("View chat"));
@@ -349,7 +349,7 @@ void BitcoinGUI::createActions()
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
-	connect(poolAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
+	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
 	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
@@ -460,8 +460,8 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
-    mainToolbar->addAction(poolAction);
-    mainToolbar->addAction(chatAction);
+    mainToolbar->addAction(marketAction);
+    //mainToolbar->addAction(chatAction); Next release
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -882,7 +882,7 @@ void BitcoinGUI::gotoOverviewPage()
 
 void BitcoinGUI::gotoMarketBrowser()
 {
-    poolAction->setChecked(true);
+    marketAction->setChecked(true);
     centralWidget->setCurrentWidget(marketBrowser);
 	
     exportAction->setEnabled(false);
