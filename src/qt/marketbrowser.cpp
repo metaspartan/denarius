@@ -1,5 +1,5 @@
-#include "poolbrowser.h"
-#include "ui_poolbrowser.h"
+#include "marketbrowser.h"
+#include "ui_marketbrowser.h"
 #include "main.h"
 #include "wallet.h"
 #include "base58.h"
@@ -31,9 +31,9 @@ int mode=1;
 int o = 0;
 
 
-PoolBrowser::PoolBrowser(QWidget *parent) :
+MarketBrowser::MarketBrowser(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::PoolBrowser)
+    ui(new Ui::MarketBrowser)
 {
     ui->setupUi(this);
     setFixedSize(400, 420);
@@ -46,7 +46,7 @@ connect(ui->egal, SIGNAL(pressed()), this, SLOT( update()));
 
 }
 
-void PoolBrowser::update()
+void MarketBrowser::update()
 {
     QString temps = ui->egals->text();
     double totald = dollarg.toDouble() * temps.toDouble();
@@ -55,7 +55,7 @@ void PoolBrowser::update()
 
 }
 
-void PoolBrowser::requests()
+void MarketBrowser::requests()
 {
 	getRequest(kBaseUrl);
     getRequest(kBaseUrl1);
@@ -63,7 +63,7 @@ void PoolBrowser::requests()
 	getRequest(kBaseUrl3);
 }
 
-void PoolBrowser::getRequest( const QString &urlString )
+void MarketBrowser::getRequest( const QString &urlString )
 {
     QUrl url ( urlString );
     QNetworkRequest req ( url );
@@ -71,7 +71,7 @@ void PoolBrowser::getRequest( const QString &urlString )
     m_nam.get(req);
 }
 
-void PoolBrowser::parseNetworkResponse(QNetworkReply *finished )
+void MarketBrowser::parseNetworkResponse(QNetworkReply *finished )
 {
 
     QUrl what = finished->url();
@@ -168,12 +168,12 @@ finished->deleteLater();
 }
 
 
-void PoolBrowser::setModel(ClientModel *model)
+void MarketBrowser::setModel(ClientModel *model)
 {
     this->model = model;
 }
 
-PoolBrowser::~PoolBrowser()
+MarketBrowser::~MarketBrowser()
 {
     delete ui;
 }

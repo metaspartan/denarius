@@ -16,7 +16,7 @@ class OverviewPage;
 class AddressBookPage;
 class MessagePage;
 class StatisticsPage;
-class PoolBrowser;
+class MarketBrowser;
 class BlockBrowser;
 class ChatWindow;
 class SendCoinsDialog;
@@ -92,7 +92,7 @@ private:
     OverviewPage *overviewPage;
 	StatisticsPage *statisticsPage;
 	BlockBrowser *blockBrowser;
-	PoolBrowser *poolBrowser;
+	MarketBrowser *poolBrowser;
     ChatWindow *chatWindow;
     QWidget *transactionsPage;
     AddressBookPage *addressBookPage;
@@ -190,7 +190,7 @@ private slots:
 	/** Switch to block explorer*/
     void gotoBlockBrowser();
 	/** Switch to market*/
-    void gotoPoolBrowser();
+    void gotoMarketBrowser();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to address book page */

@@ -1,5 +1,5 @@
-#ifndef POOLBROWSER_H
-#define POOLBROWSER_H
+#ifndef MARKETBROWSER_H
+#define MARKETBROWSER_H
 
 #include "clientmodel.h"
 #include "main.h"
@@ -15,18 +15,18 @@ extern QString bitcoing;
 extern QString dollarg;
 
 namespace Ui {
-class PoolBrowser;
+class MarketBrowser;
 }
 class ClientModel;
 
 
-class PoolBrowser : public QWidget
+class MarketBrowser : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit PoolBrowser(QWidget *parent = 0);
-    ~PoolBrowser();
+    explicit MarketBrowser(QWidget *parent = 0);
+    ~MarketBrowser();
     
     void setModel(ClientModel *model);
 
@@ -43,9 +43,9 @@ public slots:
 
 private:
     QNetworkAccessManager m_nam;
-    Ui::PoolBrowser *ui;
+    Ui::MarketBrowser *ui;
     ClientModel *model;
 
 };
 
-#endif // POOLBROWSER_H
+#endif // MARKETBROWSER_H

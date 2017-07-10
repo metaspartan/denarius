@@ -23,7 +23,7 @@
 #include "overviewpage.h"
 #include "statisticspage.h"
 #include "blockbrowser.h"
-#include "poolbrowser.h"
+#include "marketbrowser.h"
 #include "chatwindow.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
@@ -168,7 +168,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     overviewPage = new OverviewPage();
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
-	poolBrowser = new PoolBrowser(this);
+	poolBrowser = new MarketBrowser(this);
 	chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -349,7 +349,7 @@ void BitcoinGUI::createActions()
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
-	connect(poolAction, SIGNAL(triggered()), this, SLOT(gotoPoolBrowser()));
+	connect(poolAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
 	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
@@ -880,7 +880,7 @@ void BitcoinGUI::gotoOverviewPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
-void BitcoinGUI::gotoPoolBrowser()
+void BitcoinGUI::gotoMarketBrowser()
 {
     poolAction->setChecked(true);
     centralWidget->setCurrentWidget(poolBrowser);

@@ -6,7 +6,7 @@
 #include "base58.h"
 #include "clientmodel.h"
 #include "bitcoinrpc.h"
-#include "poolbrowser.h"
+#include "marketbrowser.h"
 #include <sstream>
 #include <string>
 

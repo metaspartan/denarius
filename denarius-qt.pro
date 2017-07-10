@@ -277,7 +277,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/trafficgraphwidget.h \
 	src/qt/blockbrowser.h \
 	src/qt/statisticspage.h \
-	src/qt/poolbrowser.h \
+	src/qt/marketbrowser.h \
 	src/qt/chatwindow.h \
 	src/qt/serveur.h \
 	src/qt/qcustomplot.h \
@@ -313,7 +313,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
 	src/qt/statisticspage.cpp \
 	src/qt/blockbrowser.cpp \
-	src/qt/poolbrowser.cpp \
+	src/qt/marketbrowser.cpp \
 	src/qt/chatwindow.cpp \
 	src/qt/serveur.cpp \
 	src/qt/qcustomplot.cpp \
@@ -486,7 +486,7 @@ FORMS += \
     src/qt/forms/messagepage.ui \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
-	src/qt/forms/poolbrowser.ui \
+	src/qt/forms/marketbrowser.ui \
 	src/qt/forms/chatwindow.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
