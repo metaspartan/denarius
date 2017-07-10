@@ -7,7 +7,6 @@
 #include "bitcoingui.h"
 #include "transactiontablemodel.h"
 #include "addressbookpage.h"
-
 #include "messagepage.h"
 #include "sendcoinsdialog.h"
 #include "signverifymessagedialog.h"
@@ -24,6 +23,8 @@
 #include "overviewpage.h"
 #include "statisticspage.h"
 #include "blockbrowser.h"
+#include "marketbrowser.h"
+#include "chatwindow.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -127,7 +128,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     rpcConsole(0),
     nWeight(0)
 {
-    resize(1100, 600);
+    resize(1200, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/denarius"));
@@ -167,6 +168,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     overviewPage = new OverviewPage();
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
+	marketBrowser = new MarketBrowser(this);
+	chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
@@ -192,6 +195,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
+	centralWidget->addWidget(marketBrowser);
+	centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -298,6 +303,17 @@ void BitcoinGUI::createActions()
     blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
+	
+	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
+    marketAction->setToolTip(tr("Market Data"));
+    marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+    marketAction->setCheckable(true);
+    tabGroup->addAction(marketAction);
+	
+	chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
+    chatAction->setToolTip(tr("View chat"));
+    chatAction->setCheckable(true);
+    tabGroup->addAction(chatAction);
 
     sendCoinsAction = new QAction(QIcon(":/icons/send"), tr("&Send coins"), this);
     sendCoinsAction->setToolTip(tr("Send coins to a Denarius address"));
@@ -333,6 +349,8 @@ void BitcoinGUI::createActions()
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
+	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
+	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -440,8 +458,10 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(historyAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
-	mainToolbar->addAction(statisticsAction);
-	mainToolbar->addAction(blockAction);
+    mainToolbar->addAction(statisticsAction);
+    mainToolbar->addAction(blockAction);
+    mainToolbar->addAction(marketAction);
+    //mainToolbar->addAction(chatAction); Next release
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -510,8 +530,10 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         receiveCoinsPage->setModel(walletModel->getAddressTableModel());
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
-		statisticsPage->setModel(clientModel);
-		blockBrowser->setModel(clientModel);
+	statisticsPage->setModel(clientModel);
+	blockBrowser->setModel(clientModel);
+	marketBrowser->setModel(clientModel);
+	chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
@@ -858,6 +880,16 @@ void BitcoinGUI::gotoOverviewPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
+void BitcoinGUI::gotoMarketBrowser()
+{
+    marketAction->setChecked(true);
+    centralWidget->setCurrentWidget(marketBrowser);
+	
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+	
+}
+
 void BitcoinGUI::gotoBlockBrowser()
 {
     blockAction->setChecked(true);
@@ -923,6 +955,16 @@ void BitcoinGUI::gotoMessagePage()
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), messagePage, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoChatPage()
+{
+    chatAction->setChecked(true);
+    centralWidget->setCurrentWidget(chatWindow);
+	
+	exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+	
 }
 
 void BitcoinGUI::gotoSignMessageTab(QString addr)
