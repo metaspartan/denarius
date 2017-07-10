@@ -92,7 +92,7 @@ private:
     OverviewPage *overviewPage;
 	StatisticsPage *statisticsPage;
 	BlockBrowser *blockBrowser;
-	MarketBrowser *poolBrowser;
+	MarketBrowser *marketBrowser;
     ChatWindow *chatWindow;
     QWidget *transactionsPage;
     AddressBookPage *addressBookPage;

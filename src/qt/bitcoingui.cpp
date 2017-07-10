@@ -168,7 +168,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     overviewPage = new OverviewPage();
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
-	poolBrowser = new MarketBrowser(this);
+	marketBrowser = new MarketBrowser(this);
 	chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -195,7 +195,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
-	centralWidget->addWidget(poolBrowser);
+	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -532,7 +532,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         signVerifyMessageDialog->setModel(walletModel);
 	statisticsPage->setModel(clientModel);
 	blockBrowser->setModel(clientModel);
-	poolBrowser->setModel(clientModel);
+	marketBrowser->setModel(clientModel);
 	chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -883,7 +883,7 @@ void BitcoinGUI::gotoOverviewPage()
 void BitcoinGUI::gotoMarketBrowser()
 {
     poolAction->setChecked(true);
-    centralWidget->setCurrentWidget(poolBrowser);
+    centralWidget->setCurrentWidget(marketBrowser);
 	
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
