@@ -12,42 +12,24 @@
 
 using namespace json_spirit;
 
-const QString kBaseUrl = "https://api.coinmarketcap.com/v1/ticker/denarius-dnr/";
+const QString kBaseUrl = "http://denarius.io/dnrusd.php";
 const QString kBaseUrl1 = "http://blockchain.info/tobtc?currency=USD&value=1";
+const QString kBaseUrl2 = "http://denarius.io/dnrmc.php";
+const QString kBaseUrl3 = "http://denarius.io/dnrbtc.php";
 
 QString bitcoinp = "";
+QString denariusp = "";
+QString dnrmcp = "";
+QString dnrbtcp = "";
 double bitcoin2;
-double lastuG;
+double denarius2;
+double dnrmc2;
+double dnrbtc2;
 QString bitcoing;
 QString dollarg;
 int mode=1;
 int o = 0;
-QString lastp = "";
-QString lastpp = "";
-QString lastpp2 = "";
-QString lastpp3 = "";
-QString askp = "";
-QString bidp = "";
-QString highp = "";
-QString lowp = "";
-QString volumebp = "";
-QString volumesp = "";
-QString bop = "";
-QString sop = "";
-QString lastp2 = "";
-QString askp2 = "";
-QString bidp2 = "";
-QString highp2 = "";
-QString lowp2 = "";
-QString yestp = "";
-QString yestp2 = "";
-QString volumebp2 = "";
-QString volumesp2 = "";
-QStringList marketdbmint;
 
-QString lastp3 = "";
-QString volumebp3 = "";
-double volumesp3;
 
 PoolBrowser::PoolBrowser(QWidget *parent) :
     QWidget(parent),
@@ -57,37 +39,28 @@ PoolBrowser::PoolBrowser(QWidget *parent) :
     setFixedSize(400, 420);
 
 
-randomChuckNorrisJoke();
+requests();
 QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
-connect(ui->startButton, SIGNAL(pressed()), this, SLOT( randomChuckNorrisJoke()));
-connect(ui->egal, SIGNAL(pressed()), this, SLOT( egaldo()));
+connect(ui->startButton, SIGNAL(pressed()), this, SLOT( requests()));
+connect(ui->egal, SIGNAL(pressed()), this, SLOT( update()));
 
 }
 
-void PoolBrowser::egaldo()
+void PoolBrowser::update()
 {
     QString temps = ui->egals->text();
-    double totald = lastuG * temps.toDouble();
+    double totald = dollarg.toDouble() * temps.toDouble();
     double totaldq = bitcoing.toDouble() * temps.toDouble();
     ui->egald->setText("$ "+QString::number(totald)+" / "+QString::number(totaldq)+" BTC");
 
 }
 
-
-void PoolBrowser::coinex()
-{
-    QDesktopServices::openUrl(QUrl("https://www.coinexchange.io/market/DNR/BTC"));
-}
-
-void PoolBrowser::poloniex()
-{
-    QDesktopServices::openUrl(QUrl("https://poloniex.com/exchange/btc_dnr"));
-}
-
-void PoolBrowser::randomChuckNorrisJoke()
+void PoolBrowser::requests()
 {
 	getRequest(kBaseUrl);
     getRequest(kBaseUrl1);
+	getRequest(kBaseUrl2);
+	getRequest(kBaseUrl3);
 }
 
 void PoolBrowser::getRequest( const QString &urlString )
@@ -101,7 +74,7 @@ void PoolBrowser::getRequest( const QString &urlString )
 void PoolBrowser::parseNetworkResponse(QNetworkReply *finished )
 {
 
-        QUrl what = finished->url();
+    QUrl what = finished->url();
 
     if ( finished->error() != QNetworkReply::NoError )
     {
@@ -109,8 +82,29 @@ void PoolBrowser::parseNetworkResponse(QNetworkReply *finished )
         emit networkError( finished->error() );
         return;
     }
+	
+if (what == kBaseUrl) // Denarius Price
+{
 
-if (what == kBaseUrl1) //bitcoinprice
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString denarius = finished->readAll();
+    denarius2 = (denarius.toDouble());
+    denarius = QString::number(denarius2);
+	
+    if(denarius > denariusp)
+    {
+        ui->denarius->setText("<font color=\"green\">$" + denarius + "</font>");
+    } else if (denarius < denariusp) {
+        ui->denarius->setText("<font color=\"red\">$" + denarius + "</font>");
+        } else {
+    ui->denarius->setText("$"+denarius+" USD");
+    }
+
+    denariusp = denarius;
+	dollarg = denarius;
+}
+
+if (what == kBaseUrl1) // Bitcoin Price
 {
 
     // QNetworkReply is a QIODevice. So we read from it just like it was a file
@@ -119,14 +113,55 @@ if (what == kBaseUrl1) //bitcoinprice
     bitcoin = QString::number(bitcoin2);
     if(bitcoin > bitcoinp)
     {
-        ui->bitcoin->setText("<font color=\"green\">" + bitcoin + " $</font>");
+        ui->bitcoin->setText("<font color=\"green\">$" + bitcoin + " USD</font>");
     } else if (bitcoin < bitcoinp) {
-        ui->bitcoin->setText("<font color=\"red\">" + bitcoin + " $</font>");
+        ui->bitcoin->setText("<font color=\"red\">$" + bitcoin + " USD</font>");
         } else {
-    ui->bitcoin->setText("$ "+bitcoin);
+    ui->bitcoin->setText("$"+bitcoin+" USD");
     }
 
     bitcoinp = bitcoin;
+}
+
+if (what == kBaseUrl2) // Denarius Market Cap
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString dnrmc = finished->readAll();
+    dnrmc2 = (dnrmc.toDouble());
+    dnrmc = QString::number(dnrmc2);
+	
+    if(dnrmc > dnrmcp)
+    {
+        ui->dnrmc->setText("<font color=\"green\">$" + dnrmc + "</font>");
+    } else if (dnrmc < dnrmcp) {
+        ui->dnrmc->setText("<font color=\"red\">$" + dnrmc + "</font>");
+        } else {
+    ui->dnrmc->setText("$"+dnrmc+" USD");
+    }
+
+    dnrmcp = dnrmc;
+}
+
+if (what == kBaseUrl3) // Denarius BTC Price
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString dnrbtc = finished->readAll();
+    dnrbtc2 = (dnrbtc.toDouble());
+    dnrbtc = QString::number(dnrbtc2);
+	
+    if(dnrbtc > dnrbtcp)
+    {
+        ui->dnrbtc->setText("<font color=\"green\">$" + dnrbtc + "</font>");
+    } else if (dnrbtc < dnrbtcp) {
+        ui->dnrbtc->setText("<font color=\"red\">$" + dnrbtc + "</font>");
+        } else {
+    ui->dnrbtc->setText("$"+dnrbtc+" USD");
+    }
+
+    dnrbtcp = dnrbtc;
+	bitcoing = dnrbtc;
 }
 
 finished->deleteLater();
