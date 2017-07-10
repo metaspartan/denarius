@@ -280,7 +280,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/marketbrowser.h \
 	src/qt/chatwindow.h \
 	src/qt/serveur.h \
-	src/qt/qcustomplot.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -316,7 +315,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/marketbrowser.cpp \
 	src/qt/chatwindow.cpp \
 	src/qt/serveur.cpp \
-	src/qt/qcustomplot.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
