@@ -27,6 +27,7 @@ Dependencies
  libssl      SSL Support       Secure communications
  libdb       Berkeley DB       Blockchain & wallet storage
  libboost    Boost             C++ Library
+ libevent    Libevent          Event notification library
  miniupnpc   UPnP Support      Optional firewall-jumping support
  libqrencode QRCode generation Optional QRCode generation
 
@@ -65,6 +66,7 @@ sudo apt-get install build-essential
 sudo apt-get install libssl-dev
 sudo apt-get install libdb++-dev
 sudo apt-get install libboost-all-dev
+sudo apt-get install libevent-dev
 sudo apt-get install libqrencode-dev
 
 If using Boost 1.37, append -mt to the boost libraries in the makefile.
