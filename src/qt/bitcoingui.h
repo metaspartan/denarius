@@ -18,7 +18,6 @@ class MessagePage;
 class StatisticsPage;
 class MarketBrowser;
 class BlockBrowser;
-class ChatWindow;
 class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
@@ -93,7 +92,6 @@ private:
 	StatisticsPage *statisticsPage;
 	BlockBrowser *blockBrowser;
 	MarketBrowser *marketBrowser;
-    ChatWindow *chatWindow;
     QWidget *transactionsPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
@@ -116,7 +114,6 @@ private:
 	QAction *statisticsAction;
 	QAction *blockAction;
 	QAction *marketAction;
-    QAction *chatAction;
     QAction *historyAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
@@ -202,7 +199,7 @@ private slots:
     /** Switch to message page */
     void gotoMessagePage();
 	
-    void gotoChatPage();
+    //void gotoChatPage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
