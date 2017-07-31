@@ -38,7 +38,7 @@ LINKS
 ==========================
 * Official Website(https://denarius.io/)
 * Official Forums(https://denariustalk.org/)
-* My Twitter(https://twitter.com/carsenjk)
+* Denarius Twitter(https://twitter.com/denariuscoin)
 
 
 Development process
