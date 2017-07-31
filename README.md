@@ -37,6 +37,7 @@ Technology
 LINKS
 ==========================
 * Official Website(https://denarius.io/)
+* Official Forums(https://denariustalk.org/)
 * My Twitter(https://twitter.com/carsenjk)
 
 
