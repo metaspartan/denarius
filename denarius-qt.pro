@@ -1,7 +1,7 @@
 TEMPLATE = app
 TARGET = Denarius
 VERSION = 1.0.3
-INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
+INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
@@ -30,17 +30,12 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 #LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
 #QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 #QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-#LIBEVENT_INCLUDE_PATH=C:/MinGW/include
-#LIBEVENT_LIB_PATH=C:/MinGW/lib
-#LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 
 # OSX Dep Libraries, uncomment line 38 through 53 to compile OSX
 #MINIUPNPC_LIB_PATH=/usr/local/opt/miniupnpc/lib
 #MINIUPNPC_INCLUDE_PATH=/usr/local/opt/miniupnpc/include
 #OPENSSL_LIB_PATH=/usr/local/opt/openssl/lib
 #OPENSSL_INCLUDE_PATH=/usr/local/opt/openssl/include
-#LIBEVENT_LIB_PATH=/usr/local/opt/libevent/lib
-#LIBEVENT_INCLUDE_PATH=/usr/local/opt/libevent/include
 #BDB_LIB_PATH=/usr/local/opt/berkeley-db@4/lib
 #BDB_INCLUDE_PATH=/usr/local/opt/berkeley-db@4/include
 #BOOST_LIB_PATH=/usr/local/opt/boost/lib/
@@ -376,87 +371,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
-    src/stealth.cpp 
-	
-### DNR sources
-SOURCES += src/tor/anonymize.cpp \
-    src/tor/address.c \
-    src/tor/addressmap.c \
-    src/tor/aes.c \
-    src/tor/backtrace.c \
-    src/tor/buffers.c \
-    src/tor/channel.c \
-    src/tor/channeltls.c \
-    src/tor/circpathbias.c \
-    src/tor/circuitbuild.c \
-    src/tor/circuitlist.c \
-    src/tor/circuitmux.c \
-    src/tor/circuitmux_ewma.c \
-    src/tor/circuitstats.c \
-    src/tor/circuituse.c \
-    src/tor/command.c \
-    src/tor/compat.c \
-    src/tor/compat_libevent.c \
-    src/tor/config.c \
-    src/tor/config_codedigest.c \
-    src/tor/confparse.c \
-    src/tor/connection.c \
-    src/tor/connection_edge.c \
-    src/tor/connection_or.c \
-    src/tor/container.c \
-    src/tor/control.c \
-    src/tor/cpuworker.c \
-    src/tor/crypto.c \
-    src/tor/crypto_curve25519.c \
-    src/tor/crypto_format.c \
-    src/tor/curve25519-donna.c \
-    src/tor/di_ops.c \
-    src/tor/directory.c \
-    src/tor/dirserv.c \
-    src/tor/dirvote.c \
-    src/tor/dns.c \
-    src/tor/dnsserv.c \
-    src/tor/entrynodes.c \
-    src/tor/ext_orport.c \
-    src/tor/fp_pair.c \
-    src/tor/geoip.c \
-    src/tor/hibernate.c \
-    src/tor/log.c \
-    src/tor/memarea.c \
-    src/tor/mempool.c \
-    src/tor/microdesc.c \
-    src/tor/networkstatus.c \
-    src/tor/nodelist.c \
-    src/tor/onion.c \
-    src/tor/onion_fast.c \
-    src/tor/onion_main.c \
-    src/tor/onion_ntor.c \
-    src/tor/onion_tap.c \
-    src/tor/policies.c \
-    src/tor/procmon.c \
-    src/tor/reasons.c \
-    src/tor/relay.c \
-    src/tor/rendclient.c \
-    src/tor/rendcommon.c \
-    src/tor/rendmid.c \
-    src/tor/rendservice.c \
-    src/tor/rephist.c \
-    src/tor/replaycache.c \
-    src/tor/router.c \
-    src/tor/routerlist.c \
-    src/tor/routerparse.c \
-    src/tor/routerset.c \
-    src/tor/sandbox.c \
-    src/tor/statefile.c \
-    src/tor/status.c \
-    src/tor/strlcat.c \
-    src/tor/strlcpy.c \
-    src/tor/tor_util.c \
-    src/tor/torgzip.c \
-    src/tor/tortls.c \
-    src/tor/transports.c \
-    src/tor/util_codedigest.c \
-
+    src/stealth.cpp
 
 #### DNR sources
 
@@ -578,10 +493,9 @@ macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
-LIBS += -levent -lz
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
