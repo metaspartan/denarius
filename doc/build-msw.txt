@@ -7,7 +7,7 @@ cryptographic software written by Eric Young (eay@cryptsoft.com) and UPnP
 software written by Thomas Bernard.
 
 
-See readme-qt.rst for instructions on building ShadowCoin QT, the
+See readme-qt.rst for instructions on building Denarius QT, the
 graphical user interface.
 
 WINDOWS BUILD NOTES
@@ -76,9 +76,9 @@ make -f Makefile.mingw
 mkdir miniupnpc
 cp *.h miniupnpc/
 
-ShadowCoin
+Denarius
 -------
 DOS prompt:
-cd \shadowcoin\src
+cd \denarius\src
 mingw32-make -f makefile.mingw
-strip shadowcoind.exe
+strip denariusd.exe
