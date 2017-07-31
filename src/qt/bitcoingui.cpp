@@ -24,7 +24,6 @@
 #include "statisticspage.h"
 #include "blockbrowser.h"
 #include "marketbrowser.h"
-#include "chatwindow.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -169,7 +168,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
 	marketBrowser = new MarketBrowser(this);
-	chatWindow = new ChatWindow(this);
+	//chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
@@ -196,7 +195,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
 	centralWidget->addWidget(marketBrowser);
-	centralWidget->addWidget(chatWindow);
+	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -310,10 +309,10 @@ void BitcoinGUI::createActions()
     marketAction->setCheckable(true);
     tabGroup->addAction(marketAction);
 	
-	chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
-    chatAction->setToolTip(tr("View chat"));
-    chatAction->setCheckable(true);
-    tabGroup->addAction(chatAction);
+	//chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
+    //chatAction->setToolTip(tr("View chat"));
+    //chatAction->setCheckable(true);
+    //tabGroup->addAction(chatAction);
 
     sendCoinsAction = new QAction(QIcon(":/icons/send"), tr("&Send coins"), this);
     sendCoinsAction->setToolTip(tr("Send coins to a Denarius address"));
@@ -350,7 +349,7 @@ void BitcoinGUI::createActions()
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
 	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
-	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
+	//connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -533,7 +532,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 	statisticsPage->setModel(clientModel);
 	blockBrowser->setModel(clientModel);
 	marketBrowser->setModel(clientModel);
-	chatWindow->setModel(clientModel);
+	//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
@@ -956,7 +955,7 @@ void BitcoinGUI::gotoMessagePage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), messagePage, SLOT(exportClicked()));
 }
-
+/*
 void BitcoinGUI::gotoChatPage()
 {
     chatAction->setChecked(true);
@@ -966,7 +965,7 @@ void BitcoinGUI::gotoChatPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 	
 }
-
+*/
 void BitcoinGUI::gotoSignMessageTab(QString addr)
 {
     // call show() in showTab_SM()
