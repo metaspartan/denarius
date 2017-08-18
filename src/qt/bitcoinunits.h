@@ -18,7 +18,8 @@ public:
     enum Unit
     {
         BTC,
-		USD,
+        dBTC,
+	USD,
         mBTC,
         uBTC
     };

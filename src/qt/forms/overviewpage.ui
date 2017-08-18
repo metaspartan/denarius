@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>917</width>
-    <height>491</height>
+    <height>587</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -254,8 +254,40 @@
               <bold>true</bold>
              </font>
             </property>
+            <property name="cursor">
+             <cursorShape>IBeamCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Your current total balance in USD, Rate is not updated often</string>
+            </property>
             <property name="text">
              <string>0 USD</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>BTC Total:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLabel" name="labelBTCTotal">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="cursor">
+             <cursorShape>IBeamCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Your current total balance in BTC, Rate is not updated often</string>
+            </property>
+            <property name="text">
+             <string>0 BTC</string>
             </property>
            </widget>
           </item>
