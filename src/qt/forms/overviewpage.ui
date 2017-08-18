@@ -58,6 +58,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>&lt;div style=&quot;color: #fff;&quot;&gt;(&lt;a href=&quot;https://www.cryptopia.co.nz/Exchange/?market=DNR_BTC&quot; style=&quot;color: #fff;&quot;&gt;Trade DNR&lt;/a&gt;)&lt;/div&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer_2">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
