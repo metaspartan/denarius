@@ -1089,8 +1089,8 @@ QTableView, QHeaderView
     border-radius: 0px;
 }
 
-QTableView::item:pressed, QListView::item:pressed, QTreeView::item:pressed  {
-    background: #959595;
+QTableView::item:pressed, QListView::item:pressed, QTreeView::item, QTreeView::item:pressed  {
+    background: #000;
     color: #eff0f1;
 }
 
