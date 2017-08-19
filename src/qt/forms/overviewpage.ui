@@ -58,9 +58,15 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="labelTradeLink">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
             <property name="text">
              <string>&lt;div style=&quot;color: #fff;&quot;&gt;(&lt;a href=&quot;https://www.cryptopia.co.nz/Exchange/?market=DNR_BTC&quot; style=&quot;color: #fff;&quot;&gt;Trade DNR&lt;/a&gt;)&lt;/div&gt;</string>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
