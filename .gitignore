@@ -1,8 +1,14 @@
+Denarius
 src/*.exe
 src/denarius
 src/denariusd
 src/test_denarius
 src/build.h
+object_script.Denarius.Release
+object_script.Denarius.Debug
+release
+debug
+src/qt/locale/*.qm
 .*.swp
 *.*~*
 *.bak
