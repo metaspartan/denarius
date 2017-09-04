@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
     // ... then bitcoin.conf:
     if (!boost::filesystem::is_directory(GetDataDir(false)))
     {
-        QMessageBox::critical(0, "NovaCoin",
+        QMessageBox::critical(0, "Denarius",
                               QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(mapArgs["-datadir"])));
         return 1;
     }
