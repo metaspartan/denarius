@@ -12,6 +12,7 @@ class ClientModel;
 class WalletModel;
 class MessageModel;
 class TransactionView;
+class MintingView;
 class OverviewPage;
 class AddressBookPage;
 class MessagePage;
@@ -93,6 +94,7 @@ private:
 	BlockBrowser *blockBrowser;
 	MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
+	QWidget *mintingPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -115,6 +117,7 @@ private:
 	QAction *blockAction;
 	QAction *marketAction;
     QAction *historyAction;
+	QAction *mintingAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -137,6 +140,7 @@ private:
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
+	MintingView *mintingView;
     RPCConsole *rpcConsole;
 
     QMovie *syncIconMovie;
@@ -188,6 +192,8 @@ private slots:
     void gotoBlockBrowser();
 	/** Switch to market*/
     void gotoMarketBrowser();
+	/** Switch to minting page */
+    void gotoMintingPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to address book page */

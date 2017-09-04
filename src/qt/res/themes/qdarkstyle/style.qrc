@@ -31,6 +31,7 @@
     <file>rc/Vsepartoolbar.png</file>
     <file>rc/down_arrow_disabled.png</file>
     <file>rc/undock.png</file>
+	<file>rc/arrows.png</file>
   </qresource>
   <qresource prefix="qdarkstyle">
       <file>style.qss</file>
