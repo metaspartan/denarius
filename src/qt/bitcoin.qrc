@@ -2,6 +2,7 @@
     <qresource prefix="/icons">
         <file alias="bitcoin">res/icons/denarius-80.png</file>
 		<file alias="denarius">res/icons/denarius-256.png</file>
+		<file alias="denarius128">res/icons/denarius-128.png</file>
         <file alias="bitcoin_testnet">res/icons/denarius_testnet.png</file>
         <file alias="toolbar">res/icons/denarius-16.png</file>
         <file alias="toolbar_testnet">res/icons/denarius-16.png</file>
