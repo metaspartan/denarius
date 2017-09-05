@@ -58,9 +58,16 @@ MintingView::MintingView(QWidget *parent) :
     legendLayout->addWidget(oldLegend);
     legendLayout->insertStretch(-1);
 	
+	QLabel *label1 = new QLabel(this);
+	label1->setText("Staking Estimations");
+	label1->setAlignment(Qt::AlignLeft);
+	QFont font( "Arial", 16, QFont::Bold);
+	label1->setFont(font);
+	label1->setFixedWidth(250);
+	
 	QLabel *mintingLabel = new QLabel(tr("Check the arrow icon at the very bottom of the wallet for more staking information."));
 
-    QLabel *mintingLabel2 = new QLabel(tr(" Display staking probability within : "));
+    QLabel *mintingLabel2 = new QLabel(tr(" [Display staking probability within]: "));
     mintingCombo = new QComboBox();
     mintingCombo->addItem(tr("10 min"), Minting10min);
     mintingCombo->addItem(tr("24 hours"), Minting1day);
