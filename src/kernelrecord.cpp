@@ -15,11 +15,6 @@ bool KernelRecord::showTransaction(const CWalletTx &wtx)
         }
     }
 
-    if(!wtx.IsTrusted())
-    {
-        return false;
-    }
-
     return true;
 }
 
@@ -56,7 +51,7 @@ vector<KernelRecord> KernelRecord::decomposeOutput(const CWallet *wallet, const 
                     addrStr = mapValue["to"];
                 }
 
-                parts.push_back(KernelRecord(hash, nTime, addrStr, txOut.nValue, wtx.IsSpent(nOut), coinAge));
+                parts.push_back(KernelRecord(hash, nTime, addrStr, txOut.nValue, nOut, wtx.IsSpent(nOut), coinAge));
             }
         }
     }
@@ -91,10 +86,52 @@ int64_t KernelRecord::getPoSReward(int nBits, int minutes)
     if( nWeight <  nStakeMinAge)
         return 0;
     uint64_t coinAge = (nValue * nWeight ) / (COIN * nOneDay);
-    PoSReward = GetProofOfStakeReward(coinAge, nBits); //Needs Fixing
+    PoSReward = GetProofOfStakeReward(coinAge, nWeight); //Needs Fixing
+	//PoSReward = GetProofOfStakeReward(coinAge, nBits, GetAdjustedTime() + minutes * 60);
     return PoSReward;
 }
 
+double KernelRecord::getProbToMintStake(double difficulty, int timeOffset) const
+{
+    double maxTarget = pow(static_cast<double>(2), 224);
+    double target = maxTarget / difficulty;
+    int dayWeight = (min((GetAdjustedTime() - nTime) + timeOffset, (int64_t)nStakeMaxAge) - nStakeMinAge) / 86400;
+    uint64_t coinAge = max(nValue * dayWeight / COIN, (int64_t)0);
+    return target * coinAge / pow(static_cast<double>(2), 256);
+}
+
+double KernelRecord::getProbToMintWithinNMinutes(double difficulty, int minutes)
+{
+    if(difficulty != prevDifficulty || minutes != prevMinutes)
+    {
+        double prob = 1;
+        double p;
+        int d = minutes / (60 * 24); // Number of full days
+        int m = minutes % (60 * 24); // Number of minutes in the last day
+        int i, timeOffset;
+
+        // Probabilities for the first d days
+        for(i = 0; i < d; i++)
+        {
+            timeOffset = i * 86400;
+            p = pow(1 - getProbToMintStake(difficulty, timeOffset), 86400);
+            prob *= p;
+        }
+
+        // Probability for the m minutes of the last day
+        timeOffset = d * 86400;
+        p = pow(1 - getProbToMintStake(difficulty, timeOffset), 60 * m);
+        prob *= p;
+
+        prob = 1 - prob;
+        prevProbability = prob;
+        prevDifficulty = difficulty;
+        prevMinutes = minutes;
+    }
+    return prevProbability;
+}
+
+/*
 double KernelRecord::getProbToMintStake(double difficulty, int timeOffset) const
 {
     //double maxTarget = pow(static_cast<double>(2), 224);
@@ -136,4 +173,4 @@ double KernelRecord::getProbToMintWithinNMinutes(double difficulty, int minutes)
         prevMinutes = minutes;
     }
     return prevProbability;
-}
+}*/

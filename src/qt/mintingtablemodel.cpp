@@ -84,9 +84,8 @@ public:
         }
     }
 
-    /* Update our model of the wallet incrementally, to synchronize our model of the wallet
+     /* Update our model of the wallet incrementally, to synchronize our model of the wallet
        with that of the core.
-
        Call with list of hashes of transactions that were added, removed or changed.
      */
     void updateWallet(const QList<uint256> &updated)
@@ -139,12 +138,11 @@ public:
                         int insert_idx = lowerIndex;
                         BOOST_FOREACH(const KernelRecord &rec, toInsert)
                         {
-                            if(!rec.spent) 
-                            {
+                            if(!rec.spent) {
                                 parent->beginInsertRows(QModelIndex(), insert_idx, insert_idx);
                                 cachedWallet.insert(insert_idx, rec);
-                                parent->endInsertRows();
                                 insert_idx += 1;
+                                parent->endInsertRows();
                             }
                         }
                     }
@@ -157,24 +155,27 @@ public:
                     parent->endRemoveRows();
                 }
                 else if(inWallet && inModel)
-                {               
+                {
                     // Updated -- remove spent coins from table
                     std::vector<KernelRecord> toCheck = KernelRecord::decomposeOutput(wallet, mi->second);
-                    BOOST_FOREACH(const KernelRecord &rec, toCheck)
+                    if(!toCheck.empty())
                     {
-                        if(rec.spent)
+                        BOOST_FOREACH(const KernelRecord &rec, toCheck)
                         {
-                            for(int i = 0; i < cachedWallet.size(); i++)
+                            if(rec.spent)
                             {
-                                KernelRecord cachedRec = cachedWallet.at(i);
-                                if((rec.hash == cachedRec.hash)
-                                    && (rec.nTime == cachedRec.nTime)
-                                    && (rec.nValue == cachedRec.nValue))
+                                for(int i = lowerIndex; i < upperIndex; i++)
                                 {
-                                    parent->beginRemoveRows(QModelIndex(), i, i);
-                                    cachedWallet.removeAt(i);
-                                    parent->endRemoveRows();
-                                    break;
+                                    KernelRecord cachedRec = cachedWallet.at(i);
+                                    if((rec.address == cachedRec.address)
+                                       && (rec.nValue == cachedRec.nValue)
+                                       && (rec.idx == cachedRec.idx))
+                                    {
+                                        parent->beginRemoveRows(QModelIndex(), i, i);
+                                        cachedWallet.removeAt(i);
+                                        parent->endRemoveRows();
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -225,7 +226,7 @@ MintingTableModel::MintingTableModel(CWallet *wallet, WalletModel *parent):
         mintingInterval(10),
         priv(new MintingTablePriv(wallet, this))
 {
-    columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("CoinDay") << tr("MintProbability") << tr("MintReward");
+    columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("Coin Days") << tr("Stake Probability") << tr("Stake Reward");
     priv->refreshWallet();
 
     QTimer *timer = new QTimer(this);
@@ -250,16 +251,6 @@ void MintingTableModel::update()
             BOOST_FOREACH(uint256 hash, wallet->vMintingWalletUpdated)
             {
                 updated.append(hash);
-
-                // Also check the inputs to remove spent outputs from the table if necessary
-                CWalletTx wtx;
-                if(wallet->GetTransaction(hash, wtx))
-                {
-                    BOOST_FOREACH(const CTxIn& txin, wtx.vin)
-                    {
-                        updated.append(txin.prevout.hash);
-                    }
-                }
             }
             wallet->vMintingWalletUpdated.clear();
         }
@@ -362,7 +353,7 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
         }
         break;
       case Qt::BackgroundColorRole:
-        int minAge = nStakeMinAge / 60 / 60 / 24;
+        int minAge = nStakeMinAge / 60 / 60 / 8;
         int maxAge = nStakeMaxAge / 60 / 60 / 24;
         if(rec->getAge() < minAge)
         {

@@ -21,9 +21,9 @@ public:
 
     KernelRecord(uint256 hash, int64_t nTime,
                  const std::string &address,
-                 int64_t nValue, bool spent, int64_t coinAge):
+                 int64_t nValue, int idx, bool spent, int64_t coinAge):
         hash(hash), nTime(nTime), address(address), nValue(nValue),
-        idx(0), spent(spent), coinAge(coinAge), prevMinutes(0), prevDifficulty(0), prevProbability(0)
+        idx(idx), spent(spent), coinAge(coinAge), prevMinutes(0), prevDifficulty(0), prevProbability(0)
     {
     }
 
