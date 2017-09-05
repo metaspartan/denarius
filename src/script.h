@@ -551,6 +551,7 @@ public:
 
     void SetDestination(const CTxDestination& address);
     void SetMultisig(int nRequired, const std::vector<CKey>& keys);
+	void SetMultisigpub(int nRequired, const std::vector<CPubKey>& keys);
 
     std::string ToString(bool fShort=false) const
     {

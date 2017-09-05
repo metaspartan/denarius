@@ -9,6 +9,7 @@
         <file alias="address-book">res/icons/address-book.png</file>
         <file alias="quit">res/icons/quit.png</file>
         <file alias="send">res/icons/send.png</file>
+		<file alias="multi">res/icons/multi.png</file>
 		<file alias="reddit">res/icons/reddit.png</file>
         <file alias="twitter">res/icons/TW.png</file>
         <file alias="face">res/icons/face.png</file>

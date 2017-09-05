@@ -136,32 +136,46 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
-SOURCES += src/txdb-leveldb.cpp \
-	src/bloom.cpp \
-    src/hash.cpp \
-    src/aes_helper.c \
-    src/echo.c \
-	src/jh.c \
-	src/keccak.c
-!win32 {
-    # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
+contains(USE_LEVELDB, 1) {
+    message(Building with LevelDB transaction index)
+    DEFINES += USE_LEVELDB
+
+    INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
+	SOURCES += src/txdb-leveldb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
+	!win32 {
+		# we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
+		genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
+	} else {
+		# make an educated guess about what the ranlib command is called
+		isEmpty(QMAKE_RANLIB) {
+			QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
+		}
+		LIBS += -lshlwapi
+		#genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
+	}
+	genleveldb.target = $$PWD/src/leveldb/libleveldb.a
+	genleveldb.depends = FORCE
+	PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
+	QMAKE_EXTRA_TARGETS += genleveldb
+	# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
+	QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 } else {
-    # make an educated guess about what the ranlib command is called
-    isEmpty(QMAKE_RANLIB) {
-        QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
-    }
-    LIBS += -lshlwapi
-    #genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
+    message(Building with Berkeley DB transaction index)
+    SOURCES += src/txdb-bdb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
 }
-genleveldb.target = $$PWD/src/leveldb/libleveldb.a
-genleveldb.depends = FORCE
-PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
-QMAKE_EXTRA_TARGETS += genleveldb
-# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 
 # regenerate src/build.h
 !windows|contains(USE_BUILD_INFO, 1) {
@@ -210,6 +224,9 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/mintingfilterproxy.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
+	src/qt/multisigaddressentry.h \
+    src/qt/multisiginputentry.h \
+    src/qt/multisigdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -318,6 +335,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
+	src/qt/multisigaddressentry.cpp \
+    src/qt/multisiginputentry.cpp \
+    src/qt/multisigdialog.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -409,6 +429,9 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
+	src/qt/forms/multisigaddressentry.ui \
+    src/qt/forms/multisiginputentry.ui \
+    src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui

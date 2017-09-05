@@ -13,6 +13,7 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
+class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
 class MessagePage;
@@ -95,6 +96,7 @@ private:
 	MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
 	QWidget *mintingPage;
+	MultisigDialog *multisigPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -118,6 +120,7 @@ private:
 	QAction *marketAction;
     QAction *historyAction;
 	QAction *mintingAction;
+	QAction *multisigAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -182,6 +185,8 @@ public slots:
 
     void mainToolbarOrientation(Qt::Orientation orientation);
     void secondaryToolbarOrientation(Qt::Orientation orientation);
+	
+	void gotoMultisigPage();
 
 private slots:
     /** Switch to overview (home) page */

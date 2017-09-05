@@ -1702,6 +1702,7 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
     return true;
 }
 
+
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,
                   int nHashType)
 {
@@ -2052,4 +2053,14 @@ void CScript::SetMultisig(int nRequired, const std::vector<CKey>& keys)
     BOOST_FOREACH(const CKey& key, keys)
         *this << key.GetPubKey();
     *this << EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
+}
+
+void CScript::SetMultisigpub(int nRequired, const std::vector<CPubKey>& keys)
+{
+    this->clear();
+
+    *this << EncodeOP_N(nRequired);
+    BOOST_FOREACH(const CPubKey& key, keys)
+        *this << key;
+    *this << EncodeOP_N((int)(keys.size())) << OP_CHECKMULTISIG;
 }
