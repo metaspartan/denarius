@@ -133,6 +133,7 @@ public:
     }
 
     std::map<uint256, CWalletTx> mapWallet;
+	std::vector<uint256> vMintingWalletUpdated;
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;
 

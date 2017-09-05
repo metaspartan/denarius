@@ -6,6 +6,11 @@
 #ifndef BITCOIN_TXDB_H
 #define BITCOIN_TXDB_H
 
+#ifdef USE_LEVELDB
 #include "txdb-leveldb.h"
+#else
+#include "db.h"
+#include "txdb-bdb.h"
+#endif
 
 #endif  // BITCOIN_TXDB_H

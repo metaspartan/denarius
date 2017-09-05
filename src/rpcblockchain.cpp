@@ -147,6 +147,45 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     return result;
 }
 
+Value dumpbootstrap(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "dumpbootstrap \"destination\" \"blocks\"\n"
+            "\nCreates a bootstrap format block dump of the blockchain in destination, which can be a directory or a path with filename, up to the given block number.");
+
+    string strDest = params[0].get_str();
+    int nBlocks = params[1].get_int();
+    if (nBlocks < 0 || nBlocks > nBestHeight)
+        throw runtime_error("Block number out of range.");
+
+    boost::filesystem::path pathDest(strDest);
+    if (boost::filesystem::is_directory(pathDest))
+        pathDest /= "bootstrap.dat";
+
+    try {
+        FILE* file = fopen(pathDest.string().c_str(), "wb");
+        if (!file)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);
+        if (!fileout)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        for (int nHeight = 0; nHeight <= nBlocks; nHeight++)
+        {
+            CBlock block;
+            CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
+            block.ReadFromDisk(pblockindex, true);
+            fileout << FLATDATA(pchMessageStart) << fileout.GetSerializeSize(block) << block;
+        }
+    } catch(const boost::filesystem::filesystem_error &e) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Error: Bootstrap dump failed!");
+    }
+
+    return Value::null;
+}
+
 Value getbestblockhash(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)

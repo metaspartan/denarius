@@ -35,6 +35,10 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+static const int32_t nOneHour = 60 * 60;
+static const int32_t nOneDay = 24 * 60 * 60;
+static const int64_t nOneWeek = 7 * 24 * 60 * 60;
+
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 

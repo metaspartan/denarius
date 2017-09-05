@@ -4,6 +4,8 @@ src/denarius
 src/denariusd
 src/test_denarius
 src/build.h
+src/leveldb/*.a
+src/leveldb/build_config.mk
 object_script.Denarius.Release
 object_script.Denarius.Debug
 release
