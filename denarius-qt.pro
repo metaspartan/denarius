@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 1.0.6
+VERSION = 1.0.7
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -30,21 +30,6 @@ LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
 LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
 QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-}
-
-macx {
-MINIUPNPC_LIB_PATH=/usr/local/opt/miniupnpc/lib
-MINIUPNPC_INCLUDE_PATH=/usr/local/opt/miniupnpc/include
-OPENSSL_LIB_PATH=/usr/local/opt/openssl/lib
-OPENSSL_INCLUDE_PATH=/usr/local/opt/openssl/include
-BDB_LIB_PATH=/usr/local/opt/berkeley-db@4/lib
-BDB_INCLUDE_PATH=/usr/local/opt/berkeley-db@4/include
-BOOST_LIB_PATH=/usr/local/opt/boost/lib/
-BOOST_INCLUDE_PATH=/usr/local/opt/boost/include
-LIBPNG_LIB_PATH=/usr/local/opt/libpng/lib
-LIBPNG_INCLUDE_PATH=/usr/local/opt/libpng/include
-QRENCODE_LIB_PATH=/usr/local/opt/qrencode/lib
-QRENCODE_INCLUDE_PATH=/usr/local/opt/qrencode/include
 }
 
 # for boost 1.37, add -mt to the boost libraries
