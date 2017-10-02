@@ -90,7 +90,7 @@ if (what == kBaseUrl) // Denarius Price
     // QNetworkReply is a QIODevice. So we read from it just like it was a file
     QString denarius = finished->readAll();
     denarius2 = (denarius.toDouble());
-    denarius = QString::number(denarius2);
+    denarius = QString::number(denarius2, 'f', 2);
 	
     if(denarius > denariusp)
     {
@@ -151,7 +151,7 @@ if (what == kBaseUrl3) // Denarius BTC Price
     // QNetworkReply is a QIODevice. So we read from it just like it was a file
     QString dnrbtc = finished->readAll();
     dnrbtc2 = (dnrbtc.toDouble());
-    dnrbtc = QString::number(dnrbtc2);
+    dnrbtc = QString::number(dnrbtc2, 'f', 8);
 	
     if(dnrbtc > dnrbtcp)
     {
