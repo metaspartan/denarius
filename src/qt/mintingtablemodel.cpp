@@ -226,7 +226,7 @@ MintingTableModel::MintingTableModel(CWallet *wallet, WalletModel *parent):
         mintingInterval(10),
         priv(new MintingTablePriv(wallet, this))
 {
-    columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("Coin Days") << tr("Stake Probability") << tr("Stake Reward");
+    columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("Coin Days") << tr("Stake Probability"); //Removed Stake Reward temporarily
     priv->refreshWallet();
 
     QTimer *timer = new QTimer(this);
@@ -303,8 +303,8 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
             return formatTxCoinDay(rec);
         case MintProbability:
             return formatDayToMint(rec);
-        case MintReward:
-            return formatTxPoSReward(rec);
+        //case MintReward:
+            //return formatTxPoSReward(rec);
         }
         break;
       case Qt::TextAlignmentRole:
@@ -348,8 +348,8 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
             return static_cast<qlonglong>(rec->nValue);
         case MintProbability:
             return getDayToMint(rec);
-        case MintReward:
-            return formatTxPoSReward(rec);
+        //case MintReward:
+            //return formatTxPoSReward(rec);
         }
         break;
       case Qt::BackgroundColorRole:
@@ -471,8 +471,8 @@ QVariant MintingTableModel::headerData(int section, Qt::Orientation orientation,
                 return tr("Coin age in the output.");
             case MintProbability:
                 return tr("Chance to stake a block within given time interval.");
-            case MintReward:
-                return tr("The size of the potential rewards if the block is found at the beginning and the end given time interval.");
+            //case MintReward:
+                //return tr("The size of the potential rewards if the block is found at the beginning and the end given time interval.");
             }
         }
     }
