@@ -1,6 +1,4 @@
-novacoin (0.4.0~dfsg-1) unstable; urgency=low
+Denarius (1.0.7.0) stable; urgency=low
 
-  [ Balthazar ]
+  [ carsenk ]
   * Initial release.
-
- -- Balthazar <balthazar@yandex.ru>  Mon, 15 Apr 2013 22:15:22 +0100
