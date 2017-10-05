@@ -231,8 +231,8 @@ TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *paren
     columns << QString() << tr("Date") << tr("Type") << tr("Address") << tr("Narration") << tr("Amount");
 
     priv->refreshWallet();
-
-    connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
+	
+	connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 }
 
 TransactionTableModel::~TransactionTableModel()
@@ -242,11 +242,40 @@ TransactionTableModel::~TransactionTableModel()
 
 #include "nametablemodel.h"
 
-
 void TransactionTableModel::updateTransaction(const QString &hash, int status)
 {
-    uint256 updated;
+    //QList<uint256> updated;
+	uint256 updated;
     updated.SetHex(hash.toStdString());
+	
+	/*
+	// This needs optimization still
+	// Check if there are changes to wallet map
+    {
+        TRY_LOCK(wallet->cs_wallet, lockWallet);
+        if (lockWallet && !wallet->vMintingWalletUpdated.empty())
+        {
+            BOOST_FOREACH(uint256 hash, wallet->vMintingWalletUpdated)
+            {
+                updated.append(hash);
+                wallet->vCheckNewNames.push_back(hash); // to check for name ops updates
+            }
+            wallet->vMintingWalletUpdated.clear();
+        }
+    }
+
+    if(!updated.empty())
+    {
+		//updated.SetHex(hash.toStdString());
+        priv->updateWallet(updated, status);
+
+        // Status (number of confirmations) and (possibly) description
+        //  columns changed for all rows.
+        emit dataChanged(index(0, Status), index(priv->size()-1, Status));
+        emit dataChanged(index(0, ToAddress), index(priv->size()-1, ToAddress));
+    }
+	
+	*/
 
     priv->updateWallet(updated, status);
 }

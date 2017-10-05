@@ -6,6 +6,7 @@
 #include <map>
 
 #include "allocators.h" /* for SecureString */
+#include "namecoin.h"
 
 class OptionsModel;
 class AddressTableModel;
@@ -94,6 +95,12 @@ public:
 
     // Send coins to a list of recipients
     SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL);
+	
+	// Register new name or update it
+    // Requires unlocked wallet; can throw exception instead of returning error
+    NameTxReturn nameNew(const QString &name, const std::vector<unsigned char> &vchValue, int days);
+    NameTxReturn nameUpdate(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress = "");
+    NameTxReturn nameDelete(const QString &name);
 	
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);

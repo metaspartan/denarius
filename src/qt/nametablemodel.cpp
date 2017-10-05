@@ -7,7 +7,6 @@
 #include <QTimer>
 
 #include "../wallet.h"
-#include "../namecoin.h"
 
 #include <vector>
 

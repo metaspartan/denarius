@@ -30,6 +30,7 @@ public:
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const;
+    bool lessThan(const QModelIndex &left, const QModelIndex &right) const;
 
 private:
     QString nameSearch, valueSearch, addressSearch;
@@ -45,6 +46,8 @@ public:
     ~ManageNamesPage();
 
     void setModel(WalletModel *walletModel);
+    std::vector<unsigned char> importedAsBinaryFile;
+    QString               importedAsTextFile;
 
 private:
     Ui::ManageNamesPage *ui;
@@ -72,7 +75,15 @@ private slots:
     void onCopyNameAction();
     void onCopyValueAction();
     void onCopyAddressAction();
-    void on_configureNameButton_clicked();
+    void onCopyAllAction();
+    void onSaveValueAsBinaryAction();
+
+    void on_txTypeSelector_currentIndexChanged(const QString &txType);
+    void on_cbMyNames_stateChanged(int arg1);
+    void on_cbOtherNames_stateChanged(int arg1);
+    void on_cbExpired_stateChanged(int arg1);
+    void on_importValueButton_clicked();
+    void on_registerValue_textChanged();
 };
 
 #endif // MANAGENAMESPAGE_H

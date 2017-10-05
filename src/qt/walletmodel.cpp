@@ -417,6 +417,27 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     return SendCoinsReturn(OK, 0, hex);
 }
 
+NameTxReturn WalletModel::nameNew(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_new(vchName, vchValue, nRentalDays);
+}
+
+NameTxReturn WalletModel::nameUpdate(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays, QString newAddress)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_update(vchName, vchValue, nRentalDays, newAddress.toStdString());
+}
+
+NameTxReturn WalletModel::nameDelete(const QString &name)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_delete(vchName);
+}
+
 OptionsModel *WalletModel::getOptionsModel()
 {
     return optionsModel;
