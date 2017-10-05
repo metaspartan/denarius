@@ -78,6 +78,8 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
+CHooks* hooks; // This adds Namecoin hooks which allow splicing of code inside standard Denarius functions.
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -521,6 +523,7 @@ bool CTransaction::CheckTransaction() const
     }
 
     return true;
+	//return hooks->CheckTransaction(*this);
 }
 
 int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
@@ -570,10 +573,14 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
     // ppcoin: coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
-
+	
+#define STANDARD_TX_ONLY
+#ifdef STANDARD_TX_ONLY
+    bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
     // Rather not work on nonstandard transactions (unless -testnet)
-    if (!fTestNet && !tx.IsStandard())
+    if (!fTestNet && !tx.IsStandard() && !isNameTx)
         return error("CTxMemPool::accept() : nonstandard transaction type");
+#endif
 
     // Do we already have it?
     uint256 hash = tx.GetHash();
@@ -626,10 +633,12 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
                 *pfMissingInputs = true;
             return false;
         }
-
-        // Check for non-standard pay-to-script-hash in inputs
-        if (!tx.AreInputsStandard(mapInputs) && !fTestNet)
+	
+		// Check for non-standard pay-to-script-hash in inputs
+#ifdef STANDARD_TX_ONLY
+        if (!tx.AreInputsStandard(mapInputs) && !fTestNet && !isNameTx) //TODO: maybe add check for standardtness of name tx inputs here?
             return error("CTxMemPool::accept() : nonstandard transaction input");
+#endif
 
         // Note: if you modify this code to accept non-standard transactions, then
         // you should add code here to check that the transaction does a
@@ -689,6 +698,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         addUnchecked(hash, tx);
     }
 
+	hooks->AddToPendingNames(tx);
     ///// are we sure this is ok when loading transactions or restoring block txes
     // If updated, erase old tx from wallet
     if (ptxOld)
@@ -1107,6 +1117,12 @@ int GetNumBlocksOfPeers()
     return std::max(cPeerBlockCounts.median(), Checkpoints::GetTotalBlocksEstimate());
 }
 
+bool IsSynchronized() {
+  static bool rc = false;
+  if(rc == false) rc = !IsInitialBlockDownload();
+  return rc;
+}
+
 bool IsInitialBlockDownload()
 {
     LOCK(cs_main);
@@ -1164,6 +1180,8 @@ void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
 
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
+	hooks->DisconnectInputs(*this);
+	
     // Relinquish previous transactions' spent pointers
     if (!IsCoinBase())
     {
@@ -1320,6 +1338,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     // ... both are false when called from CTransaction::AcceptToMemoryPool
     if (!IsCoinBase())
     {
+		vector<CTransaction> vTxPrev;
+        vector<CTxIndex> vTxindex;
         int64_t nValueIn = 0;
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
@@ -1370,7 +1390,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             if (!(fBlock && (nBestHeight < Checkpoints::GetTotalBlocksEstimate())))
             {
                 // Verify signature
-                if (!VerifySignature(txPrev, *this, i, 0))
+                if (!VerifySignature(txPrev, *this, i, true, 0))
                 {
                     return DoS(100,error("ConnectInputs() : %s VerifySignature failed", GetHash().ToString().substr(0,10).c_str()));
                 }
@@ -1384,8 +1404,15 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             {
                 mapTestPool[prevout.hash] = txindex;
             }
+			vTxPrev.push_back(txPrev);
+            vTxindex.push_back(txindex);
         }
-
+		
+		/*
+		if (!hooks->ConnectInputs(txdb, mapTestPool, *this, vTxPrev, vTxindex, pindexBlock, posThisTx, fBlock, fMiner))
+            return false;
+		*/
+	
         if (!IsCoinStake())
         {
             if (nValueIn < GetValueOut())
@@ -1568,6 +1595,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)
         SyncWithWallets(tx, this, true);
+		
+	// add names to nameindex.dat
+    hooks->ConnectBlock(txdb, pindex);
 
     return true;
 }

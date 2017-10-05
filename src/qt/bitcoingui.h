@@ -13,6 +13,7 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
+class ManageNamesPage;
 class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
@@ -97,6 +98,7 @@ private:
     QWidget *transactionsPage;
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
+	ManageNamesPage *manageNamesPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -121,6 +123,7 @@ private:
     QAction *historyAction;
 	QAction *mintingAction;
 	QAction *multisigAction;
+	QAction *manageNamesAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -199,6 +202,8 @@ private slots:
     void gotoMarketBrowser();
 	/** Switch to minting page */
     void gotoMintingPage();
+	/** Switch to manage names page */
+    void gotoManageNamesPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to address book page */

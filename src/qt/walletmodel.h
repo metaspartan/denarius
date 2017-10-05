@@ -11,6 +11,7 @@ class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
 class MintingTableModel;
+class NameTableModel;
 class CWallet;
 class CKeyID;
 class CPubKey;
@@ -67,6 +68,7 @@ public:
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
 	MintingTableModel *getMintingTableModel();
+	NameTableModel *getNameTableModel();
 
     qint64 getBalance() const;
     qint64 getStake() const;
@@ -92,7 +94,7 @@ public:
 
     // Send coins to a list of recipients
     SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL);
-
+	
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
     // Passphrase only needed when unlocking
@@ -142,6 +144,7 @@ private:
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
 	MintingTableModel *mintingTableModel;
+	NameTableModel *nameTableModel;
 
     // Cache some values to be able to detect changes
     qint64 cachedBalance;

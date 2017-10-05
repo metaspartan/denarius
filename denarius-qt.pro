@@ -293,6 +293,10 @@ HEADERS += src/qt/bitcoingui.h \
 	src/sph_jh.h \
     src/sph_types.h \
     src/threadsafety.h \
+	src/hooks.h \
+	src/namecoin.h \
+	src/qt/nametablemodel.h \
+    src/qt/managenamespage.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/qt/sendmessagesdialog.h \
@@ -362,6 +366,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
+	src/namecoin.cpp \
+	src/qt/nametablemodel.cpp \
+    src/qt/managenamespage.cpp \
     src/qt/overviewpage.cpp \
     src/qt/csvmodelwriter.cpp \
     src/crypter.cpp \
@@ -417,6 +424,7 @@ FORMS += \
 	src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
+	src/qt/forms/managenamespage.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
