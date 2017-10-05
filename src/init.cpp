@@ -18,6 +18,7 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include "dnrdns.h"
 
 
 
@@ -30,6 +31,7 @@ using namespace std;
 using namespace boost;
 
 CWallet* pwalletMain;
+DnrDns* dnrdns = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
 bool fEnforceCanonical;
@@ -89,6 +91,8 @@ void Shutdown(void* parg)
         
         nTransactionsUpdated++;
 //        CTxDB().Close();
+	if(dnrdns)
+          delete dnrdns;
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);
@@ -929,6 +933,23 @@ bool AppInit2()
 
     if (fServer)
         NewThread(ThreadRPCServer, NULL);
+	
+    // init dnrdns. WARNING: this should be done after hooks initialization
+    if (GetBoolArg("-dnrdns", false))
+    {
+        #define DNRDNS_PORT 5333
+        int port = GetArg("-dnrdnsport", DNRDNS_PORT);
+        int verbose = GetArg("-dnrdnsverbose", 1);
+        if (port <= 0)
+            port = DNRDNS_PORT;
+        string suffix  = GetArg("-dnrdnssuffix", "");
+        string bind_ip = GetArg("-dnrdnsbindip", "");
+        string allowed = GetArg("-dnrdnsallowed", "");
+        string localcf = GetArg("-dnrdnslocalcf", "");
+        dnrdns = new DnrDns(bind_ip.c_str(), port,
+        suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius DNS server started...\n");
+    }
 
     // ********************************************************* Step 12: finished
 
@@ -951,6 +972,8 @@ bool AppInit2()
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
+	if(dnrdns)
+	dnrdns->Run();
 	while (1)
         MilliSleep(5000);
 #endif

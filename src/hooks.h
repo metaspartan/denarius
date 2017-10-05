@@ -39,5 +39,6 @@ public:
 
 extern CHooks* InitHook();
 extern std::string GetDefaultDataDirSuffix();
+extern CHooks* hooks;
 
 #endif

@@ -295,6 +295,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/threadsafety.h \
 	src/hooks.h \
 	src/namecoin.h \
+	src/dnrdns.h \
 	src/qt/nametablemodel.h \
     src/qt/managenamespage.h \
     src/qt/messagepage.h \
@@ -395,7 +396,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
-    src/stealth.cpp
+    src/stealth.cpp \
+	src/dnrdns.cpp
 
 #### DNR sources
 

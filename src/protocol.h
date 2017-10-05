@@ -15,8 +15,6 @@
 #include <string>
 #include "uint256.h"
 
-#define DNRDNS_PORT  5333
-
 extern bool fTestNet;
 static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
 {
