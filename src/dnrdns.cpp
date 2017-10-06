@@ -39,6 +39,7 @@
 #include "util.h"
 #include "dnrdns.h"
 #include "hooks.h"
+extern CHooks* hooks;
 
 /*---------------------------------------------------*/
 

@@ -461,8 +461,11 @@ bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti,
     int64_t txFee;
     MapPrevTx mapInputs;
     bool fInvalid = false;
-    if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
-        return false;
+	//Super Hacky Temp "Fix" to compile for Linux
+	#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
+		return false;
+	#endif
     txFee = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
 

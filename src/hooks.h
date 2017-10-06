@@ -25,7 +25,7 @@ class CHooks
 {
 public:
     virtual bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx) = 0;
-    virtual bool DisconnectInputs(const CTransaction& tx);
+    virtual bool DisconnectInputs(const CTransaction& tx) = 0;
     virtual bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex) = 0;
     virtual bool ExtractAddress(const CScript& script, std::string& address) = 0;
     virtual void AddToPendingNames(const CTransaction& tx) = 0;
@@ -39,6 +39,6 @@ public:
 
 extern CHooks* InitHook();
 extern std::string GetDefaultDataDirSuffix();
-extern CHooks* hooks;
+//extern CHooks* hooks;
 
 #endif
