@@ -99,7 +99,7 @@ bool CalculateExpiresAt(CNameRecord& nameRec)
         if (!DecodeNameTx(tx, nti, false))
             return error("CalculateExpiresAt() : %s is not namecoin tx, this should never happen", tx.GetHash().GetHex().c_str());
 
-        sum += nti.nRentalDays * 175; //days to blocks. 175 is average number of blocks per day
+        sum += nti.nRentalDays * 3000; //days to blocks. 3000 is the average number of blocks per day
     }
 
     //limit to INT_MAX value
@@ -335,7 +335,8 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
 
                 // Check that enough fee is included (at least MIN_TX_FEE per 1000 bytes)
                 int64_t nPayFee = max(nTransactionFee, MIN_TX_FEE * (1 + (int64_t)nBytes / 1000));
-                int64_t nMinFee = wtxNew.GetMinFee(1, nBytes);
+                //int64_t nMinFee = wtxNew.GetMinFee(1, nBytes);
+				int64_t nMinFee = wtxNew.GetMinFee(1, GMF_SEND, nBytes);
                 if (nFeeRet < max(nPayFee, nMinFee))
                 {
                     nFeeRet = max(nPayFee, nMinFee);
