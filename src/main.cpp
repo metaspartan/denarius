@@ -1338,8 +1338,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     // ... both are false when called from CTransaction::AcceptToMemoryPool
     if (!IsCoinBase())
     {
-		vector<CTransaction> vTxPrev;
-        vector<CTxIndex> vTxindex;
+		//vector<CTransaction> vTxPrev;
+        //vector<CTxIndex> vTxindex;
         int64_t nValueIn = 0;
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
@@ -1404,8 +1404,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             {
                 mapTestPool[prevout.hash] = txindex;
             }
-			vTxPrev.push_back(txPrev);
-            vTxindex.push_back(txindex);
+			//vTxPrev.push_back(txPrev);
+            //vTxindex.push_back(txindex);
         }
 		
 		/*
