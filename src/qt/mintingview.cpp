@@ -151,7 +151,7 @@ void MintingView::setModel(WalletModel *model)
         mintingView->horizontalHeader()->resizeSection(
                 MintingTableModel::Age, 60);
         mintingView->horizontalHeader()->resizeSection(
-                MintingTableModel::Balance, 120);
+                MintingTableModel::Balance, 160);
         mintingView->horizontalHeader()->resizeSection(
                 MintingTableModel::CoinDay, 60);
         mintingView->horizontalHeader()->resizeSection(
@@ -164,7 +164,7 @@ void MintingView::setModel(WalletModel *model)
                 //MintingTableModel::MintReward, QHeaderView::Stretch);
 #endif
         mintingView->horizontalHeader()->resizeSection(
-            MintingTableModel::Address, 275);
+            MintingTableModel::Address, 335);
         mintingView->horizontalHeader()->resizeSection(
             MintingTableModel::TxHash, 545);
     }
