@@ -230,7 +230,15 @@ extern json_spirit::Value clearwallettransactions(const json_spirit::Array& para
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforstealthtxns(const json_spirit::Array& params, bool fHelp);
 
-
+extern json_spirit::Value name_new(const json_spirit::Array& params, bool fHelp); // in namecoin.cpp
+extern json_spirit::Value name_update(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_delete(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value sendtoname(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_list(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_scan(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_filter(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_show(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_debug(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value smsgenable(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgdisable(const json_spirit::Array& params, bool fHelp);

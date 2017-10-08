@@ -231,8 +231,8 @@ TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *paren
     columns << QString() << tr("Date") << tr("Type") << tr("Address") << tr("Narration") << tr("Amount");
 
     priv->refreshWallet();
-
-    connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
+	
+	connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 }
 
 TransactionTableModel::~TransactionTableModel()
@@ -240,10 +240,42 @@ TransactionTableModel::~TransactionTableModel()
     delete priv;
 }
 
+#include "nametablemodel.h"
+
 void TransactionTableModel::updateTransaction(const QString &hash, int status)
 {
-    uint256 updated;
+    //QList<uint256> updated;
+	uint256 updated;
     updated.SetHex(hash.toStdString());
+	
+	/*
+	// This needs optimization still
+	// Check if there are changes to wallet map
+    {
+        TRY_LOCK(wallet->cs_wallet, lockWallet);
+        if (lockWallet && !wallet->vMintingWalletUpdated.empty())
+        {
+            BOOST_FOREACH(uint256 hash, wallet->vMintingWalletUpdated)
+            {
+                updated.append(hash);
+                wallet->vCheckNewNames.push_back(hash); // to check for name ops updates
+            }
+            wallet->vMintingWalletUpdated.clear();
+        }
+    }
+
+    if(!updated.empty())
+    {
+		//updated.SetHex(hash.toStdString());
+        priv->updateWallet(updated, status);
+
+        // Status (number of confirmations) and (possibly) description
+        //  columns changed for all rows.
+        emit dataChanged(index(0, Status), index(priv->size()-1, Status));
+        emit dataChanged(index(0, ToAddress), index(priv->size()-1, ToAddress));
+    }
+	
+	*/
 
     priv->updateWallet(updated, status);
 }
@@ -356,6 +388,8 @@ QString TransactionTableModel::formatTxType(const TransactionRecord *wtx) const
         return tr("Payment to yourself");
     case TransactionRecord::Generated:
         return tr("Mined");
+	case TransactionRecord::NameOp:
+        return tr("Name operation");
     default:
         return QString();
     }
@@ -373,6 +407,8 @@ QVariant TransactionTableModel::txAddressDecoration(const TransactionRecord *wtx
     case TransactionRecord::SendToAddress:
     case TransactionRecord::SendToOther:
         return QIcon(":/icons/tx_output");
+	case TransactionRecord::NameOp:
+        return QIcon(":/icons/tx_nameop");
     default:
         return QIcon(":/icons/tx_inout");
     }
@@ -390,6 +426,7 @@ QString TransactionTableModel::formatTxToAddress(const TransactionRecord *wtx, b
     case TransactionRecord::Generated:
         return lookupAddress(wtx->address, tooltip);
     case TransactionRecord::SendToOther:
+    case TransactionRecord::NameOp:
         return QString::fromStdString(wtx->address);
     case TransactionRecord::SendToSelf:
     default:
@@ -477,7 +514,8 @@ QString TransactionTableModel::formatTooltip(const TransactionRecord *rec) const
 {
     QString tooltip = formatTxStatus(rec) + QString("\n") + formatTxType(rec);
     if(rec->type==TransactionRecord::RecvFromOther || rec->type==TransactionRecord::SendToOther ||
-       rec->type==TransactionRecord::SendToAddress || rec->type==TransactionRecord::RecvWithAddress)
+       rec->type==TransactionRecord::SendToAddress || rec->type==TransactionRecord::RecvWithAddress ||
+       rec->type==TransactionRecord::NameOp)
     {
         tooltip += QString(" ") + formatTxToAddress(rec, true);
     }

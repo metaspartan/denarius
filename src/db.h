@@ -96,6 +96,7 @@ extern CDBEnv bitdb;
 /** RAII class that provides access to a Berkeley database */
 class CDB
 {
+friend class CNameDB;
 protected:
     Db* pdb;
     std::string strFile;
@@ -310,7 +311,6 @@ public:
 
     bool static Rewrite(const std::string& strFile, const char* pszSkip = NULL);
 };
-
 
 /** Access to the (IP) address database (peers.dat) */
 class CAddrDB

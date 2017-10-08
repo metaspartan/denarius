@@ -91,13 +91,32 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
     else
     {
         bool fAllFromMe = true;
+		int64_t nCarriedOverCoin = 0;
         BOOST_FOREACH(const CTxIn& txin, wtx.vin)
-        {
-            if (wallet->IsMine(txin))
-                continue;
-            fAllFromMe = false;
-            break;
-        };
+			//fAllFromMe = fAllFromMe && wallet->IsMine(txin);
+		{
+			if (!wallet->IsMine(txin))
+			{
+				// Check whether transaction input is name_* operation - in this case consider it ours
+				CTransaction txPrev;
+				uint256 hashBlock = 0;
+				std::string address;
+				if (GetTransaction(txin.prevout.hash, txPrev, hashBlock) &&
+						txin.prevout.n < txPrev.vout.size() &&
+						hooks->ExtractAddress(txPrev.vout[txin.prevout.n].scriptPubKey, address)
+				   )
+				{
+					// This is our name transaction
+					// Accumulate the coin carried from name_new, because it is not actually spent
+					nCarriedOverCoin += txPrev.vout[txin.prevout.n].nValue;
+				}
+				else
+				{
+					fAllFromMe = false;
+					break;
+				}
+			}
+		}
 
         bool fAllToMe = true;
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
@@ -192,6 +211,17 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         }
         else
         {
+			//
+			// Check for name transferring operation
+			//
+			BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+			{
+				std::string address;
+				// We do not check, if coin address belongs to us, assuming that the wallet can only contain
+				// transactions involving us
+				if (hooks->ExtractAddress(txout.scriptPubKey, address))
+					parts.append(TransactionRecord(hash, nTime, TransactionRecord::NameOp, address, "", 0, 0));
+			}
             //
             // Mixed debit transaction, can't break down payees
             //

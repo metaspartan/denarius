@@ -6,11 +6,13 @@
 #include <map>
 
 #include "allocators.h" /* for SecureString */
+#include "namecoin.h"
 
 class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
 class MintingTableModel;
+class NameTableModel;
 class CWallet;
 class CKeyID;
 class CPubKey;
@@ -67,6 +69,7 @@ public:
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
 	MintingTableModel *getMintingTableModel();
+	NameTableModel *getNameTableModel();
 
     qint64 getBalance() const;
     qint64 getStake() const;
@@ -92,7 +95,13 @@ public:
 
     // Send coins to a list of recipients
     SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL);
-
+	
+	// Register new name or update it
+    // Requires unlocked wallet; can throw exception instead of returning error
+    NameTxReturn nameNew(const QString &name, const std::vector<unsigned char> &vchValue, int days);
+    NameTxReturn nameUpdate(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress = "");
+    NameTxReturn nameDelete(const QString &name);
+	
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
     // Passphrase only needed when unlocking
@@ -142,6 +151,7 @@ private:
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
 	MintingTableModel *mintingTableModel;
+	NameTableModel *nameTableModel;
 
     // Cache some values to be able to detect changes
     qint64 cachedBalance;

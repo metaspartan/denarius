@@ -133,7 +133,9 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
-    obj/stealth.o
+    obj/stealth.o \
+	obj/namecoin.o \
+	obj/dnrdns.o
 
 all: denariusd
 

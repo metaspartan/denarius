@@ -26,6 +26,7 @@
 #include "marketbrowser.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
+#include "managenamespage.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -171,6 +172,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	blockBrowser = new BlockBrowser(this);
 	marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
+	manageNamesPage = new ManageNamesPage(this);
 	//chatWindow = new ChatWindow(this);
 	
     transactionsPage = new QWidget(this);
@@ -198,6 +200,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
 	centralWidget->addWidget(mintingPage);
+	centralWidget->addWidget(manageNamesPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
@@ -360,6 +363,12 @@ void BitcoinGUI::createActions()
     mintingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(mintingAction);
 	
+	manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage Names"), this);
+    manageNamesAction->setToolTip(tr("Manage values registered via Denarius"));
+    manageNamesAction->setCheckable(true);
+    manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(manageNamesAction);
+	
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 
@@ -381,6 +390,8 @@ void BitcoinGUI::createActions()
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));
+	connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(gotoManageNamesPage()));
 	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
 
@@ -480,6 +491,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
 	mainToolbar->addAction(mintingAction);
+	mainToolbar->addAction(manageNamesAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
@@ -559,6 +571,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		statisticsPage->setModel(clientModel);
 		blockBrowser->setModel(clientModel);
 		marketBrowser->setModel(clientModel);
+		manageNamesPage->setModel(walletModel);
 		multisigPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
@@ -617,6 +630,7 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addAction(receiveCoinsAction);
 	trayIconMenu->addSeparator();
 	trayIconMenu->addAction(multisigAction);
+	trayIconMenu->addAction(manageNamesAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(signMessageAction);
     trayIconMenu->addAction(verifyMessageAction);
@@ -923,6 +937,16 @@ void BitcoinGUI::gotoMultisigPage()
 {
     multisigPage->show();
     multisigPage->setFocus();
+}
+
+void BitcoinGUI::gotoManageNamesPage()
+{
+    manageNamesAction->setChecked(true);
+    centralWidget->setCurrentWidget(manageNamesPage);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), manageNamesPage, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoMintingPage()

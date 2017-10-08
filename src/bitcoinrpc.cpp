@@ -319,8 +319,20 @@ static const CRPCCommand vRPCCommands[] =
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
+	
+	
+	// Namecoin Commands
+    { "name_new",               &name_new,               false },
+    { "name_update",            &name_update,            false },
+    { "name_delete",            &name_delete,            false },
+    { "sendtoname",             &sendtoname,             false },
+    { "name_list",              &name_list,              false },
+    { "name_scan",              &name_scan,              false },
+    { "name_filter",            &name_filter,            false },
+    { "name_show",              &name_show,              false },
+    { "name_debug",             &name_debug,             false },
     
-    
+    // Secure Messaging Commands
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
     { "smsglocalkeys",          &smsglocalkeys,          false,  false},
@@ -1269,6 +1281,16 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
+	
+	//Namecoin
+    if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_update"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_update"            && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_filter"            && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
+    if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
     
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
 

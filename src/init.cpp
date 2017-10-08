@@ -18,6 +18,7 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include "dnrdns.h"
 
 
 
@@ -30,6 +31,7 @@ using namespace std;
 using namespace boost;
 
 CWallet* pwalletMain;
+DnrDns* dnrdns = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
 bool fEnforceCanonical;
@@ -89,6 +91,8 @@ void Shutdown(void* parg)
         
         nTransactionsUpdated++;
 //        CTxDB().Close();
+	if(dnrdns)
+          delete dnrdns;
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);
@@ -554,6 +558,7 @@ bool AppInit2()
     }
 #endif
 
+    hooks = InitHook();
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
@@ -928,6 +933,23 @@ bool AppInit2()
 
     if (fServer)
         NewThread(ThreadRPCServer, NULL);
+	
+    // init dnrdns. WARNING: this should be done after hooks initialization
+    if (GetBoolArg("-dnrdns", false))
+    {
+        #define DNRDNS_PORT 5333
+        int port = GetArg("-dnrdnsport", DNRDNS_PORT);
+        int verbose = GetArg("-dnrdnsverbose", 1);
+        if (port <= 0)
+            port = DNRDNS_PORT;
+        string suffix  = GetArg("-dnrdnssuffix", "");
+        string bind_ip = GetArg("-dnrdnsbindip", "");
+        string allowed = GetArg("-dnrdnsallowed", "");
+        string localcf = GetArg("-dnrdnslocalcf", "");
+        dnrdns = new DnrDns(bind_ip.c_str(), port,
+        suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius DNS server started...\n");
+    }
 
     // ********************************************************* Step 12: finished
 
@@ -937,13 +959,22 @@ bool AppInit2()
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
 
+	//  recreate namecoin index - this must happen before ReacceptWalletTransactions())
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnrnameindex.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile))
+        createNameIndexFile();
+	//  recreate namecoin index end
+
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
-    while (1)
+	if(dnrdns)
+	dnrdns->Run();
+	while (1)
         MilliSleep(5000);
 #endif
 

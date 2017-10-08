@@ -36,4 +36,8 @@ static const int MAX_URI_LENGTH = 255;
 #define COLOR_MINT_MATURE QColor(29, 99, 0)
 #define COLOR_MINT_OLD QColor(99, 0, 23)
 
+// Should be set to MAX_VALUE_LENGTH (from namecoin.h) when it's supported by the network
+// (currently due to limitations of CScript the limit is 519 bytes)
+static const int GUI_MAX_VALUE_LENGTH = 519;
+
 #endif // GUICONSTANTS_H

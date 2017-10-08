@@ -20,7 +20,9 @@
 #include "walletdb.h"
 #include "stealth.h"
 #include "smessage.h"
+#include "hooks.h"
 
+extern CHooks* hooks;
 extern bool fWalletUnlockStakingOnly;
 extern bool fConfChange;
 class CAccountingEntry;
@@ -78,7 +80,8 @@ class CWallet : public CCryptoKeyStore
 private:
     bool SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
     bool SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=NULL) const;
-
+    bool SelectCoinsMinConf2(int64_t nTargetValue, unsigned int nSpendTime, int nConfMine, int nConfTheirs, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
+	
     CWalletDB *pwalletdbEncryption;
 
     // the current wallet version: clients below this version are not able to load the wallet
@@ -88,6 +91,8 @@ private:
     int nWalletMaxVersion;
 
 public:
+	// Visible for Namecoin
+	bool SelectCoins2(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
     /// Main wallet lock.
     /// This lock protects all the fields added by CWallet
     ///   except for:
@@ -136,6 +141,8 @@ public:
 	std::vector<uint256> vMintingWalletUpdated;
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;
+	std::vector<uint256> vWalletUpdated;
+    std::vector<uint256> vCheckNewNames; //for name ops. TODO: reimplement this to use vWalletUpdated instead.
 
     std::map<CTxDestination, std::string> mapAddressBook;
 
@@ -263,7 +270,7 @@ public:
     bool IsMine(const CTransaction& tx) const
     {
         BOOST_FOREACH(const CTxOut& txout, tx.vout)
-            if (IsMine(txout) && txout.nValue >= nMinimumInputValue)
+            if (IsMine(txout) && txout.nValue >= nMinimumInputValue || hooks->IsMine(txout))
                 return true;
         return false;
     }
@@ -643,6 +650,11 @@ public:
             if (!IsSpent(i))
             {
                 const CTxOut &txout = vout[i];
+				
+				// ignore namecoin TxOut
+                if (hooks->IsNameTx(nVersion) && hooks->IsNameScript(txout.scriptPubKey))
+                    continue;
+				
                 nCredit += pwallet->GetCredit(txout);
                 if (!MoneyRange(nCredit))
                     throw std::runtime_error("CWalletTx::GetAvailableCredit() : value out of range");
@@ -665,7 +677,7 @@ public:
     }
 
     void GetAmounts(std::list<std::pair<CTxDestination, int64_t> >& listReceived,
-                    std::list<std::pair<CTxDestination, int64_t> >& listSent, int64_t& nFee, std::string& strSentAccount) const;
+                    std::list<std::pair<CTxDestination, int64_t> >& listSent, int64_t& nFee, std::string& strSentAccount, bool ignoreNameTx = true) const;
 
     void GetAccountAmounts(const std::string& strAccount, int64_t& nReceived,
                            int64_t& nSent, int64_t& nFee) const;
