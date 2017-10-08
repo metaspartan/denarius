@@ -32,11 +32,6 @@ font-family:'Open Sans,sans-serif';</string>
        <height>0</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <family>Open Sans,sans-serif</family>
-      </font>
-     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -66,11 +61,12 @@ font-family:'Open Sans,sans-serif';</string>
       </property>
       <property name="font">
        <font>
-        <family>MS Shell Dlg 2</family>
-        <pointsize>13</pointsize>
-        <weight>50</weight>
-        <italic>false</italic>
-        <bold>false</bold>
+        <family>Open Sans,sans-serif</family>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+        <underline>false</underline>
+        <kerning>true</kerning>
        </font>
       </property>
       <property name="autoFillBackground">
@@ -80,7 +76,7 @@ font-family:'Open Sans,sans-serif';</string>
        <string notr="true"/>
       </property>
       <property name="text">
-       <string>Refresh</string>
+       <string>Update Statistics</string>
       </property>
      </widget>
      <widget class="QLabel" name="label">
@@ -232,7 +228,7 @@ font-family:'Open Sans,sans-serif';</string>
           </property>
          </widget>
         </item>
-        <item row="9" column="0">
+		<item row="9" column="0">
          <widget class="QLabel" name="label_17">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Market Cap&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

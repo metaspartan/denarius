@@ -304,7 +304,7 @@
       <string notr="true">margin-right: 15px;</string>
      </property>
      <property name="text">
-      <string>Refresh Prices</string>
+      <string>Update Prices</string>
      </property>
      <property name="iconSize">
       <size>

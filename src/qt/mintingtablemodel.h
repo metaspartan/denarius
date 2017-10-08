@@ -24,8 +24,8 @@ public:
         Balance = 2,
         Age = 3,
         CoinDay = 4,
-        MintProbability = 5
-        //MintReward = 6
+        MintProbability = 5,
+        MintReward = 6
     };
 
     void setMintingProxyModel(MintingFilterProxy *mintingProxy);

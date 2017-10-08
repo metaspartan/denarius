@@ -56,11 +56,11 @@ void StatisticsPage::updateStatistics()
     QString phase = "";
     if (pindexBest->nHeight < 3000000)
     {
-        phase = "Tribus Proof of Work with Proof of Stake";
+        phase = "Tribus Proof of Work (POS Fully Starts Block 3000000)";
     }
     else if (pindexBest->nHeight > 3000000)
     {
-        phase = "Proof of Stake";
+        phase = "PoS (6% per year variable)";
     }
 
     QString subsidy = "";
@@ -78,7 +78,7 @@ void StatisticsPage::updateStatistics()
     }
     else if (pindexBest->nHeight > 3000000)
     {
-        subsidy = "No PoW Reward";
+        subsidy = "Full PoS";
     }
     QString hardness = QString::number(pHardness, 'f', 6);
     QString hardness2 = QString::number(pHardness2, 'f', 6);

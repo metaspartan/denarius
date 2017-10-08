@@ -56,7 +56,7 @@
      <item row="2" column="0" colspan="2">
       <widget class="QCheckBox" name="stealthCB">
        <property name="text">
-        <string>Check this box if you want a new DNR &amp;Stealth Address, starts with an 's'.</string>
+        <string>&amp;Stealth Address</string>
        </property>
       </widget>
      </item>
