@@ -57,18 +57,10 @@ LIBS += -l mingwthrd -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l w
 HEADERS = $(wildcard *.h)
 
 OBJS= \
-    obj/shavite.o \
     obj/echo.o \
-    obj/simd.o \
-	obj/blake.o \
-    obj/bmw.o \
-    obj/cubehash.o \    
-	obj/luffa.o \
     obj/jh.o \
     obj/keccak.o \
-	obj/groestl.o \
-	obj/skein.o \
-    obj/alert.o \
+	obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -79,8 +71,8 @@ OBJS= \
     obj/init.o \
     obj/irc.o \
     obj/keystore.o \
-    obj/main.o \
     obj/miner.o \
+    obj/main.o \
     obj/net.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
@@ -90,6 +82,7 @@ OBJS= \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
+    obj/rpcsmessage.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
@@ -99,8 +92,11 @@ OBJS= \
     obj/kernel.o \
     obj/pbkdf2.o \
     obj/scrypt.o \
+    obj/scrypt-arm.o \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
+    obj/smessage.o \
+    obj/stealth.o
 
 all: denariusd.exe
 
