@@ -219,7 +219,7 @@
           <item row="5" column="0">
            <widget class="QLabel" name="labelTotalText">
             <property name="text">
-             <string>Total:</string>
+             <string>Wallet Total:</string>
             </property>
            </widget>
           </item>
@@ -227,6 +227,7 @@
            <widget class="QLabel" name="labelTotal">
             <property name="font">
              <font>
+              <pointsize>11</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -256,6 +257,7 @@
            <widget class="QLabel" name="labelUSDTotal">
             <property name="font">
              <font>
+              <pointsize>10</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -264,10 +266,13 @@
              <cursorShape>IBeamCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Your current total balance in USD, Rate is not updated often</string>
+             <string>Your current total balance estimated in USD, Rate is not updated often</string>
             </property>
             <property name="text">
              <string>0 USD</string>
+            </property>
+            <property name="textInteractionFlags">
+             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
             </property>
            </widget>
           </item>
@@ -290,10 +295,13 @@
              <cursorShape>IBeamCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Your current total balance in BTC, Rate is not updated often</string>
+             <string>Your current total balance estimated in BTC, Rate is not updated often</string>
             </property>
             <property name="text">
              <string>0 BTC</string>
+            </property>
+            <property name="textInteractionFlags">
+             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
             </property>
            </widget>
           </item>
