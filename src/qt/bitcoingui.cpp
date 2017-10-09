@@ -26,6 +26,7 @@
 #include "marketbrowser.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
+#include "richlist.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -171,6 +172,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	blockBrowser = new BlockBrowser(this);
 	marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
+	richListPage = new RichListPage(this);
 	//chatWindow = new ChatWindow(this);
 	
     transactionsPage = new QWidget(this);
@@ -205,6 +207,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
 	centralWidget->addWidget(marketBrowser);
+	centralWidget->addWidget(richListPage);
 	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -360,6 +363,11 @@ void BitcoinGUI::createActions()
     mintingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(mintingAction);
 	
+	richListPageAction = new QAction(QIcon(":/icons/richlist"), tr("&Rich List"), this);
+    richListPageAction->setToolTip(tr("Show the top Denarius balances."));
+    richListPageAction->setCheckable(true);
+    tabGroup->addAction(richListPageAction);
+	
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 
@@ -375,6 +383,8 @@ void BitcoinGUI::createActions()
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
 	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
+	connect(richListPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(richListPageAction, SIGNAL(triggered()), this, SLOT(gotoRichListPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -485,6 +495,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
     mainToolbar->addAction(marketAction);
+	mainToolbar->addAction(richListPageAction);
     //mainToolbar->addAction(chatAction); Next release
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
@@ -917,6 +928,15 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 	
+}
+
+void BitcoinGUI::gotoRichListPage()
+{
+    richListPageAction->setChecked(true);
+    centralWidget->setCurrentWidget(richListPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoMultisigPage()

@@ -121,9 +121,27 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-contains(USE_LEVELDB, 1) {
-    message(Building with LevelDB transaction index)
-    DEFINES += USE_LEVELDB
+# use: qmake "USE_LEVELDB=1" ( enabled by default; default)
+#  or: qmake "USE_LEVELDB=0" (disabled by default)
+#  or: qmake "USE_LEVELDB=-" (not supported)
+contains(USE_LEVELDB, -) {
+	message(Building with Berkeley DB transaction index)
+	
+	    SOURCES += src/txdb-bdb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
+		
+} else {
+	message(Building with LevelDB transaction index)
+	count(USE_LEVELDB, 0) {
+        USE_LEVELDB=1
+    }
+	
+	DEFINES += USE_LEVELDB
 
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -151,15 +169,7 @@ contains(USE_LEVELDB, 1) {
 	QMAKE_EXTRA_TARGETS += genleveldb
 	# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
 	QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
-} else {
-    message(Building with Berkeley DB transaction index)
-    SOURCES += src/txdb-bdb.cpp \
-		src/bloom.cpp \
-		src/hash.cpp \
-		src/aes_helper.c \
-		src/echo.c \
-		src/jh.c \
-		src/keccak.c
+
 }
 
 # regenerate src/build.h
@@ -228,6 +238,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/smessage.h \
+	src/richlistdb.h \
+	src/richlistdata.h \
     src/main.h \
     src/miner.h \
     src/net.h \
@@ -282,6 +294,8 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/blockbrowser.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
+	src/qt/qcustomplot.h \
+	src/qt/richlist.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -327,6 +341,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
+	src/richlistdb.cpp \
+	src/richlistdata.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/key.cpp \
@@ -377,6 +393,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
+	src/qt/qcustomplot.cpp \
+	src/qt/richlist.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
@@ -414,6 +432,7 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
+	src/qt/forms/richlist.ui \
 	src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \

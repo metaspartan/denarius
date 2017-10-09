@@ -639,3 +639,70 @@ Value createmultisig(const Array& params, bool fHelp)
 
     return result;
 }
+
+Value searchrawtransactions(const Array &params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 4)
+        throw runtime_error(
+            "searchrawtransactions <address> [verbose=1] [skip=0] [count=100]\n");
+
+    CBitcoinAddress address(params[0].get_str());
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    CTxDestination dest = address.Get();
+
+    std::vector<uint256> vtxhash;
+    if (!FindTransactionsByDestination(dest, vtxhash))
+        throw JSONRPCError(RPC_DATABASE_ERROR, "Cannot search for address");
+
+    int nSkip = 0;
+    int nCount = 100;
+    bool fVerbose = true;
+    if (params.size() > 1)
+        fVerbose = (params[1].get_int() != 0);
+    if (params.size() > 2)
+        nSkip = params[2].get_int();
+    if (params.size() > 3)
+        nCount = params[3].get_int();
+
+    if (nSkip < 0)
+        nSkip += vtxhash.size();
+    if (nSkip < 0)
+        nSkip = 0;
+    if (nCount < 0)
+        nCount = 0;
+
+    std::vector<uint256>::const_iterator it = vtxhash.begin();
+    while (it != vtxhash.end() && nSkip--) it++;
+
+    Array result;
+    while (it != vtxhash.end() && nCount--) {
+        CTransaction tx;
+        uint256 hashBlock;
+        if (!GetTransaction(*it, tx, hashBlock))
+        {
+           // throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Cannot read transaction from disk");
+           Object obj;
+	   obj.push_back(Pair("ERROR", "Cannot read transaction from disk"));
+	   result.push_back(obj);
+	}
+	else
+	{
+
+        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+        ssTx << tx;
+        string strHex = HexStr(ssTx.begin(), ssTx.end());
+        if (fVerbose) {
+            Object object;
+            TxToJSON(tx, hashBlock, object);
+            object.push_back(Pair("hex", strHex));
+            result.push_back(object);
+        } else {
+            result.push_back(strHex);
+        }
+      
+        }
+        it++;
+    }
+    return result;
+}

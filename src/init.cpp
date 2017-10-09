@@ -915,6 +915,24 @@ bool AppInit2()
         return false;
 
     RandAddSeedPerfmon();
+	
+	
+    // reindex addresses found in blockchain
+    if(GetBoolArg("-reindexaddr", false))
+    {
+        uiInterface.InitMessage(_("Rebuilding address index..."));
+        CBlockIndex *pblockAddrIndex = pindexBest;
+	CTxDB txdbAddr("rw");
+	while(pblockAddrIndex)
+	{
+	    uiInterface.InitMessage(strprintf("Rebuilding address index, Block %i", pblockAddrIndex->nHeight));
+	    bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
+	    CBlock pblockAddr;
+	    if(pblockAddr.ReadFromDisk(pblockAddrIndex, true))
+	        pblockAddr.RebuildAddressIndex(txdbAddr);
+	    pblockAddrIndex = pblockAddrIndex->pprev;
+	}
+    }
 
     //// debug print
     printf("mapBlockIndex.size() = %"PRIszu"\n",   mapBlockIndex.size());

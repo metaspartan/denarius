@@ -55,6 +55,7 @@
 		<file alias="block">res/icons/block.png</file>
 		<file alias="statistics">res/icons/stats.png</file>
 		<file alias="msg">res/icons/message.png</file>
+		<file alias="richlist">res/icons/richlist.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>

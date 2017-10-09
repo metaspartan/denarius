@@ -210,6 +210,7 @@ extern json_spirit::Value createmultisig(const json_spirit::Array& params, bool 
 extern json_spirit::Value decodescript(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value signrawtransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendrawtransaction(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value searchrawtransactions(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
@@ -219,6 +220,7 @@ extern json_spirit::Value settxfee(const json_spirit::Array& params, bool fHelp)
 extern json_spirit::Value getrawmempool(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockhash(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getblock_old(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockbynumber(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool fHelp);
 
@@ -245,5 +247,9 @@ extern json_spirit::Value smsgsendanon(const json_spirit::Array& params, bool fH
 extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
+
+extern json_spirit::Value resetrichlist(const json_spirit::Array& params, bool fHelp); // in rpcwallet.cpp
+extern json_spirit::Value updaterichlist(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getrichlist(const json_spirit::Array& params, bool fHelp);
 
 #endif

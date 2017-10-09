@@ -278,6 +278,7 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
+	{ "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
     { "gettransaction",         &gettransaction,         false,  false },
@@ -304,6 +305,7 @@ static const CRPCCommand vRPCCommands[] =
     { "decodescript",           &decodescript,           false,  false },
     { "signrawtransaction",     &signrawtransaction,     false,  false },
     { "sendrawtransaction",     &sendrawtransaction,     false,  false },
+	{ "searchrawtransactions",  &searchrawtransactions,  false,  false },
     { "getcheckpoint",          &getcheckpoint,          true,   false },
     { "reservebalance",         &reservebalance,         false,  true},
     { "checkwallet",            &checkwallet,            false,  true},
@@ -319,7 +321,11 @@ static const CRPCCommand vRPCCommands[] =
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
-    
+	
+	/* Rich List */
+    { "resetrichlist",          &resetrichlist,          true,   false},
+    { "updaterichlist",         &updaterichlist,         true,   false},
+    { "getrichlist",            &getrichlist,            true,   false},    
     
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
