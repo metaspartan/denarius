@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #endif
 
+#include "core.h"
 #include "mruset.h"
 #include "netbase.h"
 #include "protocol.h"

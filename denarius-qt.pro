@@ -241,11 +241,13 @@ HEADERS += src/qt/bitcoingui.h \
 	src/richlistdb.h \
 	src/richlistdata.h \
     src/main.h \
+	src/core.h \
     src/miner.h \
     src/net.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
+	src/txmempool.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
@@ -348,6 +350,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
+	src/core.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
@@ -355,6 +358,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
+	src/txmempool.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \

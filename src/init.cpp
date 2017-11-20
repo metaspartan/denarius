@@ -87,7 +87,7 @@ void Shutdown(void* parg)
         
         SecureMsgShutdown();
         
-        nTransactionsUpdated++;
+        mempool.AddTransactionsUpdated(1);
 //        CTxDB().Close();
         bitdb.Flush(false);
         StopNode();

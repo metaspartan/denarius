@@ -141,7 +141,7 @@ Value getworkex(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlock* pblock;
         if (pindexPrev != pindexBest ||
-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60))
         {
             if (pindexPrev != pindexBest)
             {
@@ -151,7 +151,7 @@ Value getworkex(const Array& params, bool fHelp)
                     delete pblock;
                 vNewBlock.clear();
             }
-            nTransactionsUpdatedLast = nTransactionsUpdated;
+            nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             pindexPrev = pindexBest;
             nStart = GetTime();
 
@@ -275,7 +275,7 @@ Value getwork(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlock* pblock;
         if (pindexPrev != pindexBest ||
-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60))
         {
             if (pindexPrev != pindexBest)
             {
@@ -290,7 +290,7 @@ Value getwork(const Array& params, bool fHelp)
             pindexPrev = NULL;
 
             // Store the pindexBest used before CreateNewBlock, to avoid races
-            nTransactionsUpdatedLast = nTransactionsUpdated;
+            nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrevNew = pindexBest;
             nStart = GetTime();
 
@@ -414,13 +414,13 @@ Value getblocktemplate(const Array& params, bool fHelp)
     static int64_t nStart;
     static CBlock* pblock;
     if (pindexPrev != pindexBest ||
-        (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))
+        (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
         pindexPrev = NULL;
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
-        nTransactionsUpdatedLast = nTransactionsUpdated;
+        nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex* pindexPrevNew = pindexBest;
         nStart = GetTime();
 
