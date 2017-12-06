@@ -42,6 +42,8 @@ static const int64_t nOneWeek = 7 * 24 * 60 * 60;
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
+typedef int64_t CAmount;
+
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -90,6 +92,8 @@ T* alignup(T* p)
     return u.ptr;
 }
 
+boost::filesystem::path GetMasternodeConfigFile();
+
 #ifdef WIN32
 #define MSG_NOSIGNAL        0
 #define MSG_DONTWAIT        0
@@ -123,9 +127,20 @@ inline void MilliSleep(int64_t n)
 
 
 
+//Dark features
 
-
-
+extern bool fMasterNode;
+extern bool fLiteMode;
+extern int nInstantXDepth;
+extern int nDarksendRounds;
+extern int nAnonymizeDenariusAmount;
+extern int nLiquidityProvider;
+extern bool fEnableDarksend;
+extern int64_t enforceMasternodePaymentsTime;
+extern std::string strMasterNodeAddr;
+extern int keysLoaded;
+extern bool fSucessfullyLoaded;
+extern std::vector<int64_t> darkSendDenominations;
 
 
 extern std::map<std::string, std::string> mapArgs;
@@ -212,6 +227,7 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 void ShrinkDebugFile();
 int GetRandInt(int nMax);
+void GetRandBytes(unsigned char* buf, int num);
 uint64_t GetRand(uint64_t nMax);
 uint256 GetRandHash();
 int64_t GetTime();

@@ -342,6 +342,30 @@ CPubKey CKey::GetPubKey() const
     return CPubKey(vchPubKey);
 }
 
+bool CKey::Check(const unsigned char *vch) {
+    // Do not convert to OpenSSL's data structures for range-checking keys,
+    // it's easy enough to do directly.
+    static const unsigned char vchMax[32] = {
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFE,
+        0xBA,0xAE,0xDC,0xE6,0xAF,0x48,0xA0,0x3B,
+        0xBF,0xD2,0x5E,0x8C,0xD0,0x36,0x41,0x40
+    };
+    bool fIsZero = true;
+    for (int i=0; i<32 && fIsZero; i++)
+        if (vch[i] != 0)
+            fIsZero = false;
+    if (fIsZero)
+        return false;
+    for (int i=0; i<32; i++) {
+        if (vch[i] < vchMax[i])
+            return true;
+        if (vch[i] > vchMax[i])
+            return false;
+    }
+    return true;
+}
+
 bool CKey::Sign(uint256 hash, std::vector<unsigned char>& vchSig)
 {
     vchSig.clear();
@@ -446,6 +470,87 @@ bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& v
     }
     ECDSA_SIG_free(sig);
     return false;
+}
+
+// reconstruct public key from a compact signature
+// This is only slightly more CPU intensive than just verifying it.
+// If this function succeeds, the recovered public key is guaranteed to be valid
+// (the signature is a valid signature of the given data for that key)
+bool CECKey::Recover(const uint256 &hash, const unsigned char *p64, int rec)
+{
+    if (rec<0 || rec>=3)
+        return false;
+    ECDSA_SIG *sig = ECDSA_SIG_new();
+    BN_bin2bn(&p64[0],  32, sig->r);
+    BN_bin2bn(&p64[32], 32, sig->s);
+    bool ret = ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), rec, 0) == 1;
+    ECDSA_SIG_free(sig);
+    return ret;
+}
+
+void CECKey::GetPubKey(CPubKey &pubkey, bool fCompressed) {
+    EC_KEY_set_conv_form(pkey, fCompressed ? POINT_CONVERSION_COMPRESSED : POINT_CONVERSION_UNCOMPRESSED);
+    int nSize = i2o_ECPublicKey(pkey, NULL);
+    assert(nSize);
+    assert(nSize <= 65);
+    unsigned char c[65];
+    unsigned char *pbegin = c;
+    int nSize2 = i2o_ECPublicKey(pkey, &pbegin);
+    assert(nSize == nSize2);
+    //pubkey.Set(&c[0], &c[nSize]);
+}
+
+bool CECKey::SetPubKey(const CPubKey &pubkey) {
+    const unsigned char* pbegin = pubkey.begin();
+    return o2i_ECPublicKey(&pkey, &pbegin, pubkey.size());
+}
+
+bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) {
+    if (vchSig.size() != 65)
+        return false;
+    int recid = (vchSig[0] - 27) & 3;
+    bool fComp = (vchSig[0] - 27) & 4;
+/*#ifdef USE_SECP256K1
+    int pubkeylen = 65;
+    if (!secp256k1_ecdsa_recover_compact(hash.begin(), 32, &vchSig[1], begin(), &pubkeylen, fComp, recid))
+        return false;
+    assert((int)size() == pubkeylen);
+#else*/
+    CECKey key;
+    if (!key.Recover(hash, &vchSig[1], (vchSig[0] - 27) & ~4))
+    if (!key.Recover(hash, &vchSig[1], recid))
+        return false;
+    key.GetPubKey(*this, (vchSig[0] - 27) & 4);
+    key.GetPubKey(*this, fComp);
+//#endif
+    return true;
+	
+	/*
+	if (vchSig.size() != 65)
+        return false;
+    int nV = vchSig[0];
+    if (nV<27 || nV>=35)
+        return false;
+    ECDSA_SIG *sig = ECDSA_SIG_new();
+    BN_bin2bn(&vchSig[1],32,sig->r);
+    BN_bin2bn(&vchSig[33],32,sig->s);
+
+    EC_KEY_free(pkey);
+    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    if (nV >= 31)
+    {
+        SetCompressedPubKey();
+        nV -= 4;
+    }
+    if (ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), nV - 27, 0) == 1)
+    {
+        fSet = true;
+        ECDSA_SIG_free(sig);
+        return true;
+    }
+    ECDSA_SIG_free(sig);
+    return false;
+	*/
 }
 
 bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)

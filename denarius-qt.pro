@@ -251,6 +251,12 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
+	src/darksend.h \
+	src/activemasternode.h \
+	src/instantx.h \
+	src/masternode.h \
+	src/masternodeconfig.h \
+	src/spork.h \
     src/init.h \
     src/irc.h \
     src/mruset.h \
@@ -309,6 +315,7 @@ HEADERS += src/qt/bitcoingui.h \
 	src/sph_jh.h \
     src/sph_types.h \
     src/threadsafety.h \
+	src/eccryptoverify.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/qt/sendmessagesdialog.h \
@@ -359,6 +366,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/addrman.cpp \
     src/db.cpp \
 	src/txmempool.cpp \
+	src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
@@ -379,6 +387,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
+	src/rpcdarksend.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -410,7 +419,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
-    src/stealth.cpp
+    src/stealth.cpp \
+	src/darksend.cpp \
+	src/activemasternode.cpp \
+	src/instantx.cpp \
+	src/masternode.cpp \
+	src/masternodeconfig.cpp \
+	src/spork.cpp
 
 #### DNR sources
 

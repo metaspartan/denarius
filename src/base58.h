@@ -404,6 +404,11 @@ bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const {
 class CBitcoinSecret : public CBase58Data
 {
 public:
+    enum
+    {
+        PRIVKEY_ADDRESS      = 158, // Denarius private keys start with '6' or 'Q'
+        PRIVKEY_ADDRESS_TEST = 218,
+    };
     void SetSecret(const CSecret& vchSecret, bool fCompressed)
     {
         assert(vchSecret.size() == 32);
@@ -419,6 +424,21 @@ public:
         memcpy(&vchSecret[0], &vchData[0], 32);
         fCompressedOut = vchData.size() == 33;
         return vchSecret;
+    }
+	
+    void SetKey(const CKey& vchSecret)
+    {
+        assert(vchSecret.IsValid());
+        SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
+        if (vchSecret.IsCompressed())
+            vchData.push_back(1);
+    }
+
+    CKey GetKey()
+    {
+        CKey ret;
+        ret.Set(&vchData[0], &vchData[32], vchData.size() > 32 && vchData[32] == 1);
+        return ret;
     }
 
     bool IsValid() const

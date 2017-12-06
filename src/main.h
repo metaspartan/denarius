@@ -16,6 +16,43 @@
 
 #include <list>
 
+class CValidationState;
+
+#define START_MASTERNODE_PAYMENTS_TESTNET 1515900783  //2018-1-14 03:33:03 GMT
+#define START_MASTERNODE_PAYMENTS 1515900783  //2018-1-14 03:33:03 GMT
+
+static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
+static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
+static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
+
+#define MESSAGE_START_SIZE 4
+typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
+
+/*
+    At 15 signatures, 1/2 of the masternode network can be owned by
+    one party without comprimising the security of InstantX
+    (1000/2150.0)**15 = 1.031e-05
+*/
+#define INSTANTX_SIGNATURES_REQUIRED           20
+#define INSTANTX_SIGNATURES_TOTAL              30
+
+#define MASTERNODE_NOT_PROCESSED               0 // initial state
+#define MASTERNODE_IS_CAPABLE                  1
+#define MASTERNODE_NOT_CAPABLE                 2
+#define MASTERNODE_STOPPED                     3
+#define MASTERNODE_INPUT_TOO_NEW               4
+#define MASTERNODE_PORT_NOT_OPEN               6
+#define MASTERNODE_PORT_OPEN                   7
+#define MASTERNODE_SYNC_IN_PROCESS             8
+#define MASTERNODE_REMOTELY_ENABLED            9
+
+#define MASTERNODE_MIN_CONFIRMATIONS           15
+#define MASTERNODE_MIN_DSEEP_SECONDS           (30*60)
+#define MASTERNODE_MIN_DSEE_SECONDS            (5*60)
+#define MASTERNODE_PING_SECONDS                (1*60)
+#define MASTERNODE_EXPIRATION_SECONDS          (65*60)
+#define MASTERNODE_REMOVAL_SECONDS             (70*60)
+
 class CWallet;
 class CBlock;
 class CBlockIndex;
@@ -34,6 +71,8 @@ static const int LAST_POW_BLOCK = 3000000; // Block 3m Approx. 3 years of Proof 
 static const int FAIR_LAUNCH_BLOCK = 210; // Last Block until full block reward starts
 static const unsigned int MAX_BLOCK_SIZE = 1000000; // 1MB block hard limit, double the size of Bitcoin
 static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2; // 512kb block soft limit, ditto
+/** The maximum size for transactions we're willing to relay/mine **/
+static const unsigned int MAX_STANDARD_TX_SIZE = MAX_BLOCK_SIZE_GEN/5;
 static const unsigned int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
 /** The maximum number of sigops we're willing to relay/mine in a single tx */
 static const unsigned int MAX_TX_SIGOPS = MAX_BLOCK_SIGOPS/5;
@@ -82,6 +121,7 @@ extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
 extern unsigned char pchMessageStart[4];
 extern std::map<uint256, CBlock*> mapOrphanBlocks;
+
 extern CTxMemPool mempool;
 
 // Settings
@@ -89,9 +129,13 @@ extern int64_t nTransactionFee;
 extern int64_t nReserveBalance;
 extern int64_t nMinimumInputValue;
 extern bool fUseFastIndex;
+extern bool fImporting;
+extern bool fReindex;
 extern unsigned int nDerivationMethodIndex;
 
 extern bool fEnforceCanonical;
+
+extern bool fMinimizeCoinAge;
 
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64_t nMinDiskSpace = 52428800; //52 MB Minimum, Raise?
@@ -113,6 +157,8 @@ CBlockIndex* FindBlockByHeight(int nHeight);
 bool ProcessMessages(CNode* pfrom);
 bool SendMessages(CNode* pto, bool fSendTrickle);
 bool LoadExternalBlockFile(FILE* fileIn);
+
+void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd);
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits);
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake);
@@ -142,8 +188,12 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
 bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint256> &vtxhash);
 
 
-
-
+int GetInputAge(CTxIn& vin);
+/** Abort with a message */
+bool AbortNode(const std::string &msg, const std::string &userMessage="");
+/** Increase a node's misbehavior score. */
+void Misbehaving(NodeId nodeid, int howmuch);
+int64_t GetMasternodePayment(int nHeight, int64_t blockValue);
 
 
 
@@ -346,6 +396,9 @@ public:
      */
     unsigned int GetP2SHSigOpCount(const MapPrevTx& mapInputs) const;
 
+	bool IsStandardTx(const CTransaction& tx, std::string& reason);
+	bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64_t nBlockTime = 0);
+	
     /** Amount of bitcoins spent by this transaction.
         @return sum of all outputs (note: does not include fees)
      */
@@ -542,6 +595,8 @@ public:
     bool IsInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChainINTERNAL(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(bool fLimitFree=true);
+	int GetTransactionLockSignatures() const;
+    bool IsTransactionLockTimedOut() const;
 };
 
 
@@ -1342,6 +1397,70 @@ public:
             return 0;
         return pindex->nHeight;
     }
+};
+
+
+/** Capture information about block/transaction validation */
+class CValidationState {
+private:
+    enum mode_state {
+        MODE_VALID,   //! everything ok
+        MODE_INVALID, //! network rule violation (DoS value may be set)
+        MODE_ERROR,   //! run-time error
+    } mode;
+    int nDoS;
+    std::string strRejectReason;
+    unsigned char chRejectCode;
+    bool corruptionPossible;
+public:
+    CValidationState() : mode(MODE_VALID), nDoS(0), chRejectCode(0), corruptionPossible(false) {}
+    bool DoS(int level, bool ret = false,
+             unsigned char chRejectCodeIn=0, std::string strRejectReasonIn="",
+             bool corruptionIn=false) {
+        chRejectCode = chRejectCodeIn;
+        strRejectReason = strRejectReasonIn;
+        corruptionPossible = corruptionIn;
+        if (mode == MODE_ERROR)
+            return ret;
+        nDoS += level;
+        mode = MODE_INVALID;
+        return ret;
+    }
+    bool Invalid(bool ret = false,
+                 unsigned char _chRejectCode=0, std::string _strRejectReason="") {
+        return DoS(0, ret, _chRejectCode, _strRejectReason);
+    }
+    bool Error(std::string strRejectReasonIn="") {
+        if (mode == MODE_VALID)
+            strRejectReason = strRejectReasonIn;
+        mode = MODE_ERROR;
+        return false;
+    }
+    bool Abort(const std::string &msg) {
+        AbortNode(msg);
+        return Error(msg);
+    }
+    bool IsValid() const {
+        return mode == MODE_VALID;
+    }
+    bool IsInvalid() const {
+        return mode == MODE_INVALID;
+    }
+    bool IsError() const {
+        return mode == MODE_ERROR;
+    }
+    bool IsInvalid(int &nDoSOut) const {
+        if (IsInvalid()) {
+            nDoSOut = nDoS;
+            return true;
+        }
+        return false;
+    }
+    bool CorruptionPossible() const {
+        return corruptionPossible;
+    }
+    unsigned char GetRejectCode() const { return chRejectCode; }
+    std::string GetRejectReason() const { return strRejectReason; }
 };
 
 #endif

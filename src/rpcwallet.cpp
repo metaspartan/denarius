@@ -773,7 +773,9 @@ Value sendmany(const Array& params, bool fHelp)
     CReserveKey keyChange(pwalletMain);
     int64_t nFeeRequired = 0;
     int nChangePos;
-    bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos);
+	std::string strFailReason;
+    //bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos);
+	bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason);
     if (!fCreated)
     {
         if (totalAmount + nFeeRequired > pwalletMain->GetBalance())

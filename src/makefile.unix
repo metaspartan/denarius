@@ -144,7 +144,15 @@ OBJS= \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
     obj/stealth.o \
+	obj/activemasternode.o \
+	obj/masternodeconfig.o \
+    obj/masternode.o \
+    obj/rpcdarksend.o \
+    obj/spork.o \
+    obj/darksend.o \
+	obj/instantx.o \
 	obj/richlistdb.o \
+	obj/eccryptoverify.o \
 	obj/richlistdata.o
 
 

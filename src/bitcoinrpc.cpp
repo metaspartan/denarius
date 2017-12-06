@@ -322,6 +322,11 @@ static const CRPCCommand vRPCCommands[] =
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
 	
+	/* Dark features */
+    { "darksend",               &darksend,               false,  false},
+    { "spork",                  &spork,                  true,   false},
+    { "masternode",             &masternode,             true,   false},
+	
 	/* Rich List */
     { "resetrichlist",          &resetrichlist,          true,   false},
     { "updaterichlist",         &updaterichlist,         true,   false},

@@ -57,6 +57,22 @@ namespace boost {
 
 using namespace std;
 
+//Dark  features
+bool fMasterNode = false;
+string strMasterNodePrivKey = "";
+string strMasterNodeAddr = "";
+bool fLiteMode = false;
+int nInstantXDepth = 1;
+int nDarksendRounds = 2;
+int nAnonymizeDenariusAmount = 500;
+int nLiquidityProvider = 0;
+/** Spork enforcement enabled time */
+int64_t enforceMasternodePaymentsTime = 4085657524;
+bool fSucessfullyLoaded = false;
+bool fEnableDarksend = false;
+/** All denominations used by darksend */
+std::vector<int64_t> darkSendDenominations;
+
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
@@ -193,7 +209,13 @@ uint256 GetRandHash()
 }
 
 
-
+void GetRandBytes(unsigned char* buf, int num)
+{
+    if (RAND_bytes(buf, num) != 1) {
+        //printf("%s: OpenSSL RAND_bytes() failed with error: %s\n", __func__, ERR_error_string(ERR_get_error(), NULL));
+        assert(false);
+    }
+}
 
 
 
@@ -1053,6 +1075,13 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 boost::filesystem::path GetConfigFile()
 {
     boost::filesystem::path pathConfigFile(GetArg("-conf", "denarius.conf"));
+    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
+    return pathConfigFile;
+}
+
+boost::filesystem::path GetMasternodeConfigFile()
+{
+    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "masternode.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }

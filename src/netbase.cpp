@@ -462,10 +462,12 @@ bool IsProxy(const CNetAddr &addr) {
     return false;
 }
 
-bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
+bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout, bool *outProxyConnectionFailed)
 {
     proxyType proxy;
 
+	if (outProxyConnectionFailed)
+        *outProxyConnectionFailed = false;
     // no proxy needed
     if (!GetProxy(addrDest.GetNetwork(), proxy))
         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);
@@ -495,10 +497,15 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
     return true;
 }
 
-bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault, int nTimeout)
+//bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault, int nTimeout)
+bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault, int nTimeout, bool *outProxyConnectionFailed)
 {
     string strDest;
     int port = portDefault;
+	
+	if (outProxyConnectionFailed)
+        *outProxyConnectionFailed = false;
+	
     SplitHostPort(string(pszDest), port, strDest);
 
     SOCKET hSocket = INVALID_SOCKET;

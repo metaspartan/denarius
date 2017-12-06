@@ -54,6 +54,24 @@ bool CWalletDB::WriteAccountingEntry(const CAccountingEntry& acentry)
     return WriteAccountingEntry(++nAccountingEntryNumber, acentry);
 }
 
+bool CWalletDB::WriteAdrenalineNodeConfig(std::string sAlias, const CAdrenalineNodeConfig& nodeConfig)
+{
+    nWalletDBUpdated++;
+    return Write(std::make_pair(std::string("adrenaline"), sAlias), nodeConfig, true);
+}
+
+bool CWalletDB::ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig)
+{
+    return Read(std::make_pair(std::string("adrenaline"), sAlias), nodeConfig);
+}
+
+bool CWalletDB::EraseAdrenalineNodeConfig(std::string sAlias)
+{
+    nWalletDBUpdated++;
+    return Erase(std::make_pair(std::string("adrenaline"), sAlias));
+}
+
+
 int64_t CWalletDB::GetAccountCreditDebit(const string& strAccount)
 {
     list<CAccountingEntry> entries;
@@ -438,6 +456,14 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             ssValue >> pwallet->nOrderPosNext;
         }
+		else if (strType == "adrenaline")
+	{
+	    std::string sAlias;
+	    ssKey >> sAlias;
+	    CAdrenalineNodeConfig adrenalineNodeConfig;
+	    ssValue >> adrenalineNodeConfig;
+	    pwallet->mapMyAdrenalineNodes.insert(make_pair(sAlias, adrenalineNodeConfig));
+	}
     } catch (...)
     {
         return false;

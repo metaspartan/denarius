@@ -231,7 +231,10 @@ void ThreadIRCSeed2(void* parg)
             addrConnect = addrIRC;
 
         SOCKET hSocket;
-        if (!ConnectSocket(addrConnect, hSocket))
+        //if (!ConnectSocket(addrConnect, hSocket))
+		int ntimeout = 1000;
+		bool bProxyConnectionFailed = false;
+		if (!ConnectSocket(addrConnect, hSocket, ntimeout, &bProxyConnectionFailed))
         {
             printf("IRC connect failed\n");
             nErrorWait = nErrorWait * 11 / 10;

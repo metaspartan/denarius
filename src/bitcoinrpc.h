@@ -232,7 +232,9 @@ extern json_spirit::Value clearwallettransactions(const json_spirit::Array& para
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforstealthtxns(const json_spirit::Array& params, bool fHelp);
 
-
+extern json_spirit::Value darksend(const json_spirit::Array& params, bool fHelp); //rpcdarksend.cpp
+extern json_spirit::Value spork(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value masternode(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value smsgenable(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgdisable(const json_spirit::Array& params, bool fHelp);
