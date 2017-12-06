@@ -473,6 +473,11 @@ public:
     {
         SetSecret(vchSecret, fCompressed);
     }
+	
+	CBitcoinSecret(const CKey& vchSecret)
+    {
+        SetKey(vchSecret);
+    }
 
     CBitcoinSecret()
     {
