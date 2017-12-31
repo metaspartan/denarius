@@ -573,7 +573,7 @@ bool CKey::VerifyCompact(uint256 hash, const std::vector<unsigned char>& vchSig)
     return true;
 }
 
-bool CKey::IsValid()
+bool CKey::IsValid() const
 {
     if (!fSet)
         return false;
