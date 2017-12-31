@@ -311,9 +311,7 @@ public:
 	
     void SetKey(const CKey& vchSecret)
     {
-		#ifdef _WIN32
         assert(vchSecret.IsValid());
-		#endif
         SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
         if (vchSecret.IsCompressed())
             vchData.push_back(1);
