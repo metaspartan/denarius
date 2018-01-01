@@ -151,3 +151,228 @@ bool DecodeBase58Check(const std::string& str, std::vector<unsigned char>& vchRe
 {
     return DecodeBase58Check(str.c_str(), vchRet);
 }
+
+/** Base class for all base58-encoded data */
+
+CBase58Data::CBase58Data()
+{   
+    nVersion = 0;
+    vchData.clear();
+}
+
+CBase58Data::~CBase58Data()
+{
+    // zero the memory, as it may contain sensitive data
+    if (!vchData.empty())
+        memset(&vchData[0], 0, vchData.size());
+}
+
+void CBase58Data::SetData(int nVersionIn, const void* pdata, size_t nSize)
+{
+    nVersion = nVersionIn;
+    vchData.resize(nSize);
+    if (!vchData.empty())
+        memcpy(&vchData[0], pdata, nSize);
+}
+
+void CBase58Data::SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend)
+{
+    SetData(nVersionIn, (void*)pbegin, pend - pbegin);
+}
+
+bool CBase58Data::SetString(const char* psz)
+{
+    std::vector<unsigned char> vchTemp;
+    DecodeBase58Check(psz, vchTemp);
+    if (vchTemp.empty())
+    {
+        vchData.clear();
+        nVersion = 0;
+        return false;
+    }
+    nVersion = vchTemp[0];
+    vchData.resize(vchTemp.size() - 1);
+    if (!vchData.empty())
+        memcpy(&vchData[0], &vchTemp[1], vchData.size());
+    memset(&vchTemp[0], 0, vchTemp.size());
+    return true;
+}
+
+bool CBase58Data::SetString(const std::string& str)
+{
+    return SetString(str.c_str());
+}
+
+std::string CBase58Data::ToString() const
+{
+    std::vector<unsigned char> vch(1, nVersion);
+    vch.insert(vch.end(), vchData.begin(), vchData.end());
+    return EncodeBase58Check(vch);
+}
+
+int  CBase58Data::CompareTo(const CBase58Data& b58) const
+{
+    if (nVersion < b58.nVersion) return -1;
+    if (nVersion > b58.nVersion) return  1;
+    if (vchData < b58.vchData)   return -1;
+    if (vchData > b58.vchData)   return  1;
+    return 0;
+}
+
+/** base58-encoded addresses.*/
+
+bool CBitcoinAddress::Set(const CKeyID &id) 
+{
+    SetData(fTestNet ? PUBKEY_ADDRESS_TEST : PUBKEY_ADDRESS, &id, 20);
+    return true;
+}
+
+bool CBitcoinAddress::Set(const CScriptID &id) 
+{
+    SetData(fTestNet ? SCRIPT_ADDRESS_TEST : SCRIPT_ADDRESS, &id, 20);
+    return true;
+}
+
+bool CBitcoinAddress::Set(const CTxDestination &dest)
+{
+    return boost::apply_visitor(CBitcoinAddressVisitor(this), dest);
+}
+
+bool CBitcoinAddress::IsValid() const
+{
+    unsigned int nExpectedSize = 20;
+    bool fExpectTestNet = false;
+    switch(nVersion)
+    {
+        case PUBKEY_ADDRESS:
+            nExpectedSize = 20; // Hash of public key
+            fExpectTestNet = false;
+            break;
+        case SCRIPT_ADDRESS:
+            nExpectedSize = 20; // Hash of CScript
+            fExpectTestNet = false;
+            break;
+
+        case PUBKEY_ADDRESS_TEST:
+            nExpectedSize = 20;
+            fExpectTestNet = true;
+            break;
+        case SCRIPT_ADDRESS_TEST:
+            nExpectedSize = 20;
+            fExpectTestNet = true;
+            break;
+
+        default:
+            return false;
+    }
+    return fExpectTestNet == fTestNet && vchData.size() == nExpectedSize;
+}
+
+CTxDestination CBitcoinAddress::Get() const {
+    if (!IsValid())
+        return CNoDestination();
+    switch (nVersion) {
+    case PUBKEY_ADDRESS:
+    case PUBKEY_ADDRESS_TEST: {
+        uint160 id;
+        memcpy(&id, &vchData[0], 20);
+        return CKeyID(id);
+    }
+    case SCRIPT_ADDRESS:
+    case SCRIPT_ADDRESS_TEST: {
+        uint160 id;
+        memcpy(&id, &vchData[0], 20);
+        return CScriptID(id);
+    }
+    }
+    return CNoDestination();
+}
+
+bool CBitcoinAddress::GetKeyID(CKeyID &keyID) const {
+    if (!IsValid())
+        return false;
+    switch (nVersion) {
+    case PUBKEY_ADDRESS:
+    case PUBKEY_ADDRESS_TEST: {
+        uint160 id;
+        memcpy(&id, &vchData[0], 20);
+        keyID = CKeyID(id);
+        return true;
+    }
+    default: return false;
+    }
+}
+
+bool CBitcoinAddress::IsScript() const {
+    if (!IsValid())
+        return false;
+    switch (nVersion) {
+    case SCRIPT_ADDRESS:
+    case SCRIPT_ADDRESS_TEST: {
+        return true;
+    }
+    default: return false;
+    }
+}
+
+/** A base58-encoded secret key */
+
+void CBitcoinSecret::SetSecret(const CSecret& vchSecret, bool fCompressed)
+{
+    assert(vchSecret.size() == 32);
+    SetData(128 + (fTestNet ? CBitcoinAddress::PUBKEY_ADDRESS_TEST : CBitcoinAddress::PUBKEY_ADDRESS), &vchSecret[0], vchSecret.size());
+    if (fCompressed)
+        vchData.push_back(1);
+}
+
+CSecret CBitcoinSecret::GetSecret(bool &fCompressedOut)
+{
+    CSecret vchSecret;
+    vchSecret.resize(32);
+    memcpy(&vchSecret[0], &vchData[0], 32);
+    fCompressedOut = vchData.size() == 33;
+    return vchSecret;
+}
+
+void CBitcoinSecret::SetKey(const CKey& vchSecret)
+{
+    assert(vchSecret.IsValid());
+    SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
+    if (vchSecret.IsCompressed())
+        vchData.push_back(1);
+}
+
+CKey CBitcoinSecret::GetKey()
+{
+    CKey ret;
+    ret.Set(&vchData[0], &vchData[32], vchData.size() > 32 && vchData[32] == 1);
+    return ret;
+}
+
+bool CBitcoinSecret::IsValid() const
+{
+    bool fExpectTestNet = false;
+    switch(nVersion)
+    {
+        case (128 + CBitcoinAddress::PUBKEY_ADDRESS):
+            break;
+
+        case (128 + CBitcoinAddress::PUBKEY_ADDRESS_TEST):
+            fExpectTestNet = true;
+            break;
+
+        default:
+            return false;
+    }
+    return fExpectTestNet == fTestNet && (vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1));
+}
+
+bool CBitcoinSecret::SetString(const char* pszSecret)
+{
+    return CBase58Data::SetString(pszSecret) && IsValid();
+}
+
+bool CBitcoinSecret::SetString(const std::string& strSecret)
+{
+    return SetString(strSecret.c_str());
+}
