@@ -1034,6 +1034,10 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
     nRewardCoinYear = COIN_YEAR_REWARD; // 0.06 6%
 
     int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
+	
+	//New PoS Reward after block 900,000?
+	if (pindexBest->nHeight > 900000)
+		nSubsidy = nCoinAge * nRewardCoinYear / 365;
 
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
