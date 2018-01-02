@@ -128,9 +128,7 @@ std::string EncodeBase58Check(const std::vector<unsigned char>& vchIn)
 // returns true if decoding is successful
 bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet)
 {
-    if (!DecodeBase58(psz, vchRet))
-        return false;
-    if (vchRet.size() < 4)
+    if (!DecodeBase58(psz, vchRet) || vchRet.size() < 4)
     {
         vchRet.clear();
         return false;
@@ -183,8 +181,8 @@ void CBase58Data::SetData(int nVersionIn, const unsigned char *pbegin, const uns
 bool CBase58Data::SetString(const char* psz)
 {
     std::vector<unsigned char> vchTemp;
-    DecodeBase58Check(psz, vchTemp);
-    if (vchTemp.empty())
+    bool rc58 = DecodeBase58Check(psz, vchTemp);
+    if ((!rc58) || vchTemp.empty())
     {
         vchData.clear();
         nVersion = 0;
@@ -337,7 +335,7 @@ CSecret CBitcoinSecret::GetSecret(bool &fCompressedOut)
 void CBitcoinSecret::SetKey(const CKey& vchSecret)
 {
     assert(vchSecret.IsValid());
-    SetData(fTestNet ? PRIVKEY_ADDRESS_TEST : PRIVKEY_ADDRESS, vchSecret.begin(), vchSecret.size());
+    SetData(128 + (fTestNet ? CBitcoinAddress::PUBKEY_ADDRESS_TEST : CBitcoinAddress::PUBKEY_ADDRESS), vchSecret.begin(), vchSecret.size());
     if (vchSecret.IsCompressed())
         vchData.push_back(1);
 }
