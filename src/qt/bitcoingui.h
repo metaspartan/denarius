@@ -12,13 +12,14 @@ class ClientModel;
 class WalletModel;
 class MessageModel;
 class TransactionView;
+class MintingView;
+class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
 class MessagePage;
 class StatisticsPage;
 class MarketBrowser;
 class BlockBrowser;
-class ChatWindow;
 class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
@@ -93,8 +94,9 @@ private:
 	StatisticsPage *statisticsPage;
 	BlockBrowser *blockBrowser;
 	MarketBrowser *marketBrowser;
-    ChatWindow *chatWindow;
     QWidget *transactionsPage;
+	QWidget *mintingPage;
+	MultisigDialog *multisigPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -116,8 +118,9 @@ private:
 	QAction *statisticsAction;
 	QAction *blockAction;
 	QAction *marketAction;
-    QAction *chatAction;
     QAction *historyAction;
+	QAction *mintingAction;
+	QAction *multisigAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -140,6 +143,7 @@ private:
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
+	MintingView *mintingView;
     RPCConsole *rpcConsole;
 
     QMovie *syncIconMovie;
@@ -181,6 +185,8 @@ public slots:
 
     void mainToolbarOrientation(Qt::Orientation orientation);
     void secondaryToolbarOrientation(Qt::Orientation orientation);
+	
+	void gotoMultisigPage();
 
 private slots:
     /** Switch to overview (home) page */
@@ -191,6 +197,8 @@ private slots:
     void gotoBlockBrowser();
 	/** Switch to market*/
     void gotoMarketBrowser();
+	/** Switch to minting page */
+    void gotoMintingPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
     /** Switch to address book page */
@@ -202,7 +210,7 @@ private slots:
     /** Switch to message page */
     void gotoMessagePage();
 	
-    void gotoChatPage();
+    //void gotoChatPage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");

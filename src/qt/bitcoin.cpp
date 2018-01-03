@@ -8,6 +8,7 @@
 #include "messagemodel.h"
 #include "guiutil.h"
 #include "guiconstants.h"
+#include "intro.h"
 
 #include "init.h"
 #include "ui_interface.h"
@@ -126,23 +127,6 @@ int main(int argc, char *argv[])
     Q_INIT_RESOURCE(bitcoin);
     QApplication app(argc, argv);
 
-    // Install global event filter that makes sure that long tooltips can be word-wrapped
-    app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));
-
-    // Command-line options take precedence:
-    ParseParameters(argc, argv);
-
-    // ... then bitcoin.conf:
-    if (!boost::filesystem::is_directory(GetDataDir(false)))
-    {
-        // This message can not be translated, as translation is not initialized yet
-        // (which not yet possible because lang=XX can be overridden in bitcoin.conf in the data directory)
-        QMessageBox::critical(0, "Denarius",
-                              QString("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(mapArgs["-datadir"])));
-        return 1;
-    }
-    ReadConfigFile(mapArgs, mapMultiArgs);
-
     // Application identification (must be set before OptionsModel is initialized,
     // as it is used to locate QSettings)
     app.setOrganizationName("Denarius");
@@ -151,9 +135,6 @@ int main(int argc, char *argv[])
         app.setApplicationName("Denarius-Qt-testnet");
     else
         app.setApplicationName("Denarius-Qt");
-
-    // ... then GUI settings:
-    OptionsModel optionsModel;
 
     // Get desired locale (e.g. "de_DE") from command line or use system locale
     QString lang_territory = QString::fromStdString(GetArg("-lang", QLocale::system().name().toStdString()));
@@ -182,6 +163,27 @@ int main(int argc, char *argv[])
     if (translator.load(lang_territory, ":/translations/"))
         app.installTranslator(&translator);
 
+    // Command-line options take precedence:
+    ParseParameters(argc, argv);
+
+    // User language is set up: pick a data directory
+    Intro::pickDataDirectory();
+
+    // Install global event filter that makes sure that long tooltips can be word-wrapped
+    app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));
+
+    // ... then bitcoin.conf:
+    if (!boost::filesystem::is_directory(GetDataDir(false)))
+    {
+        QMessageBox::critical(0, "Denarius",
+                              QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(mapArgs["-datadir"])));
+        return 1;
+    }
+    ReadConfigFile(mapArgs, mapMultiArgs);
+
+    // ... then GUI settings:
+    OptionsModel optionsModel;	
+	
     // Subscribe to global signals from core
     uiInterface.ThreadSafeMessageBox.connect(ThreadSafeMessageBox);
     uiInterface.ThreadSafeAskFee.connect(ThreadSafeAskFee);

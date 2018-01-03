@@ -2,6 +2,7 @@
 #include "guiconstants.h"
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
+#include "mintingtablemodel.h"
 #include "transactiontablemodel.h"
 
 #include "ui_interface.h"
@@ -21,6 +22,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
     cachedNumBlocks(0)
 {
     addressTableModel = new AddressTableModel(wallet, this);
+	mintingTableModel = new MintingTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(wallet, this);
 
     // This timer will be fired repeatedly to update the balance
@@ -418,6 +420,11 @@ AddressTableModel *WalletModel::getAddressTableModel()
     return addressTableModel;
 }
 
+MintingTableModel *WalletModel::getMintingTableModel()
+{
+    return mintingTableModel;
+}
+
 TransactionTableModel *WalletModel::getTransactionTableModel()
 {
     return transactionTableModel;
@@ -653,4 +660,9 @@ void WalletModel::unlockCoin(COutPoint& output)
 void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
 {
     return;
+}
+
+CWallet* WalletModel::getWallet()
+{
+    return wallet;
 }

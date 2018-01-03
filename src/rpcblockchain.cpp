@@ -147,6 +147,45 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     return result;
 }
 
+Value dumpbootstrap(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "dumpbootstrap \"destination\" \"blocks\"\n"
+            "\nCreates a bootstrap format block dump of the blockchain in destination, which can be a directory or a path with filename, up to the given block number.");
+
+    string strDest = params[0].get_str();
+    int nBlocks = params[1].get_int();
+    if (nBlocks < 0 || nBlocks > nBestHeight)
+        throw runtime_error("Block number out of range.");
+
+    boost::filesystem::path pathDest(strDest);
+    if (boost::filesystem::is_directory(pathDest))
+        pathDest /= "bootstrap.dat";
+
+    try {
+        FILE* file = fopen(pathDest.string().c_str(), "wb");
+        if (!file)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);
+        if (!fileout)
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Could not open bootstrap file for writing.");
+
+        for (int nHeight = 0; nHeight <= nBlocks; nHeight++)
+        {
+            CBlock block;
+            CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
+            block.ReadFromDisk(pblockindex, true);
+            fileout << FLATDATA(pchMessageStart) << fileout.GetSerializeSize(block) << block;
+        }
+    } catch(const boost::filesystem::filesystem_error &e) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Error: Bootstrap dump failed!");
+    }
+
+    return Value::null;
+}
+
 Value getbestblockhash(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -228,7 +267,99 @@ Value getblockhash(const Array& params, bool fHelp)
     return pblockindex->phashBlock->GetHex();
 }
 
+//New getblock RPC Command for Denariium Compatibility
 Value getblock(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "getblock \"blockhash\" ( verbosity ) \n"
+            "\nIf verbosity is 0, returns a string that is serialized, hex-encoded data for block 'hash'.\n"
+            "If verbosity is 1, returns an Object with information about block <hash>.\n"
+            "If verbosity is 2, returns an Object with information about block <hash> and information about each transaction. \n"
+            "\nArguments:\n"
+            "1. \"blockhash\"          (string, required) The block hash\n"
+            "2. verbosity              (numeric, optional, default=1) 0 for hex encoded data, 1 for a json object, and 2 for json object with transaction data\n"
+            "\nResult (for verbosity = 0):\n"
+            "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash'.\n"
+            "\nResult (for verbosity = 1):\n"
+            "{\n"
+            "  \"hash\" : \"hash\",     (string) the block hash (same as provided)\n"
+            "  \"confirmations\" : n,   (numeric) The number of confirmations, or -1 if the block is not on the main chain\n"
+            "  \"size\" : n,            (numeric) The block size\n"
+            "  \"strippedsize\" : n,    (numeric) The block size excluding witness data\n"
+            "  \"weight\" : n           (numeric) The block weight as defined in BIP 141\n"
+            "  \"height\" : n,          (numeric) The block height or index\n"
+            "  \"version\" : n,         (numeric) The block version\n"
+            "  \"versionHex\" : \"00000000\", (string) The block version formatted in hexadecimal\n"
+            "  \"merkleroot\" : \"xxxx\", (string) The merkle root\n"
+            "  \"tx\" : [               (array of string) The transaction ids\n"
+            "     \"transactionid\"     (string) The transaction id\n"
+            "     ,...\n"
+            "  ],\n"
+            "  \"time\" : ttt,          (numeric) The block time in seconds since epoch (Jan 1 1970 GMT)\n"
+            "  \"mediantime\" : ttt,    (numeric) The median block time in seconds since epoch (Jan 1 1970 GMT)\n"
+            "  \"nonce\" : n,           (numeric) The nonce\n"
+            "  \"bits\" : \"1d00ffff\", (string) The bits\n"
+            "  \"difficulty\" : x.xxx,  (numeric) The difficulty\n"
+            "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
+            "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
+            "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
+            "}\n"
+            "\nResult (for verbosity = 2):\n"
+            "{\n"
+            "  ...,                     Same output as verbosity = 1.\n"
+            "  \"tx\" : [               (array of Objects) The transactions in the format of the getrawtransaction RPC. Different from verbosity = 1 \"tx\" result.\n"
+            "         ,...\n"
+            "  ],\n"
+            "  ,...                     Same output as verbosity = 1.\n"
+            "}\n"
+            "\nExamples:\n"
+        );
+
+    LOCK(cs_main);
+
+    std::string strHash = params[0].get_str();
+    	uint256 hash(strHash);
+    //std::string strHash = params[0].get_str();
+	//uint256 hash(uint256S(strHash));
+
+    int verbosity = 1;
+    if (params.size() > 1) {
+            verbosity = params[1].get_bool() ? 1 : 0;
+    }
+
+    if (mapBlockIndex.count(hash) == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hash];
+	
+	if(!block.ReadFromDisk(pblockindex, true)){
+        // Block not found on disk. This could be because we have the block
+        // header in our index but don't have the block (for example if a
+        // non-whitelisted node sends us an unrequested long chain of valid
+        // blocks, we add the headers to our index, but don't accept the
+        // block).
+		throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+	}
+
+	block.ReadFromDisk(pblockindex, true);
+	
+    if (verbosity <= 0)
+    {
+        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+        ssBlock << block;
+        std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
+		//strHex.insert(0, "testar ");
+        return strHex;
+    }
+
+    //return blockToJSON(block, pblockindex, verbosity >= 2);
+	return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
+}
+
+//Old getblock RPC Command, Not deprecated
+Value getblock_old(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(

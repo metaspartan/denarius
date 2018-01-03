@@ -1,7 +1,7 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 1.0.2
-INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
+VERSION = 1.0.7
+INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
@@ -16,39 +16,21 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 }
 
-# Windows Dep Libraries, Uncomment lines 20 through 34 to compile Win.
-#BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
-#BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-#BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
-#BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
-#BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-#OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-#OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
-#MINIUPNPC_INCLUDE_PATH=C:/deps/
-#MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
-#LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
-#LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
-#QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
-#QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-#LIBEVENT_INCLUDE_PATH=C:/MinGW/include
-#LIBEVENT_LIB_PATH=C:/MinGW/lib
-#LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
-
-# OSX Dep Libraries, uncomment line 38 through 53 to compile OSX
-#MINIUPNPC_LIB_PATH=/usr/local/opt/miniupnpc/lib
-#MINIUPNPC_INCLUDE_PATH=/usr/local/opt/miniupnpc/include
-#OPENSSL_LIB_PATH=/usr/local/opt/openssl/lib
-#OPENSSL_INCLUDE_PATH=/usr/local/opt/openssl/include
-#LIBEVENT_LIB_PATH=/usr/local/opt/libevent/lib
-#LIBEVENT_INCLUDE_PATH=/usr/local/opt/libevent/include
-#BDB_LIB_PATH=/usr/local/opt/berkeley-db@4/lib
-#BDB_INCLUDE_PATH=/usr/local/opt/berkeley-db@4/include
-#BOOST_LIB_PATH=/usr/local/opt/boost/lib/
-#BOOST_INCLUDE_PATH=/usr/local/opt/boost/include
-#LIBPNG_LIB_PATH=/usr/local/opt/libpng/lib
-#LIBPNG_INCLUDE_PATH=/usr/local/opt/libpng/include
-#QRENCODE_LIB_PATH=/usr/local/opt/qrencode/lib
-#QRENCODE_INCLUDE_PATH=/usr/local/opt/qrencode/include
+win32 {
+BOOST_LIB_SUFFIX=-mgw49-mt-s-1_55
+BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
+BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
+BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
+OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
+OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+MINIUPNPC_INCLUDE_PATH=C:/deps/
+MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
+LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
+QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
+QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+}
 
 # for boost 1.37, add -mt to the boost libraries
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -139,32 +121,46 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
-SOURCES += src/txdb-leveldb.cpp \
-	src/bloom.cpp \
-    src/hash.cpp \
-    src/aes_helper.c \
-    src/echo.c \
-	src/jh.c \
-	src/keccak.c
-!win32 {
-    # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
+contains(USE_LEVELDB, 1) {
+    message(Building with LevelDB transaction index)
+    DEFINES += USE_LEVELDB
+
+    INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
+	SOURCES += src/txdb-leveldb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
+	!win32 {
+		# we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
+		genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a
+	} else {
+		# make an educated guess about what the ranlib command is called
+		isEmpty(QMAKE_RANLIB) {
+			QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
+		}
+		LIBS += -lshlwapi
+		#genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
+	}
+	genleveldb.target = $$PWD/src/leveldb/libleveldb.a
+	genleveldb.depends = FORCE
+	PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
+	QMAKE_EXTRA_TARGETS += genleveldb
+	# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
+	QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 } else {
-    # make an educated guess about what the ranlib command is called
-    isEmpty(QMAKE_RANLIB) {
-        QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
-    }
-    LIBS += -lshlwapi
-    #genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
+    message(Building with Berkeley DB transaction index)
+    SOURCES += src/txdb-bdb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
 }
-genleveldb.target = $$PWD/src/leveldb/libleveldb.a
-genleveldb.depends = FORCE
-PRE_TARGETDEPS += $$PWD/src/leveldb/libleveldb.a
-QMAKE_EXTRA_TARGETS += genleveldb
-# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
 
 # regenerate src/build.h
 !windows|contains(USE_BUILD_INFO, 1) {
@@ -197,6 +193,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
+	src/qt/intro.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/optionsdialog.h \
@@ -208,6 +205,13 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/aboutdialog.h \
     src/qt/editaddressdialog.h \
     src/qt/bitcoinaddressvalidator.h \
+	src/kernelrecord.h \
+	src/qt/mintingfilterproxy.h \
+    src/qt/mintingtablemodel.h \
+    src/qt/mintingview.h \
+	src/qt/multisigaddressentry.h \
+    src/qt/multisiginputentry.h \
+    src/qt/multisigdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -278,8 +282,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/blockbrowser.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
-	src/qt/chatwindow.h \
-	src/qt/serveur.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -299,6 +301,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/qvalidatedtextedit.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
+	src/qt/intro.cpp \
     src/qt/transactiontablemodel.cpp \
     src/qt/addresstablemodel.cpp \
     src/qt/optionsdialog.cpp \
@@ -313,8 +316,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/statisticspage.cpp \
 	src/qt/blockbrowser.cpp \
 	src/qt/marketbrowser.cpp \
-	src/qt/chatwindow.cpp \
-	src/qt/serveur.cpp \
+	src/kernelrecord.cpp \
+	src/qt/mintingfilterproxy.cpp \
+    src/qt/mintingtablemodel.cpp \
+    src/qt/mintingview.cpp \
+	src/qt/multisigaddressentry.cpp \
+    src/qt/multisiginputentry.cpp \
+    src/qt/multisigdialog.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -380,87 +388,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
-    src/stealth.cpp 
-	
-### DNR sources
-SOURCES += src/tor/anonymize.cpp \
-    src/tor/address.c \
-    src/tor/addressmap.c \
-    src/tor/aes.c \
-    src/tor/backtrace.c \
-    src/tor/buffers.c \
-    src/tor/channel.c \
-    src/tor/channeltls.c \
-    src/tor/circpathbias.c \
-    src/tor/circuitbuild.c \
-    src/tor/circuitlist.c \
-    src/tor/circuitmux.c \
-    src/tor/circuitmux_ewma.c \
-    src/tor/circuitstats.c \
-    src/tor/circuituse.c \
-    src/tor/command.c \
-    src/tor/compat.c \
-    src/tor/compat_libevent.c \
-    src/tor/config.c \
-    src/tor/config_codedigest.c \
-    src/tor/confparse.c \
-    src/tor/connection.c \
-    src/tor/connection_edge.c \
-    src/tor/connection_or.c \
-    src/tor/container.c \
-    src/tor/control.c \
-    src/tor/cpuworker.c \
-    src/tor/crypto.c \
-    src/tor/crypto_curve25519.c \
-    src/tor/crypto_format.c \
-    src/tor/curve25519-donna.c \
-    src/tor/di_ops.c \
-    src/tor/directory.c \
-    src/tor/dirserv.c \
-    src/tor/dirvote.c \
-    src/tor/dns.c \
-    src/tor/dnsserv.c \
-    src/tor/entrynodes.c \
-    src/tor/ext_orport.c \
-    src/tor/fp_pair.c \
-    src/tor/geoip.c \
-    src/tor/hibernate.c \
-    src/tor/log.c \
-    src/tor/memarea.c \
-    src/tor/mempool.c \
-    src/tor/microdesc.c \
-    src/tor/networkstatus.c \
-    src/tor/nodelist.c \
-    src/tor/onion.c \
-    src/tor/onion_fast.c \
-    src/tor/onion_main.c \
-    src/tor/onion_ntor.c \
-    src/tor/onion_tap.c \
-    src/tor/policies.c \
-    src/tor/procmon.c \
-    src/tor/reasons.c \
-    src/tor/relay.c \
-    src/tor/rendclient.c \
-    src/tor/rendcommon.c \
-    src/tor/rendmid.c \
-    src/tor/rendservice.c \
-    src/tor/rephist.c \
-    src/tor/replaycache.c \
-    src/tor/router.c \
-    src/tor/routerlist.c \
-    src/tor/routerparse.c \
-    src/tor/routerset.c \
-    src/tor/sandbox.c \
-    src/tor/statefile.c \
-    src/tor/status.c \
-    src/tor/strlcat.c \
-    src/tor/strlcpy.c \
-    src/tor/tor_util.c \
-    src/tor/torgzip.c \
-    src/tor/tortls.c \
-    src/tor/transports.c \
-    src/tor/util_codedigest.c \
-
+    src/stealth.cpp
 
 #### DNR sources
 
@@ -469,6 +397,7 @@ RESOURCES += \
     src/qt/res/themes/qdarkstyle/style.qrc
 
 FORMS += \
+	src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
@@ -485,7 +414,9 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
-	src/qt/forms/chatwindow.ui \
+	src/qt/forms/multisigaddressentry.ui \
+    src/qt/forms/multisiginputentry.ui \
+    src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
@@ -583,10 +514,9 @@ macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
-LIBS += -levent -lz
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32

@@ -146,6 +146,7 @@ extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::s
 
 extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
 extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value addnode(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
@@ -155,6 +156,7 @@ extern json_spirit::Value sendalert(const json_spirit::Array& params, bool fHelp
 
 extern json_spirit::Value getsubsidy(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getmininginfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value gethashespersec(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getstakinginfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getwork(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getworkex(const json_spirit::Array& params, bool fHelp);
@@ -204,6 +206,7 @@ extern json_spirit::Value getrawtransaction(const json_spirit::Array& params, bo
 extern json_spirit::Value listunspent(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value createrawtransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value decoderawtransaction(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value createmultisig(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value decodescript(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value signrawtransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendrawtransaction(const json_spirit::Array& params, bool fHelp);
@@ -211,6 +214,7 @@ extern json_spirit::Value sendrawtransaction(const json_spirit::Array& params, b
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getdifficulty(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value dumpbootstrap(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value settxfee(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getrawmempool(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockhash(const json_spirit::Array& params, bool fHelp);

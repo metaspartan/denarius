@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>573</width>
-    <height>342</height>
+    <width>917</width>
+    <height>587</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -54,6 +54,19 @@
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelTradeLink">
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="text">
+             <string>&lt;div style=&quot;color: #fff;&quot;&gt;(&lt;a href=&quot;https://www.cryptopia.co.nz/Exchange/?market=DNR_BTC&quot; style=&quot;color: #fff;&quot;&gt;Trade DNR&lt;/a&gt;)&lt;/div&gt;</string>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -206,7 +219,7 @@
           <item row="5" column="0">
            <widget class="QLabel" name="labelTotalText">
             <property name="text">
-             <string>Total:</string>
+             <string>Wallet Total:</string>
             </property>
            </widget>
           </item>
@@ -214,6 +227,7 @@
            <widget class="QLabel" name="labelTotal">
             <property name="font">
              <font>
+              <pointsize>11</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -225,7 +239,66 @@
              <string>Your current total balance</string>
             </property>
             <property name="text">
-             <string notr="true">0 BTC</string>
+             <string notr="true">0 DNR</string>
+            </property>
+            <property name="textInteractionFlags">
+             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>USD Total:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLabel" name="labelUSDTotal">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="cursor">
+             <cursorShape>IBeamCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Your current total balance estimated in USD, Rate is not updated often</string>
+            </property>
+            <property name="text">
+             <string>0 USD</string>
+            </property>
+            <property name="textInteractionFlags">
+             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>BTC Total:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLabel" name="labelBTCTotal">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="cursor">
+             <cursorShape>IBeamCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Your current total balance estimated in BTC, Rate is not updated often</string>
+            </property>
+            <property name="text">
+             <string>0 BTC</string>
             </property>
             <property name="textInteractionFlags">
              <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -277,8 +350,13 @@
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
             <property name="text">
-             <string>&lt;b&gt;Recent transactions&lt;/b&gt;</string>
+             <string>&lt;b&gt;Recent Transactions&lt;/b&gt;</string>
             </property>
            </widget>
           </item>

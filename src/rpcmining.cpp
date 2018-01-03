@@ -14,6 +14,16 @@
 using namespace json_spirit;
 using namespace std;
 
+Value gethashespersec(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "gethashespersec\n"
+            "Returns a recent hashes per second performance measurement while generating.");
+
+    return GetPoWMHashPS() / 1000;
+}
+
 Value getsubsidy(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)

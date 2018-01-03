@@ -29,6 +29,7 @@ Technology
 ==========================
 * Stealth addresses
 * Encrypted Messaging
+* Multi-Signature Addresses & TXs
 * Fast 30 Second Block Times
 * New Tribus PoW Algorithm comprising of 3 NIST5 algos
 * Tribus PoW/PoS Hybrid
@@ -37,7 +38,8 @@ Technology
 LINKS
 ==========================
 * Official Website(https://denarius.io/)
-* My Twitter(https://twitter.com/carsenjk)
+* Official Forums(https://denariustalk.org/)
+* Denarius Twitter(https://twitter.com/denariuscoin)
 
 
 Development process
