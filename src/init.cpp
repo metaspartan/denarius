@@ -11,6 +11,7 @@
 #include "ui_interface.h"
 #include "checkpoints.h"
 #include "activemasternode.h"
+#include "masternodeconfig.h"
 #include "spork.h"
 #include "smessage.h"
 
@@ -505,7 +506,19 @@ bool AppInit2(boost::thread_group& threadGroup)
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
+    // Process Masternode config
+    std::string err;
+    masternodeConfig.read(err);
+    if (!err.empty())
+        InitError(strprintf(_("error while parsing masternode.conf Error: %s \n"), err));
 
+    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
+        // when only connecting to trusted nodes, do not seed via DNS, or listen by default
+        if (SoftSetBoolArg("-dnsseed", false))
+            InitWarning(_("AppInit2 : parameter interaction: -connect set -> setting -dnsseed=0\n"));
+        if (SoftSetBoolArg("-listen", false))
+            InitWarning(_("AppInit2 : parameter interaction: -connect set -> setting -listen=0\n"));
+    }
     // ********************************************************* Step 3: parameter-to-internal-flags
 
     fDebug = GetBoolArg("-debug");
@@ -1002,7 +1015,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             std::string errorMessage;
 
             CKey key;
-            key.MakeNewKey(false); // Pretty important.
+            //key.MakeNewKey(false); // Pretty important.
             CPubKey pubkey;
 
             if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
