@@ -2302,8 +2302,8 @@ bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubK
     if (signatureCache.Get(sighash, vchSig, pubkey))
         return true;
 
-    //if (!pubkey.Verify(sighash, vchSig))
-        //return false;
+    if (!pubkey.Verify(sighash, vchSig))
+        return false;
 	
     CKey key;
     if (!key.SetPubKey(pubkey))

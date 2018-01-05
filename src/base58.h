@@ -149,11 +149,6 @@ bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const {
 class CBitcoinSecret : public CBase58Data
 {
 public:
-    enum
-    {
-        PRIVKEY_ADDRESS      = 158, // Denarius private keys start with '6' or 'Q'
-        PRIVKEY_ADDRESS_TEST = 218,
-    };
     
     void SetSecret(const CSecret& vchSecret, bool fCompressed);
     CSecret GetSecret(bool &fCompressedOut);

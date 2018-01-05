@@ -90,7 +90,18 @@ private:
 
 public:
     CPubKey() { }
-    CPubKey(const std::vector<unsigned char> &vchPubKeyIn) : vchPubKey(vchPubKeyIn) { }
+
+    // Initialize a public key using begin/end iterators to byte data.
+    template<typename T>
+    void Set(const T pbegin, const T pend) {
+        int len = pend == pbegin ? 0 : GetLen(pbegin[0]);
+        if (len && len == (pend-pbegin))
+            memcpy(vch, (unsigned char*)&pbegin[0], len);
+        else
+            Invalidate();
+    }
+
+    CPubKey(const std::vector<unsigned char> &vchPubKeyIn) : vchPubKey(vchPubKeyIn) { Set(vchPubKeyIn.begin(), vchPubKeyIn.end()); }
     friend bool operator==(const CPubKey &a, const CPubKey &b) { return a.vchPubKey == b.vchPubKey; }
     friend bool operator!=(const CPubKey &a, const CPubKey &b) { return a.vchPubKey != b.vchPubKey; }
     friend bool operator<(const CPubKey &a, const CPubKey &b) { return a.vchPubKey < b.vchPubKey; }
@@ -113,14 +124,25 @@ public:
         return Hash(vchPubKey.begin(), vchPubKey.end());
     }
 
+    // Check syntactic correctness.
+    //
+    // Note that this is consensus critical as CheckSig() calls it!
     bool IsValid() const {
         return vchPubKey.size() == 33 || vchPubKey.size() == 65;
     }
 
+     // fully validate whether this is a valid public key (more expensive than IsValid())
+    bool IsFullyValid() const;
+
+    // Check whether the public key corresponding to this private key is (to be) compressed.
     bool IsCompressed() const {
         return vchPubKey.size() == 33;
     }
 	
+    // Verify a DER signature (~72 bytes).
+    // If this public key is not fully valid, the return value will be false.
+    bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const;
+
 	// Recover a public key from a compact signature.
     bool RecoverCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig);
 
@@ -168,7 +190,7 @@ public:
     bool IsNull() const;
     bool IsCompressed() const;
 
-    void MakeNewKey(bool fCompressed);
+    void MakeNewKey(bool fCompressedIn);
     bool SetPrivKey(const CPrivKey& vchPrivKey);
     bool SetSecret(const CSecret& vchSecret, bool fCompressed = false);
     CSecret GetSecret(bool &fCompressed) const;
