@@ -1015,7 +1015,6 @@ bool AppInit2(boost::thread_group& threadGroup)
             std::string errorMessage;
 
             CKey key;
-            //key.MakeNewKey(false); // Pretty important.
             CPubKey pubkey;
 
             if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
