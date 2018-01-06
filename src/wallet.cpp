@@ -72,13 +72,11 @@ CPubKey CWallet::GenerateNewKey()
     return key.GetPubKey();
 }
 
-bool CWallet::AddKey(const CKey& key)
+bool CWallet::AddKeyPubKey(const CKey& key, const CPubKey &pubkey)
 {
     AssertLockHeld(cs_wallet); // mapKeyMetadata
 
-    CPubKey pubkey = key.GetPubKey();
-
-    if (!CCryptoKeyStore::AddKey(key))
+    if (!CCryptoKeyStore::AddKeyPubKey(key, pubkey))
         return false;
     if (!fFileBacked)
         return true;
@@ -2854,7 +2852,8 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
         CKey ckey;
         
         try {
-            ckey.SetSecret(vchSecret, true);
+            ckey.Set(vchSecret.begin(), vchSecret.end(), true);
+            //ckey.SetSecret(vchSecret, true);
         } catch (std::exception& e) {
             printf("ckey.SetSecret() threw: %s.\n", e.what());
             continue;
@@ -3292,7 +3291,8 @@ bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNar
                     CKey ckey;
                     
                     try {
-                        ckey.SetSecret(vchSecret, true);
+                        ckey.Set(vchSecret.begin(), vchSecret.end(), true);
+                        //ckey.SetSecret(vchSecret, true);
                     } catch (std::exception& e) {
                         printf("ckey.SetSecret() threw: %s.\n", e.what());
                         continue;
