@@ -1981,10 +1981,7 @@ static bool ScanBlock(CBlock& block, CTxDB& txdb, SecMsgDB& addrpkdb,
                 // -- opcode is the length of the following data, compressed public key is always 33
                 if (opcode == 33)
                 {
-                    key.SetPubKey(vch);
-                    
-                    key.SetCompressedPubKey(); // ensure key is compressed
-                    CPubKey pubKey = key.GetPubKey();
+                    CPubKey pubKey(vch);
                     
                     if (!pubKey.IsValid()
                         || !pubKey.IsCompressed())
@@ -2631,9 +2628,8 @@ int SecureMsgGetLocalKey(CKeyID& ckid, CPubKey& cpkOut)
     if (!pwalletMain->GetKey(ckid, key))
         return 4;
     
-    key.SetCompressedPubKey(); // make sure key is compressed
-    
     cpkOut = key.GetPubKey();
+    
     if (!cpkOut.IsValid()
         || !cpkOut.IsCompressed())
     {
@@ -2735,15 +2731,14 @@ int SecureMsgAddAddress(std::string& address, std::string& publicKey)
     CPubKey pubKey(vchTest);
     
     // -- check that public key matches address hash
-    CKey keyT;
-    if (!keyT.SetPubKey(pubKey))
+    CPubKey pubKeyT(pubKey);
+    if (!pubKeyT.IsValid())
     {
         printf("SetPubKey failed.\n");
         return 2;
     };
     
-    keyT.SetCompressedPubKey();
-    CPubKey pubKeyT = keyT.GetPubKey();
+    CKeyID keyIDT = pubKeyT.GetID();
     
     CBitcoinAddress addressT(address);
     
@@ -3403,10 +3398,12 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
     CKey keyR;
     keyR.MakeNewKey(true); // make compressed key
     
-    
+    CECKey ecKeyR;
+    ecKeyR.SetSecretBytes(keyR.begin());
+
     // -- Do an EC point multiply with public key K and private key r. This gives you public key P. 
-    CKey keyK;
-    if (!keyK.SetPubKey(cpkDestK))
+    CECKey ecKeyK;
+    if (!ecKeyK.SetPubKey(cpkDestK))
     {
         printf("Could not set pubkey for K: %s.\n", ValueString(cpkDestK.Raw()).c_str());
         return 4; // address to is invalid
@@ -3414,8 +3411,8 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
     
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyr = keyR.GetECKey();
-    EC_KEY* pkeyK = keyK.GetECKey();
+    EC_KEY* pkeyr = ecKeyR.GetECKey();
+    EC_KEY* pkeyK = ecKeyK.GetECKey();
     
     // always seems to be 32, worth checking?
     //int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(pkeyr));
@@ -3806,34 +3803,31 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     
     
     
-    CKey keyR;
-    std::vector<unsigned char> vchR(psmsg->cpkR, psmsg->cpkR+33); // would be neater to override CPubKey() instead
-    CPubKey cpkR(vchR);
+    CPubKey cpkR(psmsg->cpkR, psmsg->cpkR+33);
     if (!cpkR.IsValid())
     {
         printf("Could not get public key for key R.\n");
         return 1;
     };
-    if (!keyR.SetPubKey(cpkR))
+
+    CECKey ecKeyR;
+    if (!ecKeyR.SetPubKey(cpkR))
     {
         printf("Could not set pubkey for R: %s.\n", ValueString(cpkR.Raw()).c_str());
         return 1;
     };
+
+    CECKey ecKeyDest;
+    ecKeyDest.SetSecretBytes(keyDest.begin());
     
-    cpkR = keyR.GetPubKey();
-    if (!cpkR.IsValid()
-        || !cpkR.IsCompressed())
-    {
-        printf("Could not get compressed public key for key R.\n");
-        return 1;
-    };
-    
+
+
     
     // -- Do an EC point multiply with private key k and public key R. This gives you public key P.
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyk = keyDest.GetECKey();
-    EC_KEY* pkeyR = keyR.GetECKey();
+    EC_KEY* pkeyk = ecKeyDest.GetECKey();
+    EC_KEY* pkeyR = ecKeyR.GetECKey();
     
     ECDH_set_method(pkeyk, ECDH_OpenSSL());
     int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, NULL);
@@ -3967,9 +3961,8 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
         
         memcpy(&vchSig[0], &vchPayload[1+20], 65);
         
-        CKey keyFrom;
-        keyFrom.SetCompactSignature(Hash(msg.vchMessage.begin(), msg.vchMessage.end()-1), vchSig);
-        CPubKey cpkFromSig = keyFrom.GetPubKey();
+        CPubKey cpkFromSig;
+        cpkFromSig.RecoverCompact(Hash(msg.vchMessage.begin(), msg.vchMessage.end()-1), vchSig);
         if (!cpkFromSig.IsValid())
         {
             printf("Signature validation failed.\n");
@@ -3986,7 +3979,6 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
             return 1;
         };
         
-        cpkFromSig = keyFrom.GetPubKey();
         
         int rv = 5;
         try {

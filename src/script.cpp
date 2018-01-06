@@ -2305,13 +2305,6 @@ bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubK
     if (!pubkey.Verify(sighash, vchSig))
         return false;
 	
-    CKey key;
-    if (!key.SetPubKey(pubkey))
-        return false;
-
-    if (!key.Verify(sighash, vchSig))
-        return false;
-
     if (!(SCRIPT_VERIFY_NOCACHE))
         signatureCache.Set(sighash, vchSig, pubkey);
 
@@ -3059,8 +3052,7 @@ CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo, unsign
 
 bool SignatureChecker::VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const
 {
-	CKey key;
-    return key.Verify(sighash, vchSig);
+    return pubkey.Verify(sighash, vchSig);
 }
 
 bool SignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn, const vector<unsigned char>& vchPubKey, const CScript& scriptCode) const
