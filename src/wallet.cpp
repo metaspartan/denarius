@@ -3605,10 +3605,10 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         nCredit += nReward;
     }
 	
-	    // Masternode Payments
+	// Masternode Payments
     int payments = 1;
     // start masternode payments
-    bool bMasterNodePayment = true; // note was false, set true to test
+    bool bMasterNodePayment = false;
 
     if (fTestNet){
         if (GetTime() > START_MASTERNODE_PAYMENTS_TESTNET ){
