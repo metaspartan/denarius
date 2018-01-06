@@ -268,13 +268,11 @@ bool CActiveMasternode::Register(CTxIn vin, CService service, CKey keyCollateral
     std::string vchPubKey2(pubKeyMasternode.begin(), pubKeyMasternode.end());
 
     std::string strMessage = service.ToString() + boost::lexical_cast<std::string>(masterNodeSignatureTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(PROTOCOL_VERSION);
-
     if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, keyCollateralAddress)) {
 		retErrorMessage = "sign message failed: " + errorMessage;
 		printf("CActiveMasternode::Register() - Error: %s\n", retErrorMessage.c_str());
 		return false;
     }
-
     if(!darkSendSigner.VerifyMessage(pubKeyCollateralAddress, vchMasterNodeSignature, strMessage, errorMessage)) {
 		retErrorMessage = "Verify message failed: " + errorMessage;
 		printf("CActiveMasternode::Register() - Error: %s\n", retErrorMessage.c_str());
