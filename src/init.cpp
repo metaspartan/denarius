@@ -998,10 +998,10 @@ bool AppInit2(boost::thread_group& threadGroup)
 	
     fMasterNode = GetBoolArg("-masternode", false);
     if(fMasterNode) {
-        printf("IS DARKSEND MASTER NODE\n");
+        printf("Masternode Enabled\n");
         strMasterNodeAddr = GetArg("-masternodeaddr", "");
 
-        printf(" addr %s\n", strMasterNodeAddr.c_str());
+        printf("Masternode address: %s\n", strMasterNodeAddr.c_str());
 
         if(!strMasterNodeAddr.empty()){
             CService addrTest = CService(strMasterNodeAddr);
