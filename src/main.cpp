@@ -2414,7 +2414,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
     bool MasternodePayments = false;
 
-    if(nTime > START_MASTERNODE_PAYMENTS) MasternodePayments = true;
+    if(nTime > fTestNet ? START_MASTERNODE_PAYMENTS_TESTNET : START_MASTERNODE_PAYMENTS) MasternodePayments = true;
    
     if(MasternodePayments)
     {
