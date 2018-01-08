@@ -978,7 +978,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         if (!tx.ConnectInputs(txdb, mapInputs, mapUnused, CDiskTxPos(1,1,1), pindexBest, true, false, STANDARD_SCRIPT_VERIFY_FLAGS, false))
         {
-            return error("AcceptableInputs : ConnectInputs failed %s", hash.ToString());
+            return error("AcceptableInputs : ConnectInputs failed %s", hash.ToString().c_str());
         }
     }
 
@@ -1629,7 +1629,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                     // avoid splitting the network between upgraded and
                     // non-upgraded nodes.
                     if (VerifySignature(txPrev, *this, i, flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, 0))
-                        return error("ConnectInputs() : %s non-mandatory VerifySignature failed", GetHash().ToString());
+                        return error("ConnectInputs() : %s non-mandatory VerifySignature failed", GetHash().ToString().c_str());
                     }
                     // Failures of other flags indicate a transaction that is
                     // invalid in new blocks, e.g. a invalid P2SH. We DoS ban
