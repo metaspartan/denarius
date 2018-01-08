@@ -331,53 +331,53 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
     return ReadFromDisk(txdb, prevout, txindex);
 }
 
-bool CTransaction::IsStandard() const
-{
-    if (nVersion > CTransaction::CURRENT_VERSION)
-        return false;
+// bool CTransaction::IsStandard() const
+// {
+//     if (nVersion > CTransaction::CURRENT_VERSION)
+//         return false;
 
-    BOOST_FOREACH(const CTxIn& txin, vin)
-    {
-        // Biggest 'standard' txin is a 3-signature 3-of-3 CHECKMULTISIG
-        // pay-to-script-hash, which is 3 ~80-byte signatures, 3
-        // ~65-byte public keys, plus a few script ops.
-        if (txin.scriptSig.size() > 500)
-            return false;
-        if (!txin.scriptSig.IsPushOnly())
-            return false;
-        if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
-            return false;
-        }
-    }
+//     BOOST_FOREACH(const CTxIn& txin, vin)
+//     {
+//         // Biggest 'standard' txin is a 3-signature 3-of-3 CHECKMULTISIG
+//         // pay-to-script-hash, which is 3 ~80-byte signatures, 3
+//         // ~65-byte public keys, plus a few script ops.
+//         if (txin.scriptSig.size() > 500)
+//             return false;
+//         if (!txin.scriptSig.IsPushOnly())
+//             return false;
+//         if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
+//             return false;
+//         }
+//     }
 
-    unsigned int nDataOut = 0;
-    unsigned int nTxnOut = 0;
+//     unsigned int nDataOut = 0;
+//     unsigned int nTxnOut = 0;
     
-    txnouttype whichType;
-    BOOST_FOREACH(const CTxOut& txout, vout) {
-        if (!::IsStandard(txout.scriptPubKey, whichType))
-            return false;
-        if (whichType == TX_NULL_DATA)
-        {
-            nDataOut++;
-        } else
-        {
-            if (txout.nValue == 0)
-                return false;
-            nTxnOut++;
-        }
-        if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
-            return false;
-        }
-    }
+//     txnouttype whichType;
+//     BOOST_FOREACH(const CTxOut& txout, vout) {
+//         if (!::IsStandard(txout.scriptPubKey, whichType))
+//             return false;
+//         if (whichType == TX_NULL_DATA)
+//         {
+//             nDataOut++;
+//         } else
+//         {
+//             if (txout.nValue == 0)
+//                 return false;
+//             nTxnOut++;
+//         }
+//         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
+//             return false;
+//         }
+//     }
 
-    // only one OP_RETURN txout per txn out is permitted
-    if (nDataOut > nTxnOut) {
-        return false;
-    }
+//     // only one OP_RETURN txout per txn out is permitted
+//     if (nDataOut > nTxnOut) {
+//         return false;
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
@@ -731,8 +731,9 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
         return tx.DoS(100, error("AcceptToMemoryPool : coinstake as individual tx"));
 
     // Rather not work on nonstandard transactions (unless -testnet)
-    if (!fTestNet && !tx.IsStandard())
-        return error("AcceptToMemoryPool : nonstandard transaction");
+    string reason;
+    if (!fTestNet && !IsStandardTx(tx, reason))
+        return error("AcceptToMemoryPool : nonstandard transaction : %s\n", reason.c_str());
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -802,7 +803,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
         // Don't accept it if it can't get into a block
         int64_t txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize);
         if ((fLimitFree && nFees < txMinFee) || (!fLimitFree && nFees < MIN_TX_FEE))
-            return error("AcceptToMemoryPool : not enough fees %s, %d < %d",
+            return error("AcceptToMemoryPool : not enough fees %s, %ld < %ld",
                          hash.ToString().c_str(),
                          nFees, txMinFee);
 
@@ -825,7 +826,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
             // At default rate it would take over a month to fill 1GB
             if (dFreeCount > GetArg("-limitfreerelay", 15)*10*1000)
                 return error("AcceptToMemoryPool : free transaction rejected by rate limiter");
-            printf("mempool", "Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
+            printf("mempool: Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
             dFreeCount += nSize;
         }
 
@@ -857,7 +858,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
 
     SyncWithWallets(tx, NULL);
 
-    printf("mempool", "AcceptToMemoryPool : accepted %s (poolsz %u)\n",
+    printf("mempool: AcceptToMemoryPool : accepted %s (poolsz %lu)\n",
            hash.ToString().substr(0,10).c_str(),
            pool.mapTx.size());
     return true;
@@ -884,7 +885,8 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         return tx.DoS(100, error("AcceptableInputs : coinstake as individual tx"));
 
     // Rather not work on nonstandard transactions (unless -testnet)
-    if (!fTestNet && !tx.IsStandard())
+    string reason;   
+    if (!fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptableInputs : nonstandard transaction");
 
     // is it already in the memory pool?
@@ -947,7 +949,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         // Don't accept it if it can't get into a block
         int64_t txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize);
         if ((fLimitFree && nFees < txMinFee) || (!fLimitFree && nFees < MIN_TX_FEE))
-            return error("AcceptableInputs : not enough fees %s, %d < %d",
+            return error("AcceptableInputs : not enough fees %s, %ld < %ld",
                          hash.ToString().c_str(),
                          nFees, txMinFee);
 
@@ -970,7 +972,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
             // At default rate it would take over a month to fill 1GB
             if (dFreeCount > GetArg("-limitfreerelay", 15)*10*1000)
                 return error("AcceptableInputs : free transaction rejected by rate limiter");
-            printf("mempool", "Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
+            printf("mempool: Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
             dFreeCount += nSize;
         }
 
@@ -983,7 +985,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
     }
 
 
-    printf("mempool", "AcceptableInputs : accepted %s (poolsz %u)\n",
+    printf("mempool: AcceptableInputs : accepted %s (poolsz %lu)\n",
            hash.ToString().substr(0,10).c_str(),
            pool.mapTx.size());
     return true;
@@ -1214,7 +1216,8 @@ const int YEARLY_BLOCKCOUNT = 1051896; // Amount of Blocks per year
 // Proof of Stake miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
-	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // Over 9000 years.
+	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*1998)) // Over 1998 years.
+        printf("!!!!!!!!!!!Returning Nfees\n");
         return nFees;
 
     int64_t nRewardCoinYear;
@@ -1225,6 +1228,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
 
+    printf("POS REward :%ld\n", nSubsidy+nFees);
     return nSubsidy + nFees;
 }
 
@@ -2495,7 +2499,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
                         ExtractDestination(payee, address1);
                         CBitcoinAddress address2(address1);
 
-                        if(fDebug) { printf("CheckBlock() : Couldn't find masternode payment(%d|%d) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
+                        if(fDebug) { printf("CheckBlock() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
                         return DoS(100, error("CheckBlock() : Couldn't find masternode payment or payee"));
                     } else {
                         if(fDebug) { printf("CheckBlock() : Found masternode payment %d\n", pindexBest->nHeight+1); }

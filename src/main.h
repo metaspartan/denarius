@@ -198,6 +198,10 @@ void Misbehaving(NodeId nodeid, int howmuch);
 int64_t GetMasternodePayment(int nHeight, int64_t blockValue);
 
 
+bool IsStandardTx(const CTransaction& tx, std::string& reason);
+bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64_t nBlockTime = 0);
+
+
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
 
@@ -373,11 +377,6 @@ public:
     }
 
     /** Check for standard transaction types
-        @return True if all outputs (scriptPubKeys) use only standard transaction forms
-    */
-    bool IsStandard() const;
-
-    /** Check for standard transaction types
         @param[in] mapInputs	Map of previous transactions that have outputs we're spending
         @return True if all inputs (scriptSigs) use only standard transaction forms
         @see CTransaction::FetchInputs
@@ -398,9 +397,6 @@ public:
      */
     unsigned int GetP2SHSigOpCount(const MapPrevTx& mapInputs) const;
 
-	bool IsStandardTx(const CTransaction& tx, std::string& reason);
-	bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64_t nBlockTime = 0);
-	
     /** Amount of bitcoins spent by this transaction.
         @return sum of all outputs (note: does not include fees)
      */
