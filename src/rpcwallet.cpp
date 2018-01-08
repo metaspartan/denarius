@@ -2250,8 +2250,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
         
         BOOST_FOREACH(CTransaction& tx, block.vtx)
         {
-            if (!tx.IsStandard())
-                continue; // leave out coinbase and others
+            
             nTransactions++;
             
             pwalletMain->AddToWalletIfInvolvingMe(tx, &block, fUpdate);

@@ -50,6 +50,7 @@ Notes:
 
 #include "base58.h"
 #include "db.h"
+#include "main.h"
 #include "init.h" // pwalletMain
 #include "txdb.h"
 
@@ -1944,102 +1945,90 @@ int SecureMsgInsertAddress(CKeyID& hashKey, CPubKey& pubKey)
 static bool ScanBlock(CBlock& block, CTxDB& txdb, SecMsgDB& addrpkdb,
     uint32_t& nTransactions, uint32_t& nInputs, uint32_t& nPubkeys, uint32_t& nDuplicates)
 {
-    // -- should have LOCK(cs_smsg) where db is opened
+   AssertLockHeld(cs_smsgDB);
+    
+    valtype vch;
+    opcodetype opcode;
+    
+    // -- only scan inputs of standard txns and coinstakes
+    
     BOOST_FOREACH(CTransaction& tx, block.vtx)
     {
-        if (!tx.IsStandard())
-            continue; // leave out coinbase and others
-        
-        /*
-        Look at the inputs of every tx.
-        If the inputs are standard, get the pubkey from scriptsig and
-        look for the corresponding output (the input(output of other tx) to the input of this tx)
-        get the address from scriptPubKey
-        add to db if address is unique.
-        
-        Would make more sense to do this the other way around, get address first for early out.
-        
-        */
-        
-        for (unsigned int i = 0; i < tx.vin.size(); i++)
+	std::string sReason;
+        // - harvest public keys from coinstake txns
+        if (tx.IsCoinStake())
         {
-            CScript *script = &tx.vin[i].scriptSig;
-            
-            opcodetype opcode;
-            valtype vch;
-            CScript::const_iterator pc = script->begin();
-            CScript::const_iterator pend = script->end();
-            
-            uint256 prevoutHash;
-            CKey key;
-            
-            // -- matching address is in scriptPubKey of previous tx output
-            while (pc < pend)
+            const CTxOut& txout = tx.vout[1];
+            CScript::const_iterator pc = txout.scriptPubKey.begin();
+            while (pc < txout.scriptPubKey.end())
             {
-                if (!script->GetOp(pc, opcode, vch))
+                if (!txout.scriptPubKey.GetOp(pc, opcode, vch))
                     break;
-                // -- opcode is the length of the following data, compressed public key is always 33
-                if (opcode == 33)
+                
+                if (vch.size() == 33) // pubkey
                 {
                     CPubKey pubKey(vch);
                     
                     if (!pubKey.IsValid()
                         || !pubKey.IsCompressed())
                     {
-                        printf("Public key is invalid %s.\n", ValueString(pubKey.Raw()).c_str());
+                        printf("Public key is invalid,\n");
                         continue;
                     };
                     
-                    prevoutHash = tx.vin[i].prevout.hash;
-                    CTransaction txOfPrevOutput;
-                    if (!txdb.ReadDiskTx(prevoutHash, txOfPrevOutput))
+                    CKeyID addrKey = pubKey.GetID();
+                    switch (SecureMsgInsertAddress(addrKey, pubKey, addrpkdb))
                     {
-                        printf("Could not get transaction for hash: %s.\n", prevoutHash.ToString().c_str());
-                        continue;
-                    };
-                    
-                    unsigned int nOut = tx.vin[i].prevout.n;
-                    if (nOut >= txOfPrevOutput.vout.size())
-                    {
-                        printf("Output %u, not in transaction: %s.\n", nOut, prevoutHash.ToString().c_str());
-                        continue;
-                    };
-                    
-                    CTxOut *txOut = &txOfPrevOutput.vout[nOut];
-                    
-                    CTxDestination addressRet;
-                    if (!ExtractDestination(txOut->scriptPubKey, addressRet))
-                    {
-                        printf("ExtractDestination failed: %s.\n", prevoutHash.ToString().c_str());
-                        break;
-                    };
-                    
-                    
-                    CBitcoinAddress coinAddress(addressRet);
-                    CKeyID hashKey;
-                    if (!coinAddress.GetKeyID(hashKey))
-                    {
-                        printf("coinAddress.GetKeyID failed: %s.\n", coinAddress.ToString().c_str());
-                        break;
-                    };
-                    
-                    int rv = SecureMsgInsertAddress(hashKey, pubKey, addrpkdb);
-                    if (rv != 0)
-                    {
-                        if (rv == 4)
-                            nDuplicates++;
-                        break;
-                    };
-                    nPubkeys++;
+                        case 0: nPubkeys++; break;      // added key
+                        case 4: nDuplicates++; break;   // duplicate key
+                    }
                     break;
                 };
-                
-                //printf("opcode %d, %s, value %s.\n", opcode, GetOpName(opcode), ValueString(vch).c_str());
             };
             nInputs++;
+        } else
+        if (IsStandardTx(tx, sReason))
+        {
+            for (uint32_t i = 0; i < tx.vin.size(); i++)
+            {                
+                CScript *script = &tx.vin[i].scriptSig;
+                CScript::const_iterator pc = script->begin();
+                CScript::const_iterator pend = script->end();
+
+                uint256 prevoutHash;
+                CKey key;
+
+                while (pc < pend)
+                {
+                    if (!script->GetOp(pc, opcode, vch))
+                        break;
+                    // -- opcode is the length of the following data, compressed public key is always 33
+                    if (opcode == 33)
+                    {
+                        CPubKey pubKey(vch);
+                        
+                        if (!pubKey.IsValid()
+                            || !pubKey.IsCompressed())
+                        {
+                            printf("Public key is invalid.\n");
+                            continue;
+                        };
+                        
+                        CKeyID addrKey = pubKey.GetID();
+                        switch (SecureMsgInsertAddress(addrKey, pubKey, addrpkdb))
+                        {
+                            case 0: nPubkeys++; break;      // added key
+                            case 4: nDuplicates++; break;   // duplicate key
+                        }
+                        break;
+                    };
+
+                };
+                nInputs++;
+            };
         };
         nTransactions++;
-        
+
         if (nTransactions % 10000 == 0) // for ScanChainForPublicKeys
         {
             printf("Scanning transaction no. %u.\n", nTransactions);
