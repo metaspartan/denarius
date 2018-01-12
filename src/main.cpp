@@ -1216,19 +1216,22 @@ const int YEARLY_BLOCKCOUNT = 1051896; // Amount of Blocks per year
 // Proof of Stake miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
-	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*1998)) // Over 1998 years.
-        printf("!!!!!!!!!!!Returning Nfees\n");
+	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // Over 9000 years.
         return nFees;
 
     int64_t nRewardCoinYear;
     nRewardCoinYear = COIN_YEAR_REWARD; // 0.06 6%
 
-    int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
+    int64_t nSubsidy;
+
+    if(pindexBest->nHeight <= fTestNet ? POS_STAKE_FIX_BLOCK_TESTNET : POS_STAKE_FIX_BLOCK)
+        nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
+    else
+        nSubsidy = nCoinAge * nRewardCoinYear / 365 ;
 
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
 
-    printf("POS REward :%ld\n", nSubsidy+nFees);
     return nSubsidy + nFees;
 }
 
@@ -2425,15 +2428,12 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         for (unsigned int i = 2; i < vtx.size(); i++)
             if (vtx[i].IsCoinStake())
                 return DoS(100, error("CheckBlock() : more than one coinstake"));
+    }
 
-        // Check coinstake timestamp
-        if (!CheckCoinStakeTimestamp(GetBlockTime(), (int64_t)vtx[1].nTime))
-            return DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%"PRId64" nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
-
-        // NovaCoin: check proof-of-stake block signature
+    // Check proof-of-stake block signature
         if (fCheckSig && !CheckBlockSignature())
             return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
-    }
+
 	
 	// ----------- instantX transaction scanning -----------
 
@@ -2599,10 +2599,9 @@ bool CBlock::AcceptBlock()
     if (IsProofOfStake())
     {
         uint256 targetProofOfStake;
-        if (!CheckProofOfStake(vtx[1], nBits, hashProof, targetProofOfStake))
+        if (!CheckProofOfStake(pindexPrev, vtx[1], nBits, hashProof, targetProofOfStake))
         {
-            printf("WARNING: AcceptBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
+            return error("AcceptBlock() : check proof-of-stake failed for block %s", hash.ToString().c_str());
         }
     }
     // PoW is checked in CheckBlock()
