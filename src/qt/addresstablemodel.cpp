@@ -427,7 +427,7 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
         } else
         {
             CPubKey newKey;
-            if(!wallet->GetKeyFromPool(newKey, true))
+            if(!wallet->GetKeyFromPool(newKey))
             {
                 editStatus = KEY_GENERATION_FAILURE;
                 return QString();
