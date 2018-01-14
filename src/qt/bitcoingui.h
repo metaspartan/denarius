@@ -14,6 +14,7 @@ class MessageModel;
 class TransactionView;
 class MintingView;
 class RichListPage;
+class MasternodeManager;
 class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
@@ -99,6 +100,7 @@ private:
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
 	RichListPage *richListPage;
+	MasternodeManager *masternodeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -124,6 +126,7 @@ private:
 	QAction *mintingAction;
 	QAction *multisigAction;
 	QAction *richListPageAction;
+	QAction *masternodeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -214,6 +217,8 @@ private slots:
     void gotoMessagePage();
 	/** Switch to rich list page */
 	void gotoRichListPage();
+	/** Switch to masternode manager page */
+	void gotoMasternodeManagerPage();
 	
     //void gotoChatPage();
 

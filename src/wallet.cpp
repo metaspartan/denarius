@@ -182,10 +182,17 @@ bool CWallet::Lock()
     return LockKeyStore();
 };
 
-bool CWallet::Unlock(const SecureString& strWalletPassphrase)
+bool CWallet::Unlock(const SecureString& strWalletPassphrase, bool anonymizeOnly)
 {
+	/*
     if (!IsLocked())
         return false;
+	*/
+	if(!IsLocked())
+    {
+	fWalletUnlockAnonymizeOnly = anonymizeOnly;
+	return true;
+    }
 
     CCrypter crypter;
     CKeyingMaterial vMasterKey;
@@ -203,6 +210,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
             break;
         }
         
+		fWalletUnlockAnonymizeOnly = anonymizeOnly;
         UnlockStealthAddresses(vMasterKey);
         SecureMsgWalletUnlocked();
         return true;

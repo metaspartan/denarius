@@ -24,6 +24,7 @@
 #include "statisticspage.h"
 #include "blockbrowser.h"
 #include "marketbrowser.h"
+#include "masternodemanager.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
 #include "richlist.h"
@@ -192,7 +193,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     receiveCoinsPage = new AddressBookPage(AddressBookPage::ForEditing, AddressBookPage::ReceivingTab);
 
     sendCoinsPage = new SendCoinsDialog(this);
-    messagePage   = new MessagePage(this);
+    messagePage = new MessagePage(this);
+	
+	masternodeManagerPage = new MasternodeManager(this);
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
@@ -206,6 +209,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
+	centralWidget->addWidget(masternodeManagerPage);
 	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(richListPage);
 	//centralWidget->addWidget(chatWindow);
@@ -368,6 +372,11 @@ void BitcoinGUI::createActions()
     richListPageAction->setCheckable(true);
     tabGroup->addAction(richListPageAction);
 	
+	masternodeManagerAction = new QAction(QIcon(":/icons/denarius"), tr("&Masternodes"), this);
+    masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
+    masternodeManagerAction->setCheckable(true);
+    tabGroup->addAction(masternodeManagerAction);
+	
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 
@@ -385,6 +394,8 @@ void BitcoinGUI::createActions()
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
 	connect(richListPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(richListPageAction, SIGNAL(triggered()), this, SLOT(gotoRichListPage()));
+	connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(gotoMasternodeManagerPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -494,6 +505,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
+	mainToolbar->addAction(masternodeManagerAction);
     mainToolbar->addAction(marketAction);
 	mainToolbar->addAction(richListPageAction);
     //mainToolbar->addAction(chatAction); Next release
@@ -934,6 +946,15 @@ void BitcoinGUI::gotoRichListPage()
 {
     richListPageAction->setChecked(true);
     centralWidget->setCurrentWidget(richListPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
+void BitcoinGUI::gotoMasternodeManagerPage()
+{
+    masternodeManagerAction->setChecked(true);
+    centralWidget->setCurrentWidget(masternodeManagerPage);
 
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);

@@ -8,10 +8,13 @@
 #include "ui_interface.h"
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
+#include "spork.h"
 #include "base58.h"
+#include "smessage.h"
 
 #include <QSet>
 #include <QTimer>
+#include <QDebug>
 
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
@@ -56,6 +59,12 @@ qint64 WalletModel::getStake() const
 qint64 WalletModel::getImmatureBalance() const
 {
     return wallet->GetImmatureBalance();
+}
+
+qint64 WalletModel::getAnonymizedBalance() const
+{
+    qint64 ret = wallet->GetAnonymizedBalance();
+    return ret;
 }
 
 int WalletModel::getNumTransactions() const
@@ -105,14 +114,17 @@ void WalletModel::checkBalanceChanged()
     qint64 newStake = getStake();
     qint64 newUnconfirmedBalance = getUnconfirmedBalance();
     qint64 newImmatureBalance = getImmatureBalance();
+	qint64 newAnonymizedBalance = getAnonymizedBalance();
 
-    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
+    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance || cachedAnonymizedBalance != newAnonymizedBalance || cachedTxLocks != nCompleteTXLocks)
     {
         cachedBalance = newBalance;
         cachedStake = newStake;
         cachedUnconfirmedBalance = newUnconfirmedBalance;
         cachedImmatureBalance = newImmatureBalance;
-        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
+		cachedAnonymizedBalance = newAnonymizedBalance;
+		cachedTxLocks = nCompleteTXLocks;
+        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance, newAnonymizedBalance);
     }
 }
 
@@ -161,6 +173,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     if(recipients.empty())
     {
         return OK;
+    }
+	
+	if(isAnonymizeOnlyUnlocked())
+    {
+        return AnonymizeOnlyUnlocked;
     }
 
     // Pre-check input data for validity
@@ -448,6 +465,10 @@ WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
     {
         return Locked;
     }
+	else if (wallet->fWalletUnlockAnonymizeOnly)
+    {
+        return UnlockedForAnonymizationOnly;
+    }
     else
     {
         return Unlocked;
@@ -468,7 +489,7 @@ bool WalletModel::setWalletEncrypted(bool encrypted, const SecureString &passphr
     }
 }
 
-bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase)
+bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase, bool anonymizeOnly)
 {
     if(locked)
     {
@@ -478,7 +499,7 @@ bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase)
     else
     {
         // Unlock
-        return wallet->Unlock(passPhrase);
+        return wallet->Unlock(passPhrase, anonymizeOnly);
     }
 }
 
@@ -491,6 +512,11 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri
         retval = wallet->ChangeWalletPassphrase(oldPass, newPass);
     }
     return retval;
+}
+
+bool WalletModel::isAnonymizeOnlyUnlocked()
+{
+    return wallet->fWalletUnlockAnonymizeOnly;
 }
 
 bool WalletModel::backupWallet(const QString &filename)

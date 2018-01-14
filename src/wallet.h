@@ -124,6 +124,7 @@ public:
     bool SelectCoinsWithoutDenomination(int64_t nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
 
     bool fFileBacked;
+	bool fWalletUnlockAnonymizeOnly;
     std::string strWalletFile;
 
     std::set<int64_t> setKeyPool;
@@ -161,6 +162,7 @@ public:
         pwalletdbEncryption = NULL;
         nOrderPosNext = 0;
         nTimeFirstKey = 0;
+		fWalletUnlockAnonymizeOnly = false;
     }
 
     std::map<uint256, CWalletTx> mapWallet;
@@ -214,7 +216,7 @@ public:
     bool LoadCScript(const CScript& redeemScript);
     
     bool Lock();
-    bool Unlock(const SecureString& strWalletPassphrase);
+    bool Unlock(const SecureString& strWalletPassphrase, bool anonimizeOnly = false);
     bool ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase, const SecureString& strNewWalletPassphrase);
     bool EncryptWallet(const SecureString& strWalletPassphrase);
 

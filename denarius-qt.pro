@@ -304,6 +304,10 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
 	src/qt/richlist.h \
+	src/qt/darksendconfig.h \
+	src/qt/masternodemanager.h \
+    src/qt/addeditadrenalinenode.h \
+    src/qt/adrenalinenodeconfigdialog.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -413,6 +417,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
+	src/qt/darksendconfig.cpp \
+	src/qt/masternodemanager.cpp \
+    src/qt/addeditadrenalinenode.cpp \
+    src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -453,6 +461,10 @@ FORMS += \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
 	src/qt/forms/richlist.ui \
+	src/qt/forms/darksendconfig.ui \
+    src/qt/forms/masternodemanager.ui \
+    src/qt/forms/addeditadrenalinenode.ui \
+    src/qt/forms/adrenalinenodeconfigdialog.ui \
 	src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
