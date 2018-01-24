@@ -21,7 +21,7 @@ class CValidationState;
 #define START_MASTERNODE_PAYMENTS_TESTNET 1515283200  //Sat, 07 Jan 2018 00:00:00 GMT
 #define START_MASTERNODE_PAYMENTS 1515900783  //2018-1-14 03:33:03 GMT
 
-#define POS_STAKE_FIX_BLOCK 900000
+#define POS_STAKE_FIX_BLOCK 9900000 //Needs to be worked out still
 #define POS_STAKE_FIX_BLOCK_TESTNET 20000
 
 static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
@@ -97,13 +97,13 @@ static const unsigned int MAX_P2SH_SIGOPS = 15;
 static const uint256 hashGenesisBlock("0x00000d5dbbda01621cfc16bbc1f9bf3264d641a5dbf0de89fd0182c2c4828fcd");
 static const uint256 hashGenesisBlockTestNet("0x000086bfe8264d241f7f8e5393f747784b8ca2aa98bdd066278d590462a4fdb4");
 
-inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
-inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }
+//inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
+//inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
 
-inline unsigned int GetTargetSpacing(int nHeight) { return IsProtocolV2(nHeight) ? 60 : 60; }
+//inline unsigned int GetTargetSpacing(int nHeight) { return IsProtocolV2(nHeight) ? 60 : 60; }
 
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
