@@ -108,7 +108,6 @@ OBJS= \
     obj/base58.o \
     obj/db.o \
     obj/init.o \
-    obj/irc.o \
     obj/keystore.o \
     obj/miner.o \
     obj/main.o \
