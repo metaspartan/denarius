@@ -32,7 +32,7 @@
 using namespace std;
 using namespace boost;
 
-CWallet* pwalletMain;
+CWallet* pwalletMain = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
 bool fEnforceCanonical;
