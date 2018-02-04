@@ -325,6 +325,7 @@ static const CRPCCommand vRPCCommands[] =
 	
 	/* Dark features */
     { "darksend",               &darksend,               false,  false},
+	{ "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
     { "masternode",             &masternode,             true,   false},
 	
@@ -1283,6 +1284,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "listreceivedbyaccount"  && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
+	if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockhash"           && n > 0) ConvertTo<int64_t>(params[0]);
@@ -1324,6 +1326,14 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
     
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
+	if (strMethod == "darksend"               && n > 1) ConvertTo<double>(params[1]);
+	
+	if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
+	
+	if (strMethod == "addmultisigaddress"     && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);
+    if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
 
     return params;
 }
