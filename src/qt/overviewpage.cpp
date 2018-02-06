@@ -109,8 +109,6 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 	
-	ui->frameDarksend->setVisible(false);  // Hide darksend features
-
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
@@ -129,17 +127,18 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	qDebug() << "Dark Send Status Timer";
         timer = new QTimer(this);
         connect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
+		//timer->start(333);
 	if(!GetBoolArg("-reindexaddr", false))
             timer->start(60000);
     }
-
-    if(fMasterNode || fLiteMode){
+	
+	if(fMasterNode || fLiteMode){
         ui->toggleDarksend->setText("(" + tr("Disabled") + ")");
         ui->toggleDarksend->setEnabled(false);
     }else if(!fEnableDarksend){
-        ui->toggleDarksend->setText(tr("Start Darksend"));
+        ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
     } else {
-        ui->toggleDarksend->setText(tr("Stop Darksend"));
+        ui->toggleDarksend->setText(tr("Stop Darksend Mixing"));
     }
 
     // init "out of sync" warning labels
@@ -340,7 +339,7 @@ void OverviewPage::darkSendStatus()
 
             ui->darksendEnabled->setText(tr("Disabled"));
             ui->darksendStatus->setText("");
-            ui->toggleDarksend->setText(tr("Start Darksend"));
+            ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
         }
 
         return;
@@ -481,9 +480,9 @@ void OverviewPage::toggleDarksend(){
     fEnableDarksend = !fEnableDarksend;
 
     if(!fEnableDarksend){
-        ui->toggleDarksend->setText(tr("Start Darksend"));
+        ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
     } else {
-        ui->toggleDarksend->setText(tr("Stop Darksend"));
+        ui->toggleDarksend->setText(tr("Stop Darksend Mixing"));
 
         /* show darksend configuration if client has defaults set */
 

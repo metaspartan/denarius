@@ -360,14 +360,9 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         int64_t nFeeRequired = 0;
         int nChangePos = -1;
 		std::string strFailReason;
-
-        /*if(recipients[0].useInstantX && total > GetSporkValue(SPORK_2_MAX_VALUE)*COIN){
-            emit message(tr("Send Coins"), tr("InstantX doesn't support sending values that high yet. Transactions are currently limited to %n DNR.", "", GetSporkValue(SPORK_2_MAX_VALUE)),true,
-                         CClientUIInterface::MSG_ERROR);
-            return TransactionCreationFailed;
-        }*/
-
-        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl);
+		
+        //bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl);
+		bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl, recipients[0].inputType, recipients[0].useInstantX);
         
         std::map<int, std::string>::iterator it;
         for (it = mapStealthNarr.begin(); it != mapStealthNarr.end(); ++it)
@@ -398,7 +393,13 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         {
             return Aborted;
         }
-        
+		
+        std::string strCommand = "tx";
+		if(recipients[0].useInstantX) {
+            printf("!!!! USING INSTANTX2\n");
+            strCommand = "txlreq";
+        }
+		
         if(!wallet->CommitTransaction(wtx, keyChange))
         {
             return TransactionCommitFailed;

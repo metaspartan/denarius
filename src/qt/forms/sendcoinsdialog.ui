@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Send Coins</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
    <property name="bottomMargin">
     <number>8</number>
    </property>
@@ -635,7 +635,7 @@
         <x>0</x>
         <y>0</y>
         <width>830</width>
-        <height>69</height>
+        <height>335</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -725,6 +725,23 @@
        <property name="spacing">
         <number>3</number>
        </property>
+       <item>
+        <widget class="QCheckBox" name="checkUseDarksend">
+         <property name="text">
+          <string>DarkSend</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="checkInstantX">
+         <property name="text">
+          <string>InstantX</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QLabel" name="label">
          <property name="sizePolicy">
