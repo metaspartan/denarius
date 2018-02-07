@@ -886,7 +886,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
 
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;   
-    if (!fTestNet && !IsStandardTx(tx, reason))
+    if (false && !fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptableInputs : nonstandard transaction");
 
     // is it already in the memory pool?
@@ -2440,7 +2440,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 	
 	// ----------- instantX transaction scanning -----------
 
-   
+    if(IsSporkActive(SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT)){
         BOOST_FOREACH(const CTransaction& tx, vtx){
             if (!tx.IsCoinBase()){
                 //only reject blocks when it's based on complete consensus
@@ -2453,8 +2453,10 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
                     }
                 }
             }
-        }
-    
+        } 
+	} else {
+        if(fDebug) { printf("CheckBlock() : skipping transaction locking checks\n"); }
+    }
 
 
     // ----------- masternode payments -----------
@@ -2462,6 +2464,11 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     bool MasternodePayments = false;
 
     if(nTime > fTestNet ? START_MASTERNODE_PAYMENTS_TESTNET : START_MASTERNODE_PAYMENTS) MasternodePayments = true;
+	
+	if(!IsSporkActive(SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT)){
+        MasternodePayments = false;
+        if(fDebug) printf("CheckBlock() : Masternode payment enforcement is off\n");
+    }
    
     if(MasternodePayments)
     {
@@ -4491,7 +4498,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
 int64_t GetMasternodePayment(int nHeight, int64_t blockValue)
 {
-    int64_t ret = blockValue * 1/3; //33%
+    //int64_t ret = blockValue * 1/3; //33%
+	int64_t ret = static_cast<int64_t>(blockValue * 1/3); //33%
 
     return ret;
 }

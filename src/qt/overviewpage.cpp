@@ -109,6 +109,8 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 	
+	ui->frameDarksend->setVisible(false);  // Hide darksend features
+	
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
@@ -131,6 +133,10 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	if(!GetBoolArg("-reindexaddr", false))
             timer->start(60000);
     }
+	
+	if (fEnableDarksend) {
+		ui->frameDarksend->setVisible(true);  // Show darksend features
+	}
 	
 	if(fMasterNode || fLiteMode){
         ui->toggleDarksend->setText("(" + tr("Disabled") + ")");
