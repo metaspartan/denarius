@@ -433,6 +433,11 @@ void RPCConsole::on_openDebugLogfileButton_clicked()
     GUIUtil::openDebugLogfile();
 }
 
+void RPCConsole::setTabFocus(enum TabTypes tabType)
+{
+    ui->tabWidget->setCurrentIndex(tabType);
+}
+
 void RPCConsole::scrollToEnd()
 {
     QScrollBar *scrollbar = ui->messagesWidget->verticalScrollBar();

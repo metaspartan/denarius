@@ -1059,6 +1059,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 
     printf("fLiteMode %d\n", fLiteMode);
+	printf("fMasterNode %d\n", fMasterNode);
     printf("nInstantXDepth %d\n", nInstantXDepth);
     printf("Darksend rounds %d\n", nDarksendRounds);
     printf("Anonymize Denarius Amount %d\n", nAnonymizeDenariusAmount);

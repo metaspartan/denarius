@@ -145,6 +145,11 @@ private:
     QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
+	
+	QAction *openInfoAction;
+    QAction *openGraphAction;
+    QAction *openConfEditorAction;
+    QAction *openMNConfEditorAction;
 
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
@@ -226,6 +231,19 @@ private slots:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
+	
+    /** Show debug window */
+    void showDebugWindow();
+	
+	/** Show debug window and set focus to the appropriate tab */
+    void showInfo();
+    void showConsole();
+    void showGraph();
+
+    /** Open external (default) editor with denarius.conf */
+    void showConfEditor();
+    /** Open external (default) editor with masternode.conf */
+    void showMNConfEditor();
 
     /** Show configuration dialog */
     void optionsClicked();

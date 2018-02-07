@@ -437,7 +437,16 @@ void BitcoinGUI::createActions()
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
-
+	
+	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
+    openInfoAction->setStatusTip(tr("Show diagnostic information"));
+    openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
+    openGraphAction->setStatusTip(tr("Show network monitor"));
+    openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
+    openConfEditorAction->setStatusTip(tr("Open configuration file"));
+    openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
+    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));    
+	
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -450,6 +459,15 @@ void BitcoinGUI::createActions()
     connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
     connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
+	
+	// Jump directly to tabs in RPC-console
+    connect(openInfoAction, SIGNAL(triggered()), this, SLOT(showInfo()));
+    connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showConsole()));
+    connect(openGraphAction, SIGNAL(triggered()), this, SLOT(showGraph()));
+
+    // Open configs from menu
+    connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
+    connect(openMNConfEditorAction, SIGNAL(triggered()), this, SLOT(showMNConfEditor()));
 }
 
 void BitcoinGUI::createMenuBar()
@@ -479,6 +497,14 @@ void BitcoinGUI::createMenuBar()
     settings->addAction(lockWalletAction);
     settings->addSeparator();
     settings->addAction(optionsAction);
+	
+	QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
+	tools->addAction(openInfoAction);
+	tools->addAction(openRPCConsoleAction);
+	tools->addAction(openGraphAction);
+	tools->addSeparator();
+	tools->addAction(openConfEditorAction);
+	tools->addAction(openMNConfEditorAction);
 
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
@@ -921,6 +947,42 @@ void BitcoinGUI::incomingMessage(const QModelIndex & parent, int start, int end)
                               .arg(to_address)
                               .arg(messageText));
     };
+}
+
+void BitcoinGUI::showDebugWindow()
+{
+    rpcConsole->showNormal();
+    rpcConsole->show();
+    rpcConsole->raise();
+    rpcConsole->activateWindow();
+}
+
+void BitcoinGUI::showInfo()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_INFO);
+    showDebugWindow();
+}
+
+void BitcoinGUI::showConsole()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_CONSOLE);
+    showDebugWindow();
+}
+
+void BitcoinGUI::showGraph()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_GRAPH);
+    showDebugWindow();
+}
+
+void BitcoinGUI::showConfEditor()
+{
+    GUIUtil::openConfigfile();
+}
+
+void BitcoinGUI::showMNConfEditor()
+{
+    GUIUtil::openMNConfigfile();
 }
 
 void BitcoinGUI::gotoOverviewPage()

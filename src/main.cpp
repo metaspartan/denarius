@@ -2764,7 +2764,17 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             darkSendPool.NewBlock();
             masternodePayments.ProcessBlock((pindexBest->nHeight)+10);
 
-        } 
+        }
+/*
+		if(!fLiteMode){
+			if (!fImporting && !fReindex && pindexBest->nHeight > Checkpoints::GetTotalBlocksEstimate()){
+				darkSendPool.CheckTimeout();
+				darkSendPool.NewBlock();
+				masternodePayments.ProcessBlock((pindexBest->nHeight)+10);
+				//printf("ProcessBlock() : Got BlockPayee for block : - %d\n", pindexBest->nHeight);
+			}
+		}
+*/		
     }
 
     // If don't already have its previous block, shunt it off to holding area until we get it
