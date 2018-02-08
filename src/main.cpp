@@ -1224,10 +1224,8 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 
     int64_t nSubsidy;
 
-    if(pindexBest->nHeight <= fTestNet ? POS_STAKE_FIX_BLOCK_TESTNET : POS_STAKE_FIX_BLOCK)
-        nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
-    else
-        nSubsidy = nCoinAge * nRewardCoinYear / 365;
+	//PoS Fixed on Protocol 21214 v2.0.0.0 DeNaRiUs
+	nSubsidy = nCoinAge * nRewardCoinYear / 365;
 
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
