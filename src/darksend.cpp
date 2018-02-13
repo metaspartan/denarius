@@ -179,7 +179,7 @@ void ProcessMessageDarksend(CNode* pfrom, std::string& strCommand, CDataStream& 
                 if(q.vin == dsq.vin) return;
             }
 
-            if(fDebug) printf("dsq last %d last2 %d count %d\n", vecMasternodes[mn].nLastDsq, vecMasternodes[mn].nLastDsq + (int)vecMasternodes.size()/5, darkSendPool.nDsqCount);
+            if(fDebug) printf("dsq last %lu last2 %lu count %lu\n", vecMasternodes[mn].nLastDsq, vecMasternodes[mn].nLastDsq + (int)vecMasternodes.size()/5, darkSendPool.nDsqCount);
             //don't allow a few nodes to dominate the queuing process
             if(vecMasternodes[mn].nLastDsq != 0 &&
                 vecMasternodes[mn].nLastDsq + CountMasternodesAboveProtocol(darkSendPool.MIN_PEER_PROTO_VERSION)/5 > darkSendPool.nDsqCount){
@@ -964,7 +964,7 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
 
     //collateral transactions are required to pay out DARKSEND_COLLATERAL as a fee to the miners
     if(nValueIn-nValueOut < DARKSEND_COLLATERAL) {
-        if(fDebug) printf("CDarkSendPool::IsCollateralValid - did not include enough fees in transaction %d\n%s\n", nValueOut-nValueIn, txCollateral.ToString().c_str());
+        if(fDebug) printf("CDarkSendPool::IsCollateralValid - did not include enough fees in transaction %lu\n%s\n", nValueOut-nValueIn, txCollateral.ToString().c_str());
         return false;
     }
 
@@ -1423,7 +1423,7 @@ bool CDarkSendPool::DoAutomaticDenominating(bool fDryRun, bool ready)
 //        }
     }
 
-    if (fDebug) printf("DoAutomaticDenominating : nLowestDenom=%d, nBalanceNeedsAnonymized=%d\n", nLowestDenom, nBalanceNeedsAnonymized);
+    if (fDebug) printf("DoAutomaticDenominating : nLowestDenom=%lu, nBalanceNeedsAnonymized=%lu\n", nLowestDenom, nBalanceNeedsAnonymized);
 
     // select coins that should be given to the pool
     if (!pwalletMain->SelectCoinsDark(nValueMin, nBalanceNeedsAnonymized, vCoins, nValueIn, 0, nDarksendRounds))
@@ -1461,7 +1461,7 @@ bool CDarkSendPool::DoAutomaticDenominating(bool fDryRun, bool ready)
         if(sessionTotalValue > nBalanceNeedsAnonymized) sessionTotalValue = nBalanceNeedsAnonymized;
 
         double fDenariusSubmitted = (sessionTotalValue / CENT);
-        printf("Submitting Darksend for %f DNR CENT - sessionTotalValue %d\n", fDenariusSubmitted, sessionTotalValue);
+        printf("Submitting Darksend for %f DNR CENT - sessionTotalValue %lu\n", fDenariusSubmitted, sessionTotalValue);
 
         if(pwalletMain->GetDenominatedBalance(true, true) > 0){ //get denominated unconfirmed inputs
             printf("DoAutomaticDenominating -- Found unconfirmed denominated outputs, will wait till they confirm to continue.\n");
@@ -1746,12 +1746,12 @@ bool CDarkSendPool::CreateDenominated(int64_t nTotalValue)
             //increment outputs and subtract denomination amount
             nOutputs++;
             nValueLeft -= v;
-            printf("CreateDenominated1 %d\n", nValueLeft);
+            printf("CreateDenominated1 %lu\n", nValueLeft);
         }
 
         if(nValueLeft == 0) break;
     }
-    printf("CreateDenominated2 %d\n", nValueLeft);
+    printf("CreateDenominated2 %lu\n", nValueLeft);
 
     // if we have anything left over, it will be automatically send back as change - there is no need to send it manually
 
@@ -1961,7 +1961,7 @@ int CDarkSendPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
             nValueLeft -= v;
             nOutputs++;
         }
-        printf("GetDenominationsByAmount --- %d nOutputs %d\n", v, nOutputs);
+        printf("GetDenominationsByAmount --- %lu nOutputs %d\n", v, nOutputs);
     }
 
     //add non-denom left overs as change
@@ -1982,7 +1982,7 @@ bool CDarkSendSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
     //if(GetTransaction(vin.prevout.hash, txVin, hash, true)){
     if(GetTransaction(vin.prevout.hash, txVin, hash)){
         BOOST_FOREACH(CTxOut out, txVin.vout){
-            if(out.nValue == 5000*COIN){
+            if(out.nValue == GetMNCollateral()*COIN){
                 if(out.scriptPubKey == payee2) return true;
             }
         }

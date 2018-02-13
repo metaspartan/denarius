@@ -105,6 +105,8 @@ inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 1
 
 //inline unsigned int GetTargetSpacing(int nHeight) { return IsProtocolV2(nHeight) ? 60 : 60; }
 
+inline int64_t GetMNCollateral() { return 5000; }
+
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern std::map<uint256, CBlockIndex*> mapBlockIndex;
