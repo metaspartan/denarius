@@ -679,7 +679,10 @@ void CoinControlDialog::updateView()
 			
 			// darksend rounds
             CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
-            itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString::number(GetInputDarksendRounds(vin)), 15, " "));
+            int rounds = GetInputDarksendRounds(vin);
+
+            if(rounds >= 0) itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString::number(rounds), 15, " "));
+            else itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString("N/A"), 15, " "));
             
             // immature PoS reward
             if (out.tx->IsCoinStake() && out.tx->GetBlocksToMaturity() > 0 && out.tx->GetDepthInMainChain() > 0) {
