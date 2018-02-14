@@ -26,6 +26,7 @@ class CValidationState;
 
 static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
 static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
+static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
 static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
 
 #define MESSAGE_START_SIZE 4

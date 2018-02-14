@@ -101,6 +101,22 @@ Value darksend(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
+Value denominate(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "denominate\n"
+            "Creates compatible inputs for DarkSend"
+            + HelpRequiringPassphrase());
+
+    if (pwalletMain->IsLocked())
+    {
+        return _("Error: Wallet locked, unable to denominate! Use walletpassphrase to unlock. ");
+    }
+	//May need some updating
+    return darkSendPool.Denominate();
+}
+
 
 Value getpoolinfo(const Array& params, bool fHelp)
 {

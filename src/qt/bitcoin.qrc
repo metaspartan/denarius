@@ -16,6 +16,7 @@
 		<file alias="mark">res/icons/mark.png</file>
 		<file alias="btc">res/icons/btc.png</file>
 		<file alias="mn">res/icons/mn.png</file>
+		<file alias="denominate">res/icons/multi.png</file>
         <file alias="connect_0">res/icons/connect0_16.png</file>
         <file alias="connect_1">res/icons/connect1_16.png</file>
         <file alias="connect_2">res/icons/connect2_16.png</file>

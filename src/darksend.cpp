@@ -1621,6 +1621,10 @@ bool CDarkSendPool::PrepareDarksendDenominate()
     return false;
 }
 
+std::string CDarkSendPool::Denominate() {
+	return pwalletMain->Denominate();
+}
+
 bool CDarkSendPool::SendRandomPaymentToSelf()
 {
     int64_t nBalance = pwalletMain->GetBalance();

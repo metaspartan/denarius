@@ -123,6 +123,8 @@ public:
 	bool SelectCoinsCollateral(std::vector<CTxIn>& setCoinsRet, int64_t& nValueRet) const ;
     bool SelectCoinsWithoutDenomination(int64_t nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
 
+	std::string Denominate();
+	
     bool fFileBacked;
 	bool fWalletUnlockAnonymizeOnly;
     std::string strWalletFile;
