@@ -162,7 +162,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
         //if(AcceptableInputs(mempool, state, tx)){
-	bool* pfMissingInputs = false;
+	bool* pfMissingInputs = NULL;
 	if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             if(fDebug) printf("dsee - Accepted masternode entry %i %i\n", count, current);
 
@@ -601,12 +601,12 @@ void CMasterNode::Check()
     if(!unitTest){
         CValidationState state;
         CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut(499*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut(4999*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
         //if(!AcceptableInputs(mempool, state, tx)){
-        bool* pfMissingInputs;
+        bool* pfMissingInputs = NULL;
 	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             enabled = 3;
             return;
@@ -718,11 +718,20 @@ bool CMasternodePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 {
     BOOST_FOREACH(CMasternodePaymentWinner& winner, vWinning){
         if(winner.nBlockHeight == nBlockHeight) {
-            payee = winner.payee;
+
+            CTransaction tx;
+            uint256 hash;
+            if(GetTransaction(winner.vin.prevout.hash, tx, hash)){
+                BOOST_FOREACH(CTxOut out, tx.vout){
+                    if(out.nValue == GetMNCollateral()*COIN){
+                        payee = out.scriptPubKey;
             return true;
         }
     }
-
+            }
+            return false;
+        }
+    }
     return false;
 }
 
