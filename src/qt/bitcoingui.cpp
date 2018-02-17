@@ -372,7 +372,7 @@ void BitcoinGUI::createActions()
     richListPageAction->setCheckable(true);
     tabGroup->addAction(richListPageAction);
 	
-	masternodeManagerAction = new QAction(QIcon(":/icons/denarius"), tr("&Masternodes"), this);
+	masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
     masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
     masternodeManagerAction->setCheckable(true);
     tabGroup->addAction(masternodeManagerAction);

@@ -328,6 +328,7 @@ static const CRPCCommand vRPCCommands[] =
 	{ "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
     { "masternode",             &masternode,             true,   false},
+	{ "denominate",             &denominate,             false,  false},
 	
 	/* Rich List */
     { "resetrichlist",          &resetrichlist,          true,   false},

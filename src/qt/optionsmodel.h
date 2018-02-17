@@ -31,6 +31,8 @@ public:
         DisplayAddresses,  // bool
         DetachDatabases,   // bool
         Language,          // QString
+		DarksendRounds,    // int
+        AnonymizeDenariusAmount, //int
         CoinControlFeatures, // bool
         OptionIDRowCount,
     };
@@ -63,6 +65,8 @@ signals:
     void displayUnitChanged(int unit);
     void transactionFeeChanged(qint64);
     void reserveBalanceChanged(qint64);
+	void darksendRoundsChanged(int);
+    void anonymizeDenariusAmountChanged(int);
     void coinControlFeaturesChanged(bool);
 };
 

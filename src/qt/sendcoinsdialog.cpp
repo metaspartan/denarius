@@ -5,6 +5,7 @@
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "addressbookpage.h"
+#include "darksend.h"
 
 #include "bitcoinunits.h"
 #include "addressbookpage.h"
@@ -33,6 +34,7 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     ui->addButton->setIcon(QIcon());
     ui->clearButton->setIcon(QIcon());
     ui->sendButton->setIcon(QIcon());
+	ui->denominateButton->setIcon(QIcon());
 #endif
 
 #if QT_VERSION >= 0x040700
@@ -44,6 +46,7 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
 
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addEntry()));
     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));
+	connect(ui->denominateButton, SIGNAL(clicked()), this, SLOT(denominate()));
 
     // Coin Control
     ui->lineEditCoinControlChange->setFont(GUIUtil::bitcoinAddressFont());
@@ -274,6 +277,17 @@ void SendCoinsDialog::clear()
     updateRemoveEnabled();
 
     ui->sendButton->setDefault(true);
+}
+
+void SendCoinsDialog::denominate()
+{
+    std::string message = darkSendPool.Denominate();
+
+    if(message != ""){
+        QMessageBox::warning(this, tr("Denominate"),
+            tr(message.c_str()),
+            QMessageBox::Ok, QMessageBox::Ok);
+    }
 }
 
 void SendCoinsDialog::reject()

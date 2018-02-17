@@ -3982,6 +3982,69 @@ int64_t CWallet::GetTotalValue(std::vector<CTxIn> vCoins) {
     return nTotalValue;
 }
 
+std::string CWallet::Denominate()
+{
+
+    int count = 10;
+    int successful = 0;
+    bool done = false;
+
+    if(GetBalance() < 11*COIN){
+        return "To use denominate you must have at least 11DNR with 1 confirmation.";
+    }
+
+    int64_t nFeeRequired;
+	int nChangePos;
+    string strError;
+	//std::string strFailReason;
+    CReserveKey reservekey(this);
+	CCoinControl *coinControl=NULL;
+
+    // create another transaction as collateral for using DarkSend
+    while(!done && count > 0)
+    {        
+
+        CWalletTx wtxNew;
+        CWalletTx wtxNew2;
+    
+        //get 2 new keys
+        CScript scriptNewAddr;
+        CPubKey vchPubKey;
+        assert(reservekey.GetReservedKey(vchPubKey)); // should never fail, as we just unlocked
+        scriptNewAddr.SetDestination(vchPubKey.GetID());
+
+        CScript scriptNewAddr2;
+        CPubKey vchPubKey2;
+        assert(reservekey.GetReservedKey(vchPubKey2)); // should never fail, as we just unlocked
+        scriptNewAddr2.SetDestination(vchPubKey2.GetID());
+
+        vector< pair<CScript, int64_t> > vecSend;
+        for(int i = 1; i <= count; i++) {
+            vecSend.push_back(make_pair(scriptNewAddr, 10*COIN));
+            vecSend.push_back(make_pair(scriptNewAddr2, POOL_FEE_AMOUNT+(0.01*COIN)));
+        }
+
+		if(CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePos, strError, coinControl)){
+        //try to create the larger size input
+        //if(CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, strError, NULL, true)){
+            if (CommitTransaction(wtxNew, reservekey)) {
+                //if successful, create the collateral needed to submit
+                done = true;
+                successful = count;
+            }
+        }
+        count--;
+    }
+
+    ostringstream convert;
+    if(successful == 0) {
+        convert << "An error occurred created DarkSend compatible inputs. Error was " << strError;
+    } else {
+        convert << "Successfully created inputs for " << successful << " DarkSend(s)";
+    }    
+    return convert.str();
+}
+
 DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
 {
     if (!fFileBacked)
