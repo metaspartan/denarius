@@ -22,6 +22,11 @@
 #define DECORATION_SIZE 64
 #define NUM_ITEMS 3
 
+const QString BaseURL = "http://denarius.io/dnrusd.php";
+const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
+double denariusx;
+double dnrbtcx;
+
 class TxViewDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
@@ -111,6 +116,10 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	
 	ui->frameDarksend->setVisible(false);  // Hide darksend features
 	
+	PriceRequest();
+	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
+	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
+	
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
@@ -153,6 +162,56 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
+}
+
+void OverviewPage::PriceRequest()
+{
+	getRequest(BaseURL);
+	getRequest(BaseURL2);
+	updateDisplayUnit(); //Maybe not?
+}
+
+void OverviewPage::getRequest( const QString &urlString )
+{
+    QUrl url ( urlString );
+    QNetworkRequest req ( url );
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8");
+    m_nam.get(req);
+}
+
+void OverviewPage::parseNetworkResponse(QNetworkReply *finished )
+{
+
+    QUrl what = finished->url();
+
+    if ( finished->error() != QNetworkReply::NoError )
+    {
+        // A communication error has occurred
+        emit networkError( finished->error() );
+        return;
+    }
+	
+if (what == BaseURL) // Denarius Price
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString denarius = finished->readAll();
+    denariusx = (denarius.toDouble());
+    denarius = QString::number(denariusx, 'f', 2);
+
+	dollarg = denarius;
+}
+if (what == BaseURL2) // Denarius BTC Price
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString dnrbtc = finished->readAll();
+    dnrbtcx = (dnrbtc.toDouble());
+    dnrbtc = QString::number(dnrbtcx, 'f', 8);
+
+	bitcoing = dnrbtc;
+}
+finished->deleteLater();
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
