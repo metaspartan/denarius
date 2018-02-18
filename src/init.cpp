@@ -1058,10 +1058,11 @@ bool AppInit2(boost::thread_group& threadGroup)
     //lite mode disables all Masternode and Darksend related functionality
     fLiteMode = GetBoolArg("-litemode", false);
     if(fMasterNode && fLiteMode){
-        return InitError("You can not start a masternode in litemode");
+        return InitError("You can't start a masternode in litemode!");
     }
 
     printf("fLiteMode %d\n", fLiteMode);
+	printf("fEnableDarksend %d\n", fEnableDarksend);
 	printf("fMasterNode %d\n", fMasterNode);
     printf("nInstantXDepth %d\n", nInstantXDepth);
     printf("Darksend rounds %d\n", nDarksendRounds);

@@ -4215,7 +4215,7 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
         if (nSize > 0)
             nTargetSize = nSize;
         else
-            nTargetSize = max(GetArg("-keypool", 100), (int64_t)0);
+            nTargetSize = max(GetArg("-keypool", 1000), (int64_t) 0); //Increased to 1,000
 
         while (setKeyPool.size() < (nTargetSize + 1))
         {
