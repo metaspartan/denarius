@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2017-2018 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -2458,10 +2459,23 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
 
     // ----------- masternode payments -----------
+    // Once upon a time, People were really interested in DNR.
+    // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
+    // The Discord was active, People discussed how they would reach that goal.
+    // There was one person, named Thi3rryzz watching all this from a save distance.
+    // Then, the word MASTERNODES came to the table.
+    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of DNR
+    // So Thi3rryzz decided to jump in..
+    // After a lot of: "How much for MN" and "When MN?"
+    // We hope to proudly present you: 
 
+    // ----------- masternode payments -----------
     bool MasternodePayments = false;
 
-    if(nTime > fTestNet ? START_MASTERNODE_PAYMENTS_TESTNET : START_MASTERNODE_PAYMENTS) MasternodePayments = true;
+    if(nTime > fTestNet ? START_MASTERNODE_PAYMENTS_TESTNET : START_MASTERNODE_PAYMENTS){
+         MasternodePayments = true;
+         if(fDebug) printf("CheckBlock() : Masternode payment enabled\n");
+    }
 	
 	if(!IsSporkActive(SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT)){
         MasternodePayments = false;
@@ -2475,7 +2489,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         CBlockIndex *pindex = pindexBest;
         if(IsProofOfStake() && pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[1].GetValueOut());
+                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
                 bool fIsInitialDownload = IsInitialBlockDownload();
 
                 // If we don't already have its previous block, skip masternode payment step
@@ -2493,12 +2507,12 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
                         if(fDebug) { printf("CheckBlock() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
                     }
 
-                    for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
-                        if(vtx[1].vout[i].nValue == masternodePaymentAmount )
+                    for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
+                        if(vtx[0].vout[i].nValue == masternodePaymentAmount )
                             foundPaymentAmount = true;
-                        if(vtx[1].vout[i].scriptPubKey == payee )
+                        if(vtx[0].vout[i].scriptPubKey == payee )
                             foundPayee = true;
-                        if(vtx[1].vout[i].nValue == masternodePaymentAmount && vtx[1].vout[i].scriptPubKey == payee)
+                        if(vtx[0].vout[i].nValue == masternodePaymentAmount && vtx[1].vout[i].scriptPubKey == payee)
                             foundPaymentAndPayee = true;
                     }
 

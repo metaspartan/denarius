@@ -117,6 +117,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 
     CBlockIndex* pindexPrev = pindexBest;
 
+    int payments = 1;
     // Create coinbase tx
     CTransaction txNew;
     txNew.vin.resize(1);
@@ -161,6 +162,19 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     unsigned int nBlockMinSize = GetArg("-blockminsize", 0);
     nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
 
+    // start masternode payments
+    bool bMasterNodePayment = false;
+
+    if (fTestNet){
+        if (GetTime() > START_MASTERNODE_PAYMENTS_TESTNET){
+            bMasterNodePayment = true;
+        }
+    }else{
+        if (GetTime() > START_MASTERNODE_PAYMENTS){
+            bMasterNodePayment = true;
+        }
+    }
+
     // Fee-per-kilobyte amount considered the same as "free"
     // Be careful setting this: if you set it to zero then
     // a transaction spammer can cheaply fill blocks using
@@ -177,6 +191,36 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     {
         LOCK2(cs_main, mempool.cs);
         CTxDB txdb("r");
+
+        if(bMasterNodePayment) {
+            bool hasPayment = true;
+            //spork
+            CScript payee;
+            if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+                //no masternode detected
+                int winningNode = GetCurrentMasterNode(1);
+                if(winningNode >= 0){
+                    payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+                } else {
+                    printf("CreateNewBlock: Failed to detect masternode to pay\n");
+                    hasPayment = false;
+                }
+            }
+
+            if(hasPayment){
+                payments = txNew.vout.size() + 1;
+                txNew.vout.resize(payments);
+
+                txNew.vout[payments-1].scriptPubKey = payee;
+                txNew.vout[payments-1].nValue = 0;
+
+                CTxDestination address1;
+                ExtractDestination(payee, address1);
+                CBitcoinAddress address2(address1);
+
+                printf("Masternode payment to %s\n", address2.ToString().c_str());
+            }
+        }
 
         // Priority order to process transactions
         list<COrphan> vOrphan; // list memory doesn't move
@@ -360,11 +404,21 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
 
+        int64_t blockValue = GetProofOfWorkReward(nHeight, nFees);
+        int64_t masternodePayment = GetMasternodePayment(pindexPrev->nHeight+1, blockValue);
+
+        //create masternode payment
+        if(payments > 1){
+            pblock->vtx[0].vout[payments-1].nValue = masternodePayment;
+            blockValue -= masternodePayment;
+        }
+
         if (fDebug && GetBoolArg("-printpriority"))
             printf("CreateNewBlock(): total size %"PRIu64"\n", nBlockSize);
 
-        if (!fProofOfStake)
-            pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(nHeight, nFees);
+        if (!fProofOfStake){
+            pblock->vtx[0].vout[0].nValue = blockValue;
+        }
 
         if (pFees)
             *pFees = nFees;
