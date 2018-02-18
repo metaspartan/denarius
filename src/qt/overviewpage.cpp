@@ -152,7 +152,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
             }
             timer = new QTimer(this);
             connect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
-            timer->start(6000); //This may need changing still
+            //timer->start(6000); //This may need changing still
         }
     }
 
