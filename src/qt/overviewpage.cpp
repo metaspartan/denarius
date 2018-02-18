@@ -116,7 +116,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	
 	ui->frameDarksend->setVisible(false);  // Hide darksend features
 	
-	PriceRequest();
+	//PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
 	
