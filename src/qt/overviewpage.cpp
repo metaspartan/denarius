@@ -114,7 +114,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 	
-	ui->frameDarksend->setVisible(false);  // Hide darksend features
+	//ui->frameDarksend->setVisible(false);
 	
 	//PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
@@ -132,28 +132,28 @@ OverviewPage::OverviewPage(QWidget *parent) :
     darksendActionCheck = 0;
     lastNewBlock = 0;
 
-    if(fLiteMode){
+    //This is driving me nuts, will fix later lmao
+	ui->frameDarksend->setVisible(true);
+	
+	if(fLiteMode){
         ui->frameDarksend->setVisible(false);
     } else {
-	qDebug() << "Dark Send Status Timer";
-        timer = new QTimer(this);
-        connect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
-		//timer->start(333);
-	if(!GetBoolArg("-reindexaddr", false))
-            timer->start(60000);
-    }
-	
-	if (fEnableDarksend) {
-		ui->frameDarksend->setVisible(true);  // Show darksend features
-	}
-	
-	if(fMasterNode || fLiteMode){
-        ui->toggleDarksend->setText("(" + tr("Disabled") + ")");
-        ui->toggleDarksend->setEnabled(false);
-    }else if(!fEnableDarksend){
-        ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
-    } else {
-        ui->toggleDarksend->setText(tr("Stop Darksend Mixing"));
+        if(fMasterNode){
+            ui->toggleDarksend->setText("(" + tr("Disabled") + ")");
+            ui->darksendAuto->setText("(" + tr("Disabled") + ")");
+            ui->darksendReset->setText("(" + tr("Disabled") + ")");
+            ui->frameDarksend->setEnabled(false);
+        } else {
+            if(!fEnableDarksend){
+                ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
+				ui->frameDarksend->setVisible(false);
+            } else {
+                ui->toggleDarksend->setText(tr("Stop Darksend Mixing"));
+            }
+            timer = new QTimer(this);
+            connect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
+            timer->start(6000); //This may need changing still
+        }
     }
 
     // init "out of sync" warning labels
@@ -168,7 +168,7 @@ void OverviewPage::PriceRequest()
 {
 	getRequest(BaseURL);
 	getRequest(BaseURL2);
-	updateDisplayUnit(); //Maybe not?
+	updateDisplayUnit();
 }
 
 void OverviewPage::getRequest( const QString &urlString )

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>917</width>
-    <height>624</height>
+    <height>659</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,7 +126,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="stakelabel">
             <property name="text">
              <string>Stake:</string>
             </property>
@@ -155,7 +155,7 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="unconfirmedlabeltxt">
             <property name="text">
              <string>Unconfirmed:</string>
             </property>
@@ -247,7 +247,7 @@
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="usdtotal">
             <property name="text">
              <string>USD Total:</string>
             </property>
@@ -277,7 +277,7 @@
            </widget>
           </item>
           <item row="7" column="0">
-           <widget class="QLabel" name="label_9">
+           <widget class="QLabel" name="btctotal">
             <property name="text">
              <string>BTC Total:</string>
             </property>
@@ -325,13 +325,13 @@
              </font>
             </property>
             <property name="toolTip">
-             <string>Refresh your USD and BTC totals, forces price data from CMC.</string>
+             <string>Refresh your USD and BTC estimated totals, forces price data from CMC.</string>
             </property>
             <property name="layoutDirection">
              <enum>Qt::LeftToRight</enum>
             </property>
             <property name="text">
-             <string>Refresh Prices</string>
+             <string>Refresh Totals</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
