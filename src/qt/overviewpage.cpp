@@ -133,7 +133,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
     lastNewBlock = 0;
 
     //This is driving me nuts, will fix later lmao
-	ui->frameDarksend->setVisible(true);
+	//ui->frameDarksend->setVisible(true);
 	
 	if(fLiteMode){
         ui->frameDarksend->setVisible(false);
