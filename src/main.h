@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2017-2018 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_MAIN_H
@@ -19,7 +20,7 @@
 class CValidationState;
 
 #define START_MASTERNODE_PAYMENTS_TESTNET 1515283200  //Sat, 07 Jan 2018 00:00:00 GMT
-#define START_MASTERNODE_PAYMENTS 1515900783  //2018-1-14 03:33:03 GMT
+#define START_MASTERNODE_PAYMENTS 1519862400  //Thu, 01 Mar 2018 00:00:00 GMT
 
 #define POS_STAKE_FIX_BLOCK 9900000 //Needs to be worked out still
 #define POS_STAKE_FIX_BLOCK_TESTNET 20000
