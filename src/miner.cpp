@@ -218,7 +218,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 ExtractDestination(payee, address1);
                 CBitcoinAddress address2(address1);
 
-                printf("Masternode payment to %s\n", address2.ToString().c_str());
+                printf("CreateNewBlock(): Masternode payment to %s\n", address2.ToString().c_str());
             }
         }
 
