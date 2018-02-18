@@ -209,10 +209,11 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 
             if(hasPayment){
                 payments = txNew.vout.size() + 1;
-                txNew.vout.resize(payments);
+                printf("CreateNewBlock(): Payment Size: %i\n", payments);
+                pblock->vtx[0].vout.resize(payments);
 
-                txNew.vout[payments-1].scriptPubKey = payee;
-                txNew.vout[payments-1].nValue = 0;
+                pblock->vtx[0].vout[payments-1].scriptPubKey = payee;
+                pblock->vtx[0].vout[payments-1].nValue = 0;
 
                 CTxDestination address1;
                 ExtractDestination(payee, address1);
