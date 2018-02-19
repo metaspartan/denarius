@@ -2487,9 +2487,9 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         LOCK2(cs_main, mempool.cs);
 
         CBlockIndex *pindex = pindexBest;
-        if(IsProofOfStake() && pindex != NULL){
+        if(pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
+                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[IsProofOfStake() ? 1 : 0].GetValueOut());
                 bool fIsInitialDownload = IsInitialBlockDownload();
 
                 // If we don't already have its previous block, skip masternode payment step
@@ -2507,12 +2507,12 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
                         if(fDebug) { printf("CheckBlock() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
                     }
 
-                    for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
-                        if(vtx[0].vout[i].nValue == masternodePaymentAmount )
+                    for (unsigned int i = 0; i < vtx[IsProofOfStake() ? 1 : 0].vout.size(); i++) {
+                        if(vtx[IsProofOfStake() ? 1 : 0].vout[i].nValue == masternodePaymentAmount )
                             foundPaymentAmount = true;
-                        if(vtx[0].vout[i].scriptPubKey == payee )
+                        if(vtx[IsProofOfStake() ? 1 : 0].vout[i].scriptPubKey == payee )
                             foundPayee = true;
-                        if(vtx[0].vout[i].nValue == masternodePaymentAmount && vtx[1].vout[i].scriptPubKey == payee)
+                        if(vtx[IsProofOfStake() ? 1 : 0].vout[i].nValue == masternodePaymentAmount && vtx[IsProofOfStake() ? 1 : 0].vout[i].scriptPubKey == payee)
                             foundPaymentAndPayee = true;
                     }
 
