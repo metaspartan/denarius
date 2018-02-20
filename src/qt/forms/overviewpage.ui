@@ -333,6 +333,10 @@
             <property name="text">
              <string>Refresh Totals</string>
             </property>
+            <property name="icon">
+             <iconset resource="../bitcoin.qrc">
+              <normaloff>:/icons/refresh</normaloff>:/icons/refresh</iconset>
+            </property>
             <property name="autoDefault">
              <bool>false</bool>
             </property>

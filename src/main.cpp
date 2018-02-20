@@ -1197,7 +1197,7 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 		nSubsidy = 1000000 * COIN;  // 10% Premine	
 	else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
         nSubsidy = 1 * COIN/2;	
-	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m DNR
+	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m DNR (33% will go to hybrid masternodes)
 		nSubsidy = 3 * COIN;	
 	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m DNR
 		nSubsidy = 4 * COIN;
@@ -1225,7 +1225,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 
     int64_t nSubsidy;
 
-	//PoS Fixed on Protocol 21214 v2.0.0.0 DeNaRiUs
+	//PoS Fixed on v2.0.0.0 DeNaRiUs
 	nSubsidy = nCoinAge * nRewardCoinYear / 365;
 
     if (fDebug && GetBoolArg("-printcreation"))
