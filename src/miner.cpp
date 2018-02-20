@@ -166,11 +166,11 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     bool bMasterNodePayment = false;
 
     if (fTestNet){
-        if (GetTime() > START_MASTERNODE_PAYMENTS_TESTNET){
+        if (GetTime() > START_POW_MASTERNODE_PAYMENTS_TESTNET){
             bMasterNodePayment = true;
         }
     }else{
-        if (GetTime() > START_MASTERNODE_PAYMENTS){
+        if (GetTime() > START_POW_MASTERNODE_PAYMENTS){
             bMasterNodePayment = true;
         }
     }
