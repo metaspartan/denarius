@@ -380,6 +380,8 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "  \"height\" : height of the next block\n"
             "  \"payee\" : required payee\n"
             "  \"payee_amount\" : required amount to pay\n"
+			"  \"masternode_payments\" : true|false,         (boolean) true, if masternode payments are enabled"
+            "  \"enforce_masternode_payments\" : true|false  (boolean) true, if masternode payments are enforced"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
@@ -501,12 +503,14 @@ Value getblocktemplate(const Array& params, bool fHelp)
         aMutable.push_back("prevblock");
     }
 
+	CScript payee;
+	
     Object result;
     result.push_back(Pair("version", pblock->nVersion));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+	result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
     result.push_back(Pair("mutable", aMutable));
@@ -517,29 +521,31 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
 
-
+	/*
+	//CScript payee;
+    int winningNode = GetCurrentMasterNode(1);
+    if(winningNode >= 0){
+        //payee = GetScriptForDestination(vecMasternodes[winningNode].pubkey.GetID());
+		payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+    } else {
+        printf("GetBlockTemplate RPC: Failed to detect masternode to pay\n");
+        // pay the burn address if it can't detect
+        //std::string burnAddy = "DNRWINbXXXXXXXXXXXXXXXXXXXXXXXZVaG";
+        //CBitcoinAddress burnAddr;
+        //burnAddr.SetString(burnAddy);
+		//payee.SetDestination(burnAddr.Get());
+    }
+	*/
+	
     // ---- Masternode info ---
-    CScript payee;
     if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no masternode detected
         int winningNode = GetCurrentMasterNode(1);
         if(winningNode >= 0){
             payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
         } else {
-            printf("getblocktemplate(): Failed to detect masternode to pay\n");
+            printf("getblocktemplate() RPC: Failed to detect masternode to pay\n");
         }
-    }
-
-    if(payee != CScript()){
-        CTxDestination address1;
-        ExtractDestination(payee, address1);
-        CBitcoinAddress address2(address1);
-        result.push_back(Pair("payee", address2.ToString().c_str()));
-        result.push_back(Pair("payee_amount", (int64_t)GetMasternodePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
-    } 
-    else {
-        result.push_back(Pair("payee", ""));
-        result.push_back(Pair("payee_amount", ""));
     }
 
     bool MasternodePayments = false;
@@ -549,10 +555,22 @@ Value getblocktemplate(const Array& params, bool fHelp)
     } else {
         if(pblock->nTime > START_MASTERNODE_PAYMENTS) MasternodePayments = true;
     }
-
-    result.push_back(Pair("masternode_payments", MasternodePayments));
-    result.push_back(Pair("enforce_masternode_payments", true));
-
+	
+	if(payee != CScript()){
+		CTxDestination address1;
+		ExtractDestination(payee, address1);
+		CBitcoinAddress address2(address1);
+		result.push_back(Pair("payee", address2.ToString().c_str()));
+		result.push_back(Pair("payee_amount", (int64_t)GetMasternodePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
+	} 
+    else {
+        result.push_back(Pair("payee", ""));
+        result.push_back(Pair("payee_amount", ""));
+    }
+	
+	result.push_back(Pair("masternode_payments", MasternodePayments));
+    result.push_back(Pair("enforce_masternode_payments", MasternodePayments));
+	
     return result;
 }
 
