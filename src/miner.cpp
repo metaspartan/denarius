@@ -165,16 +165,20 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     // start masternode payments
     bool bMasterNodePayment = false;
 
-    if (fTestNet){
-        if (GetTime() > START_POW_MASTERNODE_PAYMENTS_TESTNET){
-            bMasterNodePayment = true;
-        }
-    }else{
-        if (GetTime() > START_POW_MASTERNODE_PAYMENTS){
-            bMasterNodePayment = true;
-        }
-    }
-
+	//Only if it isn't Proof of Stake?
+	if (!fProofOfStake)
+    {
+		if (fTestNet){
+			if (GetTime() > START_POW_MASTERNODE_PAYMENTS_TESTNET){
+				bMasterNodePayment = true;
+			}
+		}else{
+			if (GetTime() > START_POW_MASTERNODE_PAYMENTS){
+				bMasterNodePayment = true;
+			}
+		}
+	}
+	
     // Fee-per-kilobyte amount considered the same as "free"
     // Be careful setting this: if you set it to zero then
     // a transaction spammer can cheaply fill blocks using
