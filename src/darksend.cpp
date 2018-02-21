@@ -2118,11 +2118,13 @@ void ThreadCheckDarkSendPool()
     {
         c++;
 
-        MilliSleep(5000);
+        MilliSleep(1000);
         //printf("ThreadCheckDarkSendPool::check timeout\n");
         darkSendPool.CheckTimeout();
+		
+		int mnTimeout = 60;
 
-        if(c % 60 == 0){
+        if(c % mnTimeout == 0){
             LOCK(cs_main);
             /*
                 cs_main is required for doing masternode.Check because something
@@ -2155,9 +2157,11 @@ void ThreadCheckDarkSendPool()
             masternodePayments.CleanPaymentList();
             CleanTransactionLocksList();
         }
+		
+		int mnRefresh = 5; //(5*5)
 
         //try to sync the masternode list and payment list every 5 seconds from at least 3 nodes
-        if(c % (5*5) == 0 && RequestedMasterNodeList < 3){
+        if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
@@ -2184,7 +2188,8 @@ void ThreadCheckDarkSendPool()
             activeMasternode.ManageStatus();
         }
 
-        if(c % (60*5) == 0){
+        //if(c % (60*5) == 0){
+		if(c % 60 == 0){
             //if we've used 1/5 of the masternode list, then clear the list.
             if((int)vecMasternodesUsed.size() > (int)vecMasternodes.size() / 5)
                 vecMasternodesUsed.clear();
