@@ -585,7 +585,11 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
 
 void StakeMiner(CWallet *pwallet)
 {
+<<<<<<< HEAD
     printf("! Started STAKEMINER()\n");
+=======
+	//printf("! Started STAKEMINER()\n");
+>>>>>>> upstream/masternodes
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
@@ -620,10 +624,17 @@ void StakeMiner(CWallet *pwallet)
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
+<<<<<<< HEAD
                 vnThreadsRunning[THREAD_STAKE_MINER]--;
                 MilliSleep(60000);
                 vnThreadsRunning[THREAD_STAKE_MINER]++;
                 if (fShutdown)
+=======
+				vnThreadsRunning[THREAD_STAKE_MINER]--;
+                MilliSleep(60000);
+                vnThreadsRunning[THREAD_STAKE_MINER]++;
+				if (fShutdown)
+>>>>>>> upstream/masternodes
                     return;
             }
         }
@@ -643,12 +654,20 @@ void StakeMiner(CWallet *pwallet)
             CheckStake(pblock.get(), *pwallet);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
             MilliSleep(500);
+<<<<<<< HEAD
             if (fShutdown)
+=======
+			if (fShutdown)
+>>>>>>> upstream/masternodes
                 return;
         }
         else
             MilliSleep(nMinerSleep);
+<<<<<<< HEAD
             if (fShutdown)
+=======
+			if (fShutdown)
+>>>>>>> upstream/masternodes
                 return;
     }
 }

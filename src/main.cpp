@@ -985,10 +985,10 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         }
     }
 
-
-    printf("mempool: AcceptableInputs : accepted %s (poolsz %lu)\n",
-           hash.ToString().substr(0,10).c_str(),
-           pool.mapTx.size());
+	//Minimize debug spam
+    //printf("mempool: AcceptableInputs : accepted %s (poolsz %lu)\n",
+           //hash.ToString().substr(0,10).c_str(),
+           //pool.mapTx.size());
     return true;
 }
 

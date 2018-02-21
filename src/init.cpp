@@ -96,7 +96,7 @@ void Shutdown(void* parg)
 {
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
-	printf("Shutdown is in progress...\n\n");
+    printf("Shutdown is in progress...\n\n");
 
     // Make this thread recognisable as the shutdown thread
     RenameThread("denarius-shutoff");
@@ -164,9 +164,9 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
-	
-	boost::thread_group threadGroup;
-	
+    
+    boost::thread_group threadGroup;
+    
     bool fRet = false;
     try
     {
@@ -218,7 +218,7 @@ bool AppInit(int argc, char* argv[])
     }
     //if (!fRet)
         //Shutdown(NULL);
-	if (!fRet)
+    if (!fRet)
     {
         threadGroup.interrupt_all();
         // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
@@ -360,24 +360,24 @@ std::string HelpMessage()
         "  -rpcsslcertificatechainfile=<file.cert>  " + _("Server certificate file (default: server.cert)") + "\n" +
         "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n" +
         "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)") + "\n" +
-		"  -litemode=<n>          " + _("Disable all Masternode and Darksend related functionality (0-1, default: 0)") + "\n" +
-		"\n" + _("Masternode options:") + "\n" +
-		"  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
-		"  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
-		"  -masternodeprivkey=<n>     " + _("Set the masternode private key") + "\n" +
-		"  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
-		"  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
+        "  -litemode=<n>          " + _("Disable all Masternode and Darksend related functionality (0-1, default: 0)") + "\n" +
+        "\n" + _("Masternode options:") + "\n" +
+        "  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
+        "  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
+        "  -masternodeprivkey=<n>     " + _("Set the masternode private key") + "\n" +
+        "  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
+        "  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
 
-		"\n" + _("Darksend options:") + "\n" +
-		"  -enabledarksend=<n>          " + _("Enable use of automated darksend for funds stored in this wallet (0-1, default: 0)") + "\n" +
-		"  -darksendrounds=<n>          " + _("Use N separate masternodes to anonymize funds  (2-8, default: 2)") + "\n" +
-		"  -anonymizedenariusamount=<n> " + _("Keep N Denarius anonymized (default: 0)") + "\n" +
-		"  -liquidityprovider=<n>       " + _("Provide liquidity to Darksend by infrequently mixing coins on a continual basis (0-100, default: 0, 1=very frequent, high fees, 100=very infrequent, low fees)") + "\n" +
+        "\n" + _("Darksend options:") + "\n" +
+        "  -enabledarksend=<n>          " + _("Enable use of automated darksend for funds stored in this wallet (0-1, default: 0)") + "\n" +
+        "  -darksendrounds=<n>          " + _("Use N separate masternodes to anonymize funds  (2-8, default: 2)") + "\n" +
+        "  -anonymizedenariusamount=<n> " + _("Keep N Denarius anonymized (default: 0)") + "\n" +
+        "  -liquidityprovider=<n>       " + _("Provide liquidity to Darksend by infrequently mixing coins on a continual basis (0-100, default: 0, 1=very frequent, high fees, 100=very infrequent, low fees)") + "\n" +
 
-		"\n" + _("InstantX options:") + "\n" +
-		"  -enableinstantx=<n>    " + _("Enable instantx, show confirmations for locked transactions (bool, default: true)") + "\n" +
-		"  -instantxdepth=<n>     " + _("Show N confirmations for a successfully locked transaction (0-9999, default: 1)") + "\n" +
-		
+        "\n" + _("InstantX options:") + "\n" +
+        "  -enableinstantx=<n>    " + _("Enable instantx, show confirmations for locked transactions (bool, default: true)") + "\n" +
+        "  -instantxdepth=<n>     " + _("Show N confirmations for a successfully locked transaction (0-9999, default: 1)") + "\n" +
+        
         "\n" + _("Secure messaging options:") + "\n" +
         "  -nosmsg                                  " + _("Disable secure messaging.") + "\n" +
         "  -debugsmsg                               " + _("Log extra debug messages.") + "\n" +
@@ -632,8 +632,8 @@ bool AppInit2(boost::thread_group& threadGroup)
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
-	
-	if (mapArgs.count("-masternodepaymentskey")) // masternode payments priv key
+    
+    if (mapArgs.count("-masternodepaymentskey")) // masternode payments priv key
     {
         if (!masternodePayments.SetPrivKey(GetArg("-masternodepaymentskey", "")))
             return InitError(_("Unable to sign masternode payment winner, wrong key?"));
@@ -992,10 +992,10 @@ bool AppInit2(boost::thread_group& threadGroup)
     
     if (!CheckDiskSpace())
         return false;
-	
-	if (!strErrors.str().empty())
+    
+    if (!strErrors.str().empty())
         return InitError(strErrors.str());
-	
+    
     fMasterNode = GetBoolArg("-masternode", false);
     if(fMasterNode) {
         printf("Masternode Enabled\n");
@@ -1062,8 +1062,8 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 
     printf("fLiteMode %d\n", fLiteMode);
-	printf("fEnableDarksend %d\n", fEnableDarksend);
-	printf("fMasterNode %d\n", fMasterNode);
+    printf("fEnableDarksend %d\n", fEnableDarksend);
+    printf("fMasterNode %d\n", fMasterNode);
     printf("nInstantXDepth %d\n", nInstantXDepth);
     printf("Darksend rounds %d\n", nDarksendRounds);
     printf("Anonymize Denarius Amount %d\n", nAnonymizeDenariusAmount);
@@ -1093,23 +1093,23 @@ bool AppInit2(boost::thread_group& threadGroup)
 
 
     RandAddSeedPerfmon();
-	
-	
+    
+    
     // reindex addresses found in blockchain
     if(GetBoolArg("-reindexaddr", false))
     {
         uiInterface.InitMessage(_("Rebuilding address index..."));
         CBlockIndex *pblockAddrIndex = pindexBest;
-	CTxDB txdbAddr("rw");
-	while(pblockAddrIndex)
-	{
-	    uiInterface.InitMessage(strprintf("Rebuilding address index, Block %i", pblockAddrIndex->nHeight));
-	    bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
-	    CBlock pblockAddr;
-	    if(pblockAddr.ReadFromDisk(pblockAddrIndex, true))
-	        pblockAddr.RebuildAddressIndex(txdbAddr);
-	    pblockAddrIndex = pblockAddrIndex->pprev;
-	}
+    CTxDB txdbAddr("rw");
+    while(pblockAddrIndex)
+    {
+        uiInterface.InitMessage(strprintf("Rebuilding address index, Block %i", pblockAddrIndex->nHeight));
+        bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
+        CBlock pblockAddr;
+        if(pblockAddr.ReadFromDisk(pblockAddrIndex, true))
+            pblockAddr.RebuildAddressIndex(txdbAddr);
+        pblockAddrIndex = pblockAddrIndex->pprev;
+    }
     }
 
     //// debug print
@@ -1135,12 +1135,12 @@ bool AppInit2(boost::thread_group& threadGroup)
 
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
-	
-	if (pwalletMain) {
-	BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-	{
-	    uiInterface.NotifyAdrenalineNodeChanged(adrenaline.second);
-	}
+    
+    if (pwalletMain) {
+    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
+    {
+        uiInterface.NotifyAdrenalineNodeChanged(adrenaline.second);
+    }
         // Run a thread to flush wallet periodically
         //threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
     }
@@ -1151,6 +1151,8 @@ bool AppInit2(boost::thread_group& threadGroup)
     while (1)
         MilliSleep(5000);
 #endif
+
+    fSuccessfullyLoaded = true;
 
     return true;
 }

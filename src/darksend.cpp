@@ -272,7 +272,7 @@ void ProcessMessageDarksend(CNode* pfrom, std::string& strCommand, CDataStream& 
                 CTransaction tx2;
                 uint256 hash;
                 //if(GetTransaction(i.prevout.hash, tx2, hash, true)){
-		if(GetTransaction(i.prevout.hash, tx2, hash)){
+        if(GetTransaction(i.prevout.hash, tx2, hash)){
                     if(tx2.vout.size() > i.prevout.n) {
                         nValueIn += tx2.vout[i.prevout.n].nValue;
                     }
@@ -304,7 +304,7 @@ void ProcessMessageDarksend(CNode* pfrom, std::string& strCommand, CDataStream& 
 
             //if(!AcceptableInputs(mempool, state, tx)){
             bool* pfMissingInputs;
-	    if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+        if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
                 printf("dsi -- transaction not valid! \n");
                 error = _("Transaction not valid.");
                 pfrom->PushMessage("dssu", darkSendPool.sessionID, darkSendPool.GetState(), darkSendPool.GetEntriesCount(), MASTERNODE_REJECTED, error);
@@ -916,7 +916,7 @@ bool CDarkSendPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
         int n = found;
         txNew.vin[n].scriptSig = newSig;
         if(fDebug) printf("CDarkSendPool::SignatureValid() - Sign with sig %s\n", newSig.ToString().substr(0,24).c_str());
-		if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, SignatureChecker(txNew, i))){
+        if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, SignatureChecker(txNew, i))){
             if(fDebug) printf("CDarkSendPool::SignatureValid() - Signing - Error signing input %u\n", n);
             return false;
         }
@@ -948,7 +948,7 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
         CTransaction tx2;
         uint256 hash;
         //if(GetTransaction(i.prevout.hash, tx2, hash, true)){
-	if(GetTransaction(i.prevout.hash, tx2, hash)){
+    if(GetTransaction(i.prevout.hash, tx2, hash)){
             if(tx2.vout.size() > i.prevout.n) {
                 nValueIn += tx2.vout[i.prevout.n].nValue;
             }
@@ -1153,8 +1153,8 @@ void CDarkSendPool::SendDarksendDenominate(std::vector<CTxIn>& vin, std::vector<
         }
 
         //if(!AcceptableInputs(mempool, state, tx)){
-	bool* pfMissingInputs;
-	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+    bool* pfMissingInputs;
+    if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             printf("dsi -- transaction not valid! %s \n", tx.ToString().c_str());
             return;
         }
@@ -1275,7 +1275,7 @@ bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNod
                     printf("CDarkSendPool::Sign - My entries are not correct! Refusing to sign. %d entries %d target. \n", foundOutputs, targetOuputs);
                     return false;
                 }
-				
+                
                 if(fDebug) printf("CDarkSendPool::Sign - Signing my input %i\n", mine);
                 if(!SignSignature(*pwalletMain, prevPubKey, finalTransaction, mine, int(SIGHASH_ALL|SIGHASH_ANYONECANPAY))) { // changes scriptSig
                     if(fDebug) printf("CDarkSendPool::Sign - Unable to sign my own transaction! \n");
@@ -1507,7 +1507,7 @@ bool CDarkSendPool::DoAutomaticDenominating(bool fDryRun, bool ready)
                     LOCK(cs_vNodes);
                     BOOST_FOREACH(CNode* pnode, vNodes)
                     {
-                    	if((CNetAddr)pnode->addr != (CNetAddr)submittedToMasternode) continue;
+                        if((CNetAddr)pnode->addr != (CNetAddr)submittedToMasternode) continue;
 
                         std::string strReason;
                         if(txCollateral == CTransaction()){
@@ -1622,7 +1622,7 @@ bool CDarkSendPool::PrepareDarksendDenominate()
 }
 
 std::string CDarkSendPool::Denominate() {
-	return pwalletMain->Denominate();
+    return pwalletMain->Denominate();
 }
 
 bool CDarkSendPool::SendRandomPaymentToSelf()
@@ -2121,8 +2121,8 @@ void ThreadCheckDarkSendPool()
         MilliSleep(1000);
         //printf("ThreadCheckDarkSendPool::check timeout\n");
         darkSendPool.CheckTimeout();
-		
-		int mnTimeout = 60;
+        
+        int mnTimeout = 60;
 
         if(c % mnTimeout == 0){
             LOCK(cs_main);
@@ -2131,9 +2131,9 @@ void ThreadCheckDarkSendPool()
                 is modifying the coins view without a mempool lock. It causes
                 segfaults from this code without the cs_main lock.
             */
-	    {
+        {
 
-	    LOCK(cs_masternodes);
+        LOCK(cs_masternodes);
             vector<CMasterNode>::iterator it = vecMasternodes.begin();
             //check them separately
             while(it != vecMasternodes.end()){
@@ -2152,13 +2152,13 @@ void ThreadCheckDarkSendPool()
                 }
             }
 
-	    }
+        }
 
             masternodePayments.CleanPaymentList();
             CleanTransactionLocksList();
         }
-		
-		int mnRefresh = 5; //(5*5)
+        
+        int mnRefresh = 5; //(5*5)
 
         //try to sync the masternode list and payment list every 5 seconds from at least 3 nodes
         if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
@@ -2189,7 +2189,7 @@ void ThreadCheckDarkSendPool()
         }
 
         //if(c % (60*5) == 0){
-		if(c % 60 == 0){
+        if(c % 60 == 0){
             //if we've used 1/5 of the masternode list, then clear the list.
             if((int)vecMasternodesUsed.size() > (int)vecMasternodes.size() / 5)
                 vecMasternodesUsed.clear();

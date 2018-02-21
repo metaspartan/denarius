@@ -1730,11 +1730,11 @@ void ThreadOpenAddedConnections2(void* parg)
                 OpenNetworkConnection(addr, &grant, strAddNode.c_str());
                 MilliSleep(500);
             }
-            if (fShutdown)
+			if (fShutdown)
                 return;
             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
             MilliSleep(120000); // Retry every 2 minutes
-            vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
+			vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
             if (fShutdown)
                 return;
         }
@@ -1782,14 +1782,14 @@ void ThreadOpenAddedConnections2(void* parg)
             CSemaphoreGrant grant(*semOutbound);
             OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);   
             MilliSleep(500);
-            if (fShutdown)
+			if (fShutdown)
                 return;
         }
-            vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-            MilliSleep(120000); // Retry every 2 minutes
-            vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
-            if (fShutdown)
-                return;
+		vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
+        MilliSleep(120000); // Retry every 2 minutes
+        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
+        if (fShutdown)
+            return;
     }
 }
 
