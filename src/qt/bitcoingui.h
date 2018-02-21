@@ -78,6 +78,7 @@ public:
         functionality.
     */
     void setMessageModel(MessageModel *messageModel);
+    void checkTOU();
 
 protected:
     void changeEvent(QEvent *e);

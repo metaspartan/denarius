@@ -585,7 +585,6 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
 
 void StakeMiner(CWallet *pwallet)
 {
-	//printf("! Started STAKEMINER()\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread

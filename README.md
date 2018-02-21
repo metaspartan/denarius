@@ -24,9 +24,12 @@ Specifications
 * Confirmations: 10 blocks
 * Maturity: 30 blocks (15 minutes)
 * Min stake age: 8 hours
+* Cost of Hybrid Masternode: 5,000 DNR
+* Hybrid Masternode Reward: 33% of current block reward
 
 Technology
 ==========================
+* Hybrid PoW/PoS Masternodes
 * Stealth addresses
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs

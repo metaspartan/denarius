@@ -231,6 +231,9 @@ int main(int argc, char *argv[])
 
                 if (splashref)
                     splash.finish(&window);
+                
+                //make sure user has agreed to TOU
+                window.checkTOU();
 
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(pwalletMain, &optionsModel);

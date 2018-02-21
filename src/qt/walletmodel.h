@@ -58,7 +58,7 @@ public:
         TransactionCommitFailed,
         NarrationTooLong,
         Aborted,
-	AnonymizeOnlyUnlocked
+        AnonymizeOnlyUnlocked
     };
 
     enum EncryptionStatus
