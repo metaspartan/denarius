@@ -35,6 +35,7 @@
 #include "guiutil.h"
 #include "rpcconsole.h"
 #include "wallet.h"
+#include "termsofuse.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -544,6 +545,22 @@ void BitcoinGUI::createToolBars()
     connect(secondaryToolbar, SIGNAL(orientationChanged(Qt::Orientation)), this, SLOT(secondaryToolbarOrientation(Qt::Orientation)));
     mainToolbarOrientation(mainToolbar->orientation());
     secondaryToolbarOrientation(secondaryToolbar->orientation());
+}
+
+void BitcoinGUI::checkTOU()
+{
+    bool agreed_to_tou = false;
+    boost::filesystem::path pathDebug = GetDataDir() / ".agreed_to_tou";
+    if (FILE *file = fopen(pathDebug.string().c_str(), "r")) {
+        file=file;
+        fclose(file);
+        agreed_to_tou = true;
+    }
+
+    if(!agreed_to_tou){
+        TermsOfUse dlg(this);
+        dlg.exec();
+    }
 }
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
@@ -1244,6 +1261,16 @@ void BitcoinGUI::setEncryptionStatus(int status)
         lockWalletAction->setVisible(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
         break;
+    case WalletModel::UnlockedForAnonymizationOnly:
+        labelEncryptionIcon->show();
+        labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_open").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
+        labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b> for anonymization only"));
+        encryptWalletAction->setChecked(true);
+        changePassphraseAction->setEnabled(true);
+        unlockWalletAction->setVisible(true);
+        lockWalletAction->setVisible(true);
+        encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+        break;
     case WalletModel::Locked:
         disconnect(labelEncryptionIcon, SIGNAL(clicked()), unlockWalletAction, SLOT(trigger()));
         disconnect(labelEncryptionIcon, SIGNAL(clicked()),   lockWalletAction, SLOT(trigger()));
@@ -1295,7 +1322,7 @@ void BitcoinGUI::unlockWallet()
     if(!walletModel)
         return;
     // Unlock wallet when requested by wallet model
-    if(walletModel->getEncryptionStatus() == WalletModel::Locked)
+    if(walletModel->getEncryptionStatus() == WalletModel::Locked || walletModel->getEncryptionStatus() == WalletModel::UnlockedForAnonymizationOnly)
     {
         AskPassphraseDialog::Mode mode = sender() == unlockWalletAction ?
               AskPassphraseDialog::UnlockStaking : AskPassphraseDialog::Unlock;
