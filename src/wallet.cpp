@@ -1219,6 +1219,8 @@ int64_t CWallet::GetBalanceNoLocks() const
 
 CAmount CWallet::GetAnonymizedBalance() const
 {
+	if(fLiteMode) return 0;
+	
     int64_t nTotal = 0;
     {
         LOCK(cs_wallet);
@@ -1254,6 +1256,8 @@ CAmount CWallet::GetAnonymizedBalance() const
 
 double CWallet::GetAverageAnonymizedRounds() const
 {
+	if(fLiteMode) return 0;
+	
     double fTotal = 0;
     double fCount = 0;
 
@@ -1292,6 +1296,8 @@ double CWallet::GetAverageAnonymizedRounds() const
 
 CAmount CWallet::GetNormalizedAnonymizedBalance() const
 {
+	if(fLiteMode) return 0;
+	
     int64_t nTotal = 0;
 
     {
@@ -1326,6 +1332,8 @@ CAmount CWallet::GetNormalizedAnonymizedBalance() const
 
 CAmount CWallet::GetDenominatedBalance(bool onlyDenom, bool onlyUnconfirmed) const
 {
+	if(fLiteMode) return 0;
+	
     int64_t nTotal = 0;
     {
         LOCK(cs_wallet);
@@ -4188,7 +4196,14 @@ bool CWallet::NewKeyPool()
         if (IsLocked())
             return false;
 
-        int64_t nKeys = max(GetArg("-keypool", 100), (int64_t)0);
+		fLiteMode = GetBoolArg("-litemode", false);
+		int64_t nKeys;
+
+        if(fLiteMode)
+            nKeys = max(GetArg("-keypool", 100), (int64_t)0);
+        else
+            nKeys = max(GetArg("-keypool", 1000), (int64_t)0);
+		
         for (int i = 0; i < nKeys; i++)
         {
             int64_t nIndex = i+1;
@@ -4212,10 +4227,14 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
 
         // Top up key pool
         unsigned int nTargetSize;
+		fLiteMode = GetBoolArg("-litemode", false);
+		
         if (nSize > 0)
             nTargetSize = nSize;
-        else
+        else if (fLiteMode)
             nTargetSize = max(GetArg("-keypool", 100), (int64_t)0);
+		else
+			nTargetSize = max(GetArg("-keypool", 1000), (int64_t)0);
 
         while (setKeyPool.size() < (nTargetSize + 1))
         {
@@ -4226,6 +4245,12 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
                 throw runtime_error("TopUpKeyPool() : writing generated key failed");
             setKeyPool.insert(nEnd);
             printf("keypool added key %"PRId64", size=%"PRIszu"\n", nEnd, setKeyPool.size());
+			
+			if(!fSuccessfullyLoaded) {
+			    double dProgress = nEnd / 10.f;
+                std::string strMsg = strprintf(_("Loading Wallet... (Generating Keys: %3.2f %%)"), dProgress);
+                uiInterface.InitMessage(strMsg);
+			}
         }
     }
     return true;

@@ -1152,5 +1152,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         MilliSleep(5000);
 #endif
 
+    fSuccessfullyLoaded = true;
+
     return true;
 }
