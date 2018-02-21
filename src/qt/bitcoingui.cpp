@@ -977,12 +977,33 @@ void BitcoinGUI::showGraph()
 
 void BitcoinGUI::showConfEditor()
 {
-    GUIUtil::openConfigfile();
+    boost::filesystem::path pathConfig = GetConfigFile();
+
+    /* Open denarius.conf with the associated application */
+    if (boost::filesystem::exists(pathConfig)) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathConfig.string())));
+	} else {
+		QMessageBox::warning(this, tr("No denarius.conf"),
+        tr("Your denarius.conf does not exist! Please create one in your Denarius data directory."),
+        QMessageBox::Ok, QMessageBox::Ok);
+	}		
+	//GUIUtil::openConfigfile();
+	
 }
 
 void BitcoinGUI::showMNConfEditor()
 {
-    GUIUtil::openMNConfigfile();
+    boost::filesystem::path pathMNConfig = GetMasternodeConfigFile();
+
+    /* Open masternode.conf with the associated application */
+    if (boost::filesystem::exists(pathMNConfig)) {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathMNConfig.string())));
+	} else {
+		QMessageBox::warning(this, tr("No masternode.conf"),
+        tr("Your masternode.conf does not exist! Please create one in your Denarius data directory."),
+        QMessageBox::Ok, QMessageBox::Ok);
+	}
+    //GUIUtil::openMNConfigfile();
 }
 
 void BitcoinGUI::gotoOverviewPage()
