@@ -156,6 +156,7 @@ Value masternode(const Array& params, bool fHelp)
 			"  genkey       - Generate new masternodeprivkey\n"
 			"  enforce      - Enforce masternode payments\n"
 			"  outputs      - Print masternode compatible outputs\n"
+            "  status       - Current masternode status\n"
 			"  start        - Start masternode configured in denarius.conf\n"
 			"  start-alias  - Start single masternode by assigned alias configured in masternode.conf\n"
 			"  start-many   - Start all masternodes configured in masternode.conf\n"
@@ -170,7 +171,7 @@ Value masternode(const Array& params, bool fHelp)
             );
     if (strCommand == "stop")
     {
-        if(!fMasterNode) return "you must set masternode=1 in the configuration";
+        if(!fMasterNode) return "You must set masternode=1 in the configuration";
 
         if(pwalletMain->IsLocked()) {
             SecureString strWalletPass;
@@ -184,18 +185,18 @@ Value masternode(const Array& params, bool fHelp)
             }
 
             if(!pwalletMain->Unlock(strWalletPass)){
-                return "incorrect passphrase";
+                return "Incorrect passphrase";
             }
         }
 
         std::string errorMessage;
         if(!activeMasternode.StopMasterNode(errorMessage)) {
-        	return "stop failed: " + errorMessage;
+        	return "Stop Failed: " + errorMessage;
         }
         pwalletMain->Lock();
 
-        if(activeMasternode.status == MASTERNODE_STOPPED) return "successfully stopped masternode";
-        if(activeMasternode.status == MASTERNODE_NOT_CAPABLE) return "not capable masternode";
+        if(activeMasternode.status == MASTERNODE_STOPPED) return "Successfully Stopped Masternode";
+        if(activeMasternode.status == MASTERNODE_NOT_CAPABLE) return "Not a capable Masternode";
 
         return "unknown";
     }
@@ -221,7 +222,7 @@ Value masternode(const Array& params, bool fHelp)
 			}
 
 			if(!pwalletMain->Unlock(strWalletPass)){
-				return "incorrect passphrase";
+				return "Incorrect passphrase";
 			}
         }
 
