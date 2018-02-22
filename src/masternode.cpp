@@ -607,6 +607,7 @@ void CMasterNode::Check()
 
         //if(!AcceptableInputs(mempool, state, tx)){
         bool* pfMissingInputs = NULL;
+        
 	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             enabled = 3;
             return;

@@ -22,6 +22,7 @@
 #include <QTextDocument>
 #include <QScrollBar>
 #include <QClipboard>
+#include <QSettings>
 
 SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     QDialog(parent),
@@ -53,8 +54,37 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));
     connect(ui->checkBoxCoinControlChange, SIGNAL(stateChanged(int)), this, SLOT(coinControlChangeChecked(int)));
     connect(ui->lineEditCoinControlChange, SIGNAL(textEdited(const QString &)), this, SLOT(coinControlChangeEdited(const QString &)));
-	connect(ui->checkUseDarksend, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
-	connect(ui->checkInstantX, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
+	
+    QSettings settings;
+    if (!settings.contains("bUseDarkSend"))
+        settings.setValue("bUseDarkSend", false);
+    if (!settings.contains("bUseInstantX"))
+        settings.setValue("bUseInstantX", false);
+
+    bool useDarkSend = settings.value("bUseDarkSend").toBool();
+    bool useInstantX = settings.value("bUseInstantX").toBool();
+
+    if(fLiteMode) {
+        ui->checkUseDarksend->setChecked(false);
+        ui->checkUseDarksend->setVisible(false);
+        ui->checkInstantX->setVisible(false);
+        CoinControlDialog::coinControl->useDarkSend = false;
+        CoinControlDialog::coinControl->useInstantX = false;
+    }
+    else{
+        ui->checkUseDarksend->setChecked(useDarkSend);
+        ui->checkInstantX->setChecked(useInstantX);
+        CoinControlDialog::coinControl->useDarkSend = useDarkSend;
+        CoinControlDialog::coinControl->useInstantX = useInstantX;
+    }
+
+    connect(ui->checkUseDarksend, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
+    connect(ui->checkInstantX, SIGNAL(stateChanged ( int )), this, SLOT(updateInstantX()));
+    
+    
+    
+    //connect(ui->checkUseDarksend, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
+	//connect(ui->checkInstantX, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
 
     // Coin Control: clipboard actions
     QAction *clipboardQuantityAction = new QAction(tr("Copy quantity"), this);
@@ -433,9 +463,17 @@ void SendCoinsDialog::updateDisplayUnit()
 
         // Update labelBalance with the current balance and the current unit
         ui->labelBalance->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), balance));
-        // Update labelBalance with the current balance and the current unit
-        //ui->labelBalance->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), model->getBalance()));
     }
+    CoinControlDialog::coinControl->useDarkSend = ui->checkUseDarksend->isChecked();
+    coinControlUpdateLabels();
+}
+
+void SendCoinsDialog::updateInstantX()
+{
+    QSettings settings;
+    settings.setValue("bUseInstantX", ui->checkInstantX->isChecked());
+    CoinControlDialog::coinControl->useInstantX = ui->checkInstantX->isChecked();
+    coinControlUpdateLabels();
 }
 
 // Coin Control: copy label "Quantity" to clipboard
@@ -571,6 +609,8 @@ void SendCoinsDialog::coinControlUpdateLabels()
         if(entry)
             CoinControlDialog::payAmounts.append(entry->getValue().amount);
     }
+    
+    ui->checkUseDarksend->setChecked(CoinControlDialog::coinControl->useDarkSend);
 
     if (CoinControlDialog::coinControl->HasSelected())
     {

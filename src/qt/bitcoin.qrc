@@ -59,6 +59,7 @@
 		<file alias="msg">res/icons/message.png</file>
 		<file alias="richlist">res/icons/richlist.png</file>
 		<file alias="refresh">res/icons/refresh.png</file>
+        <file alias="data">res/icons/data.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
