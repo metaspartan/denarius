@@ -36,6 +36,7 @@
 #include "rpcconsole.h"
 #include "wallet.h"
 #include "termsofuse.h"
+#include "proofofimage.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -175,6 +176,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
 	richListPage = new RichListPage(this);
+    proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
 	
     transactionsPage = new QWidget(this);
@@ -213,6 +215,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	centralWidget->addWidget(masternodeManagerPage);
 	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(richListPage);
+    centralWidget->addWidget(proofOfImagePage);
 	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -377,6 +380,11 @@ void BitcoinGUI::createActions()
     masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
     masternodeManagerAction->setCheckable(true);
     tabGroup->addAction(masternodeManagerAction);
+    
+    proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
+    proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));
+    proofOfImageAction ->setCheckable(true);
+    tabGroup->addAction(proofOfImageAction);
 	
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
@@ -405,6 +413,8 @@ void BitcoinGUI::createActions()
     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));
 	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
+    connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -535,7 +545,7 @@ void BitcoinGUI::createToolBars()
 	mainToolbar->addAction(masternodeManagerAction);
     mainToolbar->addAction(marketAction);
 	mainToolbar->addAction(richListPageAction);
-    //mainToolbar->addAction(chatAction); Next release
+    mainToolbar->addAction(proofOfImageAction);
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -1040,6 +1050,15 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 	
+}
+
+void BitcoinGUI::gotoProofOfImagePage()
+{
+    proofOfImageAction->setChecked(true);
+    centralWidget->setCurrentWidget(proofOfImagePage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoRichListPage()

@@ -735,6 +735,16 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
     string reason;
     if (!fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptToMemoryPool : nonstandard transaction : %s\n", reason.c_str());
+    
+    // ----------- instantX transaction scanning -----------
+
+    BOOST_FOREACH(const CTxIn& in, tx.vin){
+        if(mapLockedInputs.count(in.prevout)){
+            if(mapLockedInputs[in.prevout] != tx.GetHash()){
+                return tx.DoS(0, error("AcceptableInputs : conflicts with existing transaction lock: %s", reason.c_str()));
+            }
+        }
+    }
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -889,6 +899,16 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
     string reason;   
     if (false && !fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptableInputs : nonstandard transaction");
+    
+    // ----------- instantX transaction scanning -----------
+
+    BOOST_FOREACH(const CTxIn& in, tx.vin){
+        if(mapLockedInputs.count(in.prevout)){
+            if(mapLockedInputs[in.prevout] != tx.GetHash()){
+                return tx.DoS(0, error("AcceptableInputs : conflicts with existing transaction lock: %s", reason.c_str()));
+            }
+        }
+    }
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -994,6 +1014,62 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
     return true;
 }
 
+//More InstantX code
+
+int GetInputAge(CTxIn& vin)
+{
+    const uint256& prevHash = vin.prevout.hash;
+    CTransaction tx;
+    uint256 hashBlock;
+    bool fFound = GetTransaction(prevHash, tx, hashBlock);
+    if(fFound)
+    {
+    if(mapBlockIndex.find(hashBlock) != mapBlockIndex.end())
+    {
+        return pindexBest->nHeight - mapBlockIndex[hashBlock]->nHeight;
+    }
+    else
+        return 0;
+    }
+    else
+        return 0;
+}
+
+
+int GetInputAgeIX(uint256 nTXHash, CTxIn& vin)
+{
+    int sigs = 0;
+    int nResult = GetInputAge(vin);
+    if(nResult < 0) nResult = 0;
+
+    if (nResult < 6){
+        std::map<uint256, CTransactionLock>::iterator i = mapTxLocks.find(nTXHash);
+        if (i != mapTxLocks.end()){
+            sigs = (*i).second.CountSignatures();
+        }
+        if(sigs >= INSTANTX_SIGNATURES_REQUIRED){
+            return nInstantXDepth+nResult;
+        }
+    }
+
+    return -1;
+}
+
+int GetIXConfirmations(uint256 nTXHash)
+{
+    int sigs = 0;
+
+    std::map<uint256, CTransactionLock>::iterator i = mapTxLocks.find(nTXHash);
+    if (i != mapTxLocks.end()){
+        sigs = (*i).second.CountSignatures();
+    }
+    if(sigs >= INSTANTX_SIGNATURES_REQUIRED){
+        return nInstantXDepth;
+    }
+
+    return 0;
+}
+
 int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
 {
     if (hashBlock == 0 || nIndex == -1)
@@ -1068,25 +1144,6 @@ bool CWalletTx::AcceptWalletTransaction()
 {
     CTxDB txdb("r");
     return AcceptWalletTransaction(txdb);
-}
-
-int GetInputAge(CTxIn& vin)
-{
-    const uint256& prevHash = vin.prevout.hash;
-    CTransaction tx;
-    uint256 hashBlock;
-    bool fFound = GetTransaction(prevHash, tx, hashBlock);
-    if(fFound)
-    {
-	if(mapBlockIndex.find(hashBlock) != mapBlockIndex.end())
-	{
-	    return pindexBest->nHeight - mapBlockIndex[hashBlock]->nHeight;
-	}
-	else
-	    return 0;
-    }
-    else
-	return 0; 
 }
 
 int CTxIndex::GetDepthInMainChain() const
@@ -1921,6 +1978,141 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (nStakeReward > nCalculatedStakeReward)
             return DoS(100, error("ConnectBlock() : coinstake pays too much(actual=%"PRId64" vs calculated=%"PRId64")", nStakeReward, nCalculatedStakeReward));
     }
+    
+    // ----------- masternode payments -----------
+    // Once upon a time, People were really interested in DNR.
+    // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
+    // The Discord was active, People discussed how they would reach that goal.
+    // There was one person, named Thi3rryzz watching all this from a save distance.
+    // Then, the word MASTERNODES came to the table.
+    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of DNR
+    // So Thi3rryzz decided to jump in..
+    // After a lot of: "How much for MN" and "When MN?"
+    // We hope to proudly present you:
+    // ----------- hybrid masternode payments -----------
+    
+    bool MasternodePayments = false;
+    
+    if (fTestNet){
+        if (pindex->nHeight > TESTNET_MN_HEIGHT){ // Block 75k Testnet
+            MasternodePayments = true;
+            if(fDebug) { printf("CheckBlock() : Masternode payments enabled\n"); }
+        }else{
+            MasternodePayments = false;
+            if(fDebug) { printf("CheckBlock() : Masternode payments disabled\n"); }
+        }
+    }else{
+        if (pindex->nHeight > MAINNET_MN_HEIGHT){ //Block 645k Mainnet
+            MasternodePayments = true;
+            if(fDebug) { printf("CheckBlock() : Masternode payments enabled\n"); }
+        }else{
+            MasternodePayments = false;
+            if(fDebug) { printf("CheckBlock() : Masternode payments disabled\n"); }
+        }
+    }
+   
+    if(MasternodePayments == true)
+    {
+        LOCK2(cs_main, mempool.cs);
+
+        CBlockIndex *pindex = pindexBest;
+        if(IsProofOfStake() && pindex != NULL){
+            if(pindex->GetBlockHash() == hashPrevBlock){
+                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[1].GetValueOut());
+                bool fIsInitialDownload = IsInitialBlockDownload();
+
+                // If we don't already have its previous block, skip masternode payment step
+                if (!fIsInitialDownload && pindex != NULL)
+                {
+                    bool foundPaymentAmount = false;
+                    bool foundPayee = false;
+
+                    CScript payee;
+
+                    // Non specific payee
+                    if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
+                        foundPayee = true; //doesn't require a specific payee
+                        if(fDebug) { printf("CheckBlock-POS() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
+                    }
+                    
+                    // Check transaction for payee and if contains masternode reward payment
+                    if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[0].vout.size()); }
+                    for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
+                        if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
+                        if(vtx[1].vout[i].nValue == masternodePaymentAmount )
+                            foundPaymentAmount = true;
+                        if(vtx[1].vout[i].scriptPubKey == payee )
+                            foundPayee = true;
+                    }
+
+                    if(!(foundPaymentAmount && foundPayee)) {
+                        CTxDestination address1;
+                        ExtractDestination(payee, address1);
+                        CBitcoinAddress address2(address1);
+
+                        if(fDebug) { printf("CheckBlock-POS() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
+                        return DoS(100, error("CheckBlock-POS() : Couldn't find masternode payment or payee"));
+                    } else {
+                        if(fDebug) { printf("CheckBlock-POS() : Found masternode payment %d\n", pindexBest->nHeight+1); }
+                    }
+                } else {
+                    if(fDebug) { printf("CheckBlock-POS() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
+                }
+            } else {
+                if(fDebug) { printf("CheckBlock-POS() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
+            }
+        }else if(IsProofOfWork() && pindex != NULL){
+            if(pindex->GetBlockHash() == hashPrevBlock){
+                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
+                bool fIsInitialDownload = IsInitialBlockDownload();
+
+                // If we don't already have its previous block, skip masternode payment step
+                if (!fIsInitialDownload && pindex != NULL)
+                {
+                    bool foundPaymentAmount = false;
+                    bool foundPayee = false;
+
+                    CScript payee;
+
+                    if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
+                        foundPayee = true; //doesn't require a specific payee
+                        if(fDebug) { printf("CheckBlock-POW() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
+                    }
+
+                    // Check transaction for payee and if contains masternode reward payment
+                    if(fDebug) { printf("CheckBlock-POW(): Transaction 0 Size : %i\n", vtx[0].vout.size()); }
+                    for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
+                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
+                        if(vtx[0].vout[i].nValue == masternodePaymentAmount )
+                            foundPaymentAmount = true;
+                        if(vtx[0].vout[i].scriptPubKey == payee )
+                            foundPayee = true;
+                    }
+                    if(fDebug) {printf("CheckBlock-POW(): foundPaymentAmount= %i ; foundPayee = %i\n", foundPaymentAmount, foundPayee); }
+                    if(!(foundPaymentAmount && foundPayee)) {
+                        CTxDestination address1;
+                        ExtractDestination(payee, address1);
+                        CBitcoinAddress address2(address1);
+
+                        if(fDebug) { printf("CheckBlock-POW() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
+                        return DoS(100, error("CheckBlock-POW() : Couldn't find masternode payment or payee"));
+                    } else {
+                        if(fDebug) { printf("CheckBlock-POW() : Found masternode payment %d\n", pindexBest->nHeight+1); }
+                    }
+                } else {
+                    if(fDebug) { printf("CheckBlock-POW() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
+                }
+            } else {
+                if(fDebug) { printf("CheckBlock-POW() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
+            }
+        }
+        
+         else {
+            if(fDebug) { printf("CheckBlock() : pindex is null, skipping masternode payment check\n"); }
+        }
+    } else {
+        if(fDebug) { printf("CheckBlock() : skipping masternode payment checks\n"); }
+    }
 
     // ppcoin: track money supply and mint amount info
     pindex->nMint = nValueOut - nValueIn + nFees;
@@ -2438,154 +2630,6 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 		if (fCheckSig && !CheckBlockSignature())
             return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
 	}
-	
-	// ----------- instantX transaction scanning -----------
-
-    if(IsSporkActive(SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT)){
-        BOOST_FOREACH(const CTransaction& tx, vtx){
-            if (!tx.IsCoinBase()){
-                //only reject blocks when it's based on complete consensus
-                BOOST_FOREACH(const CTxIn& in, tx.vin){
-                    if(mapLockedInputs.count(in.prevout)){
-                        if(mapLockedInputs[in.prevout] != tx.GetHash()){
-                            if(fDebug) { printf("CheckBlock() : found conflicting transaction with transaction lock %s %s\n", mapLockedInputs[in.prevout].ToString().c_str(), tx.GetHash().ToString().c_str()); }
-                            return DoS(0, error("CheckBlock() : found conflicting transaction with transaction lock"));
-                        }
-                    }
-                }
-            }
-        } 
-	} else {
-        if(fDebug) { printf("CheckBlock() : skipping transaction locking checks\n"); }
-    }
-
-
-    // ----------- masternode payments -----------
-    // Once upon a time, People were really interested in DNR.
-    // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
-    // The Discord was active, People discussed how they would reach that goal.
-    // There was one person, named Thi3rryzz watching all this from a save distance.
-    // Then, the word MASTERNODES came to the table.
-    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of DNR
-    // So Thi3rryzz decided to jump in..
-    // After a lot of: "How much for MN" and "When MN?"
-    // We hope to proudly present you: 
-
-    // ----------- masternode payments -----------
-    bool MasternodePayments = false;
-
-    if(nTime > fTestNet ? START_MASTERNODE_PAYMENTS_TESTNET : START_MASTERNODE_PAYMENTS){
-         MasternodePayments = true;
-         if(fDebug) printf("CheckBlock() : Masternode payment enabled\n");
-    }
-	
-	if(!IsSporkActive(SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT)){
-        MasternodePayments = false;
-        if(fDebug) printf("CheckBlock() : Masternode payment enforcement is off\n");
-    }
-   
-    if(MasternodePayments)
-    {
-        LOCK2(cs_main, mempool.cs);
-
-        CBlockIndex *pindex = pindexBest;
-        if(IsProofOfStake() && pindex != NULL){
-            if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[1].GetValueOut());
-                bool fIsInitialDownload = IsInitialBlockDownload();
-
-                // If we don't already have its previous block, skip masternode payment step
-                if (!fIsInitialDownload && pindex != NULL)
-                {
-                    bool foundPaymentAmount = false;
-                    bool foundPayee = false;
-
-                    CScript payee;
-
-                    // Non specific payee
-                    if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
-                        foundPayee = true; //doesn't require a specific payee
-                        if(fDebug) { printf("CheckBlock-POS() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
-                    }
-                    
-                    // Check transaction for payee and if contains masternode reward payment
-                    if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[0].vout.size()); }
-                    for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
-                        if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
-                        if(vtx[1].vout[i].nValue == masternodePaymentAmount )
-                            foundPaymentAmount = true;
-                        if(vtx[1].vout[i].scriptPubKey == payee )
-                            foundPayee = true;
-                    }
-
-                    if(!(foundPaymentAmount && foundPayee)) {
-                        CTxDestination address1;
-                        ExtractDestination(payee, address1);
-                        CBitcoinAddress address2(address1);
-
-                        if(fDebug) { printf("CheckBlock-POS() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
-                        return DoS(100, error("CheckBlock-POS() : Couldn't find masternode payment or payee"));
-                    } else {
-                        if(fDebug) { printf("CheckBlock-POS() : Found masternode payment %d\n", pindexBest->nHeight+1); }
-                    }
-                } else {
-                    if(fDebug) { printf("CheckBlock-POS() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
-                }
-            } else {
-                if(fDebug) { printf("CheckBlock-POS() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
-            }
-        }else if(IsProofOfWork() && pindex != NULL){
-            if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
-                bool fIsInitialDownload = IsInitialBlockDownload();
-
-                // If we don't already have its previous block, skip masternode payment step
-                if (!fIsInitialDownload && pindex != NULL)
-                {
-                    bool foundPaymentAmount = false;
-                    bool foundPayee = false;
-
-                    CScript payee;
-
-                    if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
-                        foundPayee = true; //doesn't require a specific payee
-                        if(fDebug) { printf("CheckBlock-POW() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
-                    }
-
-                    // Check transaction for payee and if contains masternode reward payment
-                    if(fDebug) { printf("CheckBlock-POW(): Transaction 0 Size : %i\n", vtx[0].vout.size()); }
-                    for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
-                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
-                        if(vtx[0].vout[i].nValue == masternodePaymentAmount )
-                            foundPaymentAmount = true;
-                        if(vtx[0].vout[i].scriptPubKey == payee )
-                            foundPayee = true;
-                    }
-                    if(fDebug) {printf("CheckBlock-POW(): foundPaymentAmount= %i ; foundPayee = %i\n", foundPaymentAmount, foundPayee); }
-                    if(!(foundPaymentAmount && foundPayee)) {
-                        CTxDestination address1;
-                        ExtractDestination(payee, address1);
-                        CBitcoinAddress address2(address1);
-
-                        if(fDebug) { printf("CheckBlock-POW() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
-                        return DoS(100, error("CheckBlock-POW() : Couldn't find masternode payment or payee"));
-                    } else {
-                        if(fDebug) { printf("CheckBlock-POW() : Found masternode payment %d\n", pindexBest->nHeight+1); }
-                    }
-                } else {
-                    if(fDebug) { printf("CheckBlock-POW() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
-                }
-            } else {
-                if(fDebug) { printf("CheckBlock-POW() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
-            }
-        }
-        
-         else {
-            if(fDebug) { printf("CheckBlock() : pindex is null, skipping masternode payment check\n"); }
-        }
-    } else {
-        if(fDebug) { printf("CheckBlock() : skipping masternode payment checks\n"); }
-    }
 
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, vtx)

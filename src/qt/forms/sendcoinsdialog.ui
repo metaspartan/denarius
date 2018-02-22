@@ -173,16 +173,7 @@
            <string notr="true"/>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayoutCoinControl5">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
+           <property name="margin">
             <number>0</number>
            </property>
            <item>
@@ -639,16 +630,7 @@
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
+       <property name="margin">
         <number>0</number>
        </property>
        <item>
@@ -720,7 +702,7 @@
        </property>
       </widget>
      </item>
-	 <item>
+     <item>
       <widget class="QPushButton" name="denominateButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -753,6 +735,9 @@
        </property>
        <item>
         <widget class="QCheckBox" name="checkUseDarksend">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>DarkSend</string>
          </property>
@@ -763,6 +748,9 @@
        </item>
        <item>
         <widget class="QCheckBox" name="checkInstantX">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>InstantX</string>
          </property>

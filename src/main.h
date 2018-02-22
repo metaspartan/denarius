@@ -33,6 +33,9 @@ static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
 static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
 static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
 
+static const int64_t TESTNET_MN_HEIGHT = 75000; // Testnet Masternode payments enabled block 75k
+static const int64_t MAINNET_MN_HEIGHT = 645000; //Mainnet Masternode payments not enabled until block 645k
+
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
 
@@ -205,6 +208,8 @@ bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint2
 
 
 int GetInputAge(CTxIn& vin);
+int GetInputAgeIX(uint256 nTXHash, CTxIn& vin);
+int GetIXConfirmations(uint256 nTXHash);
 /** Abort with a message */
 bool AbortNode(const std::string &msg, const std::string &userMessage="");
 /** Increase a node's misbehavior score. */
