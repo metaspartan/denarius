@@ -706,13 +706,12 @@ uint64_t CMasternodePayments::CalculateScore(uint256 blockHash, CTxIn& vin)
     r +=  (a2 > b2 ? a2 - b2 : b2 - a2);
     r +=  (a3 > b3 ? a3 - b3 : b3 - a3);
 
-    /*
     printf(" -- MasterNode CalculateScore() n2 = %s \n", n2.ToString().c_str());
     printf(" -- MasterNode CalculateScore() vin = %s \n", vin.prevout.hash.GetHex().c_str());
-    printf(" -- MasterNode CalculateScore() n3 = %s \n", n3.ToString().c_str());*/
+    printf(" -- MasterNode CalculateScore() n3 = %s \n", n3.ToString().c_str());
 
-    //return r;
-
+    return r;
+    */
 }
 
 bool CMasternodePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
