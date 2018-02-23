@@ -65,7 +65,7 @@ std::vector<char> imageContents((std::istreambuf_iterator<char>(imageFile)),
 
     ui->lineEdit->setText(QString::fromStdString(addr));
 
-    CAmount nAmount = 0.5 * COIN; // 0.5 DNR
+    CAmount nAmount = 0.1 * COIN; // 0.1 DNR
     
     // Wallet comments
     CWalletTx wtx;
@@ -76,9 +76,9 @@ std::vector<char> imageContents((std::istreambuf_iterator<char>(imageFile)),
     {
       ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send proof of data. Unlock your wallet!");
     }
-    else if(pwalletMain->GetBalance() < 0.5)
+    else if(pwalletMain->GetBalance() < 0.1)
     {
-      ui->txLineEdit->setText("ERROR: You need at least a 0.5 DNR balance to send proof of data.");
+      ui->txLineEdit->setText("ERROR: You need at least a 0.1 DNR balance to send proof of data.");
     }
     else
     {
