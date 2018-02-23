@@ -1287,7 +1287,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 	//PoS Fixed on v2.0.0.0 DeNaRiUs
     nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
     
-	if (pindexBest->nHeight >= MAINNET_POSFIX || fTestNet)
+    if (pindexBest->nHeight >= MAINNET_POSFIX || fTestNet)
         nSubsidy = nCoinAge * nRewardCoinYear / 365;
 
     if (fDebug && GetBoolArg("-printcreation"))
