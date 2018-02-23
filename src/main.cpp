@@ -2021,7 +2021,16 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         CBlockIndex *pindex = pindexBest;
         if(IsProofOfStake() && pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[1].GetValueOut());
+
+                // Calculate Coin Age for Masternode Reward Calculation
+                uint64_t nCoinAge;
+                if (!vtx[1].GetCoinAge(txdb, nCoinAge))
+                    return error("CheckBlock-POS : %s unable to get coin age for coinstake, Can't Calculate Masternode Reward\n", vtx[1].GetHash().ToString().substr(0,10).c_str());
+                int64_t nCalculatedStakeReward = GetProofOfStakeReward(nCoinAge, nFees);
+                
+                // Calculate expected masternodePaymentAmmount
+                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, nCalculatedStakeReward);
+
                 bool fIsInitialDownload = IsInitialBlockDownload();
 
                 // If we don't already have its previous block, skip masternode payment step
@@ -2035,13 +2044,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                     // Non specific payee
                     if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
                         foundPayee = true; //doesn't require a specific payee
-                        if(fDebug) { printf("CheckBlock-POS() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
+                        if(fDebug) { printf("CheckBlock-POS() : Using non-specific masternode payments %ld\n", pindexBest->nHeight+1); }
                     }
                     
                     // Check transaction for payee and if contains masternode reward payment
-                    if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[0].vout.size()); }
+                    if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[1].vout.size()); }
                     for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
-                        if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
+                        if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %ld\n",i, vtx[1].vout[i].nValue); }
                         if(vtx[1].vout[i].nValue == masternodePaymentAmount )
                             foundPaymentAmount = true;
                         if(vtx[1].vout[i].scriptPubKey == payee )
@@ -2052,17 +2061,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                         CTxDestination address1;
                         ExtractDestination(payee, address1);
                         CBitcoinAddress address2(address1);
-
-                        if(fDebug) { printf("CheckBlock-POS() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
+                        if(fDebug) { printf("CheckBlock-POS() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
+                        if(fDebug) { printf("CheckBlock-POS() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %ld. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
                         return DoS(100, error("CheckBlock-POS() : Couldn't find masternode payment or payee"));
                     } else {
                         if(fDebug) { printf("CheckBlock-POS() : Found masternode payment %d\n", pindexBest->nHeight+1); }
                     }
                 } else {
-                    if(fDebug) { printf("CheckBlock-POS() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
+                    if(fDebug) { printf("CheckBlock-POS() : Is initial download, skipping masternode payment check %ld\n", pindexBest->nHeight+1); }
                 }
             } else {
-                if(fDebug) { printf("CheckBlock-POS() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
+                if(fDebug) { printf("CheckBlock-POS() : Skipping masternode payment check - nHeight %ld Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
             }
         }else if(IsProofOfWork() && pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
@@ -2079,13 +2088,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
                         foundPayee = true; //doesn't require a specific payee
-                        if(fDebug) { printf("CheckBlock-POW() : Using non-specific masternode payments %d\n", pindexBest->nHeight+1); }
+                        if(fDebug) { printf("CheckBlock-POW() : Using non-specific masternode payments %ld\n", pindexBest->nHeight+1); }
                     }
 
                     // Check transaction for payee and if contains masternode reward payment
                     if(fDebug) { printf("CheckBlock-POW(): Transaction 0 Size : %i\n", vtx[0].vout.size()); }
                     for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
-                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %i\n",i, vtx[0].vout[i].nValue); }
+                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %ld\n",i, vtx[0].vout[i].nValue); }
                         if(vtx[0].vout[i].nValue == masternodePaymentAmount )
                             foundPaymentAmount = true;
                         if(vtx[0].vout[i].scriptPubKey == payee )
@@ -2096,17 +2105,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                         CTxDestination address1;
                         ExtractDestination(payee, address1);
                         CBitcoinAddress address2(address1);
-
+                        if(fDebug) { printf("CheckBlock-POW() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
                         if(fDebug) { printf("CheckBlock-POW() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
                         return DoS(100, error("CheckBlock-POW() : Couldn't find masternode payment or payee"));
                     } else {
-                        if(fDebug) { printf("CheckBlock-POW() : Found masternode payment %d\n", pindexBest->nHeight+1); }
+                        if(fDebug) { printf("CheckBlock-POW() : Found masternode payment %ld\n", pindexBest->nHeight+1); }
                     }
                 } else {
-                    if(fDebug) { printf("CheckBlock-POW() : Is initial download, skipping masternode payment check %d\n", pindexBest->nHeight+1); }
+                    if(fDebug) { printf("CheckBlock-POW() : Is initial download, skipping masternode payment check %ld\n", pindexBest->nHeight+1); }
                 }
             } else {
-                if(fDebug) { printf("CheckBlock-POW() : Skipping masternode payment check - nHeight %d Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
+                if(fDebug) { printf("CheckBlock-POW() : Skipping masternode payment check - nHeight %ld Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
             }
         }
         
