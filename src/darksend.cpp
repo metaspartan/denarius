@@ -2122,7 +2122,7 @@ void ThreadCheckDarkSendPool()
         //printf("ThreadCheckDarkSendPool::check timeout\n");
         darkSendPool.CheckTimeout();
         
-        int mnTimeout = 60;
+        int mnTimeout = 150; //2.5 minutes
 
         if(c % mnTimeout == 0){
             LOCK(cs_main);
@@ -2158,9 +2158,9 @@ void ThreadCheckDarkSendPool()
             CleanTransactionLocksList();
         }
         
-        int mnRefresh = 5; //(5*5)
+        int mnRefresh = 90; //(5*5)
 
-        //try to sync the masternode list and payment list every 5 seconds from at least 3 nodes
+        //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes
         if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
