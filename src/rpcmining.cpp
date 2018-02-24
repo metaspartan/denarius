@@ -531,6 +531,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
             printf("getblocktemplate() RPC: Failed to detect masternode to pay, burning coins\n");
             // pay the burn address if it can't detect
             if (fDebug) printf("CreateCoinStake: Failed to detect masternode to pay, burning coins..\n");
+            std::string burnAddress;
             if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
             else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
             CBitcoinAddress burnAddr;
