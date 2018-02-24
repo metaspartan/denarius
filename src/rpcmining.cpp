@@ -521,22 +521,6 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
 
-	/*
-	//CScript payee;
-    int winningNode = GetCurrentMasterNode(1);
-    if(winningNode >= 0){
-        //payee = GetScriptForDestination(vecMasternodes[winningNode].pubkey.GetID());
-		payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
-    } else {
-        printf("GetBlockTemplate RPC: Failed to detect masternode to pay\n");
-        // pay the burn address if it can't detect
-        //std::string burnAddy = "DNRWINbXXXXXXXXXXXXXXXXXXXXXXXZVaG";
-        //CBitcoinAddress burnAddr;
-        //burnAddr.SetString(burnAddy);
-		//payee.SetDestination(burnAddr.Get());
-    }
-	*/
-	
     // ---- Masternode info ---
     if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no masternode detected
@@ -544,7 +528,14 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if(winningNode >= 0){
             payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
         } else {
-            printf("getblocktemplate() RPC: Failed to detect masternode to pay\n");
+            printf("getblocktemplate() RPC: Failed to detect masternode to pay, burning coins\n");
+            // pay the burn address if it can't detect
+            if (fDebug) printf("CreateCoinStake: Failed to detect masternode to pay, burning coins..\n");
+            if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+            else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+            CBitcoinAddress burnAddr;
+            burnAddr.SetString(burnAddress);
+           payee = GetScriptForDestination(burnAddr.Get());
         }
     }
 

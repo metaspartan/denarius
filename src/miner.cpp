@@ -207,7 +207,13 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                     payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
                 } else {
                     printf("CreateNewBlock: Failed to detect masternode to pay\n");
-                    hasPayment = false;
+                    // pay the burn address if it can't detect
+                    if (fDebug) printf("CreateCoinStake: Failed to detect masternode to pay, burning coins..\n");
+                    if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+                    else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+                    CBitcoinAddress burnAddr;
+                    burnAddr.SetString(burnAddress);
+                    payee = GetScriptForDestination(burnAddr.Get());
                 }
             }
 
