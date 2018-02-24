@@ -3627,14 +3627,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     bool bMasterNodePayment = false;
 
     if (fTestNet){
-        if (GetTime() > START_MASTERNODE_PAYMENTS_TESTNET ){
+        if (pindexPrev->nHeight+1 > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET ){
             bMasterNodePayment = true;
         }
     }else{
-        if (GetTime() > START_MASTERNODE_PAYMENTS){
+        if (pindexPrev->nHeight+1 > BLOCK_START_MASTERNODE_PAYMENTS){
             bMasterNodePayment = true;
         }
     }
+    if(fDebug) { printf("CreateCoinStake() : Masternode Payments = %i!\n", bMasterNodePayment); }
 
     CScript payee;
     bool hasPayment = true;

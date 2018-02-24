@@ -1997,7 +1997,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     bool MasternodePayments = false;
     
     if (fTestNet){
-        if (pindex->nHeight > TESTNET_MN_HEIGHT){ // Block 75k Testnet
+        if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){ // Block 75k Testnet
             MasternodePayments = true;
             if(fDebug) { printf("CheckBlock() : Masternode payments enabled\n"); }
         }else{
@@ -2005,7 +2005,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(fDebug) { printf("CheckBlock() : Masternode payments disabled\n"); }
         }
     }else{
-        if (pindex->nHeight > MAINNET_MN_HEIGHT){ //Block 645k Mainnet
+        if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS){ //Block 645k Mainnet
             MasternodePayments = true;
             if(fDebug) { printf("CheckBlock() : Masternode payments enabled\n"); }
         }else{

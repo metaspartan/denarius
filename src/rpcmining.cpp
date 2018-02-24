@@ -540,14 +540,14 @@ Value getblocktemplate(const Array& params, bool fHelp)
         }
     }
 
-    bool MasternodePayments = false;
+    bool bMasternodePayments = false;
 
     if(fTestNet){
-        if(pblock->nTime > START_MASTERNODE_PAYMENTS_TESTNET) MasternodePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET) bMasternodePayments = true;
     } else {
-        if(pblock->nTime > START_MASTERNODE_PAYMENTS) MasternodePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS) bMasternodePayments = true;
     }
-	
+	if(fDebug) { printf("GetBlockTemplate(): Masternode Payments : %i\n", bMasternodePayments); }
 	if(payee != CScript()){
 		CTxDestination address1;
 		ExtractDestination(payee, address1);
@@ -560,8 +560,8 @@ Value getblocktemplate(const Array& params, bool fHelp)
         result.push_back(Pair("payee_amount", ""));
     }
 	
-	result.push_back(Pair("masternode_payments", MasternodePayments));
-    result.push_back(Pair("enforce_masternode_payments", MasternodePayments));
+	result.push_back(Pair("masternode_payments", bMasternodePayments));
+    result.push_back(Pair("enforce_masternode_payments", bMasternodePayments));
 	
     return result;
 }

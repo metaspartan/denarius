@@ -169,14 +169,15 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 	if (!fProofOfStake)
     {
 		if (fTestNet){
-			if (GetTime() > START_MASTERNODE_PAYMENTS_TESTNET){
+			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){
 				bMasterNodePayment = true;
 			}
 		}else{
-			if (GetTime() > START_MASTERNODE_PAYMENTS){
+			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS){
 				bMasterNodePayment = true;
 			}
 		}
+        if(fDebug) { printf("CreateNewBlock(): Masternode Payments : %i\n", bMasterNodePayment); }
 	}
 	
     // Fee-per-kilobyte amount considered the same as "free"
