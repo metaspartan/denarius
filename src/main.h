@@ -19,16 +19,16 @@
 
 class CValidationState;
 
-#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
-#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
+#define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Masternode payments enabled block 81k5
+#define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Masternode payments not enabled until block 645k
+
+//#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
+//#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
 
 static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
 static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
 static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
 static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
-
-static const int64_t TESTNET_MN_HEIGHT = 75000; // Testnet Masternode payments enabled block 75k
-static const int64_t MAINNET_MN_HEIGHT = 645000; //Mainnet Masternode payments not enabled until block 645k
 
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
