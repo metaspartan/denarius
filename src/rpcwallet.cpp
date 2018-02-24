@@ -10,6 +10,8 @@
 #include "base58.h"
 #include "stealth.h"
 #include "smessage.h"
+#include "richlistdata.h"
+#include "richlistdb.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -429,15 +431,15 @@ Value verifymessage(const Array& params, bool fHelp)
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
 
-    CDataStream ss(SER_GETHASH, 0);
+    CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
     ss << strMessage;
 
-    CKey key;
-    if (!key.SetCompactSignature(Hash(ss.begin(), ss.end()), vchSig))
+    CPubKey pubkey;
+    if (!pubkey.RecoverCompact(ss.GetHash(), vchSig))
         return false;
 
-    return (key.GetPubKey().GetID() == keyID);
+    return (pubkey.GetID() == keyID);
 }
 
 
@@ -771,7 +773,13 @@ Value sendmany(const Array& params, bool fHelp)
     CReserveKey keyChange(pwalletMain);
     int64_t nFeeRequired = 0;
     int nChangePos;
-    bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos);
+	std::string strFailReason;
+	
+	CCoinControl *coinControl=NULL;
+    AvailableCoinsType act = ALL_COINS;
+	
+    //bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos);
+	bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl, act);
     if (!fCreated)
     {
         if (totalAmount + nFeeRequired > pwalletMain->GetBalance())
@@ -826,7 +834,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
             if (!pwalletMain->GetPubKey(keyID, vchPubKey))
                 throw runtime_error(
                     strprintf("no full public key for address %s",ks.c_str()));
-            if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
+             if (!vchPubKey.IsFullyValid())
                 throw runtime_error(" Invalid public key: "+ks);
         }
 
@@ -834,7 +842,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
         else if (IsHex(ks))
         {
             CPubKey vchPubKey(ParseHex(ks));
-            if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
+            if (!vchPubKey.IsFullyValid())
                 throw runtime_error(" Invalid public key: "+ks);
         }
         else
@@ -2246,8 +2254,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
         
         BOOST_FOREACH(CTransaction& tx, block.vtx)
         {
-            if (!tx.IsStandard())
-                continue; // leave out coinbase and others
+            
             nTransactions++;
             
             pwalletMain->AddToWalletIfInvolvingMe(tx, &block, fUpdate);
@@ -2266,5 +2273,81 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
     result.push_back(Pair("result", "Scan complete."));
     result.push_back(Pair("found", std::string(cbuf)));
     
+    return result;
+}
+
+Value resetrichlist(const Array& params, bool fHelp) {
+    if (fHelp)
+        throw runtime_error(
+            "resetrichlist\n"
+	    "Clears the existing data in the rich list.\n");
+
+    CRichListData richListData;
+    bool fResult = ReadRichList(richListData);
+    if(fResult)
+    {
+	richListData.mapRichList.clear();
+	richListData.nLastHeight = 0;
+        fResult = WriteRichList(richListData);
+    }
+
+    Object result;
+    result.push_back(Pair("result", fResult));
+    return result;
+}
+
+Value updaterichlist(const Array& params, bool fHelp) {
+    if (fHelp)
+        throw runtime_error(
+            "updaterichlist\n"
+	    "Scans the blockchain from the last processed block\n"
+	    "and updates the rich list index.\n"
+	    "NOTE: This can take a long time if starting from\n"
+	    "an empty index or on first run.\n");
+
+    bool fResult = UpdateRichList();
+    Object result;
+    result.push_back(Pair("result", fResult));
+    return result;
+}
+
+
+Value getrichlist(const Array& params, bool fHelp) {
+    if (params.size() > 1 || fHelp)
+        throw runtime_error(
+            "getrichlist <count>\n"
+	    "<count> Optional number of addresses to return (default: 100)\n"
+	    "Returns the rich list, the list of all known addresses\n"
+	    "and their balances sorted in descending order.\n");
+
+    int nMaxCount = 100;
+    if (params.size() >= 1)
+        nMaxCount = params[0].get_int();
+
+    CRichListData richListData;
+    bool fResult = LoadRichList(richListData);
+    Object result;
+    if(!fResult)
+    {
+	result.push_back(Pair("result", "Could not load rich list."));
+    }
+    else
+    {
+	std::set<CRichListDataItem> setRichList;
+	BOOST_FOREACH(const PAIRTYPE(std::string, CRichListDataItem)& p, richListData.mapRichList)
+        {
+	    setRichList.insert(p.second);
+        }
+
+	int n = 0;
+	BOOST_REVERSE_FOREACH(CRichListDataItem p, setRichList)
+	{
+	    n++;
+	    if(n > nMaxCount)
+		break;
+	
+	    result.push_back(Pair(p.dAddress, ValueFromAmount(p.nBalance)));
+	}
+    }
     return result;
 }

@@ -5,6 +5,7 @@
 
 #include "main.h"
 #include "bitcoinrpc.h"
+#include "spork.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -435,4 +436,43 @@ Value getcheckpoint(const Array& params, bool fHelp)
         result.push_back(Pair("checkpointmaster", true));
 
     return result;
+}
+
+/*
+    Used for updating/reading spork settings on the network
+*/
+Value spork(const Array& params, bool fHelp)
+{
+    if(params.size() == 1 && params[0].get_str() == "show"){
+        std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
+
+        Object ret;
+        while(it != mapSporksActive.end()) {
+            ret.push_back(Pair(sporkManager.GetSporkNameByID(it->second.nSporkID), it->second.nValue));
+            it++;
+        }
+        return ret;
+    } else if (params.size() == 2){
+        int nSporkID = sporkManager.GetSporkIDByName(params[0].get_str());
+        if(nSporkID == -1){
+            return "Invalid spork name";
+        }
+
+        // SPORK VALUE
+        int64_t nValue = params[1].get_int();
+
+        //broadcast new spork
+        if(sporkManager.UpdateSpork(nSporkID, nValue)){
+            return "success";
+        } else {
+            return "failure";
+        }
+
+    }
+
+    throw runtime_error(
+        "spork <name> [<value>]\n"
+        "<name> is the corresponding spork name, or 'show' to show all current spork settings"
+        "<value> is a epoch datetime to enable or disable spork"
+        + HelpRequiringPassphrase());
 }

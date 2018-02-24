@@ -8,6 +8,7 @@
 #include "txdb.h"
 #include "init.h"
 #include "miner.h"
+#include "masternode.h"
 #include "bitcoinrpc.h"
 
 
@@ -141,7 +142,7 @@ Value getworkex(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlock* pblock;
         if (pindexPrev != pindexBest ||
-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60))
         {
             if (pindexPrev != pindexBest)
             {
@@ -151,7 +152,7 @@ Value getworkex(const Array& params, bool fHelp)
                     delete pblock;
                 vNewBlock.clear();
             }
-            nTransactionsUpdatedLast = nTransactionsUpdated;
+            nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             pindexPrev = pindexBest;
             nStart = GetTime();
 
@@ -275,7 +276,7 @@ Value getwork(const Array& params, bool fHelp)
         static int64_t nStart;
         static CBlock* pblock;
         if (pindexPrev != pindexBest ||
-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))
+            (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60))
         {
             if (pindexPrev != pindexBest)
             {
@@ -290,7 +291,7 @@ Value getwork(const Array& params, bool fHelp)
             pindexPrev = NULL;
 
             // Store the pindexBest used before CreateNewBlock, to avoid races
-            nTransactionsUpdatedLast = nTransactionsUpdated;
+            nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrevNew = pindexBest;
             nStart = GetTime();
 
@@ -377,6 +378,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "  \"sizelimit\" : limit of block size\n"
             "  \"bits\" : compressed target of next block\n"
             "  \"height\" : height of the next block\n"
+            "  \"payee\" : required payee\n"
+            "  \"payee_amount\" : required amount to pay\n"
+			"  \"masternode_payments\" : true|false,         (boolean) true, if masternode payments are enabled"
+            "  \"enforce_masternode_payments\" : true|false  (boolean) true, if masternode payments are enforced"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
@@ -414,13 +419,13 @@ Value getblocktemplate(const Array& params, bool fHelp)
     static int64_t nStart;
     static CBlock* pblock;
     if (pindexPrev != pindexBest ||
-        (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))
+        (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
         pindexPrev = NULL;
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
-        nTransactionsUpdatedLast = nTransactionsUpdated;
+        nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex* pindexPrevNew = pindexBest;
         nStart = GetTime();
 
@@ -498,12 +503,14 @@ Value getblocktemplate(const Array& params, bool fHelp)
         aMutable.push_back("prevblock");
     }
 
+	CScript payee;
+	
     Object result;
     result.push_back(Pair("version", pblock->nVersion));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+	result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
     result.push_back(Pair("mutable", aMutable));
@@ -514,6 +521,50 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
 
+
+    // ---- Masternode info ---
+
+    bool bMasternodePayments = false;
+
+    if(fTestNet){
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET) bMasternodePayments = true;
+    } else {
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS) bMasternodePayments = true;
+    }
+	if(fDebug) { printf("GetBlockTemplate(): Masternode Payments : %i\n", bMasternodePayments); }
+	
+    if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+        //no masternode detected
+        int winningNode = GetCurrentMasterNode(1);
+        if(winningNode >= 0){
+            payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+        } else {
+            printf("getblocktemplate() RPC: Failed to detect masternode to pay, burning coins\n");
+            // masternodes are in-eligible for payment, burn the coins in-stead
+            std::string burnAddress;
+            if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+            else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+            CBitcoinAddress burnDestination;
+            burnDestination.SetString(burnAddress);
+            payee = GetScriptForDestination(burnDestination.Get());
+        }
+    }
+    printf("getblock : payee = %i, bMasternode = %i\n",payee != CScript(),bMasternodePayments);
+    if(payee != CScript() && bMasternodePayments){   
+		CTxDestination address1;
+		ExtractDestination(payee, address1);
+		CBitcoinAddress address2(address1);
+		result.push_back(Pair("payee", address2.ToString().c_str()));
+		result.push_back(Pair("payee_amount", (int64_t)GetMasternodePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
+	} 
+    else {
+        result.push_back(Pair("payee", ""));
+        result.push_back(Pair("payee_amount", ""));
+    }
+	
+	result.push_back(Pair("masternode_payments", bMasternodePayments));
+    result.push_back(Pair("enforce_masternode_payments", bMasternodePayments));
+	
     return result;
 }
 

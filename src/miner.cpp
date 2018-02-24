@@ -7,6 +7,7 @@
 #include "txdb.h"
 #include "miner.h"
 #include "kernel.h"
+#include "masternode.h"
 
 using namespace std;
 
@@ -116,6 +117,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 
     CBlockIndex* pindexPrev = pindexBest;
 
+    int payments = 1;
     // Create coinbase tx
     CTransaction txNew;
     txNew.vin.resize(1);
@@ -160,6 +162,24 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     unsigned int nBlockMinSize = GetArg("-blockminsize", 0);
     nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
 
+    // start masternode payments
+    bool bMasterNodePayment = false;
+
+	//Only if it isn't Proof of Stake?
+	if (!fProofOfStake)
+    {
+		if (fTestNet){
+			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){
+				bMasterNodePayment = true;
+			}
+		}else{
+			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS){
+				bMasterNodePayment = true;
+			}
+		}
+        if(fDebug) { printf("CreateNewBlock(): Masternode Payments : %i\n", bMasterNodePayment); }
+	}
+	
     // Fee-per-kilobyte amount considered the same as "free"
     // Be careful setting this: if you set it to zero then
     // a transaction spammer can cheaply fill blocks using
@@ -176,6 +196,44 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     {
         LOCK2(cs_main, mempool.cs);
         CTxDB txdb("r");
+
+        if(bMasterNodePayment) {
+            bool hasPayment = true;
+            //spork
+            CScript payee;
+            if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+                //no masternode detected
+                int winningNode = GetCurrentMasterNode(1);
+                if(winningNode >= 0){
+                    payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+                } else {
+                    printf("CreateNewBlock: Failed to detect masternode to pay\n");
+                    // pay the burn address if it can't detect
+                    if (fDebug) printf("CreateNewBlock(): Failed to detect masternode to pay, burning coins..\n");
+                    std::string burnAddress;
+                    if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+                    else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+                    CBitcoinAddress burnAddr;
+                    burnAddr.SetString(burnAddress);
+                    payee = GetScriptForDestination(burnAddr.Get());
+                }
+            }
+
+            if(hasPayment){
+                payments = txNew.vout.size() + 1;
+                printf("CreateNewBlock(): Payment Size: %i\n", payments);
+                pblock->vtx[0].vout.resize(payments);
+
+                pblock->vtx[0].vout[payments-1].scriptPubKey = payee;
+                pblock->vtx[0].vout[payments-1].nValue = 0;
+
+                CTxDestination address1;
+                ExtractDestination(payee, address1);
+                CBitcoinAddress address2(address1);
+
+                printf("CreateNewBlock(): Masternode payment to %s\n", address2.ToString().c_str());
+            }
+        }
 
         // Priority order to process transactions
         list<COrphan> vOrphan; // list memory doesn't move
@@ -319,7 +377,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
                 continue;
 
-            if (!tx.ConnectInputs(txdb, mapInputs, mapTestPoolTmp, CDiskTxPos(1,1,1), pindexPrev, false, true))
+            if (!tx.ConnectInputs(txdb, mapInputs, mapTestPoolTmp, CDiskTxPos(1,1,1), pindexPrev, false, true, MANDATORY_SCRIPT_VERIFY_FLAGS))
                 continue;
             mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.vout.size());
             swap(mapTestPool, mapTestPoolTmp);
@@ -359,11 +417,21 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
 
+        int64_t blockValue = GetProofOfWorkReward(nHeight, nFees);
+        int64_t masternodePayment = GetMasternodePayment(pindexPrev->nHeight+1, blockValue);
+
+        //create masternode payment
+        if(payments > 1){
+            pblock->vtx[0].vout[payments-1].nValue = masternodePayment;
+            blockValue -= masternodePayment;
+        }
+
         if (fDebug && GetBoolArg("-printpriority"))
             printf("CreateNewBlock(): total size %"PRIu64"\n", nBlockSize);
 
-        if (!fProofOfStake)
-            pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(nHeight, nFees);
+        if (!fProofOfStake){
+            pblock->vtx[0].vout[0].nValue = blockValue;
+        }
 
         if (pFees)
             *pFees = nFees;
@@ -493,8 +561,9 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
     if(!pblock->IsProofOfStake())
         return error("CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex().c_str());
 
-    // verify hash target and signature of coinstake tx
-    if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, proofHash, hashTarget))
+   // verify hash target and signature of coinstake tx
+    //if (!CheckProofOfStake(mapBlockIndex[pblock->hashPrevBlock], pblock->vtx[1], pblock->nBits, proofHash, hashTarget))
+	if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, proofHash, hashTarget))
         return error("CheckStake() : proof-of-stake checking failed");
 
     //// debug print
@@ -558,8 +627,11 @@ void StakeMiner(CWallet *pwallet)
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
+				vnThreadsRunning[THREAD_STAKE_MINER]--;
                 MilliSleep(60000);
-                continue;
+                vnThreadsRunning[THREAD_STAKE_MINER]++;
+				if (fShutdown)
+                    return;
             }
         }
 
@@ -578,8 +650,12 @@ void StakeMiner(CWallet *pwallet)
             CheckStake(pblock.get(), *pwallet);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
             MilliSleep(500);
+			if (fShutdown)
+                return;
         }
         else
             MilliSleep(nMinerSleep);
+			if (fShutdown)
+                return;
     }
 }

@@ -151,6 +151,10 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->unit, OptionsModel::DisplayUnit);
     mapper->addMapping(ui->displayAddresses, OptionsModel::DisplayAddresses);
     mapper->addMapping(ui->coinControlFeatures, OptionsModel::CoinControlFeatures);
+	
+	/* Darksend Rounds */
+    mapper->addMapping(ui->darksendRounds, OptionsModel::DarksendRounds);
+    mapper->addMapping(ui->anonymizeDenarius, OptionsModel::AnonymizeDenariusAmount);
 }
 
 void OptionsDialog::enableApplyButton()
