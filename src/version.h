@@ -30,7 +30,7 @@ static const int DATABASE_VERSION = 21213;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 21213; //Old Version 21213
+static const int PROTOCOL_VERSION = 21213; //Protocol remains the same with v2.0.0.0
 
 // intial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 21212;
@@ -40,6 +40,7 @@ static const int MIN_PEER_PROTO_VERSION = 21213;
 
 static const int MIN_INSTANTX_PROTO_VERSION = 21213;
 
+// Don't forget to change proto in DARKSEND.h as well!!
 static const int MIN_MN_PROTO_VERSION = 21213;
 
 // nTime field added to CAddress, starting with this version;
