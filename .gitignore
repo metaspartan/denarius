@@ -8,6 +8,8 @@ src/leveldb/*.a
 src/leveldb/build_config.mk
 object_script.Denarius.Release
 object_script.Denarius.Debug
+Makefile
+Makefile.*
 release
 debug
 src/qt/locale/*.qm

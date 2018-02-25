@@ -94,7 +94,7 @@ endif
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter \
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wno-format -Wno-unused-parameter -Wno-literal-suffix \
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
@@ -112,13 +112,16 @@ OBJS= \
     obj/addrman.o \
     obj/crypter.o \
     obj/key.o \
+    obj/hash.o \
+    obj/base58.o \
     obj/db.o \
     obj/init.o \
-    obj/irc.o \
     obj/keystore.o \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
+	obj/core.o \
+	obj/txmempool.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -141,7 +144,17 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
-    obj/stealth.o 
+    obj/stealth.o \
+	obj/activemasternode.o \
+	obj/masternodeconfig.o \
+    obj/masternode.o \
+    obj/rpcdarksend.o \
+    obj/spork.o \
+    obj/darksend.o \
+	obj/instantx.o \
+	obj/richlistdb.o \
+	obj/eccryptoverify.o \
+	obj/richlistdata.o
 
 
 all: denariusd

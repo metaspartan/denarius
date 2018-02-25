@@ -8,10 +8,13 @@
 #include "ui_interface.h"
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
+#include "spork.h"
 #include "base58.h"
+#include "smessage.h"
 
 #include <QSet>
 #include <QTimer>
+#include <QDebug>
 
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
@@ -56,6 +59,12 @@ qint64 WalletModel::getStake() const
 qint64 WalletModel::getImmatureBalance() const
 {
     return wallet->GetImmatureBalance();
+}
+
+qint64 WalletModel::getAnonymizedBalance() const
+{
+    qint64 ret = wallet->GetAnonymizedBalance();
+    return ret;
 }
 
 int WalletModel::getNumTransactions() const
@@ -105,14 +114,17 @@ void WalletModel::checkBalanceChanged()
     qint64 newStake = getStake();
     qint64 newUnconfirmedBalance = getUnconfirmedBalance();
     qint64 newImmatureBalance = getImmatureBalance();
+	qint64 newAnonymizedBalance = getAnonymizedBalance();
 
-    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
+    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance || cachedAnonymizedBalance != newAnonymizedBalance || cachedTxLocks != nCompleteTXLocks)
     {
         cachedBalance = newBalance;
         cachedStake = newStake;
         cachedUnconfirmedBalance = newUnconfirmedBalance;
         cachedImmatureBalance = newImmatureBalance;
-        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
+		cachedAnonymizedBalance = newAnonymizedBalance;
+		cachedTxLocks = nCompleteTXLocks;
+        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance, newAnonymizedBalance);
     }
 }
 
@@ -161,6 +173,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     if(recipients.empty())
     {
         return OK;
+    }
+	
+	if(isAnonymizeOnlyUnlocked())
+    {
+        return AnonymizeOnlyUnlocked;
     }
 
     // Pre-check input data for validity
@@ -342,7 +359,10 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
         int nChangePos = -1;
-        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, coinControl);
+		std::string strFailReason;
+		
+        //bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl);
+		bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePos, strFailReason, coinControl, recipients[0].inputType, recipients[0].useInstantX);
         
         std::map<int, std::string>::iterator it;
         for (it = mapStealthNarr.begin(); it != mapStealthNarr.end(); ++it)
@@ -373,7 +393,13 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         {
             return Aborted;
         }
-        
+		
+        std::string strCommand = "tx";
+		if(recipients[0].useInstantX) {
+            printf("!!!! USING INSTANTX2\n");
+            strCommand = "txlreq";
+        }
+		
         if(!wallet->CommitTransaction(wtx, keyChange))
         {
             return TransactionCommitFailed;
@@ -440,6 +466,10 @@ WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
     {
         return Locked;
     }
+	else if (wallet->fWalletUnlockAnonymizeOnly)
+    {
+        return UnlockedForAnonymizationOnly;
+    }
     else
     {
         return Unlocked;
@@ -460,7 +490,7 @@ bool WalletModel::setWalletEncrypted(bool encrypted, const SecureString &passphr
     }
 }
 
-bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase)
+bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase, bool anonymizeOnly)
 {
     if(locked)
     {
@@ -470,7 +500,7 @@ bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase)
     else
     {
         // Unlock
-        return wallet->Unlock(passPhrase);
+        return wallet->Unlock(passPhrase, anonymizeOnly);
     }
 }
 
@@ -483,6 +513,11 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri
         retval = wallet->ChangeWalletPassphrase(oldPass, newPass);
     }
     return retval;
+}
+
+bool WalletModel::isAnonymizeOnlyUnlocked()
+{
+    return wallet->fWalletUnlockAnonymizeOnly;
 }
 
 bool WalletModel::backupWallet(const QString &filename)
@@ -602,7 +637,8 @@ void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vect
         if (!wallet->mapWallet.count(outpoint.hash)) continue;
         int nDepth = wallet->mapWallet[outpoint.hash].GetDepthInMainChain();
         if (nDepth < 0) continue;
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth);
+        //COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth);
+		COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);
         vOutputs.push_back(out);
     }
 }
@@ -622,7 +658,8 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
         if (!wallet->mapWallet.count(outpoint.hash)) continue;
         int nDepth = wallet->mapWallet[outpoint.hash].GetDepthInMainChain();
         if (nDepth < 0) continue;
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth);
+        //COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth);
+		COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);
         vCoins.push_back(out);
     }
 
@@ -633,7 +670,8 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
         while (wallet->IsChange(cout.tx->vout[cout.i]) && cout.tx->vin.size() > 0 && wallet->IsMine(cout.tx->vin[0]))
         {
             if (!wallet->mapWallet.count(cout.tx->vin[0].prevout.hash)) break;
-            cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0);
+            //cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0);
+			cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0, true);
         }
 
         CTxDestination address;

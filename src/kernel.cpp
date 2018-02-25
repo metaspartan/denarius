@@ -1,4 +1,5 @@
-// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2012-2013 The Peercoin developers
+// Copyright (c) 2017-2018 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -248,7 +249,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
     return true;
 }
 
-// ppcoin kernel protocol
+// Denarius kernel protocol
 // coinstake must meet hash target according to the protocol:
 // kernel (input 0) must meet the formula
 //     hash(nStakeModifier + txPrev.block.nTime + txPrev.offset + txPrev.nTime + txPrev.vout.n + nTime) < bnTarget * nCoinDayWeight
@@ -347,7 +348,7 @@ bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hash
         return tx.DoS(1, error("CheckProofOfStake() : INFO: read txPrev failed"));  // previous transaction not in main chain, may occur during initial download
 
     // Verify signature
-    if (!VerifySignature(txPrev, tx, 0, 0))
+    if (!VerifySignature(txPrev, tx, 0, SCRIPT_VERIFY_NONE, 0))
         return tx.DoS(100, error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
 
     // Read block header

@@ -15,6 +15,7 @@
 
 class CBasicKeyStore;
 class CWallet;
+class CAdrenalineNodeConfig;
 class uint256;
 
 /** General change type (added, updated, removed). */
@@ -85,6 +86,8 @@ public:
 
     /** Number of network connections changed. */
     boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;
+	
+	boost::signals2::signal<void (CAdrenalineNodeConfig nodeConfig)> NotifyAdrenalineNodeChanged;
 
     /**
      * New, updated or cancelled alert.

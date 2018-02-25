@@ -58,13 +58,16 @@ OBJS= \
     obj/addrman.o \
     obj/crypter.o \
     obj/key.o \
+    obj/hash.o \
+    obj/base58.o \
     obj/db.o \
     obj/init.o \
-    obj/irc.o \
     obj/keystore.o \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
+	obj/core.o \
+	obj/txmempool.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -87,7 +90,9 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
-    obj/stealth.o
+    obj/stealth.o \
+	obj/richlistdb.o \
+	obj/richlistdata.o
 
 all: denariusd.exe
 

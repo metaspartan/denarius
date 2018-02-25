@@ -42,6 +42,8 @@ static const int64_t nOneWeek = 7 * 24 * 60 * 60;
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
+typedef int64_t CAmount;
+
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -90,6 +92,8 @@ T* alignup(T* p)
     return u.ptr;
 }
 
+boost::filesystem::path GetMasternodeConfigFile();
+
 #ifdef WIN32
 #define MSG_NOSIGNAL        0
 #define MSG_DONTWAIT        0
@@ -123,9 +127,20 @@ inline void MilliSleep(int64_t n)
 
 
 
+//Dark features
 
-
-
+extern bool fMasterNode;
+extern bool fLiteMode;
+extern int nInstantXDepth;
+extern int nDarksendRounds;
+extern int nAnonymizeDenariusAmount;
+extern int nLiquidityProvider;
+extern bool fEnableDarksend;
+extern int64_t enforceMasternodePaymentsTime;
+extern std::string strMasterNodeAddr;
+extern int keysLoaded;
+extern bool fSuccessfullyLoaded;
+extern std::vector<int64_t> darkSendDenominations;
 
 
 extern std::map<std::string, std::string> mapArgs;
@@ -212,6 +227,7 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 void ShrinkDebugFile();
 int GetRandInt(int nMax);
+void GetRandBytes(unsigned char* buf, int num);
 uint64_t GetRand(uint64_t nMax);
 uint256 GetRandHash();
 int64_t GetTime();
@@ -530,13 +546,20 @@ uint256 SerializeHash(const T& obj, int nType=SER_GETHASH, int nVersion=PROTOCOL
     return ss.GetHash();
 }
 
-inline uint160 Hash160(const std::vector<unsigned char>& vch)
+template<typename T1>
+inline uint160 Hash160(const T1 pbegin, const T1 pend)
 {
+    static unsigned char pblank[1];
     uint256 hash1;
-    SHA256(&vch[0], vch.size(), (unsigned char*)&hash1);
+    SHA256((pbegin == pend ? pblank : (unsigned char*)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char*)&hash1);
     uint160 hash2;
     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
     return hash2;
+}
+
+inline uint160 Hash160(const std::vector<unsigned char>& vch)
+{
+    return Hash160(vch.begin(), vch.end());
 }
 
 /**
