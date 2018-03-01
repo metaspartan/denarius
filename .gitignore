@@ -8,6 +8,7 @@ src/leveldb/*.a
 src/leveldb/build_config.mk
 object_script.Denarius.Release
 object_script.Denarius.Debug
+denarius_plugin_import.cpp
 Makefile
 Makefile.*
 release

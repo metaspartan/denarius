@@ -37,6 +37,7 @@
 #include "wallet.h"
 #include "termsofuse.h"
 #include "proofofimage.h"
+#include "tradingdialog.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -178,6 +179,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	richListPage = new RichListPage(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
+    
+    tradingDialogPage = new tradingDialog(this);
+    tradingDialogPage->setObjectName("tradingDialog");
 	
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
@@ -216,6 +220,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(richListPage);
     centralWidget->addWidget(proofOfImagePage);
+    centralWidget->addWidget(tradingDialogPage);
 	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -283,6 +288,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     // Double-clicking on a transaction on the transaction history page shows details
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
+    connect(tradingAction, SIGNAL(triggered()), tradingDialogPage, SLOT(InitTrading()));
+        
     rpcConsole = new RPCConsole(this);
     connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
 
@@ -370,6 +377,11 @@ void BitcoinGUI::createActions()
     mintingAction->setCheckable(true);
     mintingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(mintingAction);
+    
+    tradingAction = new QAction(QIcon(":/icons/trade"), tr("&Trading"), this);
+    tradingAction->setToolTip(tr("Trading on Cryptopia"));
+    tradingAction->setCheckable(true);
+    tabGroup->addAction(tradingAction);
 	
 	richListPageAction = new QAction(QIcon(":/icons/richlist"), tr("&Rich List"), this);
     richListPageAction->setToolTip(tr("Show the top Denarius balances."));
@@ -415,6 +427,8 @@ void BitcoinGUI::createActions()
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(tradingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(tradingAction, SIGNAL(triggered()), this, SLOT(gotoTradingPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -538,6 +552,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
 	mainToolbar->addAction(mintingAction);
+    mainToolbar->addAction(tradingAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
@@ -636,6 +651,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		blockBrowser->setModel(clientModel);
 		marketBrowser->setModel(clientModel);
 		multisigPage->setModel(walletModel);
+        tradingDialogPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -1059,6 +1075,16 @@ void BitcoinGUI::gotoProofOfImagePage()
 
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
+void BitcoinGUI::gotoTradingPage()
+{
+
+     tradingAction->setChecked(true);
+     centralWidget->setCurrentWidget(tradingDialogPage);
+
+     exportAction->setEnabled(false);
+     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoRichListPage()
