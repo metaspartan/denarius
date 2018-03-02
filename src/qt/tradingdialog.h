@@ -49,6 +49,7 @@ private slots:
     void on_LoadKeys_clicked();
     void on_SaveKeys_clicked();
     void on_GenDepositBTN_clicked();
+    void on_GenDepositBTNbtc_clicked();
 
     void CalculateBuyCostLabel();
     void on_Buy_Max_Amount_clicked();
@@ -77,6 +78,7 @@ private slots:
     void on_CSPasteButton_clicked();
     void on_WithdrawPasteButton_clicked();
     void on_DepositCopyButton_clicked();
+    void on_DepositCopyButtonbtc_clicked();
 
     int SetExchangeInfoTextLabels();
 
@@ -93,6 +95,7 @@ private slots:
     QString GetAccountHistory();
     QString GetBalance(QString Currency);
     QString GetDepositAddress();
+    QString GetDepositAddressBTC();
     unsigned char* HMAC_SHA256_SIGNER(QString UrlToSign,QString Secretkey);
     QString sendRequest(QString url, QString method = "GET", QString body = QString("{\"market\":\"DNR/BTC\"}"));
     //QString sendRequest(QString url);

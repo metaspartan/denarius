@@ -179,7 +179,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="BuyTab">
       <attribute name="title">
@@ -4931,21 +4931,6 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="3">
-        <widget class="QLabel" name="DNRBalanceLabel">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>0.00000000</string>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="4">
         <widget class="QLabel" name="label_12">
          <property name="font">
@@ -4975,35 +4960,8 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="7" rowspan="10">
-        <spacer name="horizontalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>478</width>
-           <height>488</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="QLabel" name="label_13">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>DNR Available:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="3">
-        <widget class="QLabel" name="DNRAvailableLabel_2">
+       <item row="0" column="2" colspan="2">
+        <widget class="QLabel" name="DNRBalanceLabel">
          <property name="font">
           <font>
            <pointsize>10</pointsize>
@@ -5017,22 +4975,8 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="4">
-        <widget class="QLabel" name="label_15">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>BTC Available:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="5">
-        <widget class="QLabel" name="BitcoinAvailableLabel">
+       <item row="1" column="2" colspan="2">
+        <widget class="QLabel" name="DNRAvailableLabel_2">
          <property name="font">
           <font>
            <pointsize>10</pointsize>
@@ -5060,7 +5004,7 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="3">
+       <item row="2" column="2" colspan="2">
         <widget class="QLabel" name="DNRPendingLabel">
          <property name="font">
           <font>
@@ -5072,20 +5016,6 @@
          </property>
          <property name="textInteractionFlags">
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="4">
-        <widget class="QLabel" name="label_31">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>BTC Pending:</string>
          </property>
         </widget>
        </item>
@@ -5112,11 +5042,183 @@
           </font>
          </property>
          <property name="text">
-          <string>Generate DNR Coin Deposit Address</string>
+          <string>Generate (DNR) Denarius Deposit Address</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0" colspan="3">
+       <item row="1" column="4">
+        <widget class="QLabel" name="label_15">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>BTC Available:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_13">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>DNR Available:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
+        <widget class="QLabel" name="label_31">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>BTC Pending:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="5">
+        <widget class="QLabel" name="BitcoinAvailableLabel">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>0.00000000</string>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="7" rowspan="11">
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>478</width>
+           <height>488</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="6" column="3" colspan="3">
+        <widget class="QLabel" name="DepositAddressLabelbtc">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="palette">
+          <palette>
+           <active>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>0</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Text">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </active>
+           <inactive>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>0</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Text">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </inactive>
+           <disabled>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Text">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </disabled>
+          </palette>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="4">
+        <widget class="QPushButton" name="GenDepositBTNbtc">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Generate (BTC) Bitcoin Deposit Address</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="3">
         <widget class="QLabel" name="label_33">
          <property name="font">
           <font>
@@ -5126,11 +5228,42 @@
           </font>
          </property>
          <property name="text">
-          <string>Deposit Address:</string>
+          <string>DNR Deposit Address:</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="3" colspan="3">
+       <item row="5" column="6">
+        <widget class="QToolButton" name="DepositCopyButton">
+         <property name="toolTip">
+          <string>Copy to clipboard</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../bitcoin.qrc">
+           <normaloff>:/icons/editcopy</normaloff>:/icons/editcopy</iconset>
+         </property>
+         <property name="shortcut">
+          <string>Alt+P</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="3">
+        <widget class="QLabel" name="label_38">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>BTC Deposit Address:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="3" colspan="3">
         <widget class="QLabel" name="DepositAddressLabel">
          <property name="minimumSize">
           <size>
@@ -5220,8 +5353,73 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="6">
-        <widget class="QToolButton" name="DepositCopyButton">
+       <item row="7" column="0" colspan="2">
+        <widget class="QLabel" name="label_34">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Withdraw DNR:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="4">
+        <widget class="QPushButton" name="Withdraw_Max_Amount">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Max</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_26">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Amount:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1" colspan="3">
+        <widget class="QLineEdit" name="WithdrawAddress">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Address:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="6">
+        <widget class="QToolButton" name="DepositCopyButtonbtc">
          <property name="toolTip">
           <string>Copy to clipboard</string>
          </property>
@@ -5237,86 +5435,7 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
-        <widget class="QLabel" name="label_34">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Withdraw DNR:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_26">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Amount:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1" colspan="3">
-        <widget class="QLineEdit" name="WithdrawUnitsInput">
-         <property name="font">
-          <font>
-           <pointsize>9</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="4">
-        <widget class="QPushButton" name="Withdraw_Max_Amount">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Max</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Address:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="1" colspan="3">
-        <widget class="QLineEdit" name="WithdrawAddress">
-         <property name="font">
-          <font>
-           <pointsize>9</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="4">
+       <item row="9" column="4">
         <widget class="QToolButton" name="WithdrawPasteButton">
          <property name="toolTip">
           <string>Paste from clipboard</string>
@@ -5333,7 +5452,7 @@
          </property>
         </widget>
        </item>
-       <item row="8" column="2" colspan="2">
+       <item row="10" column="2" colspan="2">
         <widget class="QPushButton" name="WithdrawUnitsBtn">
          <property name="font">
           <font>
@@ -5345,15 +5464,32 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="0" colspan="6">
+       <item row="8" column="1" colspan="3">
+        <widget class="QLineEdit" name="WithdrawUnitsInput">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="2">
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>428</width>
-           <height>262</height>
+           <width>20</width>
+           <height>150</height>
           </size>
          </property>
         </spacer>
@@ -5382,9 +5518,13 @@
       <zorder>WithdrawAddress</zorder>
       <zorder>WithdrawUnitsBtn</zorder>
       <zorder>horizontalSpacer_4</zorder>
-      <zorder>verticalSpacer</zorder>
       <zorder>WithdrawPasteButton</zorder>
       <zorder>DepositCopyButton</zorder>
+      <zorder>DepositCopyButtonbtc</zorder>
+      <zorder>DepositAddressLabelbtc</zorder>
+      <zorder>label_38</zorder>
+      <zorder>GenDepositBTNbtc</zorder>
+      <zorder>verticalSpacer</zorder>
      </widget>
      <widget class="QWidget" name="ApiSettings">
       <attribute name="title">

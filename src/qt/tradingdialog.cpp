@@ -275,6 +275,14 @@ QString tradingDialog::GetDepositAddress(){
     return Response;
 }
 
+QString tradingDialog::GetDepositAddressBTC(){
+
+    QString URL = "https://www.cryptopia.co.nz/api/GetDepositAddress";
+
+    QString Response = sendRequest(URL, "POST", QString("{\"Currency\":\"BTC\"}"));
+    return Response;
+}
+
 QString tradingDialog::GetAccountHistory(){
 
     QString URL = "https://www.cryptopia.co.nz/api/GetTradeHistory";
@@ -1179,6 +1187,13 @@ void tradingDialog::on_GenDepositBTN_clicked()
     ui->DepositAddressLabel->setText(ResultObject["Address"].toString());
 }
 
+void tradingDialog::on_GenDepositBTNbtc_clicked()
+{
+    QString response         =  GetDepositAddressBTC();
+    QJsonObject ResultObject =  GetResultObjectFromJSONObject(response);
+    ui->DepositAddressLabelbtc->setText(ResultObject["Address"].toString());
+}
+
 void tradingDialog::on_Sell_Max_Amount_clicked()
 {
     //calculate amount of BTC that can be gained from selling DNR available balance
@@ -1645,6 +1660,11 @@ void setClipboard(const QString& str)
 void tradingDialog::on_DepositCopyButton_clicked()
 {
     setClipboard(ui->DepositAddressLabel->text());
+}
+
+void tradingDialog::on_DepositCopyButtonbtc_clicked()
+{
+    setClipboard(ui->DepositAddressLabelbtc->text());
 }
 
 void tradingDialog::setModel(WalletModel *model)
