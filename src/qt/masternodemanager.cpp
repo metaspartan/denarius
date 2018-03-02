@@ -38,8 +38,8 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     ui->stopButton->setEnabled(false);
     ui->copyAddressButton->setEnabled(false);
 
-    //ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    //ui->tableWidget_2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidget_2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     subscribeToCoreSignals();
 
@@ -94,7 +94,7 @@ void MasternodeManager::on_tableWidget_2_itemSelectionChanged()
         ui->getConfigButton->setEnabled(true);
         ui->startButton->setEnabled(true);
         ui->stopButton->setEnabled(true);
-	ui->copyAddressButton->setEnabled(true);
+        ui->copyAddressButton->setEnabled(true);
     }
 }
 
@@ -269,7 +269,7 @@ void MasternodeManager::on_removeButton_clicked()
         return;
 
     QMessageBox::StandardButton confirm;
-    confirm = QMessageBox::question(this, "Delete Master Node Conf?", "Are you sure you want to delete this master node configuration?", QMessageBox::Yes|QMessageBox::No);
+    confirm = QMessageBox::question(this, "Delete masternode.conf?", "Are you sure you want to delete this master node configuration?", QMessageBox::Yes|QMessageBox::No);
 
     if(confirm == QMessageBox::Yes)
     {
@@ -307,7 +307,7 @@ void MasternodeManager::on_startButton_clicked()
 
     QMessageBox msg;
     if(result)
-        msg.setText("Master Node at " + QString::fromStdString(c.sAddress) + " started.");
+        msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " started.");
     else
         msg.setText("Error: " + QString::fromStdString(errorMessage));
 
@@ -332,7 +332,7 @@ void MasternodeManager::on_stopButton_clicked()
     QMessageBox msg;
     if(result)
     {
-        msg.setText("Master Node at " + QString::fromStdString(c.sAddress) + " stopped.");
+        msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " stopped.");
     }
     else
     {
