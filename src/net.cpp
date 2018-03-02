@@ -1323,7 +1323,8 @@ static const char *strDNSSeed[][2] = {
     {"chainz.cryptoid.info", "chainz.cryptoid.info"},
     {"hashbag.cc", "hashbag.cc"},
     {"denarius.name", "denarius.name"},
-    {"yiimp.eu", "yiimp.eu"}
+    {"yiimp.eu", "yiimp.eu"},
+    {"denarius.host", "denarius.host"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
