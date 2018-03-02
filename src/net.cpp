@@ -1318,11 +1318,12 @@ void MapPort()
 // The second name should resolve to a list of seed addresses.
 
 static const char *strDNSSeed[][2] = {
-    {"172.93.53.210", "172.93.53.210"},
-	{"104.233.106.135", "104.233.106.135"},
-	{"104.238.169.5", "104.238.169.5"},
-	{"147.135.191.162", "147.135.191.162"},
-	{"dnsseed.denarius.name", "dnsseed.denarius.name"}
+    {"denariusexplorer.org", "denariusexplorer.org"},
+    {"107.181.154.106", "107.181.154.106"},
+    {"chainz.cryptoid.info", "chainz.cryptoid.info"},
+    {"hashbag.cc", "hashbag.cc"},
+    {"denarius.name", "denarius.name"},
+    {"yiimp.eu", "yiimp.eu"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
