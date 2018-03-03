@@ -188,16 +188,27 @@ QString tradingDialog::CancelOrder(QString OrderId){
 QString tradingDialog::BuyDNR(QString OrderType, double Quantity, double Rate){
 
     QString str = "";
-    QString URL = "https://www.cryptopia.co.nz";
-            URL += OrderType;
-            URL += "/api/SubmitTrade";
+    QString URL = "https://www.cryptopia.co.nz/api/SubmitTrade";
+            /*URL += OrderType;
+            URL += "/api/GetMarket/DNR_BTC";
             URL += this->ApiKey;
             URL += "&nonce=12345434&market=BTC-DNR&quantity=";
             URL += str.number(Quantity,'i',8);
             URL += "&rate=";
-            URL += str.number(Rate,'i',8);
+            URL += str.number(Rate,'i',8);*/
+    QJsonObject stats_obj;
+    stats_obj["Market"] = "DNR/BTC";
+    stats_obj["Type"] = "Buy";
+    stats_obj["Amount"] = Quantity;
+    stats_obj["Rate"] = Rate;
 
-    QString Response = sendRequest(URL);
+    //QJsonObject jsonObj; // assume this has been populated with Json data
+
+    QJsonDocument doc(stats_obj);
+    QString param_str(doc.toJson(QJsonDocument::Compact));
+
+
+    QString Response = sendRequest(URL, "POST", param_str);
     return Response;
 }
 
@@ -955,7 +966,7 @@ void tradingDialog::CalculateBuyCostLabel(){
 
     double price    = ui->BuyBidPriceEdit->text().toDouble();
     double Quantity = ui->UnitsInput->text().toDouble();
-    double cost = ((price * Quantity) + ((price * Quantity / 100) * 0.25));
+    double cost = ((price * Quantity) + ((price * Quantity / 100) * 0.2));
 
     QString Str = "";
     ui->BuyCostLabel->setText("<span style='font-weight:bold; font-size:12px; color:#c20211'>" + Str.number(cost,'i',8) + "</span>");
@@ -965,7 +976,7 @@ void tradingDialog::CalculateSellCostLabel(){
 
     double price    = ui->SellBidPriceEdit->text().toDouble();
     double Quantity = ui->UnitsInputDNR->text().toDouble();
-    double cost = ((price * Quantity) - ((price * Quantity / 100) * 0.25));
+    double cost = ((price * Quantity) - ((price * Quantity / 100) * 0.2));
 
     QString Str = "";
     ui->SellCostLabel->setText("<span style='font-weight:bold; font-size:12px; color:#05cb6d'>" + Str.number(cost,'i',8) + "</span>");
@@ -1005,12 +1016,12 @@ void tradingDialog::CalculateCSReceiveLabel(){
         if ( ((Quantity / x) - y) > 0 )
         {
             Price = x;
-            Received += ((Price * y) - ((Price * y / 100) * 0.25));
+            Received += ((Price * y) - ((Price * y / 100) * 0.2));
             Qty += y;
-            Quantity -= ((Price * y) - ((Price * y / 100) * 0.25));
+            Quantity -= ((Price * y) - ((Price * y / 100) * 0.2));
         } else {
             Price = x;
-            Received += ((Price * (Quantity / x)) - ((Price * (Quantity / x) / 100) * 0.25));
+            Received += ((Price * (Quantity / x)) - ((Price * (Quantity / x) / 100) * 0.2));
             Qty += (Quantity / x);
             Quantity -= 0;
             break;
@@ -1222,7 +1233,7 @@ void tradingDialog::on_Buy_Max_Amount_clicked()
     double AvailableBTC = ResultObject["Available"].toDouble();
     double CurrentASK   = ResultObj["AskPrice"].toDouble();
     double Result = (AvailableBTC / CurrentASK);
-    double percentofnumber = (Result * 0.0025);
+    double percentofnumber = (Result * 0.002);
 
     Result = Result - percentofnumber;
     ui->UnitsInput->setText(str.number(Result,'i',8));
@@ -1254,13 +1265,13 @@ void tradingDialog::on_CS_Max_Amount_clicked()
         if ( (Quantity - y) > 0 )
         {
             Price = x;
-            Received += ((Price * y) - ((Price * y / 100) * 0.25));
+            Received += ((Price * y) - ((Price * y / 100) * 0.2));
             Qty += y;
             Quantity -= y;
 
         } else {
             Price = x;
-            Received += ((Price * Quantity) - ((Price * Quantity / 100) * 0.25));
+            Received += ((Price * Quantity) - ((Price * Quantity / 100) * 0.2));
             Qty += Quantity;
 
             if ((Quantity * x) < 0.00055){
@@ -1397,7 +1408,6 @@ void tradingDialog::on_BuyDNR_clicked()
     if (reply == QMessageBox::Yes) {
 
         QString Response =  BuyDNR(Order,Quantity,Rate);
-
         QJsonDocument jsonResponse = QJsonDocument::fromJson(Response.toUtf8());          //get json from str.
         QJsonObject  ResponseObject = jsonResponse.object();                              //get json obj
 
