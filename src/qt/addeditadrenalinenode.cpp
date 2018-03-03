@@ -75,14 +75,12 @@ void AddEditAdrenalineNode::on_okButton_clicked()
         std::string sOutputIndex = ui->outputindexLineEdit->text().toStdString();
 
         boost::filesystem::path pathConfigFile = GetDataDir() / "masternode.conf";
-        //boost::filesystem::ofstream stream (pathConfigFile.string(), ios::out | ios::app);
-		/*
+        boost::filesystem::ofstream stream (pathConfigFile.string(), std::ios::out | std::ios::app);
         if (stream.is_open())
         {
             stream << sAlias << " " << sAddress << " " << sMasternodePrivKey << " " << sTxHash << " " << sOutputIndex << std::endl;
             stream.close();
         }
-		*/
         masternodeConfig.add(sAlias, sAddress, sMasternodePrivKey, sTxHash, sOutputIndex);
         accept();
     }
