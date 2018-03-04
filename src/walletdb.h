@@ -181,6 +181,12 @@ public:
     bool ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig);
     bool EraseAdrenalineNodeConfig(std::string sAlias);
     
+    bool WriteWatchOnly(const CTxDestination &dest)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("watch"), CBitcoinAddress(dest).ToString()), '1');
+    }
+    
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta)
     {
         nWalletDBUpdated++;

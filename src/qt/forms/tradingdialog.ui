@@ -179,7 +179,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>5</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="BuyTab">
       <attribute name="title">
@@ -1437,7 +1437,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Total w/ 0.25% Fee </string>
+            <string>Total w/ 0.2% Fee </string>
            </property>
           </widget>
          </item>
@@ -1901,7 +1901,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Total w/ 0.25% Fee </string>
+            <string>Total w/ 0.2% Fee </string>
            </property>
           </widget>
          </item>
