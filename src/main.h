@@ -147,6 +147,7 @@ extern bool fUseFastIndex;
 extern bool fImporting;
 extern bool fReindex;
 extern unsigned int nDerivationMethodIndex;
+extern unsigned int nCoinCacheSize;
 
 extern bool fEnforceCanonical;
 
@@ -184,7 +185,7 @@ unsigned int ComputeMinStake(unsigned int nBase, int64_t nTime, unsigned int nBl
 int GetNumBlocksOfPeers();
 bool IsInitialBlockDownload();
 std::string GetWarnings(std::string strFor);
-bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);
+bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s=false);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);

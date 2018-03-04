@@ -86,6 +86,8 @@ int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
+unsigned int nCoinCacheSize = 5000;
+
 extern enum Checkpoints::CPMode CheckpointsMode;
 
 std::set<uint256> setValidatedTx;
@@ -1163,15 +1165,18 @@ int CTxIndex::GetDepthInMainChain() const
 }
 
 // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock
-bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock)
+bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s)
 {
     {
-        LOCK(cs_main);
+        if(s)
         {
+          LOCK(cs_main);
+          {
             if (mempool.lookup(hash, tx))
             {
                 return true;
             }
+          }
         }
         CTxDB txdb("r");
         CTxIndex txindex;

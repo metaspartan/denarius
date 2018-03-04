@@ -12,6 +12,7 @@ using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
 extern enum Checkpoints::CPMode CheckpointsMode;
+extern void spj(const CScript& scriptPubKey, Object& out, bool fIncludeHex);
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -475,4 +476,111 @@ Value spork(const Array& params, bool fHelp)
         "<name> is the corresponding spork name, or 'show' to show all current spork settings"
         "<value> is a epoch datetime to enable or disable spork"
         + HelpRequiringPassphrase());
+}
+
+Value gettxout(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error(
+            "gettxout \"txid\" n ( includemempool )\n"
+            "\nReturns details about an unspent transaction output.\n"
+            "\nArguments:\n"
+            "1. \"txid\"       (string, required) The transaction id\n"
+            "2. n              (numeric, required) vout value\n"
+            "3. includemempool  (boolean, optional) Whether to included the mem pool\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"bestblock\" : \"hash\",    (string) the block hash\n"
+            "  \"confirmations\" : n,       (numeric) The number of confirmations\n"
+            "  \"value\" : x.xxx,           (numeric) The transaction value in btc\n"
+            "  \"scriptPubKey\" : {         (json object)\n"
+            "     \"asm\" : \"code\",       (string) \n"
+            "     \"hex\" : \"hex\",        (string) \n"
+            "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
+            "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
+            "     \"addresses\" : [          (array of string) array of bitcoin addresses\n"
+            "        \"bitcoinaddress\"     (string) bitcoin address\n"
+            "        ,...\n"
+            "     ]\n"
+            "  },\n"
+            "  \"version\" : n,            (numeric) The version\n"
+            "  \"coinbase\" : true|false   (boolean) Coinbase or not\n"
+            "  \"coinstake\" : true|false  (boolean) Coinstake or not\n"
+            "}\n"
+        );
+
+    LOCK(cs_main);
+
+    Object ret;
+
+    uint256 hash;
+    hash.SetHex(params[0].get_str());
+    int n = params[1].get_int();
+    bool mem = true;
+    if (params.size() == 3)
+        mem = params[2].get_bool();
+
+    CTransaction tx;
+    uint256 hashBlock = 0;
+    if (!GetTransaction(hash, tx, hashBlock, mem))
+      return Value::null;  
+
+    if (n<0 || (unsigned int)n>=tx.vout.size() || tx.vout[n].IsNull())
+      return Value::null;
+
+    ret.push_back(Pair("bestblock", pindexBest->GetBlockHash().GetHex()));
+    if (hashBlock == 0)
+      ret.push_back(Pair("confirmations", 0));
+    else
+    {
+      map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
+      if (mi != mapBlockIndex.end() && (*mi).second)
+      {
+        CBlockIndex* pindex = (*mi).second;
+        if (pindex->IsInMainChain())
+        {
+          bool isSpent=false;
+          CBlockIndex* p = pindex;
+          p=p->pnext;
+          for (; p; p = p->pnext)
+          {
+            CBlock block;
+            CBlockIndex* pblockindex = mapBlockIndex[p->GetBlockHash()];
+            block.ReadFromDisk(pblockindex, true);
+            BOOST_FOREACH(const CTransaction& tx, block.vtx)
+            {
+              BOOST_FOREACH(const CTxIn& txin, tx.vin)
+              {
+                if( hash == txin.prevout.hash &&
+                   (int64_t)txin.prevout.n )
+                {
+                  printf("spent at block %s\n", block.GetHash().GetHex().c_str());
+                  isSpent=true; break;
+                }
+              }
+
+              if(isSpent) break;
+            }
+
+            if(isSpent) break;
+          }
+
+          if(isSpent)
+            return Value::null;
+
+          ret.push_back(Pair("confirmations", pindexBest->nHeight - pindex->nHeight + 1));
+        }
+        else
+          return Value::null;
+      }
+    }
+
+    ret.push_back(Pair("value", ValueFromAmount(tx.vout[n].nValue)));
+    Object o;
+    spj(tx.vout[n].scriptPubKey, o, true);
+    ret.push_back(Pair("scriptPubKey", o));
+    ret.push_back(Pair("coinbase", tx.IsCoinBase()));
+    ret.push_back(Pair("coinstake", tx.IsCoinStake()));
+
+    return ret;
 }
