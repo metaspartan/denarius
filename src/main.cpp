@@ -1632,7 +1632,7 @@ unsigned int CTransaction::GetP2SHSigOpCount(const MapPrevTx& inputs) const
 }
 
 bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx,
-    const CBlockIndex* pindexBlock, bool fBlock, bool fMiner,unsigned int flags, bool fValidateSig)
+    const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags, bool fValidateSig)
 {
     // Take over previous transactions' spent pointers
     // fBlock is true when this is called from AcceptBlock when a new best-block is added to the blockchain
@@ -1886,6 +1886,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         return false;
 
     unsigned int flags = SCRIPT_VERIFY_NOCACHE;
+    
+    /* // Currently don't need
+    if(V3(nTime))
+    {
+      flags |= SCRIPT_VERIFY_NULLDUMMY |
+               SCRIPT_VERIFY_STRICTENC |
+               SCRIPT_VERIFY_ALLOW_EMPTY_SIG |
+               SCRIPT_VERIFY_FIX_HASHTYPE |
+               SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
+    }
+    */
 
     //// issue here: it doesn't know the version
     unsigned int nTxPos;

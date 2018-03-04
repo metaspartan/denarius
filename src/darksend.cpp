@@ -916,7 +916,7 @@ bool CDarkSendPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
         int n = found;
         txNew.vin[n].scriptSig = newSig;
         if(fDebug) printf("CDarkSendPool::SignatureValid() - Sign with sig %s\n", newSig.ToString().substr(0,24).c_str());
-        if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, SignatureChecker(txNew, i))){
+        if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, txNew, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0)){
             if(fDebug) printf("CDarkSendPool::SignatureValid() - Signing - Error signing input %u\n", n);
             return false;
         }

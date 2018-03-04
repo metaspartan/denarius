@@ -103,6 +103,7 @@ static const uint256 hashGenesisBlockTestNet("0x000086bfe8264d241f7f8e5393f74778
 
 //inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
 //inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }
+//inline bool V3(int64_t nTime) { return fTestNet || nTime > 1524196491; } //nTime April 20th 2018
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future

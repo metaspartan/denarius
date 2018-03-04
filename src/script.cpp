@@ -317,7 +317,7 @@ const char* GetOpName(opcodetype opcode)
 
     // expanson
     case OP_NOP1                   : return "OP_NOP1";
-    case OP_NOP2                   : return "OP_NOP2";
+    case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY"; //BIP65
     case OP_NOP3                   : return "OP_NOP3";
     case OP_NOP4                   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
@@ -526,9 +526,78 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 // Control
                 //
                 case OP_NOP:
-                break;
+                  break;
 
-                case OP_NOP1: case OP_NOP2: case OP_NOP3: case OP_NOP4: case OP_NOP5:
+                case OP_NOP2:
+    {
+        // CHECKLOCKTIMEVERIFY
+        //
+        // (nLockTime -- nLockTime )
+    
+        if (!(flags & SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY))
+            break; // not enabled; treat as a NOP
+    
+        if (stack.size() < 1)
+            return false;
+    
+        // Note that elsewhere numeric opcodes are limited to
+        // operands in the range -2**31+1 to 2**31-1, however it is
+        // legal for opcodes to produce results exceeding that
+        // range. This limitation is implemented by CScriptNum's
+        // default 4-byte limit.
+        //
+        // If we kept to that limit we'd have a year 2038 problem,
+        // even though the nLockTime field in transactions
+        // themselves is uint32 which only becomes meaningless
+        // after the year 2106.
+        //
+        // Thus as a special case we tell CScriptNum to accept up
+        // to 5-byte bignums, which are good until 2**32-1, the
+        // same limit as the nLockTime field itself.
+        const CScriptNum nLockTime(stacktop(-1), 5);
+    
+        // In the rare event that the argument may be < 0 due to
+        // some arithmetic being done first, you can always use
+        // 0 MAX CHECKLOCKTIMEVERIFY.
+        if (nLockTime < 0)
+            return false;
+    
+        // There are two types of nLockTime: lock-by-blockheight
+        // and lock-by-blocktime, distinguished by whether
+        // nLockTime < LOCKTIME_THRESHOLD.
+        //
+        // We want to compare apples to apples, so fail the script
+        // unless the type of nLockTime being tested is the same as
+        // the nLockTime in the transaction.
+        if (!(
+              (txTo.nLockTime <  LOCKTIME_THRESHOLD && nLockTime <  LOCKTIME_THRESHOLD) ||
+              (txTo.nLockTime >= LOCKTIME_THRESHOLD && nLockTime >= LOCKTIME_THRESHOLD)
+             ))
+            return false;
+    
+        // Now that we know we're comparing apples-to-apples, the
+        // comparison is a simple numeric one.
+        if (nLockTime > (int64_t)txTo.nLockTime)
+            return false;
+    
+        // Finally the nLockTime feature can be disabled and thus
+        // CHECKLOCKTIMEVERIFY bypassed if every txin has been
+        // finalized by setting nSequence to maxint. The
+        // transaction would be allowed into the blockchain, making
+        // the opcode ineffective.
+        //
+        // Testing if this vin is not final is sufficient to
+        // prevent this condition. Alternatively we could test all
+        // inputs, but testing just this input minimizes the data
+        // required to prove correct CHECKLOCKTIMEVERIFY execution.
+        if (txTo.vin[nIn].IsFinal())
+            return false;
+    
+        break;
+    
+    }
+
+                case OP_NOP1: case OP_NOP3: case OP_NOP4: case OP_NOP5:
                 case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
                 {
                     if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
@@ -1326,6 +1395,8 @@ bool static CheckMinimalPush(const valtype& data, opcodetype opcode) {
     return true;
 }
 
+/*
+
 bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
     static const CScriptNum bnZero(0);
@@ -1426,8 +1497,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                 // Control
                 //
                 case OP_NOP:
-                break;
-
+                  break;
                 case OP_NOP1: case OP_NOP2: case OP_NOP3: case OP_NOP4: case OP_NOP5:
                 case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
                 {
@@ -2030,8 +2100,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
     return set_success(serror);
 }
-
-
+*/
 
 
 
@@ -2130,7 +2199,8 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     }
 
     // Test solution
-    return VerifyScript(txin.scriptSig, fromPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, SignatureChecker(txTo, nIn));
+    //return VerifyScript(txin.scriptSig, fromPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, SignatureChecker(txTo, nIn));
+    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0);
 }
 
 bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
@@ -2658,44 +2728,6 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
     return true;
 }
 
-/*
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, int nHashType)
-{
-    vector<vector<unsigned char> > stack, stackCopy;
-    if (!EvalScript(stack, scriptSig, txTo, nIn, nHashType))
-        return false;
-
-    stackCopy = stack;
-
-    if (!EvalScript(stack, scriptPubKey, txTo, nIn, nHashType))
-        return false;
-    if (stack.empty())
-        return false;
-
-    if (CastToBool(stack.back()) == false)
-        return false;
-
-    // Additional validation for spend-to-script-hash transactions:
-    if (scriptPubKey.IsPayToScriptHash())
-    {
-        if (!scriptSig.IsPushOnly()) // scriptSig must be literals-only
-            return false;            // or validation fails
-
-        const valtype& pubKeySerialized = stackCopy.back();
-        CScript pubKey2(pubKeySerialized.begin(), pubKeySerialized.end());
-        popstack(stackCopy);
-
-        if (!EvalScript(stackCopy, pubKey2, txTo, nIn, nHashType))
-            return false;
-        if (stackCopy.empty())
-            return false;
-        return CastToBool(stackCopy.back());
-    }
-
-    return true;
-}
-*/
-
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
     vector<vector<unsigned char> > stack, stackCopy;
@@ -2732,6 +2764,7 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
     return true;
 }
 
+/*
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
@@ -2784,53 +2817,7 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigne
 
     return set_success(serror);
 }
-
-
-/*bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType)
-{
-    assert(nIn < txTo.vin.size());
-    CTxIn& txin = txTo.vin[nIn];
-
-    // Leave out the signature from the hash, since a signature can't sign itself.
-    // The checksig op will also drop the signatures from its hash.
-    uint256 hash = SignatureHash(fromPubKey, txTo, nIn, nHashType);
-
-    txnouttype whichType;
-    if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType))
-        return false;
-
-    if (whichType == TX_SCRIPTHASH)
-    {
-        // Solver returns the subscript that need to be evaluated;
-        // the final scriptSig is the signatures from that
-        // and then the serialized subscript:
-        CScript subscript = txin.scriptSig;
-
-        // Recompute txn hash using subscript in place of scriptPubKey:
-        uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
-
-        txnouttype subType;
-        bool fSolved =
-            Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) && subType != TX_SCRIPTHASH;
-        // Append serialized subscript whether or not it is completely signed:
-        txin.scriptSig << static_cast<valtype>(subscript);
-        if (!fSolved) return false;
-    }
-
-    // Test solution
-	return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0);
-}
-
-bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
-{
-    assert(nIn < txTo.vin.size());
-    CTxIn& txin = txTo.vin[nIn];
-    assert(txin.prevout.n < txFrom.vout.size());
-    assert(txin.prevout.hash == txFrom.GetHash());
-    const CTxOut& txout = txFrom.vout[txin.prevout.n];
-
-    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
-}*/
+*/
 
 bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
