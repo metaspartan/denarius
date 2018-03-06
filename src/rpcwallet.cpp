@@ -938,14 +938,14 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 continue;
 
             isminefilter mine = IsMine(*pwalletMain, address);
-            if(!mine & filter)
+            if(!mine && filter)
                 continue;
 
             tallyitem& item = mapTally[address];
             item.nAmount += txout.nValue;
             item.nConf = min(item.nConf, nDepth);
             item.txids.push_back(wtx.GetHash());
-            if (mine & MINE_WATCH_ONLY)
+            if (mine && MINE_WATCH_ONLY)
                 item.fIsWatchonly = true;
         }
     }
