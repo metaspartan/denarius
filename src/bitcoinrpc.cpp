@@ -314,6 +314,8 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+    { "gettxout",               &gettxout,               true,   false },
+    { "importaddress",          &importaddress,          false,  false },
 
     { "getnewstealthaddress",   &getnewstealthaddress,   false,  false},
     { "liststealthaddresses",   &liststealthaddresses,   false,  false},
@@ -1281,6 +1283,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getreceivedbyaccount"   && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "listreceivedbyaddress"  && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "listreceivedbyaddress"  && n > 1) ConvertTo<bool>(params[1]);
+    if (strMethod == "listreceivedbyaddress"  && n > 2) ConvertTo<bool>(params[2]);
+    if (strMethod == "listreceivedbyaddress"  && n > 3) ConvertTo<bool>(params[3]);
     if (strMethod == "listreceivedbyaccount"  && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "listreceivedbyaccount"  && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
@@ -1325,6 +1329,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "gettxout"               && n == 2) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
+    if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
     
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "darksend"               && n > 1) ConvertTo<double>(params[1]);

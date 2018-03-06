@@ -891,10 +891,13 @@ struct tallyitem
 {
     int64_t nAmount;
     int nConf;
+    vector<uint256> txids;
+    bool fIsWatchonly;
     tallyitem()
     {
         nAmount = 0;
         nConf = std::numeric_limits<int>::max();
+        fIsWatchonly = false;
     }
 };
 
@@ -909,6 +912,11 @@ Value ListReceived(const Array& params, bool fByAccounts)
     bool fIncludeEmpty = false;
     if (params.size() > 1)
         fIncludeEmpty = params[1].get_bool();
+    
+    isminefilter filter = MINE_SPENDABLE;
+    if(params.size() > 2)
+        if(params[2].get_bool())
+            filter = filter | MINE_WATCH_ONLY;
 
     // Tally
     map<CBitcoinAddress, tallyitem> mapTally;
@@ -916,7 +924,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
     {
         const CWalletTx& wtx = (*it).second;
 
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
             continue;
 
         int nDepth = wtx.GetDepthInMainChain();
@@ -926,12 +934,19 @@ Value ListReceived(const Array& params, bool fByAccounts)
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
         {
             CTxDestination address;
-            if (!ExtractDestination(txout.scriptPubKey, address) || !IsMine(*pwalletMain, address))
+            if (!ExtractDestination(txout.scriptPubKey, address))
+                continue;
+
+            isminefilter mine = IsMine(*pwalletMain, address);
+            if(!mine && filter)
                 continue;
 
             tallyitem& item = mapTally[address];
             item.nAmount += txout.nValue;
             item.nConf = min(item.nConf, nDepth);
+            item.txids.push_back(wtx.GetHash());
+            if (mine && MINE_WATCH_ONLY)
+                item.fIsWatchonly = true;
         }
     }
 
@@ -948,10 +963,12 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
         int64_t nAmount = 0;
         int nConf = std::numeric_limits<int>::max();
+        bool fIsWatchonly = false;
         if (it != mapTally.end())
         {
             nAmount = (*it).second.nAmount;
             nConf = (*it).second.nConf;
+            fIsWatchonly = (*it).second.fIsWatchonly;
         }
 
         if (fByAccounts)
@@ -959,14 +976,26 @@ Value ListReceived(const Array& params, bool fByAccounts)
             tallyitem& item = mapAccountTally[strAccount];
             item.nAmount += nAmount;
             item.nConf = min(item.nConf, nConf);
+            item.fIsWatchonly = fIsWatchonly;
         }
         else
         {
             Object obj;
+            if(fIsWatchonly)
+                obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("address",       address.ToString()));
             obj.push_back(Pair("account",       strAccount));
             obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
+            Array transactions;
+            if (it != mapTally.end())
+            {
+                BOOST_FOREACH(const uint256& item, (*it).second.txids)
+                {
+                    transactions.push_back(item.GetHex());
+                }
+            }
+            obj.push_back(Pair("txids", transactions));
             ret.push_back(obj);
         }
     }
@@ -990,16 +1019,26 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
 Value listreceivedbyaddress(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 2)
+    if (fHelp || params.size() > 3)
         throw runtime_error(
-            "listreceivedbyaddress [minconf=1] [includeempty=false]\n"
-            "[minconf] is the minimum number of confirmations before payments are included.\n"
-            "[includeempty] whether to include addresses that haven't received any payments.\n"
-            "Returns an array of objects containing:\n"
-            "  \"address\" : receiving address\n"
-            "  \"account\" : the account of the receiving address\n"
-            "  \"amount\" : total amount received by the address\n"
-            "  \"confirmations\" : number of confirmations of the most recent transaction included");
+            "listreceivedbyaddress ( minconf includeempty includeWatchonly)\n"
+            "\nList balances by receiving address.\n"
+            "\nArguments:\n"
+            "1. minconf       (numeric, optional, default=1) The minimum number of confirmations before payments are included.\n"
+            "2. includeempty  (numeric, optional, dafault=false) Whether to include addresses that haven't received any payments.\n"
+            "3. includeWatchonly (bool, optional, default=false) Whether to include watchonly addresses (see 'importaddress').\n"
+
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"involvesWatchonly\" : \"true\",    (bool) Only returned if imported addresses were involved in transaction\n"
+            "    \"address\" : \"receivingaddress\",  (string) The receiving address\n"
+            "    \"account\" : \"accountname\",       (string) The account of the receiving address. The default account is \"\".\n"
+            "    \"amount\" : x.xxx,                  (numeric) The total amount in btc received by the address\n"
+            "    \"confirmations\" : n                (numeric) The number of confirmations of the most recent transaction included\n"
+            "  }\n"
+            "  ,...\n"
+            "]\n");
 
     return ListReceived(params, false);
 }
@@ -1585,36 +1624,47 @@ Value encryptwallet(const Array& params, bool fHelp)
 
 class DescribeAddressVisitor : public boost::static_visitor<Object>
 {
+private:
+    isminetype mine;
 public:
+    DescribeAddressVisitor(isminetype mineIn) : mine(mineIn) {}
+    
     Object operator()(const CNoDestination &dest) const { return Object(); }
 
     Object operator()(const CKeyID &keyID) const {
         Object obj;
         CPubKey vchPubKey;
-        pwalletMain->GetPubKey(keyID, vchPubKey);
+        //pwalletMain->GetPubKey(keyID, vchPubKey);
         obj.push_back(Pair("isscript", false));
-        obj.push_back(Pair("pubkey", HexStr(vchPubKey.Raw())));
-        obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
+        //obj.push_back(Pair("pubkey", HexStr(vchPubKey.Raw())));
+        //obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
+        if (mine == MINE_SPENDABLE) {
+            pwalletMain->GetPubKey(keyID, vchPubKey);
+            obj.push_back(Pair("pubkey", HexStr(vchPubKey.Raw())));
+            obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
+        }
         return obj;
     }
 
     Object operator()(const CScriptID &scriptID) const {
         Object obj;
         obj.push_back(Pair("isscript", true));
-        CScript subscript;
-        pwalletMain->GetCScript(scriptID, subscript);
-        std::vector<CTxDestination> addresses;
-        txnouttype whichType;
-        int nRequired;
-        ExtractDestinations(subscript, whichType, addresses, nRequired);
-        obj.push_back(Pair("script", GetTxnOutputType(whichType)));
-        obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
-        Array a;
-        BOOST_FOREACH(const CTxDestination& addr, addresses)
-            a.push_back(CBitcoinAddress(addr).ToString());
-        obj.push_back(Pair("addresses", a));
-        if (whichType == TX_MULTISIG)
-            obj.push_back(Pair("sigsrequired", nRequired));
+        if (mine == MINE_SPENDABLE) {
+            CScript subscript;
+            pwalletMain->GetCScript(scriptID, subscript);
+            std::vector<CTxDestination> addresses;
+            txnouttype whichType;
+            int nRequired;
+            ExtractDestinations(subscript, whichType, addresses, nRequired);
+            obj.push_back(Pair("script", GetTxnOutputType(whichType)));
+            obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
+            Array a;
+            BOOST_FOREACH(const CTxDestination& addr, addresses)
+                a.push_back(CBitcoinAddress(addr).ToString());
+            obj.push_back(Pair("addresses", a));
+            if (whichType == TX_MULTISIG)
+                obj.push_back(Pair("sigsrequired", nRequired));
+        }
         return obj;
     }
     
@@ -1642,13 +1692,14 @@ Value validateaddress(const Array& params, bool fHelp)
         CTxDestination dest = address.Get();
         string currentAddress = address.ToString();
         ret.push_back(Pair("address", currentAddress));
-        bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
-        if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+        isminetype mine = pwalletMain ? IsMine(*pwalletMain, dest) : MINE_NO;
+        ret.push_back(Pair("ismine", mine != MINE_NO));
+        if (mine != MINE_NO) {
+            ret.push_back(Pair("watchonly", mine == MINE_WATCH_ONLY));
+            Object detail = boost::apply_visitor(DescribeAddressVisitor(mine), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
-        if (pwalletMain->mapAddressBook.count(dest))
+        if (pwalletMain && pwalletMain->mapAddressBook.count(dest))
             ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
     }
     return ret;
@@ -1678,11 +1729,11 @@ Value validatepubkey(const Array& params, bool fHelp)
         CTxDestination dest = address.Get();
         string currentAddress = address.ToString();
         ret.push_back(Pair("address", currentAddress));
-        bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
+        isminetype mine = pwalletMain ? IsMine(*pwalletMain, dest) : MINE_NO;
+        ret.push_back(Pair("ismine", mine != MINE_NO));
         ret.push_back(Pair("iscompressed", isCompressed));
-        if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+        if (mine != MINE_NO) {
+            Object detail = boost::apply_visitor(DescribeAddressVisitor(mine), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
         if (pwalletMain->mapAddressBook.count(dest))

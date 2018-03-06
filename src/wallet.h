@@ -51,15 +51,6 @@ enum AvailableCoinsType
     ONLY_NONDENOMINATED_NOTMN = 4 // ONLY_NONDENOMINATED and not 5000 DNR at the same time
 };
 
-/** IsMine() return codes */
-enum isminetype
-{
-    ISMINE_NO = 0,
-    ISMINE_WATCH_ONLY = 1,
-    ISMINE_SPENDABLE = 2,
-    ISMINE_ALL = ISMINE_WATCH_ONLY | ISMINE_SPENDABLE
-};
-
 /** A key pool entry */
 class CKeyPool
 {
@@ -217,6 +208,11 @@ public:
     bool AddCScript(const CScript& redeemScript);
     bool LoadCScript(const CScript& redeemScript);
     
+    // Adds a watch-only address to the store, and saves it to disk.
+    bool AddWatchOnly(const CTxDestination &dest);
+    // Adds a watch-only address to the store, without saving it to disk (used by LoadWallet)
+    bool LoadWatchOnly(const CTxDestination &dest) { printf("Loaded %s!\n", CBitcoinAddress(dest).ToString().c_str()); return CCryptoKeyStore::AddWatchOnly(dest); }
+    
     bool Lock();
     bool Unlock(const SecureString& strWalletPassphrase, bool anonimizeOnly = false);
     bool ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase, const SecureString& strNewWalletPassphrase);
@@ -319,9 +315,9 @@ public:
 
     bool IsDenominatedAmount(int64_t nInputAmount) const;
 
-    bool IsMine(const CTxIn& txin) const;
+    isminetype IsMine(const CTxIn& txin) const;
     int64_t GetDebit(const CTxIn& txin) const;
-    bool IsMine(const CTxOut& txout) const
+    isminetype IsMine(const CTxOut& txout) const
     {
         return ::IsMine(*this, txout.scriptPubKey);
     }

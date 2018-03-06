@@ -103,6 +103,7 @@ static const uint256 hashGenesisBlockTestNet("0x000086bfe8264d241f7f8e5393f74778
 
 //inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
 //inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }
+//inline bool V3(int64_t nTime) { return fTestNet || nTime > 1524196491; } //nTime April 20th 2018
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
@@ -147,6 +148,7 @@ extern bool fUseFastIndex;
 extern bool fImporting;
 extern bool fReindex;
 extern unsigned int nDerivationMethodIndex;
+extern unsigned int nCoinCacheSize;
 
 extern bool fEnforceCanonical;
 
@@ -184,7 +186,7 @@ unsigned int ComputeMinStake(unsigned int nBase, int64_t nTime, unsigned int nBl
 int GetNumBlocksOfPeers();
 bool IsInitialBlockDownload();
 std::string GetWarnings(std::string strFor);
-bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);
+bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s=false);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);

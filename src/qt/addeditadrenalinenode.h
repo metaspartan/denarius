@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <iostream>
 
 namespace Ui {
 class AddEditAdrenalineNode;
