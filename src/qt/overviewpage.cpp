@@ -132,6 +132,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
     darksendActionCheck = 0;
     lastNewBlock = 0;
 
+    /*
     if(fLiteMode){
         ui->frameDarksend->setVisible(false);
     } else {
@@ -150,7 +151,9 @@ OverviewPage::OverviewPage(QWidget *parent) :
         ui->toggleDarksend->setText(tr("Start Darksend Mixing"));
     } else {
         ui->toggleDarksend->setText(tr("Stop Darksend Mixing"));
-    }
+    }    
+        
+    */
 
     // init "out of sync" warning labels
     ui->labelWalletStatus->setText("(" + tr("Out of Sync!") + ")");
@@ -279,9 +282,9 @@ void OverviewPage::setModel(WalletModel *model)
 
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 		
-		connect(ui->darksendAuto, SIGNAL(clicked()), this, SLOT(darksendAuto()));
-        connect(ui->darksendReset, SIGNAL(clicked()), this, SLOT(darksendReset()));
-        connect(ui->toggleDarksend, SIGNAL(clicked()), this, SLOT(toggleDarksend()));
+		//connect(ui->darksendAuto, SIGNAL(clicked()), this, SLOT(darksendAuto()));
+        //connect(ui->darksendReset, SIGNAL(clicked()), this, SLOT(darksendReset()));
+        //connect(ui->toggleDarksend, SIGNAL(clicked()), this, SLOT(toggleDarksend()));
     }
 
     // update the display unit, to not use the default ("BTC")
