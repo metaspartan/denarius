@@ -151,6 +151,11 @@ Value listunspent(const Array& params, bool fHelp)
             "{txid, vout, scriptPubKey, amount, confirmations}");
 
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));
+    
+    // Fix Spent Coins First
+    int nMismatchSpent;
+    int64_t nBalanceInQuestion;
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
 
     int nMinDepth = 1;
     if (params.size() > 0)
