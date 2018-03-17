@@ -9,6 +9,8 @@
 #include "main.h"
 #include "util.h"
 #include "addrman.h"
+#include "sync.h"
+#include "core.h"
 #include <boost/lexical_cast.hpp>
 
 int CMasterNode::minProtoVersion = MIN_MN_PROTO_VERSION;

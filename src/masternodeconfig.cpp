@@ -26,8 +26,11 @@ bool CMasternodeConfig::read(std::string& strErr) {
         }
         std::istringstream iss(line);
         std::string alias, ip, privKey, txHash, outputIndex;
+        iss.str(line);
+        iss.clear();
         if (!(iss >> alias >> ip >> privKey >> txHash >> outputIndex)) {
-            strErr = "Could not parse masternode.conf line: " + line;
+            //strErr = "Could not parse masternode.conf line: " + line;
+            printf("Could not parse masternode.conf line: %s\n", line.c_str());
             streamConfig.close();
             return false;
         }

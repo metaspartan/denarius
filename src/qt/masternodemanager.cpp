@@ -12,13 +12,19 @@
 #include "walletdb.h"
 #include "wallet.h"
 #include "init.h"
+#include "bitcoinrpc.h"
+
+#include <boost/lexical_cast.hpp>
+#include <fstream>
+using namespace json_spirit;
+using namespace std;
 
 #include <QAbstractItemDelegate>
 #include <QPainter>
 #include <QTimer>
 #include <QDebug>
 #include <QScrollArea>
-//#include <QScroller>
+#include <QScroller>
 #include <QDateTime>
 #include <QApplication>
 #include <QClipboard>
@@ -166,10 +172,10 @@ void MasternodeManager::updateNodeList()
 	QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
 	
 	CScript pubkey;
-        pubkey =GetScriptForDestination(mn.pubkey.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        CBitcoinAddress address2(address1);
+    pubkey =GetScriptForDestination(mn.pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(pubkey, address1);
+    CBitcoinAddress address2(address1);
 	QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()));
 	
 	ui->tableWidget->setItem(mnRow, 0, addressItem);
@@ -190,6 +196,7 @@ void MasternodeManager::updateNodeList()
             updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey), QString::fromStdString(adrenaline.second.sCollateralAddress));
         }
     }
+    
 }
 
 
@@ -261,34 +268,6 @@ void MasternodeManager::on_getConfigButton_clicked()
     d->exec();
 }
 
-void MasternodeManager::on_removeButton_clicked()
-{
-    QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
-    QModelIndexList selected = selectionModel->selectedRows();
-    if(selected.count() == 0)
-        return;
-
-    QMessageBox::StandardButton confirm;
-    confirm = QMessageBox::question(this, "Delete masternode.conf?", "Are you sure you want to delete this master node configuration?", QMessageBox::Yes|QMessageBox::No);
-
-    if(confirm == QMessageBox::Yes)
-    {
-        QModelIndex index = selected.at(0);
-        int r = index.row();
-        std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
-        CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
-        CWalletDB walletdb(pwalletMain->strWalletFile);
-        pwalletMain->mapMyAdrenalineNodes.erase(sAddress);
-        walletdb.EraseAdrenalineNodeConfig(c.sAddress);
-        ui->tableWidget_2->clearContents();
-        ui->tableWidget_2->setRowCount(0);
-        BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-        {
-            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey), QString::fromStdString(adrenaline.second.sCollateralAddress));
-        }
-    }
-}
-
 void MasternodeManager::on_startButton_clicked()
 {
     // start the node
@@ -312,6 +291,57 @@ void MasternodeManager::on_startButton_clicked()
         msg.setText("Error: " + QString::fromStdString(errorMessage));
 
     msg.exec();
+}
+
+void MasternodeManager::on_startAllButton_clicked()
+{
+    std::string results;
+    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
+    {
+        CAdrenalineNodeConfig c = adrenaline.second;
+	std::string errorMessage;
+        bool result = activeMasternode.RegisterByPubKey(c.sAddress, c.sMasternodePrivKey, c.sCollateralAddress, errorMessage);
+	if(result)
+	{
+   	    results += c.sAddress + ": STARTED\n";
+	}	
+	else
+	{
+	    results += c.sAddress + ": ERROR: " + errorMessage + "\n";
+	}
+    }
+
+    QMessageBox msg;
+    msg.setText(QString::fromStdString(results));
+    msg.exec();
+}
+
+void MasternodeManager::on_removeButton_clicked()
+{
+    QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
+    QModelIndexList selected = selectionModel->selectedRows();
+    if(selected.count() == 0)
+        return;
+
+    QMessageBox::StandardButton confirm;
+    confirm = QMessageBox::question(this, "Delete masternode.conf?", "Are you sure you want to delete this hybrid masternode configuration?", QMessageBox::Yes|QMessageBox::No);
+
+    if(confirm == QMessageBox::Yes)
+    {
+        QModelIndex index = selected.at(0);
+        int r = index.row();
+        std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
+        CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
+        CWalletDB walletdb(pwalletMain->strWalletFile);
+        pwalletMain->mapMyAdrenalineNodes.erase(sAddress);
+        walletdb.EraseAdrenalineNodeConfig(c.sAddress);
+        ui->tableWidget_2->clearContents();
+        ui->tableWidget_2->setRowCount(0);
+        BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
+        {
+            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey), QString::fromStdString(adrenaline.second.sCollateralAddress));
+        }
+    }
 }
 
 void MasternodeManager::on_stopButton_clicked()
@@ -338,29 +368,6 @@ void MasternodeManager::on_stopButton_clicked()
     {
         msg.setText("Error: " + QString::fromStdString(errorMessage));
     }
-    msg.exec();
-}
-
-void MasternodeManager::on_startAllButton_clicked()
-{
-    std::string results;
-    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-    {
-        CAdrenalineNodeConfig c = adrenaline.second;
-	std::string errorMessage;
-        bool result = activeMasternode.RegisterByPubKey(c.sAddress, c.sMasternodePrivKey, c.sCollateralAddress, errorMessage);
-	if(result)
-	{
-   	    results += c.sAddress + ": STARTED\n";
-	}	
-	else
-	{
-	    results += c.sAddress + ": ERROR: " + errorMessage + "\n";
-	}
-    }
-
-    QMessageBox msg;
-    msg.setText(QString::fromStdString(results));
     msg.exec();
 }
 

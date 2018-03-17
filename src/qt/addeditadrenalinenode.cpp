@@ -28,7 +28,6 @@ AddEditAdrenalineNode::~AddEditAdrenalineNode()
     delete ui;
 }
 
-
 void AddEditAdrenalineNode::on_okButton_clicked()
 {
     if(ui->aliasLineEdit->text() == "")
@@ -41,7 +40,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->addressLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter an ip address and port. (123.45.67.89:17170)");
+        msg.setText("Please enter an ip address and port. (123.45.68.69:19999)");
         msg.exec();
         return;
     }
@@ -55,7 +54,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->txhashLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter the transaction hash for the transaction that has 5000 coins");
+        msg.setText("Please enter the transaction hash for the transaction that has 5000 DNR");
         msg.exec();
         return;
     }
