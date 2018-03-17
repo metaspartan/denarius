@@ -110,7 +110,9 @@ CoinControlDialog::CoinControlDialog(QWidget *parent) :
     ui->treeWidget->setColumnWidth(COLUMN_AMOUNT, 100);
     ui->treeWidget->setColumnWidth(COLUMN_LABEL, 170);
     ui->treeWidget->setColumnWidth(COLUMN_ADDRESS, 290);
-	ui->treeWidget->setColumnWidth(COLUMN_DARKSEND_ROUNDS, 120);
+    if (!fLiteMode) {
+        ui->treeWidget->setColumnWidth(COLUMN_DARKSEND_ROUNDS, 120);
+    }
     ui->treeWidget->setColumnWidth(COLUMN_DATE, 110);
     ui->treeWidget->setColumnWidth(COLUMN_CONFIRMATIONS, 100);
     ui->treeWidget->setColumnWidth(COLUMN_PRIORITY, 100);
@@ -374,14 +376,16 @@ void CoinControlDialog::viewItemChanged(QTreeWidgetItem* item, int column)
         else if (item->isDisabled()) // locked (this happens if "check all" through parent node)
             item->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
         else {
-            coinControl->Select(outpt);
-            CTxIn vin(outpt);
-            int rounds = GetInputDarksendRounds(vin);
-            if(coinControl->useDarkSend && rounds < nDarksendRounds) {
-                QMessageBox::warning(this, windowTitle(),
-                    tr("Non-anonymized input selected. <b>Darksend will be disabled.</b><br><br>If you still want to use Darksend, please deselect all non-anonymized inputs first and then check Darksend checkbox again."),
-                    QMessageBox::Ok, QMessageBox::Ok);
-                coinControl->useDarkSend = false;
+            if (!fLiteMode) {
+                coinControl->Select(outpt);
+                CTxIn vin(outpt);
+                int rounds = GetInputDarksendRounds(vin);
+                if(coinControl->useDarkSend && rounds < nDarksendRounds) {
+                    QMessageBox::warning(this, windowTitle(),
+                        tr("Non-anonymized input selected. <b>Darksend will be disabled.</b><br><br>If you still want to use Darksend, please deselect all non-anonymized inputs first and then check Darksend checkbox again."),
+                        QMessageBox::Ok, QMessageBox::Ok);
+                    coinControl->useDarkSend = false;
+                }
             }
         }
 
@@ -698,13 +702,15 @@ void CoinControlDialog::updateView()
 
             // date
             itemOutput->setText(COLUMN_DATE, QDateTime::fromTime_t(out.tx->GetTxTime()).toUTC().toString("yy-MM-dd hh:mm"));
-			
-			// darksend rounds
-            CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
-            int rounds = GetInputDarksendRounds(vin);
+            
+            // darksend rounds
+			if (!fLiteMode) {
+                CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
+                int rounds = GetInputDarksendRounds(vin);
 
-            if(rounds >= 0) itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString::number(rounds), 15, " "));
-            else itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString("N/A"), 15, " "));
+                if(rounds >= 0) itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString::number(rounds), 15, " "));
+                else itemOutput->setText(COLUMN_DARKSEND_ROUNDS, strPad(QString("N/A"), 15, " "));
+            }
             
             // immature PoS reward
             if (out.tx->IsCoinStake() && out.tx->GetBlocksToMaturity() > 0 && out.tx->GetDepthInMainChain() > 0) {

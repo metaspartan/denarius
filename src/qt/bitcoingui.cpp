@@ -25,6 +25,7 @@
 #include "blockbrowser.h"
 #include "marketbrowser.h"
 #include "masternodemanager.h"
+#include "darksend.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
 #include "richlist.h"
@@ -202,9 +203,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     sendCoinsPage = new SendCoinsDialog(this);
     messagePage = new MessagePage(this);
 	
-    if (!fLiteMode) {
-        masternodeManagerPage = new MasternodeManager(this);
-    }
+    masternodeManagerPage = new MasternodeManager(this);
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
@@ -218,9 +217,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
-    if (!fLiteMode) {
-        centralWidget->addWidget(masternodeManagerPage);
-    }
+    centralWidget->addWidget(masternodeManagerPage);
 	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(richListPage);
     centralWidget->addWidget(proofOfImagePage);
@@ -392,12 +389,10 @@ void BitcoinGUI::createActions()
     richListPageAction->setCheckable(true);
     tabGroup->addAction(richListPageAction);
 	
-    if (!fLiteMode) {
-        masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
-        masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
-        masternodeManagerAction->setCheckable(true);
-        tabGroup->addAction(masternodeManagerAction);
-    }
+    masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
+    masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
+    masternodeManagerAction->setCheckable(true);
+    tabGroup->addAction(masternodeManagerAction);
     
     proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
     proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));
@@ -421,7 +416,7 @@ void BitcoinGUI::createActions()
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
 	connect(richListPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(richListPageAction, SIGNAL(triggered()), this, SLOT(gotoRichListPage()));
-	connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(gotoMasternodeManagerPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
@@ -476,7 +471,7 @@ void BitcoinGUI::createActions()
     openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
     openConfEditorAction->setStatusTip(tr("Open configuration file"));
     openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
-    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));    
+    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
 	
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -499,10 +494,12 @@ void BitcoinGUI::createActions()
     // Open configs from menu
     connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
     connect(openMNConfEditorAction, SIGNAL(triggered()), this, SLOT(showMNConfEditor()));
+
 }
 
 void BitcoinGUI::createMenuBar()
 {
+    fLiteMode = GetBoolArg("-litemode", false);
 #ifdef Q_OS_MAC
     // Create a decoupled menu bar on Mac which stays even if the window is closed
     appMenuBar = new QMenuBar();
@@ -535,8 +532,9 @@ void BitcoinGUI::createMenuBar()
 	tools->addAction(openGraphAction);
 	tools->addSeparator();
 	tools->addAction(openConfEditorAction);
-	tools->addAction(openMNConfEditorAction);
-
+    if (!fLiteMode) {
+        tools->addAction(openMNConfEditorAction);
+    }
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
     help->addSeparator();
@@ -546,6 +544,8 @@ void BitcoinGUI::createMenuBar()
 
 void BitcoinGUI::createToolBars()
 {
+    fLiteMode = GetBoolArg("-litemode", false);
+    
     mainIcon = new QLabel (this);
     mainIcon->setPixmap(QPixmap(":images/vertical"));
     mainIcon->show();
@@ -563,7 +563,9 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
-	mainToolbar->addAction(masternodeManagerAction);
+    if (!fLiteMode) {
+        mainToolbar->addAction(masternodeManagerAction);
+    }
     mainToolbar->addAction(marketAction);
 	mainToolbar->addAction(richListPageAction);
     mainToolbar->addAction(proofOfImageAction);
