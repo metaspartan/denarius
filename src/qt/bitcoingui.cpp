@@ -202,7 +202,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     sendCoinsPage = new SendCoinsDialog(this);
     messagePage = new MessagePage(this);
 	
-	masternodeManagerPage = new MasternodeManager(this);
+    if (!fLiteMode) {
+        masternodeManagerPage = new MasternodeManager(this);
+    }
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
@@ -216,7 +218,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
-	centralWidget->addWidget(masternodeManagerPage);
+    if (!fLiteMode) {
+        centralWidget->addWidget(masternodeManagerPage);
+    }
 	centralWidget->addWidget(marketBrowser);
 	centralWidget->addWidget(richListPage);
     centralWidget->addWidget(proofOfImagePage);
@@ -388,10 +392,12 @@ void BitcoinGUI::createActions()
     richListPageAction->setCheckable(true);
     tabGroup->addAction(richListPageAction);
 	
-	masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
-    masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
-    masternodeManagerAction->setCheckable(true);
-    tabGroup->addAction(masternodeManagerAction);
+    if (!fLiteMode) {
+        masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
+        masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
+        masternodeManagerAction->setCheckable(true);
+        tabGroup->addAction(masternodeManagerAction);
+    }
     
     proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
     proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));

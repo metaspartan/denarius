@@ -121,6 +121,11 @@ bool ClientModel::isTestNet() const
     return fTestNet;
 }
 
+bool ClientModel::isLiteMode() const
+{
+    return fLiteMode;
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();

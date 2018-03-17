@@ -279,6 +279,7 @@ void RPCConsole::setClientModel(ClientModel *model)
 
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
+        ui->isLiteMode->setChecked(model->isLiteMode());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }
