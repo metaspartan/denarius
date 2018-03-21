@@ -740,6 +740,8 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
         if(HasFulfilledRequest(strRequest)) return;
         vecRequestsFulfilled.push_back(strRequest);
     }
+	
+	void PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd);
 
     bool IsSubscribed(unsigned int nChannel);
     void Subscribe(unsigned int nChannel, unsigned int nHops=0);

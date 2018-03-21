@@ -49,6 +49,7 @@ namespace Checkpoints
         ( 636115,  uint256("0x000000000002e90ba8bd7737b206c75a48cafef514e640b7c03753e93fb5fffe") )
         ( 640042,  uint256("0x000000000010014c70f1eef2e6a0599b4c05f19e3dc0510758c684eaec513a28") )
         ( 641361,  uint256("0x000000000005e6b7e106ce402511a64b239b5668e3599fb9e71dd75c16528033") )
+		( 654900,  uint256("0x000000000003200e2a80124060eab0f846671ec542cfa8f19f1bf4ad9501ad3e") )
         ;
 
     // TestNet has no checkpoints
@@ -410,8 +411,8 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
         // Ask this guy to fill in what we're missing
         if (pfrom)
         {
-            //pfrom->PushGetBlocks(pindexBest, hashCheckpoint);
-            PushGetBlocks(pfrom, pindexBest, hashCheckpoint);
+            pfrom->PushGetBlocks(pindexBest, hashCheckpoint);
+            //PushGetBlocks(pfrom, pindexBest, hashCheckpoint);
             // ask directly as well in case rejected earlier by duplicate
             // proof-of-stake because getblocks may not get it this time
             pfrom->AskFor(CInv(MSG_BLOCK, mapOrphanBlocks.count(hashCheckpoint)? WantedByOrphan(mapOrphanBlocks[hashCheckpoint]) : hashCheckpoint));
