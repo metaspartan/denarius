@@ -1,11 +1,20 @@
 #ifndef COINCONTROL_H
 #define COINCONTROL_H
 
+#include "core.h"
+
 /** Coin Control Features. */
 class CCoinControl
 {
 public:
     CTxDestination destChange;
+    //! If false, allows unselected inputs, but requires all selected inputs be used
+    bool fAllowOtherInputs;
+    //! Includes watch only addresses which match the ISMINE_WATCH_SOLVABLE criteria
+    bool fAllowWatchOnly;
+    
+    bool useDarkSend;
+    bool useInstantX;
 
     CCoinControl()
     {
@@ -16,6 +25,10 @@ public:
     {
         destChange = CNoDestination();
         setSelected.clear();
+        fAllowOtherInputs = false;
+        fAllowWatchOnly = false;
+        useInstantX = false;
+        useDarkSend = false;
     }
     
     bool HasSelected() const
@@ -27,6 +40,11 @@ public:
     {
         COutPoint outpt(hash, n);
         return (setSelected.count(outpt) > 0);
+    }
+    
+    bool IsSelectedd(const COutPoint& output) const
+    {
+        return (setSelected.count(output) > 0);
     }
     
     void Select(COutPoint& output)

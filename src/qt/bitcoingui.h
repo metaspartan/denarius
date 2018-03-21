@@ -13,6 +13,8 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
+class RichListPage;
+class MasternodeManager;
 class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
@@ -24,6 +26,8 @@ class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
+class ProofOfImage;
+class tradingDialog;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -76,6 +80,7 @@ public:
         functionality.
     */
     void setMessageModel(MessageModel *messageModel);
+    void checkTOU();
 
 protected:
     void changeEvent(QEvent *e);
@@ -97,6 +102,10 @@ private:
     QWidget *transactionsPage;
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
+    tradingDialog   *tradingDialogPage;
+	RichListPage *richListPage;
+	ProofOfImage *proofOfImagePage;
+	MasternodeManager *masternodeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -121,6 +130,10 @@ private:
     QAction *historyAction;
 	QAction *mintingAction;
 	QAction *multisigAction;
+    QAction *tradingAction;
+	QAction *richListPageAction;
+	QAction *proofOfImageAction;
+	QAction *masternodeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -139,6 +152,11 @@ private:
     QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
+	
+	QAction *openInfoAction;
+    QAction *openGraphAction;
+    QAction *openConfEditorAction;
+    QAction *openMNConfEditorAction;
 
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
@@ -209,6 +227,14 @@ private slots:
     void gotoSendCoinsPage();
     /** Switch to message page */
     void gotoMessagePage();
+	/** Switch to rich list page */
+	void gotoRichListPage();
+	/** Switch to masternode manager page */
+	void gotoMasternodeManagerPage();
+	/** Switch to proof of image page */
+	void gotoProofOfImagePage();
+    /** Switch to trading */
+	void gotoTradingPage();
 	
     //void gotoChatPage();
 
@@ -216,6 +242,19 @@ private slots:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
+	
+    /** Show debug window */
+    void showDebugWindow();
+	
+	/** Show debug window and set focus to the appropriate tab */
+    void showInfo();
+    void showConsole();
+    void showGraph();
+
+    /** Open external (default) editor with denarius.conf */
+    void showConfEditor();
+    /** Open external (default) editor with masternode.conf */
+    void showMNConfEditor();
 
     /** Show configuration dialog */
     void optionsClicked();

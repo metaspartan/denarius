@@ -18,7 +18,8 @@ using namespace boost;
 using namespace boost::assign;
 using namespace json_spirit;
 
-void ScriptPubKeyToJSON(const CScript& scriptPubKey, Object& out, bool fIncludeHex)
+//void ScriptPubKeyToJSON(const CScript& scriptPubKey, Object& out, bool fIncludeHex)
+void spj(const CScript& scriptPubKey, Object& out, bool fIncludeHex)
 {
     txnouttype type;
     vector<CTxDestination> addresses;
@@ -77,7 +78,8 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
         out.push_back(Pair("value", ValueFromAmount(txout.nValue)));
         out.push_back(Pair("n", (int64_t)i));
         Object o;
-        ScriptPubKeyToJSON(txout.scriptPubKey, o, false);
+        //ScriptPubKeyToJSON(txout.scriptPubKey, o, false);
+        spj(txout.scriptPubKey, o, false);
         out.push_back(Pair("scriptPubKey", o));
         vout.push_back(out);
     }
@@ -149,6 +151,11 @@ Value listunspent(const Array& params, bool fHelp)
             "{txid, vout, scriptPubKey, amount, confirmations}");
 
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));
+    
+    // Fix Spent Coins First
+    int nMismatchSpent;
+    int64_t nBalanceInQuestion;
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
 
     int nMinDepth = 1;
     if (params.size() > 0)
@@ -204,8 +211,20 @@ Value listunspent(const Array& params, bool fHelp)
                 entry.push_back(Pair("account", pwalletMain->mapAddressBook[address]));
         }
         entry.push_back(Pair("scriptPubKey", HexStr(pk.begin(), pk.end())));
+        if (pk.IsPayToScriptHash())
+        {
+            CTxDestination address;
+            if (ExtractDestination(pk, address))
+            {
+                const CScriptID& hash = boost::get<CScriptID>(address);
+                CScript redeemScript;
+                if (pwalletMain->GetCScript(hash, redeemScript))
+                    entry.push_back(Pair("redeemScript", HexStr(redeemScript.begin(), redeemScript.end())));
+            }
+        }
         entry.push_back(Pair("amount",ValueFromAmount(nValue)));
         entry.push_back(Pair("confirmations",out.nDepth));
+        entry.push_back(Pair("spendable", out.fSpendable));
         results.push_back(entry);
     }
 
@@ -319,7 +338,8 @@ Value decodescript(const Array& params, bool fHelp)
     } else {
         // Empty scripts are valid
     }
-    ScriptPubKeyToJSON(script, r, false);
+    spj(script, r, false);
+    //ScriptPubKeyToJSON(script, r, false);
 
     r.push_back(Pair("p2sh", CBitcoinAddress(script.GetID()).ToString()));
     return r;
@@ -448,10 +468,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
             bool fGood = vchSecret.SetString(k.get_str());
             if (!fGood)
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,"Invalid private key");
-            CKey key;
-            bool fCompressed;
-            CSecret secret = vchSecret.GetSecret(fCompressed);
-            key.SetSecret(secret, fCompressed);
+            CKey key = vchSecret.GetKey();
             tempKeystore.AddKey(key);
         }
     }
@@ -502,7 +519,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
         {
             txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);
         }
-        if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, 0))
+		if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
             fComplete = false;
     }
 
@@ -552,8 +569,8 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     else
     {
         // push to local node
-        CTxDB txdb("r");
-        if (!tx.AcceptToMemoryPool(txdb))
+        //CTxDB txdb("r");
+        if (!AcceptToMemoryPool(mempool, tx, true, NULL))
             throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected");
 
         SyncWithWallets(tx, NULL, true);
@@ -637,5 +654,72 @@ Value createmultisig(const Array& params, bool fHelp)
     result.push_back(Pair("address", address.ToString()));
     result.push_back(Pair("redeemScript", HexStr(inner.begin(), inner.end())));
 
+    return result;
+}
+
+Value searchrawtransactions(const Array &params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 4)
+        throw runtime_error(
+            "searchrawtransactions <address> [verbose=1] [skip=0] [count=100]\n");
+
+    CBitcoinAddress address(params[0].get_str());
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    CTxDestination dest = address.Get();
+
+    std::vector<uint256> vtxhash;
+    if (!FindTransactionsByDestination(dest, vtxhash))
+        throw JSONRPCError(RPC_DATABASE_ERROR, "Cannot search for address");
+
+    int nSkip = 0;
+    int nCount = 100;
+    bool fVerbose = true;
+    if (params.size() > 1)
+        fVerbose = (params[1].get_int() != 0);
+    if (params.size() > 2)
+        nSkip = params[2].get_int();
+    if (params.size() > 3)
+        nCount = params[3].get_int();
+
+    if (nSkip < 0)
+        nSkip += vtxhash.size();
+    if (nSkip < 0)
+        nSkip = 0;
+    if (nCount < 0)
+        nCount = 0;
+
+    std::vector<uint256>::const_iterator it = vtxhash.begin();
+    while (it != vtxhash.end() && nSkip--) it++;
+
+    Array result;
+    while (it != vtxhash.end() && nCount--) {
+        CTransaction tx;
+        uint256 hashBlock;
+        if (!GetTransaction(*it, tx, hashBlock))
+        {
+           // throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Cannot read transaction from disk");
+           Object obj;
+	   obj.push_back(Pair("ERROR", "Cannot read transaction from disk"));
+	   result.push_back(obj);
+	}
+	else
+	{
+
+        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+        ssTx << tx;
+        string strHex = HexStr(ssTx.begin(), ssTx.end());
+        if (fVerbose) {
+            Object object;
+            TxToJSON(tx, hashBlock, object);
+            object.push_back(Pair("hex", strHex));
+            result.push_back(object);
+        } else {
+            result.push_back(strHex);
+        }
+      
+        }
+        it++;
+    }
     return result;
 }

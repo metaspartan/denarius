@@ -183,6 +183,8 @@ public:
         return Write(std::string("version"), nVersion);
     }
 
+	bool ReadAddrIndex(uint160 addrHash, std::vector<uint256>& txHashes);
+    bool WriteAddrIndex(uint160 addrHash, uint256 txHash);
     bool ReadTxIndex(uint256 hash, CTxIndex& txindex);
     bool UpdateTxIndex(uint256 hash, const CTxIndex& txindex);
     bool AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight);

@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 1.0.7
+VERSION = 2.0.5.0
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -12,7 +12,7 @@ lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
 QMAKE_CXXFLAGS = -fpermissive
 
 greaterThan(QT_MAJOR_VERSION, 4) {
-    QT += widgets
+    QT += widgets printsupport
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 }
 
@@ -65,7 +65,8 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
-win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
+# win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
+win32:QMAKE_LFLAGS *= -static
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
@@ -121,9 +122,27 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-contains(USE_LEVELDB, 1) {
-    message(Building with LevelDB transaction index)
-    DEFINES += USE_LEVELDB
+# use: qmake "USE_LEVELDB=1" ( enabled by default; default)
+#  or: qmake "USE_LEVELDB=0" (disabled by default)
+#  or: qmake "USE_LEVELDB=-" (not supported)
+contains(USE_LEVELDB, -) {
+	message(Building with Berkeley DB transaction index)
+	
+	    SOURCES += src/txdb-bdb.cpp \
+		src/bloom.cpp \
+		src/hash.cpp \
+		src/aes_helper.c \
+		src/echo.c \
+		src/jh.c \
+		src/keccak.c
+		
+} else {
+	message(Building with LevelDB transaction index)
+	count(USE_LEVELDB, 0) {
+        USE_LEVELDB=1
+    }
+	
+	DEFINES += USE_LEVELDB
 
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -151,15 +170,7 @@ contains(USE_LEVELDB, 1) {
 	QMAKE_EXTRA_TARGETS += genleveldb
 	# Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
 	QMAKE_CLEAN += $$PWD/src/leveldb/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
-} else {
-    message(Building with Berkeley DB transaction index)
-    SOURCES += src/txdb-bdb.cpp \
-		src/bloom.cpp \
-		src/hash.cpp \
-		src/aes_helper.c \
-		src/echo.c \
-		src/jh.c \
-		src/keccak.c
+
 }
 
 # regenerate src/build.h
@@ -209,9 +220,11 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/mintingfilterproxy.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
+    src/qt/proofofimage.h \
 	src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
+    src/qt/tradingdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -228,17 +241,26 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/smessage.h \
+	src/richlistdb.h \
+	src/richlistdata.h \
     src/main.h \
+	src/core.h \
     src/miner.h \
     src/net.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
+	src/txmempool.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
+	src/darksend.h \
+	src/activemasternode.h \
+	src/instantx.h \
+	src/masternode.h \
+	src/masternodeconfig.h \
+	src/spork.h \
     src/init.h \
-    src/irc.h \
     src/mruset.h \
     src/json/json_spirit_writer_template.h \
     src/json/json_spirit_writer.h \
@@ -282,6 +304,13 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/blockbrowser.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
+	src/qt/qcustomplot.h \
+	src/qt/richlist.h \
+	src/qt/darksendconfig.h \
+	src/qt/masternodemanager.h \
+    src/qt/addeditadrenalinenode.h \
+    src/qt/adrenalinenodeconfigdialog.h \
+    src/qt/termsofuse.h \
     src/version.h \
 	src/bloom.h \
     src/netbase.h \
@@ -293,6 +322,7 @@ HEADERS += src/qt/bitcoingui.h \
 	src/sph_jh.h \
     src/sph_types.h \
     src/threadsafety.h \
+	src/eccryptoverify.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/qt/sendmessagesdialog.h \
@@ -323,22 +353,30 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/multisigaddressentry.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
+    src/qt/proofofimage.cpp \
+    src/qt/termsofuse.cpp \
+    src/qt/tradingdialog.cpp \
     src/alert.cpp \
+	src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
+	src/richlistdb.cpp \
+	src/richlistdata.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
+	src/core.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
-    src/irc.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
+	src/txmempool.cpp \
+	src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
@@ -359,6 +397,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
+	src/rpcdarksend.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -377,10 +416,16 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
+	src/qt/qcustomplot.cpp \
+	src/qt/richlist.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
+	src/qt/darksendconfig.cpp \
+	src/qt/masternodemanager.cpp \
+    src/qt/addeditadrenalinenode.cpp \
+    src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -388,7 +433,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
-    src/stealth.cpp
+    src/stealth.cpp \
+	src/darksend.cpp \
+	src/activemasternode.cpp \
+	src/instantx.cpp \
+	src/masternode.cpp \
+	src/masternodeconfig.cpp \
+	src/spork.cpp
 
 #### DNR sources
 
@@ -414,11 +465,19 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
+	src/qt/forms/richlist.ui \
+    src/qt/forms/proofofimage.ui \
+    src/qt/forms/termsofuse.ui \
+	src/qt/forms/darksendconfig.ui \
+    src/qt/forms/masternodemanager.ui \
+    src/qt/forms/addeditadrenalinenode.ui \
+    src/qt/forms/adrenalinenodeconfigdialog.ui \
 	src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
+    src/qt/forms/tradingdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
 
 contains(USE_QRCODE, 1) {

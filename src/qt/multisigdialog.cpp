@@ -482,7 +482,8 @@ void MultisigDialog::on_signTransactionButton_clicked()
         txin.scriptSig.clear();
         SignSignature(*wallet, prevPubKey, mergedTx, i, SIGHASH_ALL);
         txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, tx.vin[i].scriptSig);
-        if(!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, 0))
+        //if(!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, 0))
+		if(!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
         {
           fComplete = false;
         }
@@ -555,8 +556,9 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     }
 
     // Send the transaction to the local node
-    CTxDB txdb("r");
-    if(!tx.AcceptToMemoryPool(txdb, false))
+    //CTxDB txdb("r");
+    //if(!tx.AcceptToMemoryPool(txdb, false))
+	if (!AcceptToMemoryPool(mempool, tx, true, NULL))
     return;
     SyncWithWallets(tx, NULL, true);
     //(CInv(MSG_TX, txHash), tx);

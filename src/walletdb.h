@@ -78,6 +78,28 @@ public:
 
 };
 
+class CAdrenalineNodeConfig
+{
+public:
+    int nVersion;
+    std::string sAlias;
+    std::string sAddress;
+    std::string sCollateralAddress;
+    std::string sMasternodePrivKey;
+
+    CAdrenalineNodeConfig()
+    {
+	nVersion = 0;
+    }
+
+    IMPLEMENT_SERIALIZE(
+        READWRITE(nVersion);
+        READWRITE(sAlias);
+        READWRITE(sAddress);
+        READWRITE(sCollateralAddress);
+	READWRITE(sMasternodePrivKey);
+    )
+};
 
 /** Access to the wallet database (wallet.dat) */
 class CWalletDB : public CDB
@@ -153,6 +175,16 @@ public:
     {
         // -- set scan_pubkey before reading
         return Read(std::make_pair(std::string("sxAddr"), sxAddr.scan_pubkey), sxAddr);
+    }
+	
+	bool WriteAdrenalineNodeConfig(std::string sAlias, const CAdrenalineNodeConfig& nodeConfig);
+    bool ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig);
+    bool EraseAdrenalineNodeConfig(std::string sAlias);
+    
+    bool WriteWatchOnly(const CTxDestination &dest)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("watch"), CBitcoinAddress(dest).ToString()), '1');
     }
     
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta)

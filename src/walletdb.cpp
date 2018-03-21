@@ -5,6 +5,7 @@
 
 #include "walletdb.h"
 #include "wallet.h"
+#include "key.h"
 #include <boost/version.hpp>
 #include <boost/filesystem.hpp>
 
@@ -53,6 +54,24 @@ bool CWalletDB::WriteAccountingEntry(const CAccountingEntry& acentry)
 {
     return WriteAccountingEntry(++nAccountingEntryNumber, acentry);
 }
+
+bool CWalletDB::WriteAdrenalineNodeConfig(std::string sAlias, const CAdrenalineNodeConfig& nodeConfig)
+{
+    nWalletDBUpdated++;
+    return Write(std::make_pair(std::string("adrenaline"), sAlias), nodeConfig, true);
+}
+
+bool CWalletDB::ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig)
+{
+    return Read(std::make_pair(std::string("adrenaline"), sAlias), nodeConfig);
+}
+
+bool CWalletDB::EraseAdrenalineNodeConfig(std::string sAlias)
+{
+    nWalletDBUpdated++;
+    return Erase(std::make_pair(std::string("adrenaline"), sAlias));
+}
+
 
 int64_t CWalletDB::GetAccountCreditDebit(const string& strAccount)
 {
@@ -286,55 +305,78 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                     wss.fAnyUnordered = true;
             }
         }
+        else if (strType == "watch")
+        {
+            std::string strAddress;
+            ssKey >> strAddress;
+            char fYes;
+            ssValue >> fYes;
+            if (fYes == '1')
+                pwallet->LoadWatchOnly(CBitcoinAddress(strAddress).Get());
+
+            // Watch-only addresses have no birthday information for now,
+            // so set the wallet birthday to the beginning of time.
+            pwallet->nTimeFirstKey = 1;
+        }
         else if (strType == "key" || strType == "wkey")
         {
-            vector<unsigned char> vchPubKey;
+            CPubKey vchPubKey;
             ssKey >> vchPubKey;
+            if (!vchPubKey.IsValid())
+            {
+                strErr = "Error reading wallet database: CPubKey corrupt";
+                return false;
+            }
             CKey key;
+            CPrivKey pkey;
+            uint256 hash = 0;
+
             if (strType == "key")
             {
                 wss.nKeys++;
-                CPrivKey pkey;
                 ssValue >> pkey;
-                key.SetPubKey(vchPubKey);
-                if (!key.SetPrivKey(pkey))
-                {
-                    strErr = "Error reading wallet database: CPrivKey corrupt";
-                    return false;
-                }
-                if (key.GetPubKey() != vchPubKey)
-                {
-                    strErr = "Error reading wallet database: CPrivKey pubkey inconsistency";
-                    return false;
-                }
-                if (!key.IsValid())
-                {
-                    strErr = "Error reading wallet database: invalid CPrivKey";
-                    return false;
-                }
-            }
-            else
-            {
+            } else {
                 CWalletKey wkey;
                 ssValue >> wkey;
-                key.SetPubKey(vchPubKey);
-                if (!key.SetPrivKey(wkey.vchPrivKey))
-                {
-                    strErr = "Error reading wallet database: CPrivKey corrupt";
-                    return false;
-                }
-                if (key.GetPubKey() != vchPubKey)
-                {
-                    strErr = "Error reading wallet database: CWalletKey pubkey inconsistency";
-                    return false;
-                }
-                if (!key.IsValid())
-                {
-                    strErr = "Error reading wallet database: invalid CWalletKey";
-                    return false;
-                }
+                pkey = wkey.vchPrivKey;
             }
-            if (!pwallet->LoadKey(key))
+
+            // Old wallets store keys as "key" [pubkey] => [privkey]
+            // ... which was slow for wallets with lots of keys, because the public key is re-derived from the private key
+            // using EC operations as a checksum.
+            // Newer wallets store keys as "key"[pubkey] => [privkey][hash(pubkey,privkey)], which is much faster while
+            // remaining backwards-compatible.
+            try
+            {
+                ssValue >> hash;
+            }
+            catch(...){}
+
+            bool fSkipCheck = false;
+
+            if (hash != 0)
+            {
+                // hash pubkey/privkey to accelerate wallet load
+                std::vector<unsigned char> vchKey;
+                vchKey.reserve(vchPubKey.size() + pkey.size());
+                vchKey.insert(vchKey.end(), vchPubKey.begin(), vchPubKey.end());
+                vchKey.insert(vchKey.end(), pkey.begin(), pkey.end());
+
+                if (Hash(vchKey.begin(), vchKey.end()) != hash)
+                {
+                    strErr = "Error reading wallet database: CPubKey/CPrivKey corrupt";
+                    return false;
+                }
+
+                fSkipCheck = true;
+            }
+
+            if (!key.Load(pkey, vchPubKey, fSkipCheck))
+            {
+                strErr = "Error reading wallet database: CPrivKey corrupt";
+                return false;
+            }
+            if (!pwallet->LoadKey(key, vchPubKey))
             {
                 strErr = "Error reading wallet database: LoadKey failed";
                 return false;
@@ -438,6 +480,14 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             ssValue >> pwallet->nOrderPosNext;
         }
+        else if (strType == "adrenaline")
+	{
+	    std::string sAlias;
+	    ssKey >> sAlias;
+	    CAdrenalineNodeConfig adrenalineNodeConfig;
+	    ssValue >> adrenalineNodeConfig;
+	    pwallet->mapMyAdrenalineNodes.insert(make_pair(sAlias, adrenalineNodeConfig));
+	}
     } catch (...)
     {
         return false;

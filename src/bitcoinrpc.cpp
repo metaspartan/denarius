@@ -24,6 +24,7 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/version.hpp>
 #include <list>
 
 #define printf OutputDebugStringF
@@ -224,7 +225,7 @@ Value stop(const Array& params, bool fHelp)
     if (params.size() > 0)
         bitdb.SetDetach(params[0].get_bool());
     StartShutdown();
-    return "Denarius server stopping";
+    return "Denarius server stopping, please wait a few minutes for full shutdown...";
 }
 
 
@@ -245,7 +246,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getpeerinfo",            &getpeerinfo,            true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
-	{ "dumpbootstrap",          &dumpbootstrap,          false,  false },
+    { "dumpbootstrap",          &dumpbootstrap,          false,  false },
     { "getdifficulty",          &getdifficulty,          true,   false },
     { "getinfo",                &getinfo,                true,   false },
     { "getsubsidy",             &getsubsidy,             true,   false },
@@ -278,6 +279,7 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
+    { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
     { "gettransaction",         &gettransaction,         false,  false },
@@ -300,10 +302,11 @@ static const CRPCCommand vRPCCommands[] =
     { "getrawtransaction",      &getrawtransaction,      false,  false },
     { "createrawtransaction",   &createrawtransaction,   false,  false },
     { "decoderawtransaction",   &decoderawtransaction,   false,  false },
-	{ "createmultisig",         &createmultisig,         false,  false },
+    { "createmultisig",         &createmultisig,         false,  false },
     { "decodescript",           &decodescript,           false,  false },
     { "signrawtransaction",     &signrawtransaction,     false,  false },
     { "sendrawtransaction",     &sendrawtransaction,     false,  false },
+    { "searchrawtransactions",  &searchrawtransactions,  false,  false },
     { "getcheckpoint",          &getcheckpoint,          true,   false },
     { "reservebalance",         &reservebalance,         false,  true},
     { "checkwallet",            &checkwallet,            false,  true},
@@ -311,7 +314,9 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
-    
+    { "gettxout",               &gettxout,               true,   false },
+    { "importaddress",          &importaddress,          false,  false },
+
     { "getnewstealthaddress",   &getnewstealthaddress,   false,  false},
     { "liststealthaddresses",   &liststealthaddresses,   false,  false},
     { "importstealthaddress",   &importstealthaddress,   false,  false},
@@ -319,8 +324,19 @@ static const CRPCCommand vRPCCommands[] =
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
-    
-    
+
+    /* Dark features */
+    { "darksend",               &darksend,               false,  false},
+    { "getpoolinfo",            &getpoolinfo,            true,   false},
+    { "spork",                  &spork,                  true,   false},
+    { "masternode",             &masternode,             true,   false},
+    { "denominate",             &denominate,             false,  false},
+
+    /* Rich List */
+    { "resetrichlist",          &resetrichlist,          true,   false},
+    { "updaterichlist",         &updaterichlist,         true,   false},
+    { "getrichlist",            &getrichlist,            true,   false},    
+
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
     { "smsglocalkeys",          &smsglocalkeys,          false,  false},
@@ -720,20 +736,36 @@ void ThreadRPCServer(void* parg)
 }
 
 // Forward declaration required for RPCListen
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+template <typename Protocol>
+static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+                             ssl::context& context,
+                             bool fUseSSL,
+                             AcceptedConnection* conn,
+                             const boost::system::error_code& error);
+#else
 template <typename Protocol, typename SocketAcceptorService>
 static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                              ssl::context& context,
                              bool fUseSSL,
                              AcceptedConnection* conn,
                              const boost::system::error_code& error);
+#endif
 
 /**
  * Sets up I/O resources to accept and handle a new connection.
  */
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+template <typename Protocol>
+static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+                   ssl::context& context,
+                   const bool fUseSSL)
+#else
 template <typename Protocol, typename SocketAcceptorService>
 static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                    ssl::context& context,
                    const bool fUseSSL)
+#endif
 {
     // Accept connection
     AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
@@ -741,7 +773,11 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketA
     acceptor->async_accept(
             conn->sslStream.lowest_layer(),
             conn->peer,
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+            boost::bind(&RPCAcceptHandler<Protocol>,
+#else
             boost::bind(&RPCAcceptHandler<Protocol, SocketAcceptorService>,
+#endif
                 acceptor,
                 boost::ref(context),
                 fUseSSL,
@@ -752,12 +788,21 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketA
 /**
  * Accept and handle incoming connection.
  */
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+template <typename Protocol>
+static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+                             ssl::context& context,
+                             const bool fUseSSL,
+                             AcceptedConnection* conn,
+                             const boost::system::error_code& error)
+#else
 template <typename Protocol, typename SocketAcceptorService>
 static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                              ssl::context& context,
                              const bool fUseSSL,
                              AcceptedConnection* conn,
                              const boost::system::error_code& error)
+#endif
 {
     vnThreadsRunning[THREAD_RPCLISTENER]++;
 
@@ -831,8 +876,12 @@ void ThreadRPCServer2(void* parg)
     const bool fUseSSL = GetBoolArg("-rpcssl");
 
     asio::io_service io_service;
-
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+    ssl::context context(ssl::context::sslv23);
+#else
     ssl::context context(io_service, ssl::context::sslv23);
+#endif
+
     if (fUseSSL)
     {
         context.set_options(ssl::context::no_sslv2);
@@ -848,7 +897,11 @@ void ThreadRPCServer2(void* parg)
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+        SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
+#else
         SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+#endif
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
@@ -1143,7 +1196,11 @@ Object CallRPC(const string& strMethod, const Array& params)
     // Connect to localhost
     bool fUseSSL = GetBoolArg("-rpcssl");
     asio::io_service io_service;
+#if defined BOOST_VERSION && BOOST_VERSION >= 106600
+    ssl::context context(ssl::context::sslv23);
+#else
     ssl::context context(io_service, ssl::context::sslv23);
+#endif
     context.set_options(ssl::context::no_sslv2);
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
@@ -1226,14 +1283,18 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getreceivedbyaccount"   && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "listreceivedbyaddress"  && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "listreceivedbyaddress"  && n > 1) ConvertTo<bool>(params[1]);
+    if (strMethod == "listreceivedbyaddress"  && n > 2) ConvertTo<bool>(params[2]);
+    if (strMethod == "listreceivedbyaddress"  && n > 3) ConvertTo<bool>(params[3]);
     if (strMethod == "listreceivedbyaccount"  && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "listreceivedbyaccount"  && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
+    if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockhash"           && n > 0) ConvertTo<int64_t>(params[0]);
-	if (strMethod == "dumpbootstrap"          && n > 1) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "dumpbootstrap"          && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "move"                   && n > 2) ConvertTo<double>(params[2]);
     if (strMethod == "move"                   && n > 3) ConvertTo<int64_t>(params[3]);
     if (strMethod == "sendfrom"               && n > 2) ConvertTo<double>(params[2]);
@@ -1262,15 +1323,26 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "listunspent"            && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "listunspent"            && n > 2) ConvertTo<Array>(params[2]);
     if (strMethod == "getrawtransaction"      && n > 1) ConvertTo<int64_t>(params[1]);
-	if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
     if (strMethod == "createrawtransaction"   && n > 0) ConvertTo<Array>(params[0]);
     if (strMethod == "createrawtransaction"   && n > 1) ConvertTo<Object>(params[1]);
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "gettxout"               && n == 2) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
+    if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
     
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "darksend"               && n > 1) ConvertTo<double>(params[1]);
+
+    if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
+
+    if (strMethod == "addmultisigaddress"     && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);
+    if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
 
     return params;
 }

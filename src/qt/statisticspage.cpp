@@ -87,6 +87,11 @@ void StatisticsPage::updateStatistics()
 
     QString QPeers = QString::number(peers);
     QString qVolume = QString::number(volume);
+	QString mn = "5,000 DNR";
+	QString mn2 = "33% of PoW/PoS block reward";
+	
+	ui->mncost->setText("<b><font color=\"orange\">" + mn + "</font></b>");	
+	ui->mnreward->setText("<b><font color=\"orange\">" + mn2 + "</font></b>");
 
     if(nHeight > heightPrevious)
     {

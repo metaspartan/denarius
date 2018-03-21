@@ -26,6 +26,12 @@ public:
         CMD_REPLY,
         CMD_ERROR
     };
+	
+	enum TabTypes {
+        TAB_INFO = 0,
+        TAB_CONSOLE = 1,
+        TAB_GRAPH = 2
+    };
 
 protected:
     virtual bool eventFilter(QObject* obj, QEvent *event);
@@ -54,6 +60,9 @@ public slots:
     void browseHistory(int offset);
     /** Scroll console view to end */
     void scrollToEnd();
+	
+	/** set which tab has the focus (is visible) */
+    void setTabFocus(enum TabTypes tabType);
 signals:
     // For RPC command executor
     void stopExecutor();

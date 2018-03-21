@@ -196,6 +196,33 @@ bool CTxDB::ScanBatch(const CDataStream &key, string *value, bool *deleted) cons
     return scanner.foundEntry;
 }
 
+bool CTxDB::WriteAddrIndex(uint160 addrHash, uint256 txHash)
+{
+    std::vector<uint256> txHashes;
+    if(!ReadAddrIndex(addrHash, txHashes))
+    {
+	txHashes.push_back(txHash);
+        return Write(make_pair(string("adr"), addrHash), txHashes);
+    }
+    else
+    {
+	if(std::find(txHashes.begin(), txHashes.end(), txHash) == txHashes.end()) 
+    	{
+    	    txHashes.push_back(txHash);
+            return Write(make_pair(string("adr"), addrHash), txHashes);
+	}
+	else
+	{
+	    return true; // already have this tx hash
+	}
+    }
+}
+
+bool CTxDB::ReadAddrIndex(uint160 addrHash, std::vector<uint256>& txHashes)
+{
+    return Read(make_pair(string("adr"), addrHash), txHashes);
+}
+
 bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex& txindex)
 {
     txindex.SetNull();

@@ -279,6 +279,7 @@ void RPCConsole::setClientModel(ClientModel *model)
 
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
+        ui->isLiteMode->setChecked(model->isLiteMode());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }
@@ -431,6 +432,11 @@ void RPCConsole::on_tabWidget_currentChanged(int index)
 void RPCConsole::on_openDebugLogfileButton_clicked()
 {
     GUIUtil::openDebugLogfile();
+}
+
+void RPCConsole::setTabFocus(enum TabTypes tabType)
+{
+    ui->tabWidget->setCurrentIndex(tabType);
 }
 
 void RPCConsole::scrollToEnd()

@@ -123,11 +123,9 @@ Value importprivkey(const Array& params, bool fHelp)
     if (fWalletUnlockStakingOnly)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for staking only.");
 
-    CKey key;
-    bool fCompressed;
-    CSecret secret = vchSecret.GetSecret(fCompressed);
-    key.SetSecret(secret, fCompressed);
-    CKeyID vchAddress = key.GetPubKey().GetID();
+    CKey key = vchSecret.GetKey();
+    CPubKey pubkey = key.GetPubKey();
+    CKeyID vchAddress = pubkey.GetID();
     {
         LOCK2(cs_main, pwalletMain->cs_wallet);
 
@@ -148,6 +146,51 @@ Value importprivkey(const Array& params, bool fHelp)
 
         pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
         pwalletMain->ReacceptWalletTransactions();
+    }
+
+    return Value::null;
+}
+
+Value importaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error(
+            "importaddress <address> [label] [rescan=true]\n"
+            "Adds an address that can be watched as if it were in your wallet but cannot be used to spend.");
+
+    CBitcoinAddress address(params[0].get_str());
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Denarius address");
+    CTxDestination dest;
+    dest = address.Get();
+
+    string strLabel = "";
+    if (params.size() > 1)
+        strLabel = params[1].get_str();
+
+    // Whether to perform rescan after import
+    bool fRescan = true;
+    if (params.size() > 2)
+        fRescan = params[2].get_bool();
+
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+
+        // Don't throw error in case an address is already there
+        if (pwalletMain->HaveWatchOnly(dest))
+            return Value::null;
+
+        pwalletMain->MarkDirty();
+        pwalletMain->SetAddressBookName(dest, strLabel);
+
+        if (!pwalletMain->AddWatchOnly(dest))
+            throw JSONRPCError(RPC_WALLET_ERROR, "Error adding address to wallet");
+
+        if (fRescan)
+        {
+            pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
+            pwalletMain->ReacceptWalletTransactions();
+        }
     }
 
     return Value::null;
@@ -185,11 +228,9 @@ Value importwallet(const Array& params, bool fHelp)
         if (!vchSecret.SetString(vstr[0]))
             continue;
 
-        bool fCompressed;
-        CKey key;
-        CSecret secret = vchSecret.GetSecret(fCompressed);
-        key.SetSecret(secret, fCompressed);
-        CKeyID keyid = key.GetPubKey().GetID();
+        CKey key = vchSecret.GetKey();
+        CPubKey pubkey = key.GetPubKey();
+        CKeyID keyid = pubkey.GetID();
 
         if (pwalletMain->HaveKey(keyid)) {
             printf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString().c_str());
@@ -259,11 +300,10 @@ Value dumpprivkey(const Array& params, bool fHelp)
     CKeyID keyID;
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
-    CSecret vchSecret;
-    bool fCompressed;
-    if (!pwalletMain->GetSecret(keyID, vchSecret, fCompressed))
+    CKey vchSecret;
+    if (!pwalletMain->GetKey(keyID, vchSecret))
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + strAddress + " is not known");
-    return CBitcoinSecret(vchSecret, fCompressed).ToString();
+    return CBitcoinSecret(vchSecret).ToString();
 }
 
 Value dumpwallet(const Array& params, bool fHelp)
@@ -306,19 +346,15 @@ Value dumpwallet(const Array& params, bool fHelp)
         const CKeyID &keyid = it->second;
         std::string strTime = EncodeDumpTime(it->first);
         std::string strAddr = CBitcoinAddress(keyid).ToString();
-        bool IsCompressed;
 
         CKey key;
         if (pwalletMain->GetKey(keyid, key)) {
             if (pwalletMain->mapAddressBook.count(keyid)) {
-                CSecret secret = key.GetSecret(IsCompressed);
-                file << strprintf("%s %s label=%s # addr=%s\n", CBitcoinSecret(secret, IsCompressed).ToString().c_str(), strTime.c_str(), EncodeDumpString(pwalletMain->mapAddressBook[keyid]).c_str(), strAddr.c_str());
+                file << strprintf("%s %s label=%s # addr=%s\n", CBitcoinSecret(key).ToString().c_str(), strTime.c_str(), EncodeDumpString(pwalletMain->mapAddressBook[keyid]).c_str(), strAddr.c_str());
             } else if (setKeyPool.count(keyid)) {
-                CSecret secret = key.GetSecret(IsCompressed);
-                file << strprintf("%s %s reserve=1 # addr=%s\n", CBitcoinSecret(secret, IsCompressed).ToString().c_str(), strTime.c_str(), strAddr.c_str());
+                file << strprintf("%s %s reserve=1 # addr=%s\n", CBitcoinSecret(key).ToString().c_str(), strTime.c_str(), strAddr.c_str());
             } else {
-                CSecret secret = key.GetSecret(IsCompressed);
-                file << strprintf("%s %s change=1 # addr=%s\n", CBitcoinSecret(secret, IsCompressed).ToString().c_str(), strTime.c_str(), strAddr.c_str());
+                file << strprintf("%s %s change=1 # addr=%s\n", CBitcoinSecret(key).ToString().c_str(), strTime.c_str(), strAddr.c_str());
             }
         }
     }

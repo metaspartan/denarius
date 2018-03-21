@@ -217,10 +217,13 @@ int main(int argc, char *argv[])
         // Regenerate startup link, to fix links to old versions
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
-
+		
+		boost::thread_group threadGroup;
+		
         BitcoinGUI window;
         guiref = &window;
-        if(AppInit2())
+		
+        if(AppInit2(threadGroup))
         {
             {
                 // Put this in a block, so that the Model objects are cleaned up before
@@ -228,6 +231,9 @@ int main(int argc, char *argv[])
 
                 if (splashref)
                     splash.finish(&window);
+                
+                //make sure user has agreed to TOU
+                window.checkTOU();
 
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(pwalletMain, &optionsModel);
