@@ -1202,62 +1202,6 @@ int64_t CWallet::GetBalance() const
     return nTotal;
 }
 
-int64_t CWallet::GetBalanceNoLocks() const
-{
-    int64_t nTotal = 0;
-    {
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
-        {
-            const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted())
-                nTotal += pcoin->GetAvailableCredit();
-        }
-    }
-
-    return nTotal;
-}
-
-CAmount CWallet::GetDenominatedBalance(bool onlyDenom, bool onlyUnconfirmed) const
-{
-	if(fLiteMode) return 0;
-
-    int64_t nTotal = 0;
-    {
-        LOCK(cs_wallet);
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
-        {
-            const CWalletTx* pcoin = &(*it).second;
-
-            int nDepth = pcoin->GetDepthInMainChain();
-
-            // skip conflicted
-            if(nDepth < 0) continue;
-
-            bool unconfirmed = (!pcoin->IsFinal() || (!pcoin->IsTrusted() && nDepth == 0));
-            if(onlyUnconfirmed != unconfirmed) continue;
-
-            for (unsigned int i = 0; i < pcoin->vout.size(); i++)
-            {
-				//isminetype mine = IsMine(pcoin->vout[i]);
-		//bool mine = IsMine(pcoin->vout[i]);
-                //COutput out = COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO);
-		//COutput out = COutput(pcoin, i, nDepth, mine);
-
-                //if(IsSpent(out.tx->GetHash(), i)) continue;
-		if(pcoin->IsSpent(i)) continue;
-                if(!IsMine(pcoin->vout[i])) continue;
-                if(onlyDenom != IsDenominatedAmount(pcoin->vout[i].nValue)) continue;
-
-                nTotal += pcoin->vout[i].nValue;
-            }
-        }
-    }
-
-
-
-    return nTotal;
-}
-
 int64_t CWallet::GetUnconfirmedBalance() const
 {
     int64_t nTotal = 0;
