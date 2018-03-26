@@ -607,8 +607,6 @@ public:
     bool AcceptToMemoryPool(bool fLimitFree=true);
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
-	  int GetTransactionLockSignatures() const;
-    bool IsTransactionLockTimedOut() const;
 };
 
 

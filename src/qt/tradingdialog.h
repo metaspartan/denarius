@@ -99,9 +99,9 @@ private slots:
     unsigned char* HMAC_SHA256_SIGNER(QString UrlToSign,QString Secretkey);
     QString sendRequest(QString url, QString method = "GET", QString body = QString("{\"market\":\"DNR/BTC\"}"));
     //QString sendRequest(QString url);
-    string encryptDecrypt(string toEncrypt, string password);
+    std::string encryptDecrypt(std::string toEncrypt, std::string password);
     char * base64(const unsigned char *input, int length);
-    string url_encode(const string &value);
+    std::string url_encode(const std::string &value);
     QJsonObject GetResultObjectFromJSONObject(QString response);
     QJsonObject GetResultObjectFromJSONArray(QString response);
     QJsonArray  GetResultArrayFromJSONObject(QString response);

@@ -325,17 +325,15 @@ static const CRPCCommand vRPCCommands[] =
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
 
-    /* Dark features */
-    { "darksend",               &darksend,               false,  false},
+    /* Masternode features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
     { "masternode",             &masternode,             true,   false},
-    { "denominate",             &denominate,             false,  false},
 
     /* Rich List */
     { "resetrichlist",          &resetrichlist,          true,   false},
     { "updaterichlist",         &updaterichlist,         true,   false},
-    { "getrichlist",            &getrichlist,            true,   false},    
+    { "getrichlist",            &getrichlist,            true,   false},
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -350,11 +348,11 @@ static const CRPCCommand vRPCCommands[] =
     { "smsginbox",              &smsginbox,              false,  false},
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
-    
-    
-    
-    
-    
+
+
+
+
+
 };
 
 CRPCTable::CRPCTable()
@@ -1333,9 +1331,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "gettxout"               && n == 2) ConvertTo<int64_t>(params[1]);
     if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
-    
+
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
-    if (strMethod == "darksend"               && n > 1) ConvertTo<double>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 

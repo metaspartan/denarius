@@ -7,7 +7,6 @@
 #include "init.h"
 #include "util.h"
 #include "masternode.h"
-#include "instantx.h"
 #include "ui_interface.h"
 
 #include <openssl/rand.h>
@@ -791,7 +790,7 @@ void CDarkSendPool::ChargeRandomFees(){
 // Check for various timeouts (queue objects, darksend, etc)
 //
 void CDarkSendPool::CheckTimeout(){
-    if(!fEnableDarksend && !fMasterNode) return;
+    if(!fMasterNode) return;
 
     // catching hanging sessions
     if(!fMasterNode) {
@@ -1209,7 +1208,6 @@ bool CDarkSendPool::StatusUpdate(int newState, int newEntriesCount, int newAccep
             printf("CDarkSendPool::StatusUpdate - entry not accepted by masternode \n");
             UnlockCoins();
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
-            DoAutomaticDenominating(); //try another masternode
         }
         if(sessionFoundMasternode) return true;
     }
@@ -1275,7 +1273,7 @@ bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNod
                     printf("CDarkSendPool::Sign - My entries are not correct! Refusing to sign. %d entries %d target. \n", foundOutputs, targetOuputs);
                     return false;
                 }
-                
+
                 if(fDebug) printf("CDarkSendPool::Sign - Signing my input %i\n", mine);
                 if(!SignSignature(*pwalletMain, prevPubKey, finalTransaction, mine, int(SIGHASH_ALL|SIGHASH_ANYONECANPAY))) { // changes scriptSig
                     if(fDebug) printf("CDarkSendPool::Sign - Unable to sign my own transaction! \n");
@@ -1307,8 +1305,6 @@ void CDarkSendPool::NewBlock()
     lastNewBlock = GetTime();
 
     darkSendPool.CheckTimeout();
-
-    if(!fEnableDarksend) return;
 
     if(!fMasterNode){
         //denominate all non-denominated inputs every 25 minutes.
@@ -1345,268 +1341,6 @@ void CDarkSendPool::ClearLastMessage()
 {
     lastMessage = "";
 }
-
-//
-// Passively run Darksend in the background to anonymize funds based on the given configuration.
-//
-// This does NOT run by default for daemons, only for QT.
-//
-bool CDarkSendPool::DoAutomaticDenominating(bool fDryRun, bool ready)
-{
-    LOCK(cs_darksend);
-
-    if(IsInitialBlockDownload()) return false;
-
-    if(fMasterNode) return false;
-    if(state == POOL_STATUS_ERROR || state == POOL_STATUS_SUCCESS) return false;
-
-    if(pindexBest->nHeight - cachedLastSuccess < minBlockSpacing) {
-        printf("CDarkSendPool::DoAutomaticDenominating - Last successful darksend action was too recent\n");
-        strAutoDenomResult = _("Last successful darksend action was too recent.");
-        return false;
-    }
-    if(!fEnableDarksend) {
-        if(fDebug) printf("CDarkSendPool::DoAutomaticDenominating - Darksend is disabled\n");
-        strAutoDenomResult = _("Darksend is disabled.");
-        return false;
-    }
-
-    if (!fDryRun && pwalletMain->IsLocked()){
-        strAutoDenomResult = _("Wallet is locked.");
-        return false;
-    }
-
-    if(darkSendPool.GetState() != POOL_STATUS_ERROR && darkSendPool.GetState() != POOL_STATUS_SUCCESS){
-        if(darkSendPool.GetMyTransactionCount() > 0){
-            return true;
-        }
-    }
-
-    if(vecMasternodes.size() == 0){
-        if(fDebug) printf("CDarkSendPool::DoAutomaticDenominating - No masternodes detected\n");
-        strAutoDenomResult = _("No masternodes detected.");
-        return false;
-    }
-
-    // ** find the coins we'll use
-    std::vector<CTxIn> vCoins;
-    std::vector<COutput> vCoins2;
-    int64_t nValueMin = CENT;
-    int64_t nValueIn = 0;
-
-    // should not be less than fees in DARKSEND_FEE + few (lets say 5) smallest denoms
-    int64_t nLowestDenom = DARKSEND_FEE + darkSendDenominations[darkSendDenominations.size() - 1]*5;
-
-    // if there are no DS collateral inputs yet
-    if(!pwalletMain->HasCollateralInputs())
-        // should have some additional amount for them
-        nLowestDenom += (DARKSEND_COLLATERAL*4)+DARKSEND_FEE*2;
-
-    int64_t nBalanceNeedsAnonymized = nAnonymizeDenariusAmount*COIN - pwalletMain->GetAnonymizedBalance();
-
-    // if balanceNeedsAnonymized is more than pool max, take the pool max
-    if(nBalanceNeedsAnonymized > DARKSEND_POOL_MAX) nBalanceNeedsAnonymized = DARKSEND_POOL_MAX;
-
-    // if balanceNeedsAnonymized is more than non-anonymized, take non-anonymized
-    int64_t nBalanceNotYetAnonymized = pwalletMain->GetBalance() - pwalletMain->GetAnonymizedBalance();
-    if(nBalanceNeedsAnonymized > nBalanceNotYetAnonymized) nBalanceNeedsAnonymized = nBalanceNotYetAnonymized;
-
-    if(nBalanceNeedsAnonymized < nLowestDenom)
-    {
-//        if(nBalanceNeedsAnonymized > nValueMin)
-//            nBalanceNeedsAnonymized = nLowestDenom;
-//        else
-//        {
-            printf("DoAutomaticDenominating : No funds detected in need of denominating \n");
-            strAutoDenomResult = _("No funds detected in need of denominating.");
-            return false;
-//        }
-    }
-
-    if (fDebug) printf("DoAutomaticDenominating : nLowestDenom=%lu, nBalanceNeedsAnonymized=%lu\n", nLowestDenom, nBalanceNeedsAnonymized);
-
-    // select coins that should be given to the pool
-    if (!pwalletMain->SelectCoinsDark(nValueMin, nBalanceNeedsAnonymized, vCoins, nValueIn, 0, nDarksendRounds))
-    {
-        nValueIn = 0;
-        vCoins.clear();
-
-        if (pwalletMain->SelectCoinsDark(nValueMin, 9999999*COIN, vCoins, nValueIn, -2, 0))
-        {
-            if(!fDryRun) return CreateDenominated(nBalanceNeedsAnonymized);
-            return true;
-        } else {
-            printf("DoAutomaticDenominating : Can't denominate - no compatible inputs left\n");
-            strAutoDenomResult = _("Can't denominate: no compatible inputs left.");
-            return false;
-        }
-
-    }
-
-    //check to see if we have the collateral sized inputs, it requires these
-    if(!pwalletMain->HasCollateralInputs()){
-        if(!fDryRun) MakeCollateralAmounts();
-        return true;
-    }
-
-    if(fDryRun) return true;
-
-    // initial phase, find a masternode
-    if(!sessionFoundMasternode){
-        int nUseQueue = rand()%100;
-
-        sessionTotalValue = pwalletMain->GetTotalValue(vCoins);
-
-        //randomize the amounts we mix
-        if(sessionTotalValue > nBalanceNeedsAnonymized) sessionTotalValue = nBalanceNeedsAnonymized;
-
-        double fDenariusSubmitted = (sessionTotalValue / CENT);
-        printf("Submitting Darksend for %f DNR CENT - sessionTotalValue %lu\n", fDenariusSubmitted, sessionTotalValue);
-
-        if(pwalletMain->GetDenominatedBalance(true, true) > 0){ //get denominated unconfirmed inputs
-            printf("DoAutomaticDenominating -- Found unconfirmed denominated outputs, will wait till they confirm to continue.\n");
-            strAutoDenomResult = _("Found unconfirmed denominated outputs, will wait till they confirm to continue.");
-            return false;
-        }
-
-        //don't use the queues all of the time for mixing
-        if(nUseQueue > 33){
-
-            // Look through the queues and see if anything matches
-            BOOST_FOREACH(CDarksendQueue& dsq, vecDarksendQueue){
-                CService addr;
-                if(dsq.time == 0) continue;
-
-                if(!dsq.GetAddress(addr)) continue;
-                if(dsq.IsExpired()) continue;
-
-                int protocolVersion;
-                if(!dsq.GetProtocolVersion(protocolVersion)) continue;
-                if(protocolVersion < MIN_PEER_PROTO_VERSION) continue;
-
-                //non-denom's are incompatible
-                if((dsq.nDenom & (1 << 4))) continue;
-
-                //don't reuse masternodes
-                BOOST_FOREACH(CTxIn usedVin, vecMasternodesUsed){
-                    if(dsq.vin == usedVin) {
-                        continue;
-                    }
-                }
-
-                // Try to match their denominations if possible
-                if (!pwalletMain->SelectCoinsByDenominations(dsq.nDenom, nValueMin, nBalanceNeedsAnonymized, vCoins, vCoins2, nValueIn, 0, nDarksendRounds)){
-                    printf("DoAutomaticDenominating - Couldn't match denominations %d\n", dsq.nDenom);
-                    continue;
-                }
-
-                // connect to masternode and submit the queue request
-                if(ConnectNode((CAddress)addr, NULL, true)){
-                    submittedToMasternode = addr;
-
-                    LOCK(cs_vNodes);
-                    BOOST_FOREACH(CNode* pnode, vNodes)
-                    {
-                        if((CNetAddr)pnode->addr != (CNetAddr)submittedToMasternode) continue;
-
-                        std::string strReason;
-                        if(txCollateral == CTransaction()){
-                            if(!pwalletMain->CreateCollateralTransaction(txCollateral, strReason)){
-                                printf("DoAutomaticDenominating -- dsa error:%s\n", strReason.c_str());
-                                return false;
-                            }
-                        }
-
-                        vecMasternodesUsed.push_back(dsq.vin);
-                        sessionDenom = dsq.nDenom;
-
-                        pnode->PushMessage("dsa", sessionDenom, txCollateral);
-                        printf("DoAutomaticDenominating --- connected (from queue), sending dsa for %d %d - %s\n", sessionDenom, GetDenominationsByAmount(sessionTotalValue), pnode->addr.ToString().c_str());
-                        strAutoDenomResult = "";
-                        return true;
-                    }
-                } else {
-                    printf("DoAutomaticDenominating --- error connecting \n");
-                    strAutoDenomResult = _("Error connecting to masternode.");
-                    return DoAutomaticDenominating();
-                }
-
-                dsq.time = 0; //remove node
-            }
-        }
-
-        //shuffle masternodes around before we try to connect
-        std::random_shuffle ( vecMasternodes.begin(), vecMasternodes.end() );
-        int i = 0;
-
-        // otherwise, try one randomly
-        while(i < 10)
-        {
-            //don't reuse masternodes
-            BOOST_FOREACH(CTxIn usedVin, vecMasternodesUsed) {
-                if(vecMasternodes[i].vin == usedVin){
-                    i++;
-                    continue;
-                }
-            }
-            if(vecMasternodes[i].protocolVersion < MIN_PEER_PROTO_VERSION) {
-                i++;
-                continue;
-            }
-
-            if(vecMasternodes[i].nLastDsq != 0 &&
-                vecMasternodes[i].nLastDsq + CountMasternodesAboveProtocol(darkSendPool.MIN_PEER_PROTO_VERSION)/5 > darkSendPool.nDsqCount){
-                i++;
-                continue;
-            }
-
-            lastTimeChanged = GetTimeMillis();
-            printf("DoAutomaticDenominating -- attempt %d connection to masternode %s\n", i, vecMasternodes[i].addr.ToString().c_str());
-            if(ConnectNode((CAddress)vecMasternodes[i].addr, NULL, true)){
-                submittedToMasternode = vecMasternodes[i].addr;
-
-                LOCK(cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, vNodes)
-                {
-                    if((CNetAddr)pnode->addr != (CNetAddr)vecMasternodes[i].addr) continue;
-
-                    std::string strReason;
-                    if(txCollateral == CTransaction()){
-                        if(!pwalletMain->CreateCollateralTransaction(txCollateral, strReason)){
-                            printf("DoAutomaticDenominating -- create collateral error:%s\n", strReason.c_str());
-                            return false;
-                        }
-                    }
-
-                    vecMasternodesUsed.push_back(vecMasternodes[i].vin);
-
-                    std::vector<int64_t> vecAmounts;
-                    pwalletMain->ConvertList(vCoins, vecAmounts);
-                    sessionDenom = GetDenominationsByAmounts(vecAmounts);
-
-                    pnode->PushMessage("dsa", sessionDenom, txCollateral);
-                    printf("DoAutomaticDenominating --- connected, sending dsa for %d - denom %d\n", sessionDenom, GetDenominationsByAmount(sessionTotalValue));
-                    strAutoDenomResult = "";
-                    return true;
-                }
-            } else {
-                i++;
-                continue;
-            }
-        }
-
-        strAutoDenomResult = _("No compatible masternode found.");
-        return false;
-    }
-
-    strAutoDenomResult = "";
-    if(!ready) return true;
-
-    if(sessionDenom == 0) return true;
-
-    return false;
-}
-
 
 bool CDarkSendPool::PrepareDarksendDenominate()
 {
@@ -2121,7 +1855,7 @@ void ThreadCheckDarkSendPool()
         MilliSleep(1000);
         //printf("ThreadCheckDarkSendPool::check timeout\n");
         darkSendPool.CheckTimeout();
-        
+
         int mnTimeout = 150; //2.5 minutes
 
         if(c % mnTimeout == 0){
@@ -2155,9 +1889,8 @@ void ThreadCheckDarkSendPool()
         }
 
             masternodePayments.CleanPaymentList();
-            CleanTransactionLocksList();
         }
-        
+
         int mnRefresh = 90; //(5*5)
 
         //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes
@@ -2193,24 +1926,6 @@ void ThreadCheckDarkSendPool()
             //if we've used 1/5 of the masternode list, then clear the list.
             if((int)vecMasternodesUsed.size() > (int)vecMasternodes.size() / 5)
                 vecMasternodesUsed.clear();
-        }
-
-        //auto denom every 2.5 minutes (liquidity provides try less often)
-        if(c % (60*5)*(nLiquidityProvider+1) == 0){
-            if(nLiquidityProvider!=0){
-                int nRand = rand() % (101+nLiquidityProvider);
-                //about 1/100 chance of starting over after 4 rounds.
-                if(nRand == 50+nLiquidityProvider && pwalletMain->GetAverageAnonymizedRounds() > 8){
-                    darkSendPool.SendRandomPaymentToSelf();
-                    int nLeftToAnon = ((pwalletMain->GetBalance() - pwalletMain->GetAnonymizedBalance())/COIN)-3;
-                    if(nLeftToAnon > 999) nLeftToAnon = 999;
-                    nAnonymizeDenariusAmount = (rand() % nLeftToAnon)+3;
-                } else {
-                    darkSendPool.DoAutomaticDenominating();
-                }
-            } else {
-                darkSendPool.DoAutomaticDenominating();
-            }
         }
     }
 }

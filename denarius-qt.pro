@@ -256,7 +256,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/stealth.h \
 	src/darksend.h \
 	src/activemasternode.h \
-	src/instantx.h \
 	src/masternode.h \
 	src/masternodeconfig.h \
 	src/spork.h \
@@ -306,7 +305,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
 	src/qt/richlist.h \
-	src/qt/darksendconfig.h \
 	src/qt/masternodemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
@@ -422,7 +420,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/darksendconfig.cpp \
 	src/qt/masternodemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
@@ -436,7 +433,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/stealth.cpp \
 	src/darksend.cpp \
 	src/activemasternode.cpp \
-	src/instantx.cpp \
 	src/masternode.cpp \
 	src/masternodeconfig.cpp \
 	src/spork.cpp
@@ -468,7 +464,6 @@ FORMS += \
 	src/qt/forms/richlist.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
-	src/qt/forms/darksendconfig.ui \
     src/qt/forms/masternodemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \

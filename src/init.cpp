@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-    
+
 #include "init.h"
 #include "main.h"
 #include "txdb.h"
@@ -114,9 +114,9 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
-        
+
         SecureMsgShutdown();
-        
+
         mempool.AddTransactionsUpdated(1);
 //        CTxDB().Close();
         bitdb.Flush(false);
@@ -164,9 +164,9 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
-    
+
     boost::thread_group threadGroup;
-    
+
     bool fRet = false;
     try
     {
@@ -484,7 +484,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     nDerivationMethodIndex = 0;
 
     fTestNet = GetBoolArg("-testnet");
-    
+
     //if (fTestNet)
 
     if (mapArgs.count("-bind")) {
@@ -547,7 +547,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         fDebugSmsg = GetBoolArg("-debugsmsg");
     }
     fNoSmsg = GetBoolArg("-nosmsg");
-    
+
     bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
 #if !defined(WIN32) && !defined(QT_GUI)
@@ -623,7 +623,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
-    
+
     if (mapArgs.count("-masternodepaymentskey")) // masternode payments priv key
     {
         if (!masternodePayments.SetPrivKey(GetArg("-masternodepaymentskey", "")))
@@ -973,20 +973,20 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     printf("Loaded %i addresses from peers.dat  %"PRId64"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
-    
-    
+
+
     // ********************************************************* Step 10.1: startup secure messaging
-    
+
     SecureMsgStart(fNoSmsg, GetBoolArg("-smsgscanchain"));
-    
+
     // ********************************************************* Step 11: start node
-    
+
     if (!CheckDiskSpace())
         return false;
-    
+
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
-    
+
     fMasterNode = GetBoolArg("-masternode", false);
     if(fMasterNode) {
         printf("Masternode Enabled\n");
@@ -1020,7 +1020,6 @@ bool AppInit2(boost::thread_group& threadGroup)
         }
     }
 
-
     //lite mode disables all Masternode and Darksend related functionality
     fLiteMode = GetBoolArg("-litemode", false);
     if(fMasterNode && fLiteMode){
@@ -1036,8 +1035,8 @@ bool AppInit2(boost::thread_group& threadGroup)
 
 
     RandAddSeedPerfmon();
-    
-    
+
+
     // reindex addresses found in blockchain
     if(GetBoolArg("-reindexaddr", false))
     {
@@ -1078,7 +1077,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
-    
+
     if (pwalletMain) {
     BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
     {

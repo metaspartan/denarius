@@ -38,8 +38,6 @@ static const int INIT_PROTO_VERSION = 21212;
 // disconnect from peers older than this proto version
 static const int MIN_PEER_PROTO_VERSION = 21213;
 
-static const int MIN_INSTANTX_PROTO_VERSION = 21213;
-
 // Don't forget to change proto in DARKSEND.h as well!!
 static const int MIN_MN_PROTO_VERSION = 21213;
 
