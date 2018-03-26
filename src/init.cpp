@@ -391,16 +391,6 @@ std::string HelpMessage()
         "  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
         "  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
 
-        "\n" + _("Darksend options:") + "\n" +
-        "  -enabledarksend=<n>          " + _("Enable use of automated darksend for funds stored in this wallet (0-1, default: 0)") + "\n" +
-        "  -darksendrounds=<n>          " + _("Use N separate masternodes to anonymize funds  (2-8, default: 2)") + "\n" +
-        "  -anonymizedenariusamount=<n> " + _("Keep N Denarius anonymized (default: 0)") + "\n" +
-        "  -liquidityprovider=<n>       " + _("Provide liquidity to Darksend by infrequently mixing coins on a continual basis (0-100, default: 0, 1=very frequent, high fees, 100=very infrequent, low fees)") + "\n" +
-
-        "\n" + _("InstantX options:") + "\n" +
-        "  -enableinstantx=<n>    " + _("Enable instantx, show confirmations for locked transactions (bool, default: true)") + "\n" +
-        "  -instantxdepth=<n>     " + _("Show N confirmations for a successfully locked transaction (0-9999, default: 1)") + "\n" +
-        
         "\n" + _("Secure messaging options:") + "\n" +
         "  -nosmsg                                  " + _("Disable secure messaging.") + "\n" +
         "  -debugsmsg                               " + _("Log extra debug messages.") + "\n" +
@@ -1030,31 +1020,6 @@ bool AppInit2(boost::thread_group& threadGroup)
         }
     }
 
-    fEnableDarksend = GetBoolArg("-enabledarksend", false);
-
-    nDarksendRounds = GetArg("-darksendrounds", 2);
-    if(nDarksendRounds > 16) nDarksendRounds = 16;
-    if(nDarksendRounds < 1) nDarksendRounds = 1;
-
-    nLiquidityProvider = GetArg("-liquidityprovider", 0); //0-100
-    if(nLiquidityProvider != 0) {
-        darkSendPool.SetMinBlockSpacing(std::min(nLiquidityProvider,100)*15);
-        fEnableDarksend = true;
-        nDarksendRounds = 99999;
-    }
-
-    nAnonymizeDenariusAmount = GetArg("-anonymizedenariusamount", 0);
-    if(nAnonymizeDenariusAmount > 999999) nAnonymizeDenariusAmount = 999999;
-    if(nAnonymizeDenariusAmount < 2) nAnonymizeDenariusAmount = 2;
-
-    bool fEnableInstantX = GetBoolArg("-enableinstantx", true);
-    if(fEnableInstantX){
-        nInstantXDepth = GetArg("-instantxdepth", 5);
-        if(nInstantXDepth > 60) nInstantXDepth = 60;
-        if(nInstantXDepth < 0) nAnonymizeDenariusAmount = 0;
-    } else {
-        nInstantXDepth = 0;
-    }
 
     //lite mode disables all Masternode and Darksend related functionality
     fLiteMode = GetBoolArg("-litemode", false);
@@ -1063,30 +1028,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 
     printf("fLiteMode %d\n", fLiteMode);
-    printf("fEnableDarksend %d\n", fEnableDarksend);
     printf("fMasterNode %d\n", fMasterNode);
-    printf("nInstantXDepth %d\n", nInstantXDepth);
-    printf("Darksend rounds %d\n", nDarksendRounds);
-    printf("Anonymize Denarius Amount %d\n", nAnonymizeDenariusAmount);
-
-    /* Denominations
-       A note about convertability. Within Darksend pools, each denomination
-       is convertable to another.
-       For example:
-       1DNR+1000 == (.1DNR+100)*10
-       10DNR+10000 == (1DNR+1000)*10
-    */
-    darkSendDenominations.push_back( (100000      * COIN)+100000000 );    
-    darkSendDenominations.push_back( (10000       * COIN)+10000000 );
-    darkSendDenominations.push_back( (1000        * COIN)+1000000 );
-    darkSendDenominations.push_back( (100         * COIN)+100000 );
-    darkSendDenominations.push_back( (10          * COIN)+10000 );
-    darkSendDenominations.push_back( (1           * COIN)+1000 );
-    darkSendDenominations.push_back( (.1          * COIN)+100 );
-    /* Disabled till we need them
-    darkSendDenominations.push_back( (.01      * COIN)+10 );
-    darkSendDenominations.push_back( (.001     * COIN)+1 );
-    */
 
     darkSendPool.InitCollateralAddress();
 

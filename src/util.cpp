@@ -57,19 +57,16 @@ namespace boost {
 
 using namespace std;
 
-//Dark  features
+//Masternode  features
 bool fMasterNode = false;
 string strMasterNodePrivKey = "";
 string strMasterNodeAddr = "";
 bool fLiteMode = false;
-int nInstantXDepth = 1;
-int nDarksendRounds = 2;
-int nAnonymizeDenariusAmount = 500;
-int nLiquidityProvider = 0;
+
 /** Spork enforcement enabled time */
 int64_t enforceMasternodePaymentsTime = 4085657524;
 bool fSuccessfullyLoaded = false;
-bool fEnableDarksend = false;
+
 /** All denominations used by darksend */
 std::vector<int64_t> darkSendDenominations;
 

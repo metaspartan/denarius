@@ -180,16 +180,16 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	richListPage = new RichListPage(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
-    
+
     tradingDialogPage = new tradingDialog(this);
     tradingDialogPage->setObjectName("tradingDialog");
-	
+
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
     transactionView = new TransactionView(this);
     vbox->addWidget(transactionView);
     transactionsPage->setLayout(vbox);
-	
+
 	mintingPage = new QWidget(this);
     QVBoxLayout *vboxMinting = new QVBoxLayout();
     mintingView = new MintingView(this);
@@ -202,7 +202,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     sendCoinsPage = new SendCoinsDialog(this);
     messagePage = new MessagePage(this);
-	
+
     masternodeManagerPage = new MasternodeManager(this);
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
@@ -290,7 +290,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
     connect(tradingAction, SIGNAL(triggered()), tradingDialogPage, SLOT(InitTrading()));
-        
+
     rpcConsole = new RPCConsole(this);
     connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
 
@@ -320,24 +320,24 @@ void BitcoinGUI::createActions()
     overviewAction->setCheckable(true);
     overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
     tabGroup->addAction(overviewAction);
-	
+
 	statisticsAction = new QAction(QIcon(":/icons/statistics"), tr("&Statistics"), this);
     statisticsAction->setToolTip(tr("View statistics"));
     statisticsAction->setCheckable(true);
     tabGroup->addAction(statisticsAction);
-	
+
 	blockAction = new QAction(QIcon(":/icons/block"), tr("&Block Explorer"), this);
     blockAction->setToolTip(tr("Explore the Denarius Blockchain"));
     blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
-	
+
 	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     marketAction->setToolTip(tr("Market Data"));
     marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
     marketAction->setCheckable(true);
     tabGroup->addAction(marketAction);
-	
+
 	//chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
     //chatAction->setToolTip(tr("View chat"));
     //chatAction->setCheckable(true);
@@ -372,33 +372,33 @@ void BitcoinGUI::createActions()
     messageAction->setCheckable(true);
     messageAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
     tabGroup->addAction(messageAction);
-	
+
 	mintingAction = new QAction(QIcon(":/icons/stake"), tr("&Staking"), this);
     mintingAction->setToolTip(tr("Show your staking capacity"));
     mintingAction->setCheckable(true);
     mintingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(mintingAction);
-    
+
     tradingAction = new QAction(QIcon(":/icons/trade"), tr("&Trading"), this);
     tradingAction->setToolTip(tr("Trading on Cryptopia"));
     tradingAction->setCheckable(true);
     tabGroup->addAction(tradingAction);
-	
+
 	richListPageAction = new QAction(QIcon(":/icons/richlist"), tr("&Rich List"), this);
     richListPageAction->setToolTip(tr("Show the top Denarius balances."));
     richListPageAction->setCheckable(true);
     tabGroup->addAction(richListPageAction);
-	
+
     masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
     masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
     masternodeManagerAction->setCheckable(true);
     tabGroup->addAction(masternodeManagerAction);
-    
+
     proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
     proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));
     proofOfImageAction ->setCheckable(true);
     tabGroup->addAction(proofOfImageAction);
-	
+
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 
@@ -463,7 +463,7 @@ void BitcoinGUI::createActions()
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
-	
+
 	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
     openInfoAction->setStatusTip(tr("Show diagnostic information"));
     openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
@@ -472,7 +472,7 @@ void BitcoinGUI::createActions()
     openConfEditorAction->setStatusTip(tr("Open configuration file"));
     openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
     openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
-	
+
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -485,7 +485,7 @@ void BitcoinGUI::createActions()
     connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
     connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
-	
+
 	// Jump directly to tabs in RPC-console
     connect(openInfoAction, SIGNAL(triggered()), this, SLOT(showInfo()));
     connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showConsole()));
@@ -525,7 +525,7 @@ void BitcoinGUI::createMenuBar()
     settings->addAction(lockWalletAction);
     settings->addSeparator();
     settings->addAction(optionsAction);
-	
+
 	QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
 	tools->addAction(openInfoAction);
 	tools->addAction(openRPCConsoleAction);
@@ -545,7 +545,7 @@ void BitcoinGUI::createMenuBar()
 void BitcoinGUI::createToolBars()
 {
     fLiteMode = GetBoolArg("-litemode", false);
-    
+
     mainIcon = new QLabel (this);
     mainIcon->setPixmap(QPixmap(":images/vertical"));
     mainIcon->show();
@@ -647,7 +647,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 
         // Put transaction list in tabs
         transactionView->setModel(walletModel);
-		
+
 		mintingView->setModel(walletModel);
 
         overviewPage->setModel(walletModel);
@@ -1037,9 +1037,9 @@ void BitcoinGUI::showConfEditor()
 		QMessageBox::warning(this, tr("No denarius.conf"),
         tr("Your denarius.conf does not exist! Please create one in your Denarius data directory."),
         QMessageBox::Ok, QMessageBox::Ok);
-	}		
+	}
 	//GUIUtil::openConfigfile();
-	
+
 }
 
 void BitcoinGUI::showMNConfEditor()
@@ -1070,10 +1070,10 @@ void BitcoinGUI::gotoMarketBrowser()
 {
     marketAction->setChecked(true);
     centralWidget->setCurrentWidget(marketBrowser);
-	
+
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-	
+
 }
 
 void BitcoinGUI::gotoProofOfImagePage()
@@ -1200,10 +1200,10 @@ void BitcoinGUI::gotoChatPage()
 {
     chatAction->setChecked(true);
     centralWidget->setCurrentWidget(chatWindow);
-	
+
 	exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-	
+
 }
 */
 void BitcoinGUI::gotoSignMessageTab(QString addr)
@@ -1314,16 +1314,6 @@ void BitcoinGUI::setEncryptionStatus(int status)
         lockWalletAction->setVisible(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
         break;
-    case WalletModel::UnlockedForAnonymizationOnly:
-        labelEncryptionIcon->show();
-        labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_open").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
-        labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b> for anonymization only"));
-        encryptWalletAction->setChecked(true);
-        changePassphraseAction->setEnabled(true);
-        unlockWalletAction->setVisible(true);
-        lockWalletAction->setVisible(true);
-        encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
-        break;
     case WalletModel::Locked:
         disconnect(labelEncryptionIcon, SIGNAL(clicked()), unlockWalletAction, SLOT(trigger()));
         disconnect(labelEncryptionIcon, SIGNAL(clicked()),   lockWalletAction, SLOT(trigger()));
@@ -1375,10 +1365,10 @@ void BitcoinGUI::unlockWallet()
     if(!walletModel)
         return;
     // Unlock wallet when requested by wallet model
-    if(walletModel->getEncryptionStatus() == WalletModel::Locked || walletModel->getEncryptionStatus() == WalletModel::UnlockedForAnonymizationOnly)
+    if(walletModel->getEncryptionStatus() == WalletModel::Locked)
     {
         AskPassphraseDialog::Mode mode = sender() == unlockWalletAction ?
-              AskPassphraseDialog::UnlockStaking : AskPassphraseDialog::Unlock;
+        AskPassphraseDialog::UnlockStaking : AskPassphraseDialog::Unlock;
         AskPassphraseDialog dlg(mode, this);
         dlg.setModel(walletModel);
         dlg.exec();

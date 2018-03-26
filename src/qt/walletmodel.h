@@ -6,7 +6,6 @@
 #include <map>
 
 #include "allocators.h" /* for SecureString */
-#include "instantx.h"
 #include "wallet.h"
 
 class OptionsModel;
@@ -33,8 +32,7 @@ public:
     QString narration;
     int typeInd;
     qint64 amount;
-	AvailableCoinsType inputType;
-    bool useInstantX;
+	  AvailableCoinsType inputType;
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
@@ -57,28 +55,25 @@ public:
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
         NarrationTooLong,
-        Aborted,
-        AnonymizeOnlyUnlocked
+        Aborted
     };
 
     enum EncryptionStatus
     {
         Unencrypted,  // !wallet->IsCrypted()
         Locked,       // wallet->IsCrypted() && wallet->IsLocked()
-        Unlocked,      // wallet->IsCrypted() && !wallet->IsLocked()
-		UnlockedForAnonymizationOnly
+        Unlocked      // wallet->IsCrypted() && !wallet->IsLocked()
     };
 
     OptionsModel *getOptionsModel();
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
-	MintingTableModel *getMintingTableModel();
+	  MintingTableModel *getMintingTableModel();
 
     qint64 getBalance() const;
     qint64 getStake() const;
     qint64 getUnconfirmedBalance() const;
     qint64 getImmatureBalance() const;
-	qint64 getAnonymizedBalance() const;
     int getNumTransactions() const;
     EncryptionStatus getEncryptionStatus() const;
 
@@ -103,10 +98,8 @@ public:
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
     // Passphrase only needed when unlocking
-    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString(), bool anonymizeOnly=false);
+    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString());
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
-	// Is wallet unlocked for anonymization only?
-    bool isAnonymizeOnlyUnlocked();
     // Wallet backup
     bool backupWallet(const QString &filename);
 
@@ -139,7 +132,7 @@ public:
     void lockCoin(COutPoint& output);
     void unlockCoin(COutPoint& output);
     void listLockedCoins(std::vector<COutPoint>& vOutpts);
-	CWallet* getWallet();
+	  CWallet* getWallet();
 
 private:
     CWallet *wallet;
@@ -150,17 +143,15 @@ private:
 
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
-	MintingTableModel *mintingTableModel;
+	  MintingTableModel *mintingTableModel;
 
     // Cache some values to be able to detect changes
     qint64 cachedBalance;
     qint64 cachedStake;
     qint64 cachedUnconfirmedBalance;
     qint64 cachedImmatureBalance;
-    qint64 cachedAnonymizedBalance;
     qint64 cachedNumTransactions;
     int cachedTxLocks;
-    int cachedDarksendRounds;
     EncryptionStatus cachedEncryptionStatus;
     int cachedNumBlocks;
 
@@ -183,7 +174,7 @@ public slots:
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 anonymizedBalance);
+    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);

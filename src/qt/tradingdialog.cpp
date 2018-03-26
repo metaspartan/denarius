@@ -47,7 +47,7 @@ tradingDialog::tradingDialog(QWidget *parent) :
     ui->setupUi(this);
     timerid = 0;
     qDebug() <<  "Expected this";
-    
+
     ui->BtcAvailableLabel->setTextFormat(Qt::RichText);
     ui->DNRAvailableLabel->setTextFormat(Qt::RichText);
     ui->BuyCostLabel->setTextFormat(Qt::RichText);
@@ -138,7 +138,8 @@ void tradingDialog::InitTrading()
         //Get default exchange info for the qlabels
         UpdaterFunction();
         qDebug() << "Updater called";
-      if(this->timerid == 0)
+
+        if(this->timerid == 0)
         {
           //Timer is not set,lets create one.
           this->timer = new QTimer(this);
@@ -161,13 +162,11 @@ void tradingDialog::UpdaterFunction(){
 }
 
 QString tradingDialog::GetMarketSummary(){
-
      QString Response = sendRequest("https://www.cryptopia.co.nz/api/GetMarket/DNR_BTC");
      return Response;
 }
 
 QString tradingDialog::GetOrderBook(){
-
       QString  Response = sendRequest("https://www.cryptopia.co.nz/api/GetMarketOrders/DNR_BTC/10000");
       return Response;
 }
@@ -178,15 +177,13 @@ QString tradingDialog::GetMarketHistory(){
 }
 
 QString tradingDialog::CancelOrder(QString OrderId){
+    QString URL = "https://www.cryptopia.co.nz/api/CancelTrade";
 
-        QString URL = "https://www.cryptopia.co.nz/api/CancelTrade";
-
-        QString Response = sendRequest(URL, "POST", QString("{\"Type\":\"trade\", \"OrderId\":") + OrderId + QString("}"));
-        return Response;
+    QString Response = sendRequest(URL, "POST", QString("{\"Type\":\"trade\", \"OrderId\":") + OrderId + QString("}"));
+    return Response;
 }
 
 QString tradingDialog::BuyDNR(QString OrderType, double Quantity, double Rate){
-
     QString str = "";
     QString URL = "https://www.cryptopia.co.nz/api/SubmitTrade";
             /*URL += OrderType;
@@ -1061,7 +1058,7 @@ void tradingDialog::on_UpdateKeys_clicked(bool Save, bool Load)
 
    QJsonDocument jsonResponse = QJsonDocument::fromJson(GetAccountHistory().toUtf8()); //get json from str.
    QJsonObject ResponseObject = jsonResponse.object();                                 //get json obj
- 
+
   if ( ResponseObject.value("Success").toBool() == false){
        QMessageBox::information(this,"API Configuration Failed","API configuration was unsuccessful.");
 

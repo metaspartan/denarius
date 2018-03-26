@@ -13,7 +13,6 @@
 #include "init.h"
 #include "ui_interface.h"
 #include "kernel.h"
-#include "instantx.h"
 #include "darksend.h"
 #include "masternode.h"
 #include "spork.h"
@@ -355,7 +354,7 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
 
 //     unsigned int nDataOut = 0;
 //     unsigned int nTxnOut = 0;
-    
+
 //     txnouttype whichType;
 //     BOOST_FOREACH(const CTxOut& txout, vout) {
 //         if (!::IsStandard(txout.scriptPubKey, whichType))
@@ -737,17 +736,6 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
     string reason;
     if (!fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptToMemoryPool : nonstandard transaction : %s\n", reason.c_str());
-    
-    // ----------- instantX transaction scanning -----------
-    /*
-    BOOST_FOREACH(const CTxIn& in, tx.vin){
-        if(mapLockedInputs.count(in.prevout)){
-            if(mapLockedInputs[in.prevout] != tx.GetHash()){
-                return tx.DoS(0, error("AcceptableInputs : conflicts with existing transaction lock: %s", reason.c_str()));
-            }
-        }
-    }
-    */
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -804,13 +792,13 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
                           error("AcceptToMemoryPool : too many sigops %s, %d > %d",
                                 hash.ToString(), nSigOps, MAX_TX_SIGOPS));
 								*/
-		unsigned int nSigOps = tx.GetLegacySigOpCount();						
+		unsigned int nSigOps = tx.GetLegacySigOpCount();
 		nSigOps += tx.GetP2SHSigOpCount(mapInputs);
         if (nSigOps > MAX_TX_SIGOPS)
             return tx.DoS(0,
                           error("AcceptToMemoryPool : too many sigops %s, %d > %d",
                                 hash.ToString().c_str(), nSigOps, MAX_TX_SIGOPS));
-								
+
         int64_t nFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
 
@@ -902,21 +890,9 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         return tx.DoS(100, error("AcceptableInputs : coinstake as individual tx"));
 
     // Rather not work on nonstandard transactions (unless -testnet)
-    string reason;   
+    string reason;
     if (false && !fTestNet && !IsStandardTx(tx, reason))
         return error("AcceptableInputs : nonstandard transaction");
-    
-    // ----------- instantX transaction scanning -----------
-
-    /*
-    BOOST_FOREACH(const CTxIn& in, tx.vin){
-        if(mapLockedInputs.count(in.prevout)){
-            if(mapLockedInputs[in.prevout] != tx.GetHash()){
-                return tx.DoS(0, error("AcceptableInputs : conflicts with existing transaction lock: %s", reason.c_str()));
-            }
-        }
-    }    
-    */
 
     // is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -959,7 +935,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         // Check for non-standard pay-to-script-hash in inputs
         //if (!fTestNet() && !tx.AreInputsStandard(mapInputs))
           //  return error("AcceptToMemoryPool : nonstandard transaction input");
-	  
+
 	    // Check that the transaction doesn't have an excessive number of
         // sigops, making it impossible to mine. Since the coinbase transaction
         // itself can contain sigops MAX_TX_SIGOPS is less than
@@ -971,7 +947,7 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
             return tx.DoS(0,
                           error("AcceptToMemoryPool : too many sigops %s, %d > %d",
                                 hash.ToString().c_str(), nSigOps, MAX_TX_SIGOPS));
-	  
+
         int64_t nFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
 
@@ -1022,8 +998,6 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
     return true;
 }
 
-//More InstantX code
-
 int GetInputAge(CTxIn& vin)
 {
     const uint256& prevHash = vin.prevout.hash;
@@ -1041,41 +1015,6 @@ int GetInputAge(CTxIn& vin)
     }
     else
         return 0;
-}
-
-
-int GetInputAgeIX(uint256 nTXHash, CTxIn& vin)
-{
-    int sigs = 0;
-    int nResult = GetInputAge(vin);
-    if(nResult < 0) nResult = 0;
-
-    if (nResult < 6){
-        std::map<uint256, CTransactionLock>::iterator i = mapTxLocks.find(nTXHash);
-        if (i != mapTxLocks.end()){
-            sigs = (*i).second.CountSignatures();
-        }
-        if(sigs >= INSTANTX_SIGNATURES_REQUIRED){
-            return nInstantXDepth+nResult;
-        }
-    }
-
-    return -1;
-}
-
-int GetIXConfirmations(uint256 nTXHash)
-{
-    int sigs = 0;
-
-    std::map<uint256, CTransactionLock>::iterator i = mapTxLocks.find(nTXHash);
-    if (i != mapTxLocks.end()){
-        sigs = (*i).second.CountSignatures();
-    }
-    if(sigs >= INSTANTX_SIGNATURES_REQUIRED){
-        return nInstantXDepth;
-    }
-
-    return 0;
 }
 
 int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const
@@ -1264,15 +1203,15 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 	int64_t nSubsidy = 1 * COIN;
 
 	if (pindexBest->nHeight == 1)
-		nSubsidy = 1000000 * COIN;  // 10% Premine	
+		nSubsidy = 1000000 * COIN;  // 10% Premine
 	else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
-        nSubsidy = 1 * COIN/2;	
+        nSubsidy = 1 * COIN/2;
 	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m DNR (33% will go to hybrid masternodes)
-		nSubsidy = 3 * COIN;	
+		nSubsidy = 3 * COIN;
 	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m DNR
 		nSubsidy = 4 * COIN;
 	else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m DNR
-		nSubsidy = 3 * COIN;		
+		nSubsidy = 3 * COIN;
     else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
 		nSubsidy = 0; // PoW Ends
 
@@ -1295,7 +1234,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 
     int64_t nSubsidy;
     nSubsidy = nCoinAge * nRewardCoinYear / 365 / COIN;
-    
+
     //PoS Fixed on Block 640k v2.0+ DeNaRiUs
     if (pindexBest->nHeight >= MAINNET_POSFIX || fTestNet)
         nSubsidy = nCoinAge * nRewardCoinYear / 365;
@@ -1474,7 +1413,7 @@ void Misbehaving(NodeId pnode, int howmuch)
             {
                 printf("Misbehaving: %s (%d -> %d) BAN THRESHOLD EXCEEDED\n", pn->addrName.c_str(), pn->nMisbehavior-howmuch, pn->nMisbehavior);
                 //pn->fShouldBan = true;
-            } 
+            }
             else
                 printf("Misbehaving: %s (%d -> %d)\n", pn->addrName.c_str(), pn->nMisbehavior-howmuch, pn->nMisbehavior);
 
@@ -1843,7 +1782,7 @@ void CBlock::RebuildAddressIndex(CTxDB& txdb)
     {
         uint256 hashTx = tx.GetHash();
 	// inputs
-	if(!tx.IsCoinBase()) 
+	if(!tx.IsCoinBase())
 	{
             MapPrevTx mapInputs;
 	    map<uint256, CTxIndex> mapQueuedChangesT;
@@ -1867,7 +1806,7 @@ void CBlock::RebuildAddressIndex(CTxDB& txdb)
 			}
 		    }
 	    }
- 	    
+
         }
 	// outputs
 	BOOST_FOREACH(const CTxOut &atxout, tx.vout) {
@@ -1891,7 +1830,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         return false;
 
     unsigned int flags = SCRIPT_VERIFY_NOCACHE;
-    
+
     /* // Currently don't need
     if(V3(nTime))
     {
@@ -2002,7 +1941,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (nStakeReward > nCalculatedStakeReward)
             return DoS(100, error("ConnectBlock() : coinstake pays too much(actual=%"PRId64" vs calculated=%"PRId64")", nStakeReward, nCalculatedStakeReward));
     }
-    
+
     // ----------- masternode payments -----------
     // Once upon a time, People were really interested in DNR.
     // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
@@ -2014,9 +1953,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // After a lot of: "How much for MN" and "When MN?"
     // We hope to proudly present you:
     // ----------- hybrid masternode payments -----------
-    
+
     bool MasternodePayments = false;
-    
+
     if (fTestNet){
         if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){ // Block 75k Testnet
             MasternodePayments = true;
@@ -2034,7 +1973,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(fDebug) { printf("CheckBlock() : Masternode payments disabled\n"); }
         }
     }
-   
+
     if(MasternodePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
@@ -2048,7 +1987,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 if (!vtx[1].GetCoinAge(txdb, nCoinAge))
                     return error("CheckBlock-POS : %s unable to get coin age for coinstake, Can't Calculate Masternode Reward\n", vtx[1].GetHash().ToString().substr(0,10).c_str());
                 int64_t nCalculatedStakeReward = GetProofOfStakeReward(nCoinAge, nFees);
-                
+
                 // Calculate expected masternodePaymentAmmount
                 CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, nCalculatedStakeReward);
 
@@ -2067,7 +2006,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                         foundPayee = true; //doesn't require a specific payee
                         if(fDebug) { printf("CheckBlock-POS() : Using non-specific masternode payments %ld\n", pindexBest->nHeight+1); }
                     }
-                    
+
                     // Check transaction for payee and if contains masternode reward payment
                     if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[1].vout.size()); }
                     for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
@@ -2139,7 +2078,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 if(fDebug) { printf("CheckBlock-POW() : Skipping masternode payment check - nHeight %ld Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
             }
         }
-        
+
          else {
             if(fDebug) { printf("CheckBlock() : pindex is null, skipping masternode payment check\n"); }
         }
@@ -2162,13 +2101,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (!txdb.UpdateTxIndex((*mi).first, (*mi).second))
             return error("ConnectBlock() : UpdateTxIndex failed");
     }
-	
+
 	// Write Address Index
     BOOST_FOREACH(CTransaction& tx, vtx)
     {
         uint256 hashTx = tx.GetHash();
 	// inputs
-	if(!tx.IsCoinBase()) 
+	if(!tx.IsCoinBase())
 	{
             MapPrevTx mapInputs;
 	    map<uint256, CTxIndex> mapQueuedChangesT;
@@ -2192,7 +2131,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 			}
 		    }
 	    }
- 	    
+
         }
 
 	// outputs
@@ -2474,7 +2413,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 // ppcoin: total coin age spent in transaction, in the unit of coin-days.
 // Only those coins meeting minimum age requirement counts. As those
 // transactions not in main chain are not currently indexed so we
-// might not find out about their coin age. Older transactions are 
+// might not find out about their coin age. Older transactions are
 // guaranteed to be in main chain by sync-checkpoint. This rule is
 // introduced to help nodes establish a consistent view of the coin
 // age (trust score) of competing branches.
@@ -2653,8 +2592,8 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
             return DoS(100, error("CheckBlock() : second tx is not coinstake"));
         for (unsigned int i = 2; i < vtx.size(); i++)
             if (vtx[i].IsCoinStake())
-                return DoS(100, error("CheckBlock() : more than one coinstake"));	
-	
+                return DoS(100, error("CheckBlock() : more than one coinstake"));
+
 		// Check coinstake timestamp
 		if (!CheckCoinStakeTimestamp(GetBlockTime(), (int64_t)vtx[1].nTime))
 			return DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%"PRId64" nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
@@ -2674,7 +2613,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         if (GetBlockTime() < (int64_t)tx.nTime)
             return DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
     }
-    
+
     // Check for duplicate txids. This is caught by ConnectInputs(),
     // but catching it earlier avoids a potential DoS attack:
     set<uint256> uniqueTx;
@@ -2987,7 +2926,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
         return true;
 
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
-    
+
     CKey key;
     CTransaction txCoinStake;
     int64_t nSearchTime = txCoinStake.nTime; // search to current time
@@ -3148,7 +3087,7 @@ bool LoadBlockIndex(bool fAllowNew)
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         txNew.vout[0].SetEmpty();
-        
+
         CBlock block;
         block.vtx.push_back(txNew);
         block.hashPrevBlock = 0;
@@ -3181,8 +3120,8 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("block.hashMerkleRoot == %s\n", block.hashMerkleRoot.ToString().c_str());
         printf("block.nTime = %u \n", block.nTime);
         printf("block.nNonce = %u \n", block.nNonce);
-        
-        
+
+
         //// debug print
         assert(block.hashMerkleRoot == uint256("0xc6d8e8f56c25cac33567e571a3497bfc97f715140fcfe16d971333b38e4ee0f2"));
         block.print();
@@ -3905,7 +3844,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                     if (inv.hash == pfrom->hashContinue)
                     {
                         // ppcoin: send latest proof-of-work block to allow the
-                        // download node to accept as orphan (proof-of-stake 
+                        // download node to accept as orphan (proof-of-stake
                         // block might be rejected by stake connection check)
                         vector<CInv> vInv;
                         vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
@@ -4110,10 +4049,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         if (ProcessBlock(pfrom, &block))
             mapAlreadyAskedFor.erase(inv);
-        
+
         if (block.nDoS)
             pfrom->Misbehaving(block.nDoS);
-        
+
         if (fSecMsgEnabled)
             SecureMsgScanBlock(block);
     }
@@ -4308,14 +4247,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     {
         if (fSecMsgEnabled)
             SecureMsgReceiveData(pfrom, strCommand, vRecv);
-		
+
         if(!fLiteMode) {
             ProcessMessageDarksend(pfrom, strCommand, vRecv);
             ProcessMessageMasternode(pfrom, strCommand, vRecv);
-            ProcessMessageInstantX(pfrom, strCommand, vRecv);
             ProcessSpork(pfrom, strCommand, vRecv);
         }
-        
+
         // Ignore unknown commands for extensibility
     }
 
@@ -4486,7 +4424,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                 pto->PushMessage("ping");
             }
         }
-		
+
 		/*
 		// Start block sync
         if (pto->fStartSync && !fImporting && !fReindex) {
@@ -4632,13 +4570,13 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
         if (!vGetData.empty())
             pto->PushMessage("getdata", vGetData);
-        
+
         if (fSecMsgEnabled)
             SecureMsgSendData(pto, fSendTrickle); // should be in cs_main?
     }
-    
-    
-    
+
+
+
     return true;
 }
 
