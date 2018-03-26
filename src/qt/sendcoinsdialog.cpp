@@ -34,7 +34,6 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     ui->addButton->setIcon(QIcon());
     ui->clearButton->setIcon(QIcon());
     ui->sendButton->setIcon(QIcon());
-	ui->denominateButton->setIcon(QIcon());
 #endif
 
 #if QT_VERSION >= 0x040700
@@ -360,7 +359,7 @@ void SendCoinsDialog::setBalance(qint64 balance, qint64 stake, qint64 unconfirme
     Q_UNUSED(immatureBalance);
     if(!model || !model->getOptionsModel())
         return;
-	
+
 	int unit = model->getOptionsModel()->getDisplayUnit();
 
     uint64_t bal = balance;
@@ -371,7 +370,7 @@ void SendCoinsDialog::setBalance(qint64 balance, qint64 stake, qint64 unconfirme
 void SendCoinsDialog::updateDisplayUnit()
 {
     if(model && model->getOptionsModel())
-    {		
+    {
 	uint64_t balance = model->getBalance();
 
         // Update labelBalance with the current balance and the current unit
@@ -486,7 +485,7 @@ void SendCoinsDialog::coinControlChangeEdited(const QString & text)
             {
                 CPubKey pubkey;
                 CKeyID keyid;
-                CBitcoinAddress(text.toStdString()).GetKeyID(keyid);   
+                CBitcoinAddress(text.toStdString()).GetKeyID(keyid);
                 if (model->getPubKey(keyid, pubkey))
                     ui->labelCoinControlChangeLabel->setText(tr("(no label)"));
                 else

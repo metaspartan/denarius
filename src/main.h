@@ -10,7 +10,6 @@
 #include "bignum.h"
 #include "sync.h"
 #include "net.h"
-#include "txmempool.h"
 #include "script.h"
 #include "scrypt.h"
 #include "hashblock.h"
@@ -130,7 +129,7 @@ extern std::set<CWallet*> setpwalletRegistered;
 extern unsigned char pchMessageStart[4];
 extern std::map<uint256, CBlock*> mapOrphanBlocks;
 
-extern CTxMemPool mempool;
+//extern CTxMemPool mempool;
 
 // Settings
 extern int64_t nTransactionFee;
@@ -184,14 +183,6 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 void StakeMiner(CWallet *pwallet);
 void ResendWalletTransactions(bool fForce = false);
 
-
-
-/** (try to) add transaction to memory pool **/
-bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
-                        bool* pfMissingInputs);
-
-bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
-                        bool* pfMissingInputs);
 
 
 bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint256> &vtxhash);
@@ -538,7 +529,7 @@ public:
                        std::map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx,
                        const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags = STANDARD_SCRIPT_VERIFY_FLAGS, bool fValidateSig = true);
     bool CheckTransaction() const;
-    //bool AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs=NULL);
+    bool AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs=NULL);
     bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
 
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
@@ -604,7 +595,8 @@ public:
     int GetDepthInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }
     bool IsInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChainINTERNAL(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
-    bool AcceptToMemoryPool(bool fLimitFree=true);
+    bool AcceptToMemoryPool(CTxDB& txdb);
+    bool AcceptToMemoryPool();
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
 };
@@ -1472,5 +1464,53 @@ public:
     unsigned char GetRejectCode() const { return chRejectCode; }
     std::string GetRejectReason() const { return strRejectReason; }
 };
+
+class CTxMemPool
+{
+private:
+    unsigned int nTransactionsUpdated;
+public:
+    mutable CCriticalSection cs;
+    std::map<uint256, CTransaction> mapTx;
+    std::map<COutPoint, CInPoint> mapNextTx;
+
+    bool accept(CTxDB& txdb, CTransaction &tx,
+                bool* pfMissingInputs);
+    bool addUnchecked(const uint256& hash, CTransaction &tx);
+    bool remove(const CTransaction &tx, bool fRecursive = false);
+    bool removeConflicts(const CTransaction &tx);
+    void clear();
+    void queryHashes(std::vector<uint256>& vtxid);
+    unsigned int GetTransactionsUpdated() const;
+    void AddTransactionsUpdated(unsigned int n);
+
+    unsigned long size() const
+    {
+        LOCK(cs);
+        return mapTx.size();
+    }
+
+    bool exists(uint256 hash) const
+    {
+        LOCK(cs);
+        return (mapTx.count(hash) != 0);
+    }
+
+    bool lookup(uint256 hash, CTransaction& result) const
+    {
+        LOCK(cs);
+        std::map<uint256, CTransaction>::const_iterator i = mapTx.find(hash);
+        if (i == mapTx.end()) return false;
+        result = i->second;
+        return true;
+    }
+};
+
+extern CTxMemPool mempool;
+
+/** (try to) add transaction to memory pool **/
+
+bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
+                        bool* pfMissingInputs);
 
 #endif

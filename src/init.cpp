@@ -51,27 +51,6 @@ enum Checkpoints::CPMode CheckpointsMode;
 // Shutdown
 //
 
-bool ShutdownRequested()
-{
-    return fRequestShutdown;
-}
-
-void WaitForShutdown(boost::thread_group* threadGroup)
-{
-    bool fShutdown = ShutdownRequested();
-    // Tell the main threads to shutdown.
-    while (!fShutdown)
-    {
-        MilliSleep(200);
-        fShutdown = ShutdownRequested();
-    }
-    if (threadGroup)
-    {
-        threadGroup->interrupt_all();
-        threadGroup->join_all();
-    }
-}
-
 void ExitTimeout(void* parg)
 {
 #ifdef WIN32
@@ -89,7 +68,6 @@ void StartShutdown()
     // Without UI, Shutdown() can simply be started in a new thread
     NewThread(Shutdown, NULL);
 #endif
-    fRequestShutdown = true;
 }
 
 void Shutdown(void* parg)
@@ -164,9 +142,6 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
-
-    boost::thread_group threadGroup;
-
     bool fRet = false;
     try
     {
@@ -232,7 +207,7 @@ bool AppInit(int argc, char* argv[])
     }
 #endif
 
-        fRet = AppInit2(threadGroup);
+        fRet = AppInit2();
     }
     catch (std::exception& e) {
         PrintException(&e, "AppInit()");
@@ -242,16 +217,8 @@ bool AppInit(int argc, char* argv[])
     //if (!fRet)
         //Shutdown(NULL);
     if (!fRet)
-    {
-        threadGroup.interrupt_all();
-        // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
-        // the startup-failure cases to make sure they don't result in a hang due to some
-        // thread-blocking-waiting-for-another-thread-during-startup case
-    } else {
-        WaitForShutdown(&threadGroup);
-    }
-    Shutdown(NULL);
-    return fRet;
+      Shutdown(NULL);
+      return fRet;
 }
 
 extern void noui_connect();
@@ -419,7 +386,7 @@ bool InitSanityCheck(void)
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group& threadGroup)
+bool AppInit2()
 {
     // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -1026,13 +993,9 @@ bool AppInit2(boost::thread_group& threadGroup)
         return InitError("You can not start a masternode in litemode");
     }
 
-    printf("fLiteMode %d\n", fLiteMode);
     printf("fMasterNode %d\n", fMasterNode);
 
-    darkSendPool.InitCollateralAddress();
-
-    threadGroup.create_thread(boost::bind(&ThreadCheckDarkSendPool));
-
+    NewThread(ThreadCheckDarkSendPool, NULL);
 
     RandAddSeedPerfmon();
 
@@ -1077,15 +1040,6 @@ bool AppInit2(boost::thread_group& threadGroup)
 
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
-
-    if (pwalletMain) {
-    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-    {
-        uiInterface.NotifyAdrenalineNodeChanged(adrenaline.second);
-    }
-        // Run a thread to flush wallet periodically
-        //threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
-    }
 
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,

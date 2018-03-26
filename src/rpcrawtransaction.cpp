@@ -151,7 +151,7 @@ Value listunspent(const Array& params, bool fHelp)
             "{txid, vout, scriptPubKey, amount, confirmations}");
 
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));
-    
+
     // Fix Spent Coins First
     int nMismatchSpent;
     int64_t nBalanceInQuestion;
@@ -569,8 +569,8 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     else
     {
         // push to local node
-        //CTxDB txdb("r");
-        if (!AcceptToMemoryPool(mempool, tx, true, NULL))
+        CTxDB txdb("r");
+        if (!tx.AcceptToMemoryPool(txdb))
             throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected");
 
         SyncWithWallets(tx, NULL, true);
@@ -717,7 +717,7 @@ Value searchrawtransactions(const Array &params, bool fHelp)
         } else {
             result.push_back(strHex);
         }
-      
+
         }
         it++;
     }

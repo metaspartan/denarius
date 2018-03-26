@@ -32,7 +32,6 @@ public:
     QString narration;
     int typeInd;
     qint64 amount;
-	  AvailableCoinsType inputType;
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */

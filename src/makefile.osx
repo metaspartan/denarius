@@ -33,7 +33,7 @@ LIBS += \
  $(DEPSDIR)/lib/libboost_program_options-mt.a \
  $(DEPSDIR)/lib/libboost_thread-mt.a \
  $(DEPSDIR)/lib/libssl.a \
- $(DEPSDIR)/lib/libcrypto.a 
+ $(DEPSDIR)/lib/libcrypto.a
 else
 LIBS += \
  -ldb_cxx-4.8 \
@@ -42,7 +42,7 @@ LIBS += \
  -lboost_program_options-mt \
  -lboost_thread-mt \
  -lssl \
- -lcrypto 
+ -lcrypto
 endif
 
 DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE
@@ -79,8 +79,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	obj/core.o \
-	obj/txmempool.o \
+	  obj/core.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \

@@ -250,7 +250,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
-	src/txmempool.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
@@ -373,7 +372,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
-	src/txmempool.cpp \
 	src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
