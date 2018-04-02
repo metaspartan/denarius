@@ -915,7 +915,7 @@ bool CDarksendQueue::CheckSignature()
 
 
 //TODO: Rename/move to core
-void ThreadCheckDarkSendPool()
+void ThreadCheckDarkSendPool(void* parg)
 {
     // Make this thread recognisable as the wallet flushing thread
     RenameThread("denarius-mn");

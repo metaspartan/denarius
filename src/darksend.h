@@ -428,6 +428,6 @@ public:
 
 void ConnectToDarkSendMasterNodeWinner();
 
-void ThreadCheckDarkSendPool();
+void ThreadCheckDarkSendPool(void* parg);
 
 #endif
