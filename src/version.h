@@ -30,16 +30,16 @@ static const int DATABASE_VERSION = 21212;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 21213; //Protocol remains the same with v2.0.0.0
+static const int PROTOCOL_VERSION = 25213; //Protocol remains the same with v2.0.0.0 (Protocol changes to 25213 in Denarius v2.5)
 
 // intial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 21212;
 
 // disconnect from peers older than this proto version
-static const int MIN_PEER_PROTO_VERSION = 21213;
+static const int MIN_PEER_PROTO_VERSION = 25213;
 
 // Don't forget to change proto in DARKSEND.h as well!!
-static const int MIN_MN_PROTO_VERSION = 21213;
+static const int MIN_MN_PROTO_VERSION = 25213;
 
 // nTime field added to CAddress, starting with this version;
 // if possible, avoid requesting addresses nodes older than this

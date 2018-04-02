@@ -130,7 +130,6 @@ inline void MilliSleep(int64_t n)
 //Masternode features
 
 extern bool fMasterNode;
-extern bool fLiteMode;
 extern int nDarksendRounds;
 
 extern int64_t enforceMasternodePaymentsTime;

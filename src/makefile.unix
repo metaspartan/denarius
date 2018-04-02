@@ -150,9 +150,7 @@ OBJS= \
     obj/rpcdarksend.o \
     obj/spork.o \
     obj/darksend.o \
-	  obj/richlistdb.o \
-	  obj/eccryptoverify.o \
-	  obj/richlistdata.o
+	  obj/eccryptoverify.o
 
 
 all: denariusd

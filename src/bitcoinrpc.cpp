@@ -330,11 +330,6 @@ static const CRPCCommand vRPCCommands[] =
     { "spork",                  &spork,                  true,   false},
     { "masternode",             &masternode,             true,   false},
 
-    /* Rich List */
-    { "resetrichlist",          &resetrichlist,          true,   false},
-    { "updaterichlist",         &updaterichlist,         true,   false},
-    { "getrichlist",            &getrichlist,            true,   false},
-
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
     { "smsglocalkeys",          &smsglocalkeys,          false,  false},

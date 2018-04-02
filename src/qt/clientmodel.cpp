@@ -88,7 +88,7 @@ void ClientModel::updateTimer()
 
         emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     }
-    
+
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
 }
 
@@ -119,11 +119,6 @@ void ClientModel::updateAlert(const QString &hash, int status)
 bool ClientModel::isTestNet() const
 {
     return fTestNet;
-}
-
-bool ClientModel::isLiteMode() const
-{
-    return fLiteMode;
 }
 
 bool ClientModel::inInitialBlockDownload() const

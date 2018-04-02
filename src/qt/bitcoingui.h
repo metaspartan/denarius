@@ -13,7 +13,6 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
-class RichListPage;
 class MasternodeManager;
 class MultisigDialog;
 class OverviewPage;
@@ -103,7 +102,6 @@ private:
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
     tradingDialog   *tradingDialogPage;
-	RichListPage *richListPage;
 	ProofOfImage *proofOfImagePage;
 	MasternodeManager *masternodeManagerPage;
     AddressBookPage *addressBookPage;
@@ -131,7 +129,6 @@ private:
 	QAction *mintingAction;
 	QAction *multisigAction;
     QAction *tradingAction;
-	QAction *richListPageAction;
 	QAction *proofOfImageAction;
 	QAction *masternodeManagerAction;
     QAction *quitAction;
@@ -152,7 +149,7 @@ private:
     QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
-	
+
 	QAction *openInfoAction;
     QAction *openGraphAction;
     QAction *openConfEditorAction;
@@ -203,7 +200,7 @@ public slots:
 
     void mainToolbarOrientation(Qt::Orientation orientation);
     void secondaryToolbarOrientation(Qt::Orientation orientation);
-	
+
 	void gotoMultisigPage();
 
 private slots:
@@ -227,25 +224,23 @@ private slots:
     void gotoSendCoinsPage();
     /** Switch to message page */
     void gotoMessagePage();
-	/** Switch to rich list page */
-	void gotoRichListPage();
 	/** Switch to masternode manager page */
 	void gotoMasternodeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
     /** Switch to trading */
 	void gotoTradingPage();
-	
+
     //void gotoChatPage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
-	
+
     /** Show debug window */
     void showDebugWindow();
-	
+
 	/** Show debug window and set focus to the appropriate tab */
     void showInfo();
     void showConsole();

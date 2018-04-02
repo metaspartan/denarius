@@ -49,7 +49,8 @@ namespace Checkpoints
         ( 636115,  uint256("0x000000000002e90ba8bd7737b206c75a48cafef514e640b7c03753e93fb5fffe") )
         ( 640042,  uint256("0x000000000010014c70f1eef2e6a0599b4c05f19e3dc0510758c684eaec513a28") )
         ( 641361,  uint256("0x000000000005e6b7e106ce402511a64b239b5668e3599fb9e71dd75c16528033") )
-		( 654900,  uint256("0x000000000003200e2a80124060eab0f846671ec542cfa8f19f1bf4ad9501ad3e") )
+		    ( 654900,  uint256("0x000000000003200e2a80124060eab0f846671ec542cfa8f19f1bf4ad9501ad3e") )
+        ( 695732,  uint256("0x000000000039800dffda8f76c6fc46db0e0fc585274d34d3377058a7ae4be093") )
         ;
 
     // TestNet has no checkpoints
@@ -209,7 +210,7 @@ namespace Checkpoints
         return false;
     }
 
-    // Automatically select a suitable sync-checkpoint 
+    // Automatically select a suitable sync-checkpoint
     uint256 AutoSelectSyncCheckpoint()
     {
         const CBlockIndex *pindex = pindexBest;
@@ -254,7 +255,7 @@ namespace Checkpoints
             return false;
         if (hashBlock == hashPendingCheckpoint)
             return true;
-        if (mapOrphanBlocks.count(hashPendingCheckpoint) 
+        if (mapOrphanBlocks.count(hashPendingCheckpoint)
             && hashBlock == WantedByOrphan(mapOrphanBlocks[hashPendingCheckpoint]))
             return true;
         return false;
@@ -312,7 +313,7 @@ namespace Checkpoints
     {
         if (fDebug)
             printf("SetCheckpointPrivKey()\n");
-        
+
         // Test signing a sync-checkpoint with genesis block
         CSyncCheckpoint checkpoint;
         checkpoint.hashCheckpoint = !fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet;
@@ -335,7 +336,7 @@ namespace Checkpoints
     {
         if (fDebug)
             printf("SendSyncCheckpoint()\n");
-        
+
         CSyncCheckpoint checkpoint;
         checkpoint.hashCheckpoint = hashCheckpoint;
         CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
@@ -377,7 +378,7 @@ namespace Checkpoints
     }
 }
 
-// ppcoin: sync-checkpoint master key                 
+// ppcoin: sync-checkpoint master key
 const std::string CSyncCheckpoint::strMasterPubKey = "02334512c0d7a9a69289c4b7ad1c76e5330ef9dacd9da912c91a853986bddf0434";
 
 std::string CSyncCheckpoint::strMasterPrivKey = "";

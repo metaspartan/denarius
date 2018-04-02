@@ -52,7 +52,6 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 {
 
     if (strCommand == "dsee") { //DarkSend Election Entry
-        if(fLiteMode) return; //disable all darksend/masternode related functionality
 
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
@@ -205,7 +204,6 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
     }
 
     else if (strCommand == "dseep") { //DarkSend Election Entry Ping
-        if(fLiteMode) return; //disable all darksend/masternode related functionality
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
 
@@ -277,13 +275,15 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         askedForMasternodeListEntry[vin.prevout] = askAgain;
 
     } else if (strCommand == "dseg") { //Get masternode list or specific entry
-        if(fLiteMode) return; //disable all darksend/masternode related functionality
+        bool fIsInitialDownload = IsInitialBlockDownload();
+        if(fIsInitialDownload) return;
+
         CTxIn vin;
         vRecv >> vin;
 
         if(vin == CTxIn()) { //only should ask for this once
             //local network
-            //Note tor peers show up as local proxied addrs 
+            //Note tor peers show up as local proxied addrs
             //if(!pfrom->addr.IsRFC1918())//&& !Params().MineBlocksOnDemand())
             //{
               if(!pfrom->addr.IsRFC1918())
@@ -335,7 +335,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
     }
 
     else if (strCommand == "mnget") { //Masternode Payments Request Sync
-        if(fLiteMode) return; //disable all darksend/masternode related functionality
+        bool fIsInitialDownload = IsInitialBlockDownload();
+        if(fIsInitialDownload) return;
 
         if(pfrom->HasFulfilledRequest("mnget")) {
             printf("mnget - peer already asked me for the list\n");
@@ -348,7 +349,9 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         printf("mnget - Sent masternode winners to %s\n", pfrom->addr.ToString().c_str());
     }
     else if (strCommand == "mnw") { //Masternode Payments Declare Winner
-        //this is required in litemode
+        bool fIsInitialDownload = IsInitialBlockDownload();
+        if(fIsInitialDownload) return;
+
         CMasternodePaymentWinner winner;
         int a = 0;
         vRecv >> winner >> a;
@@ -416,7 +419,6 @@ int CountMasternodesAboveProtocol(int protocolVersion)
     }
 
     return i;
-
 }
 
 
@@ -616,7 +618,7 @@ void CMasterNode::Check()
 
         //if(!AcceptableInputs(mempool, state, tx)){
         bool* pfMissingInputs = NULL;
-        
+
 	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             enabled = 3;
             return;

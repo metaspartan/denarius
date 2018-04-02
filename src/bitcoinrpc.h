@@ -253,8 +253,4 @@ extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
 
-extern json_spirit::Value resetrichlist(const json_spirit::Array& params, bool fHelp); // in rpcwallet.cpp
-extern json_spirit::Value updaterichlist(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getrichlist(const json_spirit::Array& params, bool fHelp);
-
 #endif

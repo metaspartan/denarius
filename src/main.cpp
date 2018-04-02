@@ -2912,7 +2912,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
         CScript payee;
 
-        if (!fLiteMode && !fImporting && !fReindex && pindexBest->nHeight > Checkpoints::GetTotalBlocksEstimate()){
+        if (!fImporting && !fReindex && pindexBest->nHeight > Checkpoints::GetTotalBlocksEstimate()){
             if(masternodePayments.GetBlockPayee(pindexBest->nHeight, payee)){
                 // MAYBE NEEDS TO BE REWORKED
                 //UPDATE MASTERNODE LAST PAID TIME

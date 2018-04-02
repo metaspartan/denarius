@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 2.0.5.0
+VERSION = 2.5.0.0
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -241,8 +241,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/smessage.h \
-	src/richlistdb.h \
-	src/richlistdata.h \
     src/main.h \
 	src/core.h \
     src/miner.h \
@@ -303,7 +301,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
-	src/qt/richlist.h \
 	src/qt/masternodemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
@@ -358,8 +355,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
-	src/richlistdb.cpp \
-	src/richlistdata.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/key.cpp \
@@ -413,7 +408,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
 	src/qt/qcustomplot.cpp \
-	src/qt/richlist.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
@@ -459,7 +453,6 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
-	src/qt/forms/richlist.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
     src/qt/forms/masternodemanager.ui \

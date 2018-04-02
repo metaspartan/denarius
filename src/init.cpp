@@ -350,7 +350,7 @@ std::string HelpMessage()
         "  -rpcsslcertificatechainfile=<file.cert>  " + _("Server certificate file (default: server.cert)") + "\n" +
         "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n" +
         "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)") + "\n" +
-        "  -litemode=<n>          " + _("Disable all Masternode and Darksend related functionality (0-1, default: 0)") + "\n" +
+
         "\n" + _("Masternode options:") + "\n" +
         "  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
@@ -987,14 +987,13 @@ bool AppInit2()
         }
     }
 
-    //lite mode disables all Masternode and Darksend related functionality
-    fLiteMode = GetBoolArg("-litemode", false);
-    if(fMasterNode && fLiteMode){
-        return InitError("You can not start a masternode in litemode");
+    if(fMasterNode){
+        return InitError("You can not start a masternode");
     }
 
     printf("fMasterNode %d\n", fMasterNode);
 
+    //Threading still needs reworking
     NewThread(ThreadCheckDarkSendPool, NULL);
 
     RandAddSeedPerfmon();

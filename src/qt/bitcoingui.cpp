@@ -28,7 +28,6 @@
 #include "darksend.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
-#include "richlist.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -177,7 +176,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	blockBrowser = new BlockBrowser(this);
 	marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
-	richListPage = new RichListPage(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
 
@@ -219,7 +217,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(masternodeManagerPage);
 	centralWidget->addWidget(marketBrowser);
-	centralWidget->addWidget(richListPage);
     centralWidget->addWidget(proofOfImagePage);
     centralWidget->addWidget(tradingDialogPage);
 	//centralWidget->addWidget(chatWindow);
@@ -384,11 +381,6 @@ void BitcoinGUI::createActions()
     tradingAction->setCheckable(true);
     tabGroup->addAction(tradingAction);
 
-	richListPageAction = new QAction(QIcon(":/icons/richlist"), tr("&Rich List"), this);
-    richListPageAction->setToolTip(tr("Show the top Denarius balances."));
-    richListPageAction->setCheckable(true);
-    tabGroup->addAction(richListPageAction);
-
     masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
     masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
     masternodeManagerAction->setCheckable(true);
@@ -414,8 +406,6 @@ void BitcoinGUI::createActions()
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
 	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
-	connect(richListPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
-    connect(richListPageAction, SIGNAL(triggered()), this, SLOT(gotoRichListPage()));
     connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(gotoMasternodeManagerPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -499,7 +489,6 @@ void BitcoinGUI::createActions()
 
 void BitcoinGUI::createMenuBar()
 {
-    fLiteMode = GetBoolArg("-litemode", false);
 #ifdef Q_OS_MAC
     // Create a decoupled menu bar on Mac which stays even if the window is closed
     appMenuBar = new QMenuBar();
@@ -519,22 +508,20 @@ void BitcoinGUI::createMenuBar()
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(encryptWalletAction);
-	settings->addAction(backupWalletAction);
+	  settings->addAction(backupWalletAction);
     settings->addAction(changePassphraseAction);
     settings->addAction(unlockWalletAction);
     settings->addAction(lockWalletAction);
     settings->addSeparator();
     settings->addAction(optionsAction);
 
-	QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
-	tools->addAction(openInfoAction);
-	tools->addAction(openRPCConsoleAction);
-	tools->addAction(openGraphAction);
-	tools->addSeparator();
-	tools->addAction(openConfEditorAction);
-    if (!fLiteMode) {
-        tools->addAction(openMNConfEditorAction);
-    }
+  	QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
+  	tools->addAction(openInfoAction);
+  	tools->addAction(openRPCConsoleAction);
+  	tools->addAction(openGraphAction);
+  	tools->addSeparator();
+  	tools->addAction(openConfEditorAction);
+    tools->addAction(openMNConfEditorAction);
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
     help->addSeparator();
@@ -544,7 +531,6 @@ void BitcoinGUI::createMenuBar()
 
 void BitcoinGUI::createToolBars()
 {
-    fLiteMode = GetBoolArg("-litemode", false);
 
     mainIcon = new QLabel (this);
     mainIcon->setPixmap(QPixmap(":images/vertical"));
@@ -557,17 +543,14 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(sendCoinsAction);
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
-	mainToolbar->addAction(mintingAction);
+	  mainToolbar->addAction(mintingAction);
     mainToolbar->addAction(tradingAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
-    if (!fLiteMode) {
-        mainToolbar->addAction(masternodeManagerAction);
-    }
+    mainToolbar->addAction(masternodeManagerAction);
     mainToolbar->addAction(marketAction);
-	mainToolbar->addAction(richListPageAction);
     mainToolbar->addAction(proofOfImageAction);
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
@@ -1093,15 +1076,6 @@ void BitcoinGUI::gotoTradingPage()
 
      exportAction->setEnabled(false);
      disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-}
-
-void BitcoinGUI::gotoRichListPage()
-{
-    richListPageAction->setChecked(true);
-    centralWidget->setCurrentWidget(richListPage);
-
-    exportAction->setEnabled(false);
-    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoMasternodeManagerPage()

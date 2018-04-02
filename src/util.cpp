@@ -61,7 +61,6 @@ using namespace std;
 bool fMasterNode = false;
 string strMasterNodePrivKey = "";
 string strMasterNodeAddr = "";
-bool fLiteMode = false;
 int nDarksendRounds = 2;
 
 /** Spork enforcement enabled time */
