@@ -26,7 +26,6 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class ProofOfImage;
-class tradingDialog;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -101,7 +100,6 @@ private:
     QWidget *transactionsPage;
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
-    tradingDialog   *tradingDialogPage;
 	ProofOfImage *proofOfImagePage;
 	MasternodeManager *masternodeManagerPage;
     AddressBookPage *addressBookPage;
@@ -128,7 +126,6 @@ private:
     QAction *historyAction;
 	QAction *mintingAction;
 	QAction *multisigAction;
-    QAction *tradingAction;
 	QAction *proofOfImageAction;
 	QAction *masternodeManagerAction;
     QAction *quitAction;
@@ -228,8 +225,6 @@ private slots:
 	void gotoMasternodeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
-    /** Switch to trading */
-	void gotoTradingPage();
 
     //void gotoChatPage();
 

@@ -224,7 +224,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
-    src/qt/tradingdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -349,7 +348,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
-    src/qt/tradingdialog.cpp \
     src/alert.cpp \
 	src/base58.cpp \
     src/version.cpp \
@@ -463,7 +461,6 @@ FORMS += \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
-    src/qt/forms/tradingdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
 
 contains(USE_QRCODE, 1) {
