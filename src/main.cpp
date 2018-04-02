@@ -4484,13 +4484,13 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             }
         }
 
-		/*
-		// Start block sync
+
+		      // Start block sync
         if (pto->fStartSync && !fImporting && !fReindex) {
             pto->fStartSync = false;
-            PushGetBlocks(pto, pindexBest, uint256(0));
+            pto->PushGetBlocks(pindexBest, uint256(0));
         }
-		*/
+
 
         // Resend wallet transactions that haven't gotten in a block yet
         ResendWalletTransactions();
