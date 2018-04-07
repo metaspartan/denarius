@@ -3627,13 +3627,32 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CAddress addrFrom;
         uint64_t nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
+
+        // Old Node Versioning with Block Height Code
+        bool oldVersion = false;
+
+        if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
+          oldVersion = true;
+
+        // Disconnect nodes that are over block height 800k and have an old peer version
+        if (nBestHeight >= 800000 && pfrom->nVersion < MIN_PEER_PROTO_VERSION)
+          oldVersion = true;
+
+        if (oldVersion == true)
+        {
+          printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+          pfrom->fDisconnect = true;
+          return false;
+        }
+
+        /*
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
         {
             // disconnect from peers older than this proto version
             printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return false;
-        }
+        }*/
 
         if (pfrom->nVersion == 10300)
             pfrom->nVersion = 300;

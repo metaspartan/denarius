@@ -885,7 +885,7 @@ bool CDarksendQueue::Sign()
 bool CDarksendQueue::Relay()
 {
 
-    LOCK(cs_vNodes);
+    //LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes){
         // always relay to everyone
         pnode->PushMessage("dsq", (*this));
@@ -971,7 +971,7 @@ void ThreadCheckDarkSendPool(void* parg)
         if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
-                LOCK(cs_vNodes);
+                //LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
                     if (pnode->nVersion >= darkSendPool.MIN_PEER_PROTO_VERSION) {
