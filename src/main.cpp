@@ -114,20 +114,20 @@ struct CMainSignals {
 } g_signals;
 }
 
-void RegisterWallet(CWallet* pwalletIn)
-{
-    {
-        LOCK(cs_setpwalletRegistered);
-        setpwalletRegistered.insert(pwalletIn);
-    }
+void RegisterWallet(CWallet* pwalletIn) {
+    g_signals.EraseTransaction.connect(boost::bind(&CWallet::EraseFromWallet, pwalletIn, _1));
+    g_signals.UpdatedTransaction.connect(boost::bind(&CWallet::UpdatedTransaction, pwalletIn, _1));
+    g_signals.SetBestChain.connect(boost::bind(&CWallet::SetBestChain, pwalletIn, _1));
+    g_signals.Inventory.connect(boost::bind(&CWallet::Inventory, pwalletIn, _1));
+    g_signals.Broadcast.connect(boost::bind(&CWallet::ResendWalletTransactions, pwalletIn, _1));
 }
 
-void UnregisterWallet(CWallet* pwalletIn)
-{
-    {
-        LOCK(cs_setpwalletRegistered);
-        setpwalletRegistered.erase(pwalletIn);
-    }
+void UnregisterWallet(CWallet* pwalletIn) {
+    g_signals.Broadcast.disconnect(boost::bind(&CWallet::ResendWalletTransactions, pwalletIn, _1));
+    g_signals.Inventory.disconnect(boost::bind(&CWallet::Inventory, pwalletIn, _1));
+    g_signals.SetBestChain.disconnect(boost::bind(&CWallet::SetBestChain, pwalletIn, _1));
+    g_signals.UpdatedTransaction.disconnect(boost::bind(&CWallet::UpdatedTransaction, pwalletIn, _1));
+    g_signals.EraseTransaction.disconnect(boost::bind(&CWallet::EraseFromWallet, pwalletIn, _1));
 }
 
 
@@ -2039,6 +2039,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // ----------- hybrid masternode payments -----------
 
     bool MasternodePayments = false;
+    bool fIsInitialDownload = IsInitialBlockDownload();
 
     if (fTestNet){
         if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){ // Block 75k Testnet
@@ -2058,7 +2059,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(MasternodePayments == true)
+
+    if(!fIsInitialDownload && MasternodePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2075,10 +2077,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 // Calculate expected masternodePaymentAmmount
                 CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, nCalculatedStakeReward);
 
-                bool fIsInitialDownload = IsInitialBlockDownload();
-
                 // If we don't already have its previous block, skip masternode payment step
-                if (!fIsInitialDownload && pindex != NULL)
+                if (pindex != NULL)
                 {
                     bool foundPaymentAmount = false;
                     bool foundPayee = false;
@@ -2120,10 +2120,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }else if(IsProofOfWork() && pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
                 CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
-                bool fIsInitialDownload = IsInitialBlockDownload();
 
                 // If we don't already have its previous block, skip masternode payment step
-                if (!fIsInitialDownload && pindex != NULL)
+                if (pindex != NULL)
                 {
                     bool foundPaymentAmount = false;
                     bool foundPayee = false;
@@ -2149,7 +2148,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                         CTxDestination address1;
                         ExtractDestination(payee, address1);
                         CBitcoinAddress address2(address1);
-                        if(fDebug) { printf("CheckBlock-POW() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
                         if(fDebug) { printf("CheckBlock-POW() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %d. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
                         return DoS(100, error("CheckBlock-POW() : Couldn't find masternode payment or payee"));
                     } else {
@@ -2935,7 +2933,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     // If don't already have its previous block, shunt it off to holding area until we get it
     if (!mapBlockIndex.count(pblock->hashPrevBlock))
     {
-        printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+         if (fDebug) printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
         // ppcoin: check proof-of-stake
         if (pblock->IsProofOfStake())
         {
@@ -2987,7 +2985,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         mapOrphanBlocksByPrev.erase(hashPrev);
     }
 
-    printf("ProcessBlock: ACCEPTED\n");
+    if (fDebug) printf("ProcessBlock: ACCEPTED\n");
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
@@ -3519,14 +3517,14 @@ void static ProcessGetData(CNode* pfrom)
             {
                 // Send stream from relay memory
                 bool pushed = false;
-                {
+                /*{
                     LOCK(cs_mapRelay);
                     map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
                     if (mi != mapRelay.end()) {
                         pfrom->PushMessage(inv.GetCommand(), (*mi).second);
                         pushed = true;
                     }
-                }
+                }*/
                 if (!pushed && inv.type == MSG_TX) {
                     if(mapDarksendBroadcastTxes.count(inv.hash)){
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
@@ -3856,17 +3854,22 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 break;
             }
         }
+
+        LOCK(cs_main);
         CTxDB txdb("r");
+
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
 
             if (fShutdown)
                 return true;
+
+            boost::this_thread::interruption_point();
             pfrom->AddInventoryKnown(inv);
 
             bool fAlreadyHave = AlreadyHave(txdb, inv);
-            if (fDebug)
+            if (fDebugNet)
                 printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
             if (!fAlreadyHave)
@@ -3880,12 +3883,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 // this situation and push another getblocks to continue.
                 pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
 				//PushGetBlocks(pfrom, mapBlockIndex[inv.hash], uint256(0));
-                if (fDebug)
+                if (fDebugNet)
                     printf("force request: %s\n", inv.ToString().c_str());
             }
 
             // Track requests for our stuff
-            Inventory(inv.hash);
+            g_signals.Inventory(inv.hash);
         }
     }
 
@@ -3903,62 +3906,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (fDebugNet || (vInv.size() != 1))
             printf("received getdata (%"PRIszu" invsz)\n", vInv.size());
 
-        BOOST_FOREACH(const CInv& inv, vInv)
-        {
-            if (fShutdown)
-                return true;
-            if (fDebugNet || (vInv.size() == 1))
-                printf("received getdata for: %s\n", inv.ToString().c_str());
-
-            if (inv.type == MSG_BLOCK)
-            {
-                // Send block from disk
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
-                if (mi != mapBlockIndex.end())
-                {
-                    CBlock block;
-                    block.ReadFromDisk((*mi).second);
-                    pfrom->PushMessage("block", block);
-
-                    // Trigger them to send a getblocks request for the next batch of inventory
-                    if (inv.hash == pfrom->hashContinue)
-                    {
-                        // ppcoin: send latest proof-of-work block to allow the
-                        // download node to accept as orphan (proof-of-stake
-                        // block might be rejected by stake connection check)
-                        vector<CInv> vInv;
-                        vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
-                        pfrom->PushMessage("inv", vInv);
-                        pfrom->hashContinue = 0;
-                    }
-                }
-            }
-            else if (inv.IsKnownType())
-            {
-                // Send stream from relay memory
-                bool pushed = false;
-                {
-                    LOCK(cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
-                    if (mi != mapRelay.end()) {
-                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
-                        pushed = true;
-                    }
-                }
-                if (!pushed && inv.type == MSG_TX) {
-                    CTransaction tx;
-                    if (mempool.lookup(inv.hash, tx)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << tx;
-                        pfrom->PushMessage("tx", ss);
-                    }
-                }
-            }
-
-            // Track requests for our stuff
-            Inventory(inv.hash);
-        }
+        pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
+        ProcessGetData(pfrom);
     }
 
 
@@ -3968,6 +3917,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         uint256 hashStop;
         vRecv >> locator >> hashStop;
 
+        LOCK(cs_main);
+
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
 
@@ -3975,12 +3926,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pindex)
             pindex = pindex->pnext;
         int nLimit = 500;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        if (fDebugNet) printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
             if (pindex->GetBlockHash() == hashStop)
             {
-                printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                if (fDebugNet) printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 // ppcoin: tell downloading node about the latest block if it's
                 // without risk being rejected due to stake connection check
                 if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
@@ -3992,7 +3943,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             {
                 // When this block is requested, we'll send an inv that'll make them
                 // getblocks the next batch of inventory.
-                printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                if (fDebugNet) printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 pfrom->hashContinue = pindex->GetBlockHash();
                 break;
             }
@@ -4019,6 +3970,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         uint256 hashStop;
         vRecv >> locator >> hashStop;
 
+        LOCK(cs_main);
+
+        if (IsInitialBlockDownload())
+            return true;
+
         CBlockIndex* pindex = NULL;
         if (locator.IsNull())
         {
@@ -4038,7 +3994,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         vector<CBlock> vHeaders;
         int nLimit = 2000;
-        printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
+        if (fDebugNet) printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
         for (; pindex; pindex = pindex->pnext)
         {
             vHeaders.push_back(pindex->GetBlockHeader());
@@ -4121,12 +4077,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vRecv >> block;
         uint256 hashBlock = block.GetHash();
 
-        printf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
+        if (fDebugNet) printf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
         // block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
         pfrom->AddInventoryKnown(inv);
 
+        LOCK(cs_main);
         if (ProcessBlock(pfrom, &block))
             mapAlreadyAskedFor.erase(inv);
 

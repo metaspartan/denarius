@@ -826,7 +826,8 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
         winner.payee =GetScriptForDestination(vecMasternodes[0].pubkey.GetID());
     }
 
-    if(Sign(winner)){
+
+    if(CMasternodePayments::enabled && Sign(winner)){
         if(AddWinningMasternode(winner)){
             Relay(winner);
             return true;
