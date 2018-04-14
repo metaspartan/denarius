@@ -105,7 +105,7 @@ OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	obj/alert.o \
+	  obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -120,8 +120,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	obj/core.o \
-	obj/txmempool.o \
+	  obj/core.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -145,16 +144,13 @@ OBJS= \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
     obj/stealth.o \
-	obj/activemasternode.o \
-	obj/masternodeconfig.o \
+	  obj/activemasternode.o \
+	  obj/masternodeconfig.o \
     obj/masternode.o \
     obj/rpcdarksend.o \
     obj/spork.o \
     obj/darksend.o \
-	obj/instantx.o \
-	obj/richlistdb.o \
-	obj/eccryptoverify.o \
-	obj/richlistdata.o
+	  obj/eccryptoverify.o
 
 
 all: denariusd
@@ -204,8 +200,8 @@ obj/%.o: %.cpp
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 		-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	rm -f $(@:%.o=%.d)	
-	
+	rm -f $(@:%.o=%.d)
+
 obj/%.o: json/%.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \

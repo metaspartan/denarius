@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 2.0.5.0
+VERSION = 2.5.0.0
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -224,7 +224,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
-    src/qt/tradingdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -241,8 +240,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/smessage.h \
-	src/richlistdb.h \
-	src/richlistdata.h \
     src/main.h \
 	src/core.h \
     src/miner.h \
@@ -250,13 +247,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
-	src/txmempool.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
 	src/darksend.h \
 	src/activemasternode.h \
-	src/instantx.h \
 	src/masternode.h \
 	src/masternodeconfig.h \
 	src/spork.h \
@@ -305,8 +300,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
-	src/qt/richlist.h \
-	src/qt/darksendconfig.h \
 	src/qt/masternodemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
@@ -355,14 +348,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
-    src/qt/tradingdialog.cpp \
     src/alert.cpp \
 	src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
-	src/richlistdb.cpp \
-	src/richlistdata.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/key.cpp \
@@ -375,7 +365,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
-	src/txmempool.cpp \
 	src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
@@ -417,12 +406,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
 	src/qt/qcustomplot.cpp \
-	src/qt/richlist.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/darksendconfig.cpp \
 	src/qt/masternodemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
@@ -436,7 +423,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/stealth.cpp \
 	src/darksend.cpp \
 	src/activemasternode.cpp \
-	src/instantx.cpp \
 	src/masternode.cpp \
 	src/masternodeconfig.cpp \
 	src/spork.cpp
@@ -465,10 +451,8 @@ FORMS += \
 	src/qt/forms/statisticspage.ui \
 	src/qt/forms/blockbrowser.ui \
 	src/qt/forms/marketbrowser.ui \
-	src/qt/forms/richlist.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
-	src/qt/forms/darksendconfig.ui \
     src/qt/forms/masternodemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \
@@ -477,7 +461,6 @@ FORMS += \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
-    src/qt/forms/tradingdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
 
 contains(USE_QRCODE, 1) {

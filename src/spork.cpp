@@ -26,7 +26,8 @@ CSporkManager sporkManager;
 
 void ProcessSpork(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
-    if(fLiteMode) return; //disable all darksend/masternode related functionality
+    bool fIsInitialDownload = IsInitialBlockDownload();
+    if(fIsInitialDownload) return;
 
     if (strCommand == "spork")
     {

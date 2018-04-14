@@ -164,7 +164,7 @@ void MultisigDialog::on_createAddressButton_clicked()
         QMessageBox::warning(this, tr("Error"), tr("Number of required signatures > Number of keys involved in the creation of address."), QMessageBox::Ok);
         return;
     }
-    
+
     CScript script;
     script.SetMultisigpub(required, pubkeys);
     if (script.size() > MAX_SCRIPT_ELEMENT_SIZE)
@@ -556,9 +556,9 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     }
 
     // Send the transaction to the local node
-    //CTxDB txdb("r");
-    //if(!tx.AcceptToMemoryPool(txdb, false))
-	if (!AcceptToMemoryPool(mempool, tx, true, NULL))
+  CTxDB txdb("r");
+  if(!tx.AcceptToMemoryPool(txdb))
+	//if (!AcceptToMemoryPool(mempool, tx, true, NULL))
     return;
     SyncWithWallets(tx, NULL, true);
     //(CInv(MSG_TX, txHash), tx);
