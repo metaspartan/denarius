@@ -2183,51 +2183,53 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (!txdb.UpdateTxIndex((*mi).first, (*mi).second))
             return error("ConnectBlock() : UpdateTxIndex failed");
     }
-
-	// Write Address Index
-    BOOST_FOREACH(CTransaction& tx, vtx)
+    if(GetBoolArg("-addrindex", false))
     {
-        uint256 hashTx = tx.GetHash();
-	// inputs
-	if(!tx.IsCoinBase())
-	{
-            MapPrevTx mapInputs;
-	    map<uint256, CTxIndex> mapQueuedChangesT;
-	    bool fInvalid;
-            if (!tx.FetchInputs(txdb, mapQueuedChangesT, true, false, mapInputs, fInvalid))
-                return false;
+        // Write Address Index
+        BOOST_FOREACH(CTransaction& tx, vtx)
+        {
+            uint256 hashTx = tx.GetHash();
+        // inputs
+        if(!tx.IsCoinBase())
+        {
+                MapPrevTx mapInputs;
+            map<uint256, CTxIndex> mapQueuedChangesT;
+            bool fInvalid;
+                if (!tx.FetchInputs(txdb, mapQueuedChangesT, true, false, mapInputs, fInvalid))
+                    return false;
 
-	    MapPrevTx::const_iterator mi;
-	    for(MapPrevTx::const_iterator mi = mapInputs.begin(); mi != mapInputs.end(); ++mi)
-	    {
-		    BOOST_FOREACH(const CTxOut &atxout, (*mi).second.second.vout)
-		    {
-			std::vector<uint160> addrIds;
-			if(BuildAddrIndex(atxout.scriptPubKey, addrIds))
-			{
-                            BOOST_FOREACH(uint160 addrId, addrIds)
-		            {
-			        if(!txdb.WriteAddrIndex(addrId, hashTx))
-				    printf("ConnectBlock(): txins WriteAddrIndex failed addrId: %s txhash: %s\n", addrId.ToString().c_str(), hashTx.ToString().c_str());
-                            }
-			}
-		    }
-	    }
-
-        }
-
-	// outputs
-	BOOST_FOREACH(const CTxOut &atxout, tx.vout) {
-	    std::vector<uint160> addrIds;
-            if(BuildAddrIndex(atxout.scriptPubKey, addrIds))
-	    {
-		BOOST_FOREACH(uint160 addrId, addrIds)
-		{
-		    if(!txdb.WriteAddrIndex(addrId, hashTx))
-		        printf("ConnectBlock(): txouts WriteAddrIndex failed addrId: %s txhash: %s\n", addrId.ToString().c_str(), hashTx.ToString().c_str());
+            MapPrevTx::const_iterator mi;
+            for(MapPrevTx::const_iterator mi = mapInputs.begin(); mi != mapInputs.end(); ++mi)
+            {
+                BOOST_FOREACH(const CTxOut &atxout, (*mi).second.second.vout)
+                {
+                std::vector<uint160> addrIds;
+                if(BuildAddrIndex(atxout.scriptPubKey, addrIds))
+                {
+                                BOOST_FOREACH(uint160 addrId, addrIds)
+                        {
+                        if(!txdb.WriteAddrIndex(addrId, hashTx))
+                        printf("ConnectBlock(): txins WriteAddrIndex failed addrId: %s txhash: %s\n", addrId.ToString().c_str(), hashTx.ToString().c_str());
+                                }
                 }
-	    }
-	}
+                }
+            }
+
+            }
+
+        // outputs
+        BOOST_FOREACH(const CTxOut &atxout, tx.vout) {
+            std::vector<uint160> addrIds;
+                if(BuildAddrIndex(atxout.scriptPubKey, addrIds))
+            {
+            BOOST_FOREACH(uint160 addrId, addrIds)
+            {
+                if(!txdb.WriteAddrIndex(addrId, hashTx))
+                    printf("ConnectBlock(): txouts WriteAddrIndex failed addrId: %s txhash: %s\n", addrId.ToString().c_str(), hashTx.ToString().c_str());
+                    }
+            }
+        }
+        }
     }
 
     // Update block index on disk without changing it in memory.

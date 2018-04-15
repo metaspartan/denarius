@@ -743,12 +743,12 @@ void BitcoinGUI::setNumConnections(int count)
 
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 {
-    // don't show / hide progress bar and its label if we have no connection to the network
+    // don't show progress bar if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
-        progressBarLabel->setVisible(false);
+        progressBarLabel->setText(tr("Connecting to Denarius network..."));
+        progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
-
         return;
     }
 
