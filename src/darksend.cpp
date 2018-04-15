@@ -974,7 +974,7 @@ void ThreadCheckDarkSendPool(void* parg)
                 //LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
-                    if (pnode->nVersion >= darkSendPool.MIN_PEER_PROTO_VERSION) {
+                    if (pnode->nVersion >= darkSendPool.PROTOCOL_VERSION) {
 
                         //keep track of who we've asked for the list
                         if(pnode->HasFulfilledRequest("mnsync")) continue;
