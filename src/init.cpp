@@ -949,7 +949,9 @@ bool AppInit2()
     // ********************************************************* Step 11: start node
 
     if (!CheckDiskSpace())
-        return false;
+    {
+        return InitError(_("Error: not enough disk space to start Denarius."));
+    }
 
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
@@ -987,10 +989,6 @@ bool AppInit2()
         }
     }
 
-    if(fMasterNode){
-        return InitError("You can not start a masternode");
-    }
-
     printf("fMasterNode %d\n", fMasterNode);
 
     //Threading still needs reworking
@@ -998,11 +996,11 @@ bool AppInit2()
 
     RandAddSeedPerfmon();
 
-
     // reindex addresses found in blockchain
     if(GetBoolArg("-reindexaddr", false))
     {
         uiInterface.InitMessage(_("Rebuilding address index..."));
+        nStart = GetTimeMillis();
         CBlockIndex *pblockAddrIndex = pindexBest;
     CTxDB txdbAddr("rw");
     while(pblockAddrIndex)
@@ -1014,6 +1012,9 @@ bool AppInit2()
             pblockAddr.RebuildAddressIndex(txdbAddr);
         pblockAddrIndex = pblockAddrIndex->pprev;
     }
+
+    printf("Rebuilt address index of %i blocks in %"PRId64"ms\n",
+           pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
 
     //// debug print
