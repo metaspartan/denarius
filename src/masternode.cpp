@@ -34,6 +34,7 @@ std::map<int64_t, uint256> mapCacheBlockHashes;
 
 // manage the masternode connections
 void ProcessMasternodeConnections(){
+    return;
     LOCK(cs_vNodes);
 
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -165,7 +166,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         //if(AcceptableInputs(mempool, state, tx)){
 	bool* pfMissingInputs = NULL;
 	if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
-            if(fDebug) printf("dsee - Accepted masternode entry %i %i\n", count, current);
+            if (fDebug) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
 
             if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
                 printf("dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
@@ -213,7 +214,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         bool stop;
         vRecv >> vin >> vchSig >> sigTime >> stop;
 
-        //printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
+        if (fDebug) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
 
         if (sigTime > GetAdjustedTime() + 60 * 60) {
             printf("dseep - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
@@ -256,7 +257,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             }
         }
 
-        if(fDebug) printf("dseep - Couldn't find masternode entry %s\n", vin.ToString().c_str());
+        printf("dseep - Couldn't find masternode entry %s\n", vin.ToString().c_str());
 
         std::map<COutPoint, int64_t>::iterator i = askedForMasternodeListEntry.find(vin.prevout);
         if (i != askedForMasternodeListEntry.end()){
@@ -786,7 +787,7 @@ int CMasternodePayments::LastPayment(CMasterNode& mn)
 bool CMasternodePayments::ProcessBlock(int nBlockHeight)
 {
     LOCK(cs_masternodes);
-    //if(!enabled) return false;
+    if(!enabled) return false; // don't process blocks for masternode winners if we aren't signing a winner list
     CMasternodePaymentWinner winner;
 
     std::vector<CTxIn> vecLastPayments;

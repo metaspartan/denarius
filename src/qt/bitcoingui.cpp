@@ -131,7 +131,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     trayIcon(0),
     notificator(0),
     rpcConsole(0),
-    nWeight(0)
+    nWeight(0),
+    prevBlocks(0),
+    spinnerFrame(0)
 {
     resize(1300, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
@@ -272,8 +274,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     statusBar()->addWidget(progressBarLabel);
     statusBar()->addWidget(progressBar);
     statusBar()->addPermanentWidget(frameBlocks);
-
-    syncIconMovie = new QMovie(":/movies/update_spinner", "mng", this);
 
     // Clicking on a transaction on the overview page simply sends you to transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), this, SLOT(gotoHistoryPage()));
@@ -743,7 +743,7 @@ void BitcoinGUI::setNumConnections(int count)
 
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 {
-    // don't show progress bar if we have no connection to the network
+    // don't bother showing anything if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
         progressBarLabel->setText(tr("Connecting to Denarius network..."));
@@ -754,40 +754,6 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
     QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
     QString tooltip;
-
-    if(count < nTotalBlocks)
-    {
-        int nRemainingBlocks = nTotalBlocks - count;
-        float nPercentageDone = count / (nTotalBlocks * 0.01f);
-
-        if (strStatusBarWarnings.isEmpty())
-        {
-            progressBarLabel->setText(tr("Synchronizing with network..."));
-            progressBarLabel->setVisible(true);
-            progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
-            progressBar->setMaximum(nTotalBlocks);
-            progressBar->setValue(count);
-            progressBar->setVisible(true);
-        }
-
-        tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
-    }
-    else
-    {
-        if (strStatusBarWarnings.isEmpty())
-            progressBarLabel->setVisible(false);
-
-        progressBar->setVisible(false);
-        tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
-    }
-
-    // Override progressBarLabel text and hide progress bar, when we have warnings to display
-    if (!strStatusBarWarnings.isEmpty())
-    {
-        progressBarLabel->setText(strStatusBarWarnings);
-        progressBarLabel->setVisible(true);
-        progressBar->setVisible(false);
-    }
 
     QDateTime lastBlockDate = clientModel->getLastBlockDate();
     int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
@@ -815,21 +781,48 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         text = tr("%n day(s) ago","",secs/(60*60*24));
     }
 
-    // Set icon state: spinning if catching up, tick otherwise
-    if(secs < 90*60 && count >= nTotalBlocks)
+    if(count < nTotalBlocks && secs > 30*30) // show sync when behind on blocks and last block is older than 240 secs
     {
-        tooltip = tr("Up to date") + QString(".<br>") + tooltip;
-        labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        int nRemainingBlocks = nTotalBlocks - count;
+        float nPercentageDone = count / (nTotalBlocks * 0.01f);
 
-        overviewPage->showOutOfSyncWarning(false);
+        if (strStatusBarWarnings.isEmpty())
+        {
+            progressBarLabel->setText(tr("Synchronizing with network..."));
+            progressBarLabel->setVisible(true);
+            progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
+            progressBar->setMaximum(nTotalBlocks);
+            progressBar->setValue(count);
+            progressBar->setVisible(true);
+        }
+
+        tooltip = tr("Catching up...") + QString("<br>") + tooltip;
+
+        labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        spinnerFrame = (spinnerFrame + 1) % 36;
+
+        overviewPage->showOutOfSyncWarning(true);
+
+        tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
     }
     else
     {
-        tooltip = tr("Catching up...") + QString("<br>") + tooltip;
-        labelBlocksIcon->setMovie(syncIconMovie);
-        syncIconMovie->start();
+        if (strStatusBarWarnings.isEmpty())
+            progressBarLabel->setVisible(false);
 
-        overviewPage->showOutOfSyncWarning(true);
+        tooltip = tr("Up to date") + QString(".<br>") + tooltip;
+        labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        overviewPage->showOutOfSyncWarning(false);
+        progressBar->setVisible(false);
+        tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
+    }
+
+    // Override progressBarLabel text and hide progress bar, when we have warnings to display
+    if (!strStatusBarWarnings.isEmpty())
+    {
+        progressBarLabel->setText(strStatusBarWarnings);
+        progressBarLabel->setVisible(true);
+        progressBar->setVisible(false);
     }
 
     if(!text.isEmpty())

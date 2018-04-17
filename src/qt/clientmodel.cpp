@@ -76,11 +76,13 @@ void ClientModel::updateTimer()
     TRY_LOCK(cs_main, lockMain);
     if(!lockMain)
         return;
+
     // Some quantities (such as number of blocks) change so fast that we don't want to be notified for each change.
     // Periodically check and update with a timer.
     int newNumBlocks = getNumBlocks();
     int newNumBlocksOfPeers = getNumBlocksOfPeers();
 
+    /*
     if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
     {
         cachedNumBlocks = newNumBlocks;
@@ -88,7 +90,25 @@ void ClientModel::updateTimer()
 
         emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     }
+    */
 
+    emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
+    emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
+}
+
+void ClientModel::updateNumBlocks()
+{
+    // Get required lock upfront. This avoids the GUI from getting stuck on
+    // periodical polls if the core is holding the locks for a longer time -
+    // for example, during a wallet rescan.
+    TRY_LOCK(cs_main, lockMain);
+    if(!lockMain)
+        return;
+
+    int newNumBlocks = getNumBlocks();
+    int newNumBlocksOfPeers = getNumBlocksOfPeers();
+
+    emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
 }
 
@@ -166,7 +186,10 @@ static void NotifyBlocksChanged(ClientModel *clientmodel)
 {
     // This notification is too frequent. Don't trigger a signal.
     // Don't remove it, though, as it might be useful later.
+    QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection);
 }
+
+
 
 static void NotifyNumConnectionsChanged(ClientModel *clientmodel, int newNumConnections)
 {

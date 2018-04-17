@@ -161,6 +161,8 @@ private:
     QMovie *syncIconMovie;
 
     uint64_t nWeight;
+    int prevBlocks;
+    int spinnerFrame;
 
     /** Create the main UI actions. */
     void createActions();
