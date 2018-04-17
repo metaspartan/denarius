@@ -594,9 +594,12 @@ void CDarkSendPool::NewBlock()
     darkSendPool.CheckTimeout();
 
     if(!fMasterNode){
-        //denominate all non-denominated inputs every 25 minutes.
-        if(pindexBest->nHeight % 10 == 0) UnlockCoins();
-        ProcessMasternodeConnections();
+        //denominate all non-denominated inputs every 50 blocks (25 minutes)
+        if(pindexBest->nHeight % 50 == 0)
+            UnlockCoins();
+        // free up masternode connections every 120 blocks (1 hour) unless we are syncing
+        if(pindexBest->nHeight % 120 == 0 && !IsInitialBlockDownload())
+            ProcessMasternodeConnections();
     }
 }
 
