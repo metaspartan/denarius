@@ -120,6 +120,10 @@ void RegisterWallet(CWallet* pwalletIn) {
     g_signals.SetBestChain.connect(boost::bind(&CWallet::SetBestChain, pwalletIn, _1));
     g_signals.Inventory.connect(boost::bind(&CWallet::Inventory, pwalletIn, _1));
     g_signals.Broadcast.connect(boost::bind(&CWallet::ResendWalletTransactions, pwalletIn, _1));
+    {
+            LOCK(cs_setpwalletRegistered);
+            setpwalletRegistered.insert(pwalletIn);
+    }
 }
 
 void UnregisterWallet(CWallet* pwalletIn) {
@@ -128,6 +132,10 @@ void UnregisterWallet(CWallet* pwalletIn) {
     g_signals.SetBestChain.disconnect(boost::bind(&CWallet::SetBestChain, pwalletIn, _1));
     g_signals.UpdatedTransaction.disconnect(boost::bind(&CWallet::UpdatedTransaction, pwalletIn, _1));
     g_signals.EraseTransaction.disconnect(boost::bind(&CWallet::EraseFromWallet, pwalletIn, _1));
+    {
+            LOCK(cs_setpwalletRegistered);
+            setpwalletRegistered.erase(pwalletIn);
+    }
 }
 
 
