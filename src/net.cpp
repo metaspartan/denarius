@@ -495,7 +495,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
             pnode->AddRef();
 
 	        pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
-	    
+
             return pnode;
         }
     }
@@ -786,10 +786,10 @@ void SocketSendData(CNode *pnode)
         if (nBytes > 0) {
             pnode->nLastSend = GetTime();
             pnode->nSendOffset += nBytes;
-            
+
             pnode->nSendBytes += nBytes;
             pnode->RecordBytesSent(nBytes);
-            
+
             if (pnode->nSendOffset == data.size()) {
                 pnode->nSendOffset = 0;
                 pnode->nSendSize -= data.size();
@@ -1318,13 +1318,14 @@ void MapPort()
 // The second name should resolve to a list of seed addresses.
 
 static const char *strDNSSeed[][2] = {
-    {"denariusexplorer.org", "denariusexplorer.org"},
+    {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
     {"107.181.154.106", "107.181.154.106"},
     {"chainz.cryptoid.info", "chainz.cryptoid.info"},
     {"hashbag.cc", "hashbag.cc"},
+    {"dnsseed.hashbag.cc", "dnsseed.hashbag.cc"},
     {"denarius.name", "denarius.name"},
-    {"yiimp.eu", "yiimp.eu"},
-    {"denarius.host", "denarius.host"}
+    {"seed.yiimp.eu", "seed.yiimp.eu"},
+    {"seed.denarius.host", "seed.denarius.host"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1782,7 +1783,7 @@ void ThreadOpenAddedConnections2(void* parg)
         BOOST_FOREACH(vector<CService>& vserv, lservAddressesToAdd)
         {
             CSemaphoreGrant grant(*semOutbound);
-            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);   
+            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);
             MilliSleep(500);
 			if (fShutdown)
                 return;
@@ -1897,7 +1898,7 @@ void ThreadMessageHandler2(void* parg)
     while (!fShutdown)
     {
 		bool fHaveSyncNode = false;
-		
+
         vector<CNode*> vNodesCopy;
         {
             LOCK(cs_vNodes);
@@ -1908,7 +1909,7 @@ void ThreadMessageHandler2(void* parg)
                     fHaveSyncNode = true;
             }
         }
-		
+
 		if (!fHaveSyncNode)
             StartSync(vNodesCopy);
 
