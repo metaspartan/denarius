@@ -457,27 +457,31 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
     }
 
     unsigned int nDataOut = 0;
+    unsigned int nTxnOut = 0;
+
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
-        if (!::IsStandard(txout.scriptPubKey, whichType)) {
-            reason = "scriptpubkey";
-            return false;
-        }
-        if (whichType == TX_NULL_DATA)
-            nDataOut++;
-        if (txout.nValue == 0) {
-            reason = "dust";
-            return false;
-        }
-        if (!txout.scriptPubKey.HasCanonicalPushes()) {
-            reason = "scriptpubkey-non-canonical-push";
-            return false;
-        }
+         if (!::IsStandard(txout.scriptPubKey, whichType)) {
+             reason = "scriptpubkey";
+             return false;
+         }
+         if (whichType == TX_NULL_DATA)
+         {
+             nDataOut++;
+         } else
+         {
+             if (txout.nValue == 0)
+                 return false;
+             nTxnOut++;
+         }
+         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
+             reason = "scriptpubkey-non-canonical-push";
+             return false;
+         }
     }
 
-    // not more than one data txout per non-data txout is permitted
-    // only one data txout is permitted too
-    if (nDataOut > 1 && nDataOut > tx.vout.size()/2) {
+    // only one OP_RETURN txout per txn out is permitted
+    if (nDataOut > nTxnOut) {
         reason = "multi-op-return";
         return false;
     }
