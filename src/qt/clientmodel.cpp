@@ -186,7 +186,7 @@ static void NotifyBlocksChanged(ClientModel *clientmodel)
 {
     // This notification is too frequent. Don't trigger a signal.
     // Don't remove it, though, as it might be useful later.
-    QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection);
+    // QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection);
 }
 
 

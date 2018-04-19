@@ -2795,7 +2795,8 @@ bool CBlock::AcceptBlock()
         hashProof = GetPoWHash();
     }
 
-    bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
+    // bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
+    bool cpSatisfies = Checkpoints::CheckSync(nHeight);
 
     // Check that the block satisfies synchronized checkpoint
     if (CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
