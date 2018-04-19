@@ -2795,7 +2795,8 @@ bool CBlock::AcceptBlock()
         hashProof = GetPoWHash();
     }
 
-    bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
+    // bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
+    bool cpSatisfies = Checkpoints::CheckSync(nHeight);
 
     // Check that the block satisfies synchronized checkpoint
     if (CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
@@ -3003,7 +3004,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
-        Checkpoints::SendSyncCheckpoint(Checkpoints::AutoSelectSyncCheckpoint());
+        Checkpoints::SendSyncCheckpoint(Checkpoints::AutoSelectSyncCheckpoint()->GetBlockHash());
 
     return true;
 }

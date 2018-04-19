@@ -211,6 +211,7 @@ namespace Checkpoints
         return false;
     }
 
+    /*
     // Automatically select a suitable sync-checkpoint
     uint256 AutoSelectSyncCheckpoint()
     {
@@ -220,7 +221,6 @@ namespace Checkpoints
             pindex = pindex->pprev;
         return pindex->GetBlockHash();
     }
-
     // Check against synchronized checkpoint
     bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev)
     {
@@ -246,6 +246,25 @@ namespace Checkpoints
             return false; // same height with sync-checkpoint
         if (nHeight < pindexSync->nHeight && !mapBlockIndex.count(hashBlock))
             return false; // lower height than sync-checkpoint
+        return true;
+    }
+*/
+    // Automatically select a suitable sync-checkpoint
+    const CBlockIndex* AutoSelectSyncCheckpoint()
+    {
+        const CBlockIndex *pindex = pindexBest;
+        // Search backward for a block within max span and maturity window
+        while (pindex->pprev && pindex->nHeight + nCheckpointSpan > pindexBest->nHeight)
+            pindex = pindex->pprev;
+        return pindex;
+    }
+
+    bool CheckSync(int nHeight)
+    {
+        const CBlockIndex* pindexSync = AutoSelectSyncCheckpoint();
+        if (nHeight <= pindexSync->nHeight){
+            return false;
+        }
         return true;
     }
 
