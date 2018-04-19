@@ -76,6 +76,12 @@ public:
     int getNumTransactions() const;
     EncryptionStatus getEncryptionStatus() const;
 
+    bool haveWatchOnly() const;
+
+    qint64 getWatchBalance() const;
+    qint64 getWatchUnconfirmedBalance() const;
+    qint64 getWatchImmatureBalance() const;
+
     // Check address for validity
     bool validateAddress(const QString &address);
 
@@ -144,11 +150,19 @@ private:
     TransactionTableModel *transactionTableModel;
 	  MintingTableModel *mintingTableModel;
 
+    //Watch Only
+    bool fHaveWatchOnly;
+
     // Cache some values to be able to detect changes
     qint64 cachedBalance;
     qint64 cachedStake;
     qint64 cachedUnconfirmedBalance;
     qint64 cachedImmatureBalance;
+
+    qint64 cachedWatchOnlyBalance;
+    qint64 cachedWatchUnconfBalance;
+    qint64 cachedWatchImmatureBalance;
+
     qint64 cachedNumTransactions;
     int cachedTxLocks;
     EncryptionStatus cachedEncryptionStatus;
@@ -170,16 +184,21 @@ public slots:
     void updateAddressBook(const QString &address, const QString &label, bool isMine, int status);
     /* Current, immature or unconfirmed balance might have changed - emit 'balanceChanged' if so */
     void pollBalanceChanged();
+    /* Watchonly added */
+    void updateWatchOnlyFlag(bool fHaveWatchonly);
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
+    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance,  qint64 watchOnlyBalance, qint64 watchUnconfBalance, qint64 watchImmatureBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);
 
     // Encryption status of wallet changed
     void encryptionStatusChanged(int status);
+
+    // Watch-only address added
+    void notifyWatchonlyChanged(bool fHaveWatchonly);
 
     // Signal emitted when wallet needs to be unlocked
     // It is valid behaviour for listeners to keep the wallet locked after this signal;

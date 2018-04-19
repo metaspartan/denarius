@@ -189,13 +189,13 @@ void static UpdatedTransaction(const uint256& hashTx)
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
         pwallet->UpdatedTransaction(hashTx);
 }
-
+/*
 // dump all wallets
 void static PrintWallets(const CBlock& block)
 {
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
         pwallet->PrintWallet(block);
-}
+} */
 
 // notify wallets about an incoming inventory (for request counts)
 void static Inventory(const uint256& hash)
@@ -3301,7 +3301,7 @@ void PrintBlockTree()
             FormatMoney(pindex->nMint).c_str(),
             block.vtx.size());
 
-        PrintWallets(block);
+        //PrintWallets(block);
 
         // put the main time-chain first
         vector<CBlockIndex*>& vNext = mapNext[pindex];

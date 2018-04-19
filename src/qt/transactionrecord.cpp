@@ -25,30 +25,32 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
 {
     QList<TransactionRecord> parts;
     int64_t nTime = wtx.GetTxTime();
-    int64_t nCredit = wtx.GetCredit(true);
-    int64_t nDebit = wtx.GetDebit();
+    int64_t nCredit = wtx.GetCredit(ISMINE_ALL); //Updated Watch Only
+    int64_t nDebit = wtx.GetDebit(ISMINE_ALL);
     int64_t nNet = nCredit - nDebit;
     uint256 hash = wtx.GetHash(), hashPrev = 0;
     std::map<std::string, std::string> mapValue = wtx.mapValue;
-    
+
     char cbuf[256];
-    
+
     if (nNet > 0 || wtx.IsCoinBase() || wtx.IsCoinStake())
     {
         //
         // Credit
         //
-        
+
         for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
         {
             const CTxOut& txout = wtx.vout[nOut];
-            
-            if (wallet->IsMine(txout))
+
+            isminetype mine = wallet->IsMine(txout);
+            if(mine)
             {
                 TransactionRecord sub(hash, nTime);
                 CTxDestination address;
                 sub.idx = parts.size(); // sequence number
                 sub.credit = txout.nValue;
+                sub.involvesWatchAddress = mine == ISMINE_WATCH_ONLY;
                 if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*wallet, address))
                 {
                     // Received by Bitcoin Address
@@ -61,19 +63,19 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.type = TransactionRecord::RecvFromOther;
                     sub.address = mapValue["from"];
                 }
-                
+
                 snprintf(cbuf, sizeof(cbuf), "n_%u", nOut);
                 mapValue_t::const_iterator mi = wtx.mapValue.find(cbuf);
                 if (mi != wtx.mapValue.end() && !mi->second.empty())
                     sub.narration = mi->second;
-                
+
                 if (wtx.IsCoinBase())
                 {
                     // Generated (proof-of-work)
                     sub.type = TransactionRecord::Generated;
                 }
                 if (wtx.IsCoinStake())
-                {                    
+                {
                     // Generated (proof-of-stake)
 
                     if (hashPrev == hash)
@@ -97,35 +99,28 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
     }
     else
     {
-        bool fAllFromMe = true;
+        bool involvesWatchAddress = false;
+        isminetype fAllFromMe = ISMINE_SPENDABLE;
         BOOST_FOREACH(const CTxIn& txin, wtx.vin)
         {
-            if (wallet->IsMine(txin))
-                continue;
-            fAllFromMe = false;
-            break;
-        };
+            isminetype mine = wallet->IsMine(txin);
+            if(mine == ISMINE_WATCH_ONLY) involvesWatchAddress = true;
+            if(fAllFromMe > mine) fAllFromMe = mine;
+        }
 
-        bool fAllToMe = true;
+        isminetype fAllToMe = ISMINE_SPENDABLE;
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
         {
-            opcodetype firstOpCode;
-            CScript::const_iterator pc = txout.scriptPubKey.begin();
-            if (txout.scriptPubKey.GetOp(pc, firstOpCode)
-                && firstOpCode == OP_RETURN)
-                continue;
-            if (wallet->IsMine(txout))
-                continue;
-            
-            fAllToMe = false;
-            break;
-        };
-        
+            isminetype mine = wallet->IsMine(txout);
+            if(mine == ISMINE_WATCH_ONLY) involvesWatchAddress = true;
+            if(fAllToMe > mine) fAllToMe = mine;
+        }
+
         if (fAllFromMe && fAllToMe)
         {
             // Payment to self
             int64_t nChange = wtx.GetChange();
-            
+
             std::string narration("");
             mapValue_t::const_iterator mi;
             for (mi = wtx.mapValue.begin(); mi != wtx.mapValue.end(); ++mi)
@@ -135,9 +130,10 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 narration = mi->second;
                 break;
             };
-            
+
             parts.append(TransactionRecord(hash, nTime, TransactionRecord::SendToSelf, "", narration,
                             -(nDebit - nChange), nCredit - nChange));
+            parts.last().involvesWatchAddress = involvesWatchAddress;   // maybe pass to TransactionRecord as constructor argument
         }
         else if (fAllFromMe)
         {
@@ -145,14 +141,15 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             // Debit
             //
             int64_t nTxFee = nDebit - wtx.GetValueOut();
-            
-            
+
+
             for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
             {
                 const CTxOut& txout = wtx.vout[nOut];
                 TransactionRecord sub(hash, nTime);
                 sub.idx = parts.size();
-                
+                sub.involvesWatchAddress = involvesWatchAddress;
+
                 opcodetype firstOpCode;
                 CScript::const_iterator pc = txout.scriptPubKey.begin();
                 if (txout.scriptPubKey.GetOp(pc, firstOpCode)
@@ -179,7 +176,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.type = TransactionRecord::SendToOther;
                     sub.address = mapValue["to"];
                 }
-                
+
                 snprintf(cbuf, sizeof(cbuf), "n_%u", nOut);
                 mapValue_t::const_iterator mi = wtx.mapValue.find(cbuf);
                 if (mi != wtx.mapValue.end() && !mi->second.empty())
@@ -203,6 +200,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             // Mixed debit transaction, can't break down payees
             //
             parts.append(TransactionRecord(hash, nTime, TransactionRecord::Other, "", "", nNet, 0));
+            parts.last().involvesWatchAddress = involvesWatchAddress;
         }
     }
 
@@ -304,4 +302,3 @@ std::string TransactionRecord::getTxID()
 {
     return hash.ToString() + strprintf("-%03d", idx);
 }
-
