@@ -532,7 +532,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
 }
 
 
-int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter = MINE_SPENDABLE)
+int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter)
 {
     int64_t nBalance = 0;
 
@@ -557,7 +557,7 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     return nBalance;
 }
 
-int64_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter = MINE_SPENDABLE)
+int64_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
@@ -584,19 +584,19 @@ Value getbalance(const Array& params, bool fHelp)
         return  ValueFromAmount(pwalletMain->GetBalance());
 
     int nMinDepth = 1;
-    isminefilter filter = MINE_SPENDABLE;
     if (params.size() > 1)
-    {
         nMinDepth = params[1].get_int();
-        if(params.size() > 2)
-            if(params[2].get_bool())
-                filter = filter | MINE_WATCH_ONLY;
-    }
+
+    isminefilter filter = ISMINE_SPENDABLE;
+
+    if(params.size() > 2)
+        if(params[2].get_bool())
+            filter = filter | ISMINE_WATCH_ONLY;
 
     if (params[0].get_str() == "*") {
         // Calculate total balance a different way from GetBalance()
         // (GetBalance() sums up all unspent TxOuts)
-        // getbalance and getbalance '*' 0 should return the same number.
+        // getbalance and "getbalance * 1 true" should return the same number
         int64_t nBalance = 0;
         for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
         {
@@ -606,16 +606,16 @@ Value getbalance(const Array& params, bool fHelp)
 
             int64_t allFee;
             string strSentAccount;
-            list<pair<CTxDestination, int64_t> > listReceived;
-            list<pair<CTxDestination, int64_t> > listSent;
+            list<COutputEntry> listReceived;
+            list<COutputEntry> listSent;
             wtx.GetAmounts(listReceived, listSent, allFee, strSentAccount, filter);
             if (wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
             {
-                BOOST_FOREACH(const PAIRTYPE(CTxDestination,int64_t)& r, listReceived)
-                    nBalance += r.second;
+                BOOST_FOREACH(const COutputEntry& r, listReceived)
+                    nBalance += r.amount;
             }
-            BOOST_FOREACH(const PAIRTYPE(CTxDestination,int64_t)& r, listSent)
-                nBalance -= r.second;
+            BOOST_FOREACH(const COutputEntry& s, listSent)
+                nBalance -= s.amount;
             nBalance -= allFee;
         }
         return  ValueFromAmount(nBalance);
@@ -720,7 +720,7 @@ Value sendfrom(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     // Check funds
-    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth);
+    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth, ISMINE_SPENDABLE);
     if (nAmount > nBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Account has insufficient funds");
 
@@ -778,7 +778,7 @@ Value sendmany(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     // Check funds
-    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth);
+    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth, ISMINE_SPENDABLE);
     if (totalAmount > nBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Account has insufficient funds");
 
@@ -921,10 +921,10 @@ Value ListReceived(const Array& params, bool fByAccounts)
     if (params.size() > 1)
         fIncludeEmpty = params[1].get_bool();
 
-    isminefilter filter = MINE_SPENDABLE;
+    isminefilter filter = ISMINE_SPENDABLE;
     if(params.size() > 2)
         if(params[2].get_bool())
-            filter = filter | MINE_WATCH_ONLY;
+            filter = filter | ISMINE_WATCH_ONLY;
 
     // Tally
     map<CBitcoinAddress, tallyitem> mapTally;
@@ -953,7 +953,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
             item.nAmount += txout.nValue;
             item.nConf = min(item.nConf, nDepth);
             item.txids.push_back(wtx.GetHash());
-            if (mine && MINE_WATCH_ONLY)
+            if (mine & MINE_WATCH_ONLY)
                 item.fIsWatchonly = true;
         }
     }
@@ -1015,6 +1015,8 @@ Value ListReceived(const Array& params, bool fByAccounts)
             int64_t nAmount = (*it).second.nAmount;
             int nConf = (*it).second.nConf;
             Object obj;
+            if((*it).second.fIsWatchonly)
+                obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("account",       (*it).first));
             obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
@@ -1075,27 +1077,31 @@ static void MaybePushAddress(Object & entry, const CTxDestination &dest)
         entry.push_back(Pair("address", addr.ToString()));
 }
 
-void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDepth, bool fLong, Array& ret)
+void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDepth, bool fLong, Array& ret, const isminefilter& filter)
 {
     int64_t nFee;
     string strSentAccount;
-    list<pair<CTxDestination, int64_t> > listReceived;
-    list<pair<CTxDestination, int64_t> > listSent;
+    list<COutputEntry> listReceived;
+    list<COutputEntry> listSent;
 
-    wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount);
+    wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, filter);
 
     bool fAllAccounts = (strAccount == string("*"));
+    bool involvesWatchonly = wtx.IsFromMe(ISMINE_WATCH_ONLY);
 
     // Sent
     if ((!wtx.IsCoinStake()) && (!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount))
     {
-        BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
+        BOOST_FOREACH(const COutputEntry& s, listSent)
         {
             Object entry;
+            if(involvesWatchonly || (::IsMine(*pwalletMain, s.destination) & ISMINE_WATCH_ONLY))
+                entry.push_back(Pair("involvesWatchonly", true));
             entry.push_back(Pair("account", strSentAccount));
-            MaybePushAddress(entry, s.first);
+            MaybePushAddress(entry, s.destination);
             entry.push_back(Pair("category", "send"));
-            entry.push_back(Pair("amount", ValueFromAmount(-s.second)));
+            entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
+            entry.push_back(Pair("vout", s.vout));
             entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
             if (fLong)
                 WalletTxToJSON(wtx, entry);
@@ -1107,16 +1113,18 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
     if (listReceived.size() > 0 && wtx.GetDepthInMainChain() >= nMinDepth)
     {
         bool stop = false;
-        BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
+        BOOST_FOREACH(const COutputEntry& r, listReceived)
         {
             string account;
-            if (pwalletMain->mapAddressBook.count(r.first))
-                account = pwalletMain->mapAddressBook[r.first];
+            if (pwalletMain->mapAddressBook.count(r.destination))
+                account = pwalletMain->mapAddressBook[r.destination];
             if (fAllAccounts || (account == strAccount))
             {
                 Object entry;
+                if(involvesWatchonly || (::IsMine(*pwalletMain, r.destination) & ISMINE_WATCH_ONLY))
+                    entry.push_back(Pair("involvesWatchonly", true));
                 entry.push_back(Pair("account", account));
-                MaybePushAddress(entry, r.first);
+                MaybePushAddress(entry, r.destination);
                 if (wtx.IsCoinBase() || wtx.IsCoinStake())
                 {
                     if (wtx.GetDepthInMainChain() < 1)
@@ -1131,10 +1139,14 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                     entry.push_back(Pair("category", "receive"));
                 }
                 if (!wtx.IsCoinStake())
-                    entry.push_back(Pair("amount", ValueFromAmount(r.second)));
+                {
+                    entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+                    entry.push_back(Pair("vout", r.vout));
+                }
                 else
                 {
                     entry.push_back(Pair("amount", ValueFromAmount(-nFee)));
+                    //entry.push_back(Pair("vout", r.vout));
                     stop = true; // only one coinstake output
                 }
                 if (fLong)
@@ -1181,6 +1193,11 @@ Value listtransactions(const Array& params, bool fHelp)
     if (params.size() > 2)
         nFrom = params[2].get_int();
 
+    isminefilter filter = ISMINE_SPENDABLE;
+    if(params.size() > 3)
+        if(params[3].get_bool())
+            filter = filter | ISMINE_WATCH_ONLY;
+
     if (nCount < 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Negative count");
     if (nFrom < 0)
@@ -1196,7 +1213,7 @@ Value listtransactions(const Array& params, bool fHelp)
     {
         CWalletTx *const pwtx = (*it).second.first;
         if (pwtx != 0)
-            ListTransactions(*pwtx, strAccount, 0, true, ret);
+            ListTransactions(*pwtx, strAccount, 0, true, ret, filter);
         CAccountingEntry *const pacentry = (*it).second.second;
         if (pacentry != 0)
             AcentryToJSON(*pacentry, strAccount, ret);
@@ -1234,10 +1251,14 @@ Value listaccounts(const Array& params, bool fHelp)
     int nMinDepth = 1;
     if (params.size() > 0)
         nMinDepth = params[0].get_int();
+    isminefilter includeWatchonly = ISMINE_SPENDABLE;
+    if(params.size() > 1)
+        if(params[1].get_bool())
+            includeWatchonly = includeWatchonly | ISMINE_WATCH_ONLY;
 
     map<string, int64_t> mapAccountBalances;
     BOOST_FOREACH(const PAIRTYPE(CTxDestination, string)& entry, pwalletMain->mapAddressBook) {
-        if (IsMine(*pwalletMain, entry.first)) // This address belongs to me
+        if (IsMine(*pwalletMain, entry.first) & includeWatchonly) // This address belongs to me
             mapAccountBalances[entry.second] = 0;
     }
 
@@ -1246,22 +1267,22 @@ Value listaccounts(const Array& params, bool fHelp)
         const CWalletTx& wtx = (*it).second;
         int64_t nFee;
         string strSentAccount;
-        list<pair<CTxDestination, int64_t> > listReceived;
-        list<pair<CTxDestination, int64_t> > listSent;
+        list<COutputEntry> listReceived;
+        list<COutputEntry> listSent;
         int nDepth = wtx.GetDepthInMainChain();
         if (nDepth < 0)
             continue;
-        wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount);
+        wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, includeWatchonly);
         mapAccountBalances[strSentAccount] -= nFee;
-        BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
-            mapAccountBalances[strSentAccount] -= s.second;
+        BOOST_FOREACH(const COutputEntry& s, listSent)
+            mapAccountBalances[strSentAccount] -= s.amount;
         if (nDepth >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
         {
-            BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
-                if (pwalletMain->mapAddressBook.count(r.first))
-                    mapAccountBalances[pwalletMain->mapAddressBook[r.first]] += r.second;
+            BOOST_FOREACH(const COutputEntry& r, listReceived)
+                if (pwalletMain->mapAddressBook.count(r.destination))
+                    mapAccountBalances[pwalletMain->mapAddressBook[r.destination]] += r.amount;
                 else
-                    mapAccountBalances[""] += r.second;
+                    mapAccountBalances[""] += r.amount;
         }
     }
 
@@ -1286,6 +1307,7 @@ Value listsinceblock(const Array& params, bool fHelp)
 
     CBlockIndex *pindex = NULL;
     int target_confirms = 1;
+    isminefilter filter = ISMINE_SPENDABLE;
 
     if (params.size() > 0)
     {
@@ -1303,6 +1325,10 @@ Value listsinceblock(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
     }
 
+    if(params.size() > 2)
+    if(params[2].get_bool())
+        filter = filter | ISMINE_WATCH_ONLY;
+
     int depth = pindex ? (1 + nBestHeight - pindex->nHeight) : -1;
 
     Array transactions;
@@ -1312,7 +1338,7 @@ Value listsinceblock(const Array& params, bool fHelp)
         CWalletTx tx = (*it).second;
 
         if (depth == -1 || tx.GetDepthInMainChain() < depth)
-            ListTransactions(tx, "*", 0, true, transactions);
+            ListTransactions(tx, "*", 0, true, transactions, filter);
     }
 
     uint256 lastblock;
@@ -1350,6 +1376,12 @@ Value gettransaction(const Array& params, bool fHelp)
     uint256 hash;
     hash.SetHex(params[0].get_str());
 
+    // Watch Only
+    isminefilter filter = ISMINE_SPENDABLE;
+    if(params.size() > 1)
+        if(params[1].get_bool())
+            filter = filter | ISMINE_WATCH_ONLY;
+
     Object entry;
 
     if (pwalletMain->mapWallet.count(hash))
@@ -1358,19 +1390,19 @@ Value gettransaction(const Array& params, bool fHelp)
 
         TxToJSON(wtx, 0, entry);
 
-        int64_t nCredit = wtx.GetCredit();
-        int64_t nDebit = wtx.GetDebit();
+        int64_t nCredit = wtx.GetCredit(filter);
+        int64_t nDebit = wtx.GetDebit(filter);
         int64_t nNet = nCredit - nDebit;
-        int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0);
+        int64_t nFee = (wtx.IsFromMe(filter) ? wtx.GetValueOut() - nDebit : 0);
 
         entry.push_back(Pair("amount", ValueFromAmount(nNet - nFee)));
-        if (wtx.IsFromMe())
+        if (wtx.IsFromMe(filter))
             entry.push_back(Pair("fee", ValueFromAmount(nFee)));
 
         WalletTxToJSON(wtx, entry);
 
         Array details;
-        ListTransactions(pwalletMain->mapWallet[hash], "*", 0, false, details);
+        ListTransactions(pwalletMain->mapWallet[hash], "*", 0, false, details, filter);
         entry.push_back(Pair("details", details));
     }
     else

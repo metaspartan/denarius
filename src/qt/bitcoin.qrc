@@ -70,7 +70,6 @@
     </qresource>
     <qresource prefix="/movies">
         <file alias="update_spinner">res/movies/update_spinner.mng</file>
-        <file alias="sync_spinner">res/movies/sync_spinner.gif</file>
         <file>res/movies/spinner-019.png</file>
         <file>res/movies/spinner-000.png</file>
         <file>res/movies/spinner-001.png</file>

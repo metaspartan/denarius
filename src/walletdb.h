@@ -60,13 +60,13 @@ class CStealthKeyMetadata
 // -- used to get secret for keys created by stealth transaction with wallet locked
 public:
     CStealthKeyMetadata() {};
-    
+
     CStealthKeyMetadata(CPubKey pkEphem_, CPubKey pkScan_)
     {
         pkEphem = pkEphem_;
         pkScan = pkScan_;
     };
-    
+
     CPubKey pkEphem;
     CPubKey pkScan;
 
@@ -116,29 +116,32 @@ public:
     {
         return GetCursor();
     }
-    
+
     Dbc* GetTxnCursor()
     {
         if (!pdb)
             return NULL;
-        
+
         DbTxn* ptxnid = activeTxn; // call TxnBegin first
-        
+
         Dbc* pcursor = NULL;
         int ret = pdb->cursor(ptxnid, &pcursor, 0);
         if (ret != 0)
             return NULL;
         return pcursor;
     }
-    
+
     DbTxn* GetAtActiveTxn()
     {
         return activeTxn;
     }
-    
+
     bool WriteName(const std::string& strAddress, const std::string& strName);
 
     bool EraseName(const std::string& strAddress);
+
+    bool WritePurpose(const std::string& strAddress, const std::string& purpose);
+    bool ErasePurpose(const std::string& strAddress);
 
     bool WriteTx(uint256 hash, const CWalletTx& wtx)
     {
@@ -151,42 +154,39 @@ public:
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("tx"), hash));
     }
-    
+
     bool WriteStealthKeyMeta(const CKeyID& keyId, const CStealthKeyMetadata& sxKeyMeta)
     {
         nWalletDBUpdated++;
         return Write(std::make_pair(std::string("sxKeyMeta"), keyId), sxKeyMeta, true);
     }
-    
+
     bool EraseStealthKeyMeta(const CKeyID& keyId)
     {
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("sxKeyMeta"), keyId));
     }
-    
+
     bool WriteStealthAddress(const CStealthAddress& sxAddr)
     {
         nWalletDBUpdated++;
 
         return Write(std::make_pair(std::string("sxAddr"), sxAddr.scan_pubkey), sxAddr, true);
     }
-    
+
     bool ReadStealthAddress(CStealthAddress& sxAddr)
     {
         // -- set scan_pubkey before reading
         return Read(std::make_pair(std::string("sxAddr"), sxAddr.scan_pubkey), sxAddr);
     }
-	
+
 	bool WriteAdrenalineNodeConfig(std::string sAlias, const CAdrenalineNodeConfig& nodeConfig);
     bool ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig);
     bool EraseAdrenalineNodeConfig(std::string sAlias);
-    
-    bool WriteWatchOnly(const CTxDestination &dest)
-    {
-        nWalletDBUpdated++;
-        return Write(std::make_pair(std::string("watch"), CBitcoinAddress(dest).ToString()), '1');
-    }
-    
+
+    bool WriteWatchOnly(const CScript &script);
+    bool EraseWatchOnly(const CScript &script);
+
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta)
     {
         nWalletDBUpdated++;

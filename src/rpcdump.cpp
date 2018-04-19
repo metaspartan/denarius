@@ -78,7 +78,7 @@ std::string DecodeDumpString(const std::string &str) {
     for (unsigned int pos = 0; pos < str.length(); pos++) {
         unsigned char c = str[pos];
         if (c == '%' && pos+2 < str.length()) {
-            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) | 
+            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) |
                 ((str[pos+2]>>6)*9+((str[pos+2]-'0')&15));
             pos += 2;
         }
@@ -156,13 +156,20 @@ Value importaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
             "importaddress <address> [label] [rescan=true]\n"
-            "Adds an address that can be watched as if it were in your wallet but cannot be used to spend.");
+            "Adds an address or script (in hex) that can be watched as if it were in your wallet but cannot be used to spend.");
+
+    CScript script;
 
     CBitcoinAddress address(params[0].get_str());
-    if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Denarius address");
-    CTxDestination dest;
-    dest = address.Get();
+
+    if (address.IsValid()) {
+        script.SetDestination(address.Get());
+    } else if (IsHex(params[0].get_str())) {
+        std::vector<unsigned char> data(ParseHex(params[0].get_str()));
+        script = CScript(data.begin(), data.end());
+    } else {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Denarius address or script");
+    }
 
     string strLabel = "";
     if (params.size() > 1)
@@ -174,16 +181,19 @@ Value importaddress(const Array& params, bool fHelp)
         fRescan = params[2].get_bool();
 
     {
-        LOCK2(cs_main, pwalletMain->cs_wallet);
-
+        //LOCK2(cs_main, pwalletMain->cs_wallet);
+        if (::IsMine(*pwalletMain, script) == ISMINE_SPENDABLE)
+            throw JSONRPCError(RPC_WALLET_ERROR, "The wallet already contains the private key for this address or script");
         // Don't throw error in case an address is already there
-        if (pwalletMain->HaveWatchOnly(dest))
+        if (pwalletMain->HaveWatchOnly(script))
             return Value::null;
 
         pwalletMain->MarkDirty();
-        pwalletMain->SetAddressBookName(dest, strLabel);
+        if (address.IsValid())
+            //pwalletMain->SetAddressBookName(dest, strLabel);
+            pwalletMain->SetAddressBookName(address.Get(), strLabel);
 
-        if (!pwalletMain->AddWatchOnly(dest))
+        if (!pwalletMain->AddWatchOnly(script))
             throw JSONRPCError(RPC_WALLET_ERROR, "Error adding address to wallet");
 
         if (fRescan)

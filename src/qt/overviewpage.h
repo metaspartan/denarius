@@ -32,7 +32,7 @@ private:
 	void getRequest( const QString &url );
 
 public slots:
-    void setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
+    void setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 watchOnlyBalance, qint64 watchUnconfBalance, qint64 watchImmatureBalance);
 	void parseNetworkResponse(QNetworkReply *finished );
     void PriceRequest();
 
@@ -48,6 +48,9 @@ private:
     qint64 currentStake;
     qint64 currentUnconfirmedBalance;
     qint64 currentImmatureBalance;
+    qint64 currentWatchOnlyBalance;
+    qint64 currentWatchUnconfBalance;
+    qint64 currentWatchImmatureBalance;
     qint64 lastNewBlock;
 
     int cachedNumBlocks;
@@ -58,6 +61,7 @@ private:
 private slots:
     void updateDisplayUnit();
     void handleTransactionClicked(const QModelIndex &index);
+    void updateWatchOnlyLabels(bool showWatchOnly);
 };
 
 #endif // OVERVIEWPAGE_H
