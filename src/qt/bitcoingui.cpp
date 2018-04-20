@@ -133,7 +133,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     rpcConsole(0),
     nWeight(0),
     prevBlocks(0),
-    spinnerFrame(0)
+    spinnerFrame(0),
+    nBlocksInLastPeriod(0),
+    nLastBlocks(0)
 {
     resize(1300, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
@@ -594,6 +596,8 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
         setNumConnections(clientModel->getNumConnections());
         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
 
+
+        nClientUpdateTime = GetTime();
         setNumBlocks(clientModel->getNumBlocks(), clientModel->getNumBlocksOfPeers());
         connect(clientModel, SIGNAL(numBlocksChanged(int,int)), this, SLOT(setNumBlocks(int,int)));
 
@@ -604,6 +608,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
         addressBookPage->setOptionsModel(clientModel->getOptionsModel());
         receiveCoinsPage->setOptionsModel(clientModel->getOptionsModel());
     }
+
 }
 
 void BitcoinGUI::setWalletModel(WalletModel *walletModel)
@@ -754,6 +759,24 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
     QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
     QString tooltip;
+    QString nRemainingTime;
+
+    if (nLastBlocks == 0)
+        nLastBlocks = pindexBest->nHeight;
+
+    if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
+        nBlocksInLastPeriod = count - nLastBlocks;
+        nLastBlocks = count;
+        nClientUpdateTime = GetTime();
+    }
+    if (nBlocksInLastPeriod>0)
+        nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
+    else
+        nBlocksPerSec = 0;
+
+    if (nBlocksPerSec>0) {
+        nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
+    }
 
     QDateTime lastBlockDate = clientModel->getLastBlockDate();
     int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
@@ -785,12 +808,14 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     {
         int nRemainingBlocks = nTotalBlocks - count;
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
-
         if (strStatusBarWarnings.isEmpty())
         {
             progressBarLabel->setText(tr("Synchronizing with network..."));
             progressBarLabel->setVisible(true);
-            progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
+            if (nBlocksPerSec>0)
+                progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+            else
+                progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
             progressBar->setMaximum(nTotalBlocks);
             progressBar->setValue(count);
             progressBar->setVisible(true);

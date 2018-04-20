@@ -164,6 +164,11 @@ private:
     int prevBlocks;
     int spinnerFrame;
 
+    int64_t nClientUpdateTime;
+    int nBlocksInLastPeriod;
+    int nLastBlocks;
+    int nBlocksPerSec;
+
     /** Create the main UI actions. */
     void createActions();
     /** Create the menu bar and sub-menus. */

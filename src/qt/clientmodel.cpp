@@ -39,7 +39,6 @@ int ClientModel::getNumConnections() const
 
 int ClientModel::getNumBlocks() const
 {
-    LOCK(cs_main);
     return nBestHeight;
 }
 
@@ -61,7 +60,6 @@ quint64 ClientModel::getTotalBytesSent() const
 
 QDateTime ClientModel::getLastBlockDate() const
 {
-    LOCK(cs_main);
     if (pindexBest)
         return QDateTime::fromTime_t(pindexBest->GetBlockTime());
     else
@@ -82,7 +80,6 @@ void ClientModel::updateTimer()
     int newNumBlocks = getNumBlocks();
     int newNumBlocksOfPeers = getNumBlocksOfPeers();
 
-    /*
     if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
     {
         cachedNumBlocks = newNumBlocks;
@@ -90,13 +87,11 @@ void ClientModel::updateTimer()
 
         emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     }
-    */
 
-    emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
 }
 
-void ClientModel::updateNumBlocks()
+void ClientModel::updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers)
 {
     // Get required lock upfront. This avoids the GUI from getting stuck on
     // periodical polls if the core is holding the locks for a longer time -
@@ -104,9 +99,6 @@ void ClientModel::updateNumBlocks()
     TRY_LOCK(cs_main, lockMain);
     if(!lockMain)
         return;
-
-    int newNumBlocks = getNumBlocks();
-    int newNumBlocksOfPeers = getNumBlocksOfPeers();
 
     emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
@@ -182,11 +174,12 @@ QString ClientModel::formatClientStartupTime() const
 }
 
 // Handlers for core signals
-static void NotifyBlocksChanged(ClientModel *clientmodel)
+static void NotifyBlocksChanged(ClientModel *clientmodel, int nHeight, int newNumBlocksOfPeers)
 {
     // This notification is too frequent. Don't trigger a signal.
     // Don't remove it, though, as it might be useful later.
-    // QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection, Q_ARG(int, nHeight), Q_ARG(int, newNumBlocksOfPeers));
+
 }
 
 
@@ -209,7 +202,7 @@ static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, Ch
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
-    uiInterface.NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this));
+    uiInterface.NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this, _1, _2));
     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));
 }
@@ -217,7 +210,7 @@ void ClientModel::subscribeToCoreSignals()
 void ClientModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from client
-    uiInterface.NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this));
+    uiInterface.NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this, _1, _2));
     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));
 }
