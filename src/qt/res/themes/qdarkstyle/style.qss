@@ -586,7 +586,11 @@ QToolBar::separator:vertical {
     image: url(:/qss_icons/rc/Vsepartoolbar.png);
 }
 QToolButton#qt_toolbar_ext_button {
+    min-width: 8px;
+    width: 8px;
+    padding: 1px;
     background: #58595a;
+    qproperty-icon: url(:/qss_icons/rc/branch_closed-on.png);
 }
 
 QPushButton

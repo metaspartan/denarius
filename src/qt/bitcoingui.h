@@ -4,7 +4,6 @@
 #include <QMainWindow>
 #include <QSystemTrayIcon>
 #include <QLabel>
-
 #include <stdint.h>
 
 class TransactionTableModel;

@@ -177,7 +177,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     overviewPage = new OverviewPage();
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
-	marketBrowser = new MarketBrowser(this);
+    marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
@@ -497,7 +497,7 @@ void BitcoinGUI::createMenuBar()
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(encryptWalletAction);
-	  settings->addAction(backupWalletAction);
+    settings->addAction(backupWalletAction);
     settings->addAction(changePassphraseAction);
     settings->addAction(unlockWalletAction);
     settings->addAction(lockWalletAction);
@@ -526,13 +526,13 @@ void BitcoinGUI::createToolBars()
     mainIcon->show();
 
     mainToolbar = addToolBar(tr("Tabs toolbar"));
-    mainToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mainToolbar->addWidget(mainIcon);
     mainToolbar->addAction(overviewAction);
     mainToolbar->addAction(sendCoinsAction);
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
-	  mainToolbar->addAction(mintingAction);
+    mainToolbar->addAction(mintingAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
@@ -544,6 +544,18 @@ void BitcoinGUI::createToolBars()
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     secondaryToolbar->addAction(exportAction);
+    secondaryToolbar->addSeparator();
+    secondaryToolbar->addAction(openRPCConsoleAction);
+    secondaryToolbar->addAction(openGraphAction);
+    secondaryToolbar->addSeparator();
+    secondaryToolbar->addAction(lockWalletAction);
+    secondaryToolbar->addAction(unlockWalletAction);
+    secondaryToolbar->addAction(encryptWalletAction);
+    secondaryToolbar->addAction(changePassphraseAction);
+    secondaryToolbar->addSeparator();
+    removeToolBar(secondaryToolbar);
+    addToolBar(Qt::BottomToolBarArea, secondaryToolbar);
+    secondaryToolbar->show();
 
     connect(mainToolbar,      SIGNAL(orientationChanged(Qt::Orientation)), this, SLOT(mainToolbarOrientation(Qt::Orientation)));
     connect(secondaryToolbar, SIGNAL(orientationChanged(Qt::Orientation)), this, SLOT(secondaryToolbarOrientation(Qt::Orientation)));
@@ -1232,20 +1244,26 @@ void BitcoinGUI::handleURI(QString strURI)
         notificator->notify(Notificator::Warning, tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Denarius address or malformed URI parameters."));
 }
 
+
 void BitcoinGUI::mainToolbarOrientation(Qt::Orientation orientation)
 {
+
+
     if(orientation == Qt::Horizontal)
     {
         mainIcon->setPixmap(QPixmap(":images/horizontal"));
+        mainIcon->setAlignment(Qt::AlignLeft);
         mainIcon->show();
+        mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mainToolbar->setStyleSheet(HORIZONTAL_TOOLBAR_STYLESHEET);
         messageAction->setIconText(tr("&Messages"));
     }
     else
     {
         mainIcon->setPixmap(QPixmap(":images/vertical"));
+        mainIcon->setAlignment(Qt::AlignCenter);
         mainIcon->show();
-
+        mainToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         mainToolbar->setStyleSheet(VERTICAL_TOOBAR_STYLESHEET);
         messageAction->setIconText(tr("Encrypted &Messages"));
     }
