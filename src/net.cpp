@@ -495,7 +495,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
             pnode->AddRef();
 
 	        pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
-	    
+
             return pnode;
         }
     }
@@ -786,10 +786,10 @@ void SocketSendData(CNode *pnode)
         if (nBytes > 0) {
             pnode->nLastSend = GetTime();
             pnode->nSendOffset += nBytes;
-            
+
             pnode->nSendBytes += nBytes;
             pnode->RecordBytesSent(nBytes);
-            
+
             if (pnode->nSendOffset == data.size()) {
                 pnode->nSendOffset = 0;
                 pnode->nSendSize -= data.size();
@@ -1318,13 +1318,15 @@ void MapPort()
 // The second name should resolve to a list of seed addresses.
 
 static const char *strDNSSeed[][2] = {
-    {"denariusexplorer.org", "denariusexplorer.org"},
-    {"107.181.154.106", "107.181.154.106"},
+    {"dnsseed.hashbag.cc", "dnsseed.hashbag.cc"},
+    {"seed.denarius.host", "seed.denarius.host"},
+    {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
+    {"seed.yiimp.eu", "seed.yiimp.eu"},
     {"chainz.cryptoid.info", "chainz.cryptoid.info"},
-    {"hashbag.cc", "hashbag.cc"},
-    {"denarius.name", "denarius.name"},
-    {"yiimp.eu", "yiimp.eu"},
-    {"denarius.host", "denarius.host"}
+    {"seed1.denarius.io", "seed1.denarius.io"},
+    {"seed2.denarius.io", "seed2.denarius.io"},
+    {"seed3.denarius.io", "seed3.denarius.io"},
+    {"seed4.denarius.io", "seed4.denarius.io"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1782,7 +1784,7 @@ void ThreadOpenAddedConnections2(void* parg)
         BOOST_FOREACH(vector<CService>& vserv, lservAddressesToAdd)
         {
             CSemaphoreGrant grant(*semOutbound);
-            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);   
+            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);
             MilliSleep(500);
 			if (fShutdown)
                 return;
@@ -1897,7 +1899,7 @@ void ThreadMessageHandler2(void* parg)
     while (!fShutdown)
     {
 		bool fHaveSyncNode = false;
-		
+
         vector<CNode*> vNodesCopy;
         {
             LOCK(cs_vNodes);
@@ -1908,9 +1910,11 @@ void ThreadMessageHandler2(void* parg)
                     fHaveSyncNode = true;
             }
         }
-		
+
 		if (!fHaveSyncNode)
             StartSync(vNodesCopy);
+
+        bool fSleep = true;
 
         // Poll the connected nodes for messages
         CNode* pnodeTrickle = NULL;
@@ -1925,9 +1929,22 @@ void ThreadMessageHandler2(void* parg)
             {
                 TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);
                 if (lockRecv)
+                {
                     if (!ProcessMessages(pnode))
                         pnode->CloseSocketDisconnect();
+
+                    if (pnode->nSendSize < SendBufferSize())
+                    {
+                        if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
+                        {
+                            fSleep = false;
+                        }
+                    }
+                }
             }
+
+            boost::this_thread::interruption_point();
+
             if (fShutdown)
                 return;
 
@@ -1951,7 +1968,8 @@ void ThreadMessageHandler2(void* parg)
         // Reduce vnThreadsRunning so StopNode has permission to exit while
         // we're sleeping, but we must always check fShutdown after doing this.
         vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-        MilliSleep(100);
+        if (fSleep)
+            MilliSleep(100);
         if (fRequestShutdown)
             StartShutdown();
         vnThreadsRunning[THREAD_MESSAGEHANDLER]++;

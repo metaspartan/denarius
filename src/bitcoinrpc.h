@@ -142,7 +142,7 @@ extern void EnsureWalletIsUnlocked();
 extern uint256 ParseHashV(const json_spirit::Value& v, std::string strName);
 extern uint256 ParseHashO(const json_spirit::Object& o, std::string strKey);
 extern std::vector<unsigned char> ParseHexV(const json_spirit::Value& v, std::string strName);
-extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::string strKey); 
+extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::string strKey);
 
 extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
 extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);
@@ -234,7 +234,7 @@ extern json_spirit::Value clearwallettransactions(const json_spirit::Array& para
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforstealthtxns(const json_spirit::Array& params, bool fHelp);
 
-extern json_spirit::Value darksend(const json_spirit::Array& params, bool fHelp); //rpcdarksend.cpp
+//rpcdarksend.cpp
 extern json_spirit::Value spork(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getpoolinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value masternode(const json_spirit::Array& params, bool fHelp);
@@ -252,10 +252,5 @@ extern json_spirit::Value smsgsendanon(const json_spirit::Array& params, bool fH
 extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
-
-extern json_spirit::Value resetrichlist(const json_spirit::Array& params, bool fHelp); // in rpcwallet.cpp
-extern json_spirit::Value updaterichlist(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getrichlist(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value denominate(const json_spirit::Array& params, bool fHelp);
 
 #endif

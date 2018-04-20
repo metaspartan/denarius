@@ -211,7 +211,7 @@ RPCConsole::RPCConsole(QWidget *parent) :
 
     startExecutor();
     setTrafficGraphRange(INITIAL_TRAFFIC_GRAPH_MINS);
-    
+
     clear();
 }
 
@@ -269,8 +269,8 @@ void RPCConsole::setClientModel(ClientModel *model)
 
         updateTrafficStats(model->getTotalBytesRecv(), model->getTotalBytesSent());
         connect(model, SIGNAL(bytesChanged(quint64,quint64)), this, SLOT(updateTrafficStats(quint64, quint64)));
-        
-        
+
+
         // Provide initial values
         ui->clientVersion->setText(model->formatFullVersion());
         ui->clientName->setText(model->clientName());
@@ -279,7 +279,6 @@ void RPCConsole::setClientModel(ClientModel *model)
 
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
-        ui->isLiteMode->setChecked(model->isLiteMode());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }

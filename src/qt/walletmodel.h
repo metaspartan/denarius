@@ -6,7 +6,6 @@
 #include <map>
 
 #include "allocators.h" /* for SecureString */
-#include "instantx.h"
 #include "wallet.h"
 
 class OptionsModel;
@@ -33,8 +32,6 @@ public:
     QString narration;
     int typeInd;
     qint64 amount;
-	AvailableCoinsType inputType;
-    bool useInstantX;
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
@@ -57,30 +54,33 @@ public:
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
         NarrationTooLong,
-        Aborted,
-        AnonymizeOnlyUnlocked
+        Aborted
     };
 
     enum EncryptionStatus
     {
         Unencrypted,  // !wallet->IsCrypted()
         Locked,       // wallet->IsCrypted() && wallet->IsLocked()
-        Unlocked,      // wallet->IsCrypted() && !wallet->IsLocked()
-		UnlockedForAnonymizationOnly
+        Unlocked      // wallet->IsCrypted() && !wallet->IsLocked()
     };
 
     OptionsModel *getOptionsModel();
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
-	MintingTableModel *getMintingTableModel();
+	  MintingTableModel *getMintingTableModel();
 
     qint64 getBalance() const;
     qint64 getStake() const;
     qint64 getUnconfirmedBalance() const;
     qint64 getImmatureBalance() const;
-	qint64 getAnonymizedBalance() const;
     int getNumTransactions() const;
     EncryptionStatus getEncryptionStatus() const;
+
+    bool haveWatchOnly() const;
+
+    qint64 getWatchBalance() const;
+    qint64 getWatchUnconfirmedBalance() const;
+    qint64 getWatchImmatureBalance() const;
 
     // Check address for validity
     bool validateAddress(const QString &address);
@@ -103,10 +103,8 @@ public:
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
     // Passphrase only needed when unlocking
-    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString(), bool anonymizeOnly=false);
+    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString());
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
-	// Is wallet unlocked for anonymization only?
-    bool isAnonymizeOnlyUnlocked();
     // Wallet backup
     bool backupWallet(const QString &filename);
 
@@ -139,7 +137,7 @@ public:
     void lockCoin(COutPoint& output);
     void unlockCoin(COutPoint& output);
     void listLockedCoins(std::vector<COutPoint>& vOutpts);
-	CWallet* getWallet();
+	  CWallet* getWallet();
 
 private:
     CWallet *wallet;
@@ -150,17 +148,23 @@ private:
 
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
-	MintingTableModel *mintingTableModel;
+	  MintingTableModel *mintingTableModel;
+
+    //Watch Only
+    bool fHaveWatchOnly;
 
     // Cache some values to be able to detect changes
     qint64 cachedBalance;
     qint64 cachedStake;
     qint64 cachedUnconfirmedBalance;
     qint64 cachedImmatureBalance;
-    qint64 cachedAnonymizedBalance;
+
+    qint64 cachedWatchOnlyBalance;
+    qint64 cachedWatchUnconfBalance;
+    qint64 cachedWatchImmatureBalance;
+
     qint64 cachedNumTransactions;
     int cachedTxLocks;
-    int cachedDarksendRounds;
     EncryptionStatus cachedEncryptionStatus;
     int cachedNumBlocks;
 
@@ -180,16 +184,21 @@ public slots:
     void updateAddressBook(const QString &address, const QString &label, bool isMine, int status);
     /* Current, immature or unconfirmed balance might have changed - emit 'balanceChanged' if so */
     void pollBalanceChanged();
+    /* Watchonly added */
+    void updateWatchOnlyFlag(bool fHaveWatchonly);
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 anonymizedBalance);
+    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance,  qint64 watchOnlyBalance, qint64 watchUnconfBalance, qint64 watchImmatureBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);
 
     // Encryption status of wallet changed
     void encryptionStatusChanged(int status);
+
+    // Watch-only address added
+    void notifyWatchonlyChanged(bool fHaveWatchonly);
 
     // Signal emitted when wallet needs to be unlocked
     // It is valid behaviour for listeners to keep the wallet locked after this signal;

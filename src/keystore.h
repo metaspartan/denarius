@@ -51,15 +51,17 @@ public:
     virtual bool AddCScript(const CScript& redeemScript) =0;
     virtual bool HaveCScript(const CScriptID &hash) const =0;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;
-    
+
     // Support for Watch-only addresses
-    virtual bool AddWatchOnly(const CTxDestination &dest) =0;
-    virtual bool HaveWatchOnly(const CTxDestination &dest) const =0;
+    virtual bool AddWatchOnly(const CScript &dest) =0;
+    virtual bool RemoveWatchOnly(const CScript &dest) =0;
+    virtual bool HaveWatchOnly(const CScript &dest) const =0;
+    virtual bool HaveWatchOnly() const =0;
 };
 
 typedef std::map<CKeyID, CKey> KeyMap;
 typedef std::map<CScriptID, CScript > ScriptMap;
-typedef std::set<CTxDestination> WatchOnlySet;
+typedef std::set<CScript> WatchOnlySet;
 
 /** Basic key store, that keeps keys in an address->secret map */
 class CBasicKeyStore : public CKeyStore
@@ -109,9 +111,11 @@ public:
     virtual bool AddCScript(const CScript& redeemScript);
     virtual bool HaveCScript(const CScriptID &hash) const;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const;
-    
-    virtual bool AddWatchOnly(const CTxDestination &dest);
-    virtual bool HaveWatchOnly(const CTxDestination &dest) const;
+
+    virtual bool AddWatchOnly(const CScript &dest);
+    virtual bool RemoveWatchOnly(const CScript &dest);
+    virtual bool HaveWatchOnly(const CScript &dest) const;
+    virtual bool HaveWatchOnly() const;
 };
 
 typedef std::map<CKeyID, std::pair<CPubKey, std::vector<unsigned char> > > CryptedKeyMap;
@@ -124,12 +128,12 @@ class CCryptoKeyStore : public CBasicKeyStore
 private:
     // if fUseCrypto is true, mapKeys must be empty
     // if fUseCrypto is false, vMasterKey must be empty
-    bool fUseCrypto;    
+    bool fUseCrypto;
 
 protected:
     CryptedKeyMap mapCryptedKeys;
     CKeyingMaterial vMasterKey;
-    
+
     bool SetCrypted();
 
     // will encrypt previously unencrypted keys

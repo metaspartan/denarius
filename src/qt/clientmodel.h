@@ -33,9 +33,7 @@ public:
     QDateTime getLastBlockDate() const;
 
     //! Return true if client connected to testnet
-    bool isTestNet() const;    
-    //! Return true if client is running in litemode
-    bool isLiteMode() const;    
+    bool isTestNet() const; 
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;
     //! Return conservative estimate of total number of blocks, or 0 if unknown
@@ -71,6 +69,7 @@ signals:
 public slots:
     void updateTimer();
     void updateNumConnections(int numConnections);
+    void updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers);
     void updateAlert(const QString &hash, int status);
 };
 
