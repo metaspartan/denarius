@@ -69,7 +69,7 @@ signals:
 public slots:
     void updateTimer();
     void updateNumConnections(int numConnections);
-    void updateNumBlocks();
+    void updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers);
     void updateAlert(const QString &hash, int status);
 };
 

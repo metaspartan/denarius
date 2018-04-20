@@ -111,6 +111,7 @@ struct CMainSignals {
     boost::signals2::signal<void (const uint256 &)> Inventory;
     // Tells listeners to broadcast their data.
     boost::signals2::signal<void (bool)> Broadcast;
+
 } g_signals;
 }
 
@@ -1445,7 +1446,6 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-    LOCK(cs_main);
     if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
         return true;
     static int64_t nLastUpdate;
@@ -1456,7 +1456,7 @@ bool IsInitialBlockDownload()
         nLastUpdate = GetTime();
     }
     return (GetTime() - nLastUpdate < 15 &&
-            pindexBest->GetBlockTime() < GetTime() - 8 * 60 * 60);
+            pindexBest->GetBlockTime() < GetTime() - 2 * 60 * 60);
 }
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
@@ -1465,7 +1465,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     {
         nBestInvalidTrust = pindexNew->nChainTrust;
         CTxDB().WriteBestInvalidTrust(CBigNum(nBestInvalidTrust));
-        uiInterface.NotifyBlocksChanged();
+        uiInterface.NotifyBlocksChanged(pindexBest->nHeight, GetNumBlocksOfPeers());
     }
 
     uint256 nBestInvalidBlockTrust = pindexNew->nChainTrust - pindexNew->pprev->nChainTrust;
@@ -2642,7 +2642,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         hashPrevBestCoinBase = vtx[0].GetHash();
     }
 
-    uiInterface.NotifyBlocksChanged();
+    uiInterface.NotifyBlocksChanged(pindexNew->nHeight, GetNumBlocksOfPeers());
     return true;
 }
 
@@ -2795,8 +2795,7 @@ bool CBlock::AcceptBlock()
         hashProof = GetPoWHash();
     }
 
-    // bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
-    bool cpSatisfies = Checkpoints::CheckSync(nHeight);
+    bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
 
     // Check that the block satisfies synchronized checkpoint
     if (CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
@@ -4622,7 +4621,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             pto->PushMessage("getdata", vGetData);
 
         if (fSecMsgEnabled)
-            SecureMsgSendData(pto, fSendTrickle); // should be in cs_main?
+            SecureMsgSendData(pto, fSendTrickle);
     }
 
 

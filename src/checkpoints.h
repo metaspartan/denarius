@@ -51,10 +51,8 @@ namespace Checkpoints
     CBlockIndex* GetLastSyncCheckpoint();
     bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
     bool AcceptPendingSyncCheckpoint();
-    //uint256 AutoSelectSyncCheckpoint();
-    //bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
+    bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
     const CBlockIndex* AutoSelectSyncCheckpoint();
-    bool CheckSync(int nHeight);
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
     bool ResetSyncCheckpoint();
     void AskForPendingSyncCheckpoint(CNode* pfrom);

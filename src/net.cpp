@@ -1318,14 +1318,15 @@ void MapPort()
 // The second name should resolve to a list of seed addresses.
 
 static const char *strDNSSeed[][2] = {
-    {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
-    {"107.181.154.106", "107.181.154.106"},
-    {"chainz.cryptoid.info", "chainz.cryptoid.info"},
-    {"hashbag.cc", "hashbag.cc"},
     {"dnsseed.hashbag.cc", "dnsseed.hashbag.cc"},
-    {"denarius.name", "denarius.name"},
+    {"seed.denarius.host", "seed.denarius.host"},
+    {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
     {"seed.yiimp.eu", "seed.yiimp.eu"},
-    {"seed.denarius.host", "seed.denarius.host"}
+    {"chainz.cryptoid.info", "chainz.cryptoid.info"},
+    {"seed1.denarius.io", "seed1.denarius.io"},
+    {"seed2.denarius.io", "seed2.denarius.io"},
+    {"seed3.denarius.io", "seed3.denarius.io"},
+    {"seed4.denarius.io", "seed4.denarius.io"}
 };
 
 void ThreadDNSAddressSeed(void* parg)

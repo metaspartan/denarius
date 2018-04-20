@@ -133,7 +133,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     rpcConsole(0),
     nWeight(0),
     prevBlocks(0),
-    spinnerFrame(0)
+    spinnerFrame(0),
+    nBlocksInLastPeriod(0),
+    nLastBlocks(0)
 {
     resize(1300, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
@@ -175,7 +177,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     overviewPage = new OverviewPage();
 	statisticsPage = new StatisticsPage(this);
 	blockBrowser = new BlockBrowser(this);
-	marketBrowser = new MarketBrowser(this);
+    marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
@@ -495,7 +497,7 @@ void BitcoinGUI::createMenuBar()
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(encryptWalletAction);
-	  settings->addAction(backupWalletAction);
+    settings->addAction(backupWalletAction);
     settings->addAction(changePassphraseAction);
     settings->addAction(unlockWalletAction);
     settings->addAction(lockWalletAction);
@@ -524,13 +526,13 @@ void BitcoinGUI::createToolBars()
     mainIcon->show();
 
     mainToolbar = addToolBar(tr("Tabs toolbar"));
-    mainToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mainToolbar->addWidget(mainIcon);
     mainToolbar->addAction(overviewAction);
     mainToolbar->addAction(sendCoinsAction);
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
-	  mainToolbar->addAction(mintingAction);
+    mainToolbar->addAction(mintingAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
@@ -542,6 +544,18 @@ void BitcoinGUI::createToolBars()
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     secondaryToolbar->addAction(exportAction);
+    secondaryToolbar->addSeparator();
+    secondaryToolbar->addAction(openRPCConsoleAction);
+    secondaryToolbar->addAction(openGraphAction);
+    secondaryToolbar->addSeparator();
+    secondaryToolbar->addAction(lockWalletAction);
+    secondaryToolbar->addAction(unlockWalletAction);
+    secondaryToolbar->addAction(encryptWalletAction);
+    secondaryToolbar->addAction(changePassphraseAction);
+    secondaryToolbar->addSeparator();
+    removeToolBar(secondaryToolbar);
+    addToolBar(Qt::BottomToolBarArea, secondaryToolbar);
+    secondaryToolbar->show();
 
     connect(mainToolbar,      SIGNAL(orientationChanged(Qt::Orientation)), this, SLOT(mainToolbarOrientation(Qt::Orientation)));
     connect(secondaryToolbar, SIGNAL(orientationChanged(Qt::Orientation)), this, SLOT(secondaryToolbarOrientation(Qt::Orientation)));
@@ -594,6 +608,8 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
         setNumConnections(clientModel->getNumConnections());
         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
 
+
+        nClientUpdateTime = GetTime();
         setNumBlocks(clientModel->getNumBlocks(), clientModel->getNumBlocksOfPeers());
         connect(clientModel, SIGNAL(numBlocksChanged(int,int)), this, SLOT(setNumBlocks(int,int)));
 
@@ -604,6 +620,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
         addressBookPage->setOptionsModel(clientModel->getOptionsModel());
         receiveCoinsPage->setOptionsModel(clientModel->getOptionsModel());
     }
+
 }
 
 void BitcoinGUI::setWalletModel(WalletModel *walletModel)
@@ -754,6 +771,24 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
     QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
     QString tooltip;
+    QString nRemainingTime;
+
+    if (nLastBlocks == 0)
+        nLastBlocks = pindexBest->nHeight;
+
+    if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
+        nBlocksInLastPeriod = count - nLastBlocks;
+        nLastBlocks = count;
+        nClientUpdateTime = GetTime();
+    }
+    if (nBlocksInLastPeriod>0)
+        nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
+    else
+        nBlocksPerSec = 0;
+
+    if (nBlocksPerSec>0) {
+        nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
+    }
 
     QDateTime lastBlockDate = clientModel->getLastBlockDate();
     int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
@@ -785,12 +820,14 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     {
         int nRemainingBlocks = nTotalBlocks - count;
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
-
         if (strStatusBarWarnings.isEmpty())
         {
             progressBarLabel->setText(tr("Synchronizing with network..."));
             progressBarLabel->setVisible(true);
-            progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
+            if (nBlocksPerSec>0)
+                progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+            else
+                progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
             progressBar->setMaximum(nTotalBlocks);
             progressBar->setValue(count);
             progressBar->setVisible(true);
@@ -1207,20 +1244,26 @@ void BitcoinGUI::handleURI(QString strURI)
         notificator->notify(Notificator::Warning, tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Denarius address or malformed URI parameters."));
 }
 
+
 void BitcoinGUI::mainToolbarOrientation(Qt::Orientation orientation)
 {
+
+
     if(orientation == Qt::Horizontal)
     {
         mainIcon->setPixmap(QPixmap(":images/horizontal"));
+        mainIcon->setAlignment(Qt::AlignLeft);
         mainIcon->show();
+        mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mainToolbar->setStyleSheet(HORIZONTAL_TOOLBAR_STYLESHEET);
         messageAction->setIconText(tr("&Messages"));
     }
     else
     {
         mainIcon->setPixmap(QPixmap(":images/vertical"));
+        mainIcon->setAlignment(Qt::AlignCenter);
         mainIcon->show();
-
+        mainToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         mainToolbar->setStyleSheet(VERTICAL_TOOBAR_STYLESHEET);
         messageAction->setIconText(tr("Encrypted &Messages"));
     }
