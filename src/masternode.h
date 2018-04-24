@@ -36,6 +36,7 @@ class uint256;
 #define MASTERNODE_PING_SECONDS                (1*60)
 #define MASTERNODE_EXPIRATION_SECONDS          (120*60)
 #define MASTERNODE_REMOVAL_SECONDS             (130*60)
+#define MASTERNODE_CHECK_SECONDS               10
 
 using namespace std;
 
@@ -78,6 +79,7 @@ public:
     bool unitTest;
     bool allowFreeTx;
     int protocolVersion;
+    int64_t lastTimeChecked;
 
     //the dsq count from the last dsq broadcast of this node
     int64_t nLastDsq;
@@ -99,6 +101,7 @@ public:
         lastDseep = 0;
         allowFreeTx = true;
         protocolVersion = protocolVersionIn;
+        lastTimeChecked = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
@@ -119,7 +122,7 @@ public:
         return n;
     }
 
-    void Check();
+    void Check(bool forceCheck=false);
 
     bool UpdatedWithin(int seconds)
     {

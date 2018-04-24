@@ -84,8 +84,9 @@ public:
     int nVersion;
     std::string sAlias;
     std::string sAddress;
-    std::string sCollateralAddress;
     std::string sMasternodePrivKey;
+    std::string sTxHash;
+    std::string sOutputIndex;
 
     CAdrenalineNodeConfig()
     {
@@ -96,8 +97,9 @@ public:
         READWRITE(nVersion);
         READWRITE(sAlias);
         READWRITE(sAddress);
-        READWRITE(sCollateralAddress);
-	READWRITE(sMasternodePrivKey);
+        READWRITE(sMasternodePrivKey);
+        READWRITE(sTxHash);
+        READWRITE(sOutputIndex);
     )
 };
 
