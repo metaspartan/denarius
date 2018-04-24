@@ -45,7 +45,9 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     ui->copyAddressButton->setEnabled(false);
 
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidget->setSortingEnabled(true);
     ui->tableWidget_2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidget_2->setSortingEnabled(true);
 
     subscribeToCoreSignals();
 
@@ -53,8 +55,6 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
     if(!GetBoolArg("-reindexaddr", false))
         timer->start(30000);
-
-    
 
     updateNodeList();
 }
@@ -70,13 +70,11 @@ static void NotifyAdrenalineNodeUpdated(MasternodeManager *page, CAdrenalineNode
     QString alias = QString::fromStdString(nodeConfig.sAlias);
     QString addr = QString::fromStdString(nodeConfig.sAddress);
     QString privkey = QString::fromStdString(nodeConfig.sMasternodePrivKey);
-    QString collateral = QString::fromStdString(nodeConfig.sCollateralAddress);
     
     QMetaObject::invokeMethod(page, "updateAdrenalineNode", Qt::QueuedConnection,
                               Q_ARG(QString, alias),
                               Q_ARG(QString, addr),
-                              Q_ARG(QString, privkey),
-                              Q_ARG(QString, collateral)
+                              Q_ARG(QString, privkey)
                               );
 }
 
@@ -104,9 +102,43 @@ void MasternodeManager::on_tableWidget_2_itemSelectionChanged()
     }
 }
 
-void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QString privkey, QString collateral)
+void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QString privkey)
 {
     LOCK(cs_adrenaline);
+
+    std::string errorMessage;
+    QString status;
+    QString collateral;
+
+    CKey key;
+    CPubKey pubkey;
+
+
+    if(darkSendSigner.SetKey(privkey.toStdString(), errorMessage, key, pubkey))
+    {
+        // get the collateral address and status of the masternode
+        CScript script = GetScriptForDestination(pubkey.GetID());
+        CTxDestination address1;
+        ExtractDestination(script, address1);
+        CBitcoinAddress address2(address1);
+
+        if (errorMessage == ""){
+            status = QString::fromStdString("Not in the masternode list.");
+            collateral = QString::fromStdString(address2.ToString().c_str());
+        }
+        else {
+            status = QString::fromStdString(errorMessage);
+            collateral = QString::fromStdString(address2.ToString().c_str());
+        }
+
+        BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+            if (mn.addr.ToString().c_str() == addr){
+                status = QString::fromStdString("OK");
+                collateral = QString::fromStdString(address2.ToString().c_str());
+            }
+        }
+    }
+
     bool bFound = false;
     int nodeRow = 0;
     for(int i=0; i < ui->tableWidget_2->rowCount(); i++)
@@ -124,7 +156,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
 
     QTableWidgetItem *aliasItem = new QTableWidgetItem(alias);
     QTableWidgetItem *addrItem = new QTableWidgetItem(addr);
-    QTableWidgetItem *statusItem = new QTableWidgetItem("");
+    QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
 
     ui->tableWidget_2->setItem(nodeRow, 0, aliasItem);
@@ -149,6 +181,15 @@ static QString seconds_to_DHMS(quint32 duration)
   return res.sprintf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
 }
 
+class SortedWidgetItem : public QTableWidgetItem
+{
+public:
+    bool operator <( const QTableWidgetItem& other ) const
+    {
+        return (data(Qt::UserRole) < other.data(Qt::UserRole));
+    }
+};
+
 void MasternodeManager::updateNodeList()
 {
     TRY_LOCK(cs_masternodes, lockMasternodes);
@@ -158,6 +199,8 @@ void MasternodeManager::updateNodeList()
     ui->countLabel->setText("Updating...");
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
+    ui->tableWidget->setSortingEnabled(false);
+
     BOOST_FOREACH(CMasterNode mn, vecMasternodes) 
     {
         int mnRow = 0;
@@ -165,11 +208,19 @@ void MasternodeManager::updateNodeList()
 
  	// populate list
 	// Address, Rank, Active, Active Seconds, Last Seen, Pub Key
-	QTableWidgetItem *activeItem = new QTableWidgetItem(QString::number(mn.IsEnabled()));
-	QTableWidgetItem *addressItem = new QTableWidgetItem(QString::fromStdString(mn.addr.ToString()));
-	QTableWidgetItem *rankItem = new QTableWidgetItem(QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
-	QTableWidgetItem *activeSecondsItem = new QTableWidgetItem(seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
-	QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
+    QTableWidgetItem *activeItem = new QTableWidgetItem();
+    activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsEnabled() ? "Y" : "N"));
+    QTableWidgetItem *addressItem = new QTableWidgetItem();
+    addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
+    SortedWidgetItem *rankItem = new SortedWidgetItem();
+    rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
+    rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
+    SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
+    activeSecondsItem->setData(Qt::UserRole, mn.lastTimeSeen - mn.now);
+    activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
+    SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
+    lastSeenItem->setData(Qt::UserRole, mn.lastTimeSeen);
+    lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
 	
 	CScript pubkey;
     pubkey =GetScriptForDestination(mn.pubkey.GetID());
@@ -183,17 +234,39 @@ void MasternodeManager::updateNodeList()
 	ui->tableWidget->setItem(mnRow, 2, activeItem);
 	ui->tableWidget->setItem(mnRow, 3, activeSecondsItem);
 	ui->tableWidget->setItem(mnRow, 4, lastSeenItem);
-	ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
+    ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
     }
 
     ui->countLabel->setText(QString::number(ui->tableWidget->rowCount()));
+    ui->tableWidget->setSortingEnabled(true);
+
+    CMasternodeConfig masternodeConfig;
+    // Add any masternode.conf masternodes to the adrenaline nodes
+    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+    {
+        CWalletDB walletdb(pwalletMain->strWalletFile);
+        CAdrenalineNodeConfig c;
+        c.sAlias = mne.getAlias();
+        c.sAddress = mne.getIp();
+        c.sMasternodePrivKey = mne.getPrivKey();
+        c.sTxHash = mne.getPrivKey();
+        c.sOutputIndex = mne.getOutputIndex();
+
+        // only add if it doesn't exist already
+        if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
+        {
+            pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+            walletdb.WriteAdrenalineNodeConfig(c.sAddress, c);
+            uiInterface.NotifyAdrenalineNodeChanged(c);
+        }
+    }
 
     if(pwalletMain)
     {
         LOCK(cs_adrenaline);
         BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
         {
-            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey), QString::fromStdString(adrenaline.second.sCollateralAddress));
+            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey));
         }
     }
     
@@ -282,7 +355,7 @@ void MasternodeManager::on_startButton_clicked()
     CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
 
     std::string errorMessage;
-    bool result = activeMasternode.RegisterByPubKey(c.sAddress, c.sMasternodePrivKey, c.sCollateralAddress, errorMessage);
+    bool result = activeMasternode.Register(c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
 
     QMessageBox msg;
     if(result)
@@ -299,8 +372,10 @@ void MasternodeManager::on_startAllButton_clicked()
     BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
     {
         CAdrenalineNodeConfig c = adrenaline.second;
-	std::string errorMessage;
-        bool result = activeMasternode.RegisterByPubKey(c.sAddress, c.sMasternodePrivKey, c.sCollateralAddress, errorMessage);
+
+    std::string errorMessage;
+    bool result = activeMasternode.Register(c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
+
 	if(result)
 	{
    	    results += c.sAddress + ": STARTED\n";
@@ -331,16 +406,20 @@ void MasternodeManager::on_removeButton_clicked()
         QModelIndex index = selected.at(0);
         int r = index.row();
         std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
+
         CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
+        CMasternodeConfig masternodeConfig;
         CWalletDB walletdb(pwalletMain->strWalletFile);
-        pwalletMain->mapMyAdrenalineNodes.erase(sAddress);
+
+
+        masternodeConfig.purge(c.sAlias);
+        std::map<std::string, CAdrenalineNodeConfig>::iterator iter = pwalletMain->mapMyAdrenalineNodes.find(sAddress);
+        if (iter != pwalletMain->mapMyAdrenalineNodes.end())
+            pwalletMain->mapMyAdrenalineNodes.erase(iter);
         walletdb.EraseAdrenalineNodeConfig(c.sAddress);
-        ui->tableWidget_2->clearContents();
-        ui->tableWidget_2->setRowCount(0);
-        BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-        {
-            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey), QString::fromStdString(adrenaline.second.sCollateralAddress));
-        }
+
+        //delete the matching row from the list
+        ui->tableWidget_2->removeRow(r);
     }
 }
 

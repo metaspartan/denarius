@@ -160,16 +160,16 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         CValidationState state;
         CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut(4999*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut((GetMNCollateral()-1)*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
         //if(AcceptableInputs(mempool, state, tx)){
-	bool* pfMissingInputs = NULL;
-	if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
-            if (fDebug) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
+        bool* pfMissingInputs = NULL;
+        if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+            if (fDebugNet) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
 
             if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
-                printf("dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
+                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
@@ -248,7 +248,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                         mn.UpdateLastSeen();
                         if(stop) {
                             mn.Disable();
-                            mn.Check();
+                            mn.Check(true);
                         }
                         RelayDarkSendElectionEntryPing(vin, vchSig, sigTime, stop);
                     }
@@ -257,7 +257,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             }
         }
 
-        printf("dseep - Couldn't find masternode entry %s\n", vin.ToString().c_str());
+        if (fDebugNet) printf("dseep - Couldn't find masternode entry %s\n", vin.ToString().c_str());
 
         std::map<COutPoint, int64_t>::iterator i = askedForMasternodeListEntry.find(vin.prevout);
         if (i != askedForMasternodeListEntry.end()){
@@ -270,7 +270,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         // ask for the dsee info once from the node that sent dseep
 
-        printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
+        if (fDebugNet) printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
         pfrom->PushMessage("dseg", vin);
         int64_t askAgain = GetTime()+(60*60*24);
         askedForMasternodeListEntry[vin.prevout] = askAgain;
@@ -318,7 +318,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             if(mn.addr.IsRFC1918()) continue; //local network
 
             if(vin == CTxIn()){
-                mn.Check();
+                mn.Check(true);
                 if(mn.IsEnabled()) {
                     if(fDebug) printf("dseg - Sending masternode entry - %s \n", mn.addr.ToString().c_str());
                     pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
@@ -594,8 +594,11 @@ uint256 CMasterNode::CalculateScore(int mod, int64_t nBlockHeight)
     return r;
 }
 
-void CMasterNode::Check()
+void CMasterNode::Check(bool forceCheck)
 {
+    if(!forceCheck && (GetTime() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
+    lastTimeChecked = GetTime();
+
     //once spent, stop doing the checks
     if(enabled==3) return;
 
@@ -613,18 +616,18 @@ void CMasterNode::Check()
     if(!unitTest){
         CValidationState state;
         CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut(4999*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut((GetMNCollateral()-1)*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
         //if(!AcceptableInputs(mempool, state, tx)){
         bool* pfMissingInputs = NULL;
 
-	if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
-            enabled = 3;
-            return;
+        if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+                enabled = 3; //MN input was spent, disable checks for this MN
+                return;
+            }
         }
-    }
 
     enabled = 1; // OK
 }

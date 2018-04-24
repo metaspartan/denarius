@@ -816,7 +816,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         text = tr("%n day(s) ago","",secs/(60*60*24));
     }
 
-    if(count < nTotalBlocks && secs > 30*30) // show sync when behind on blocks and last block is older than 240 secs
+    if (count < nTotalBlocks || secs > 30*30)
     {
         int nRemainingBlocks = nTotalBlocks - count;
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
