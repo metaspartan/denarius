@@ -490,7 +490,7 @@ bool AppInit2()
     std::string err;
     masternodeConfig.read(err);
     if (!err.empty())
-        InitError("error while parsing masternode.conf Error: " + err);
+        InitError("error while parsing masternode.conf Error: " + err);    
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
@@ -990,6 +990,24 @@ bool AppInit2()
     }
 
     printf("fMasterNode %d\n", fMasterNode);
+
+    // Add any masternode.conf masternodes to the adrenaline nodes
+    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+    {
+        CAdrenalineNodeConfig c(mne.getAlias(), mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex());
+        CWalletDB walletdb(strWalletFileName);
+
+        // add it to wallet db if doesn't exist already
+        if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
+        {
+
+            if (walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
+                uiInterface.NotifyAdrenalineNodeChanged(c);
+        }
+        // add it to adrenaline nodes if it doesn't exist already
+        if (!pwalletMain->mapMyAdrenalineNodes.count(c.sAddress))
+            pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+    }
 
     //Threading still needs reworking
     NewThread(ThreadCheckDarkSendPool, NULL);

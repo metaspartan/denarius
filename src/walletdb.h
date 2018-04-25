@@ -93,6 +93,15 @@ public:
 	nVersion = 0;
     }
 
+    CAdrenalineNodeConfig(std::string alias, std::string address, std::string privKey, std::string txHash, std::string outputIndex) {
+        nVersion = 0;
+        sAlias = alias;
+        sAddress = address;
+        sMasternodePrivKey = privKey;
+        sTxHash = txHash;
+        sOutputIndex = outputIndex;
+    }
+
     IMPLEMENT_SERIALIZE(
         READWRITE(nVersion);
         READWRITE(sAlias);
