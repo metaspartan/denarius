@@ -215,10 +215,10 @@ void MasternodeManager::updateNodeList()
         rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
         rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
-        activeSecondsItem->setData(Qt::UserRole, mn.lastTimeSeen - mn.now);
+        activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
         SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
-        lastSeenItem->setData(Qt::UserRole, mn.lastTimeSeen);
+        lastSeenItem->setData(Qt::UserRole, (qint64)mn.lastTimeSeen);
         lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
 
         CScript pubkey;
