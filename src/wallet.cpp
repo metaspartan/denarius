@@ -4145,7 +4145,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
 
 bool CWallet::AddAdrenalineNodeConfig(CAdrenalineNodeConfig nodeConfig)
 {
-    bool rv = CWalletDB(strWalletFile).WriteAdrenalineNodeConfig(nodeConfig.sAlias, nodeConfig);
+    bool rv = CWalletDB(strWalletFile).WriteAdrenalineNodeConfig(nodeConfig.sAddress, nodeConfig);
     if(rv)
 	uiInterface.NotifyAdrenalineNodeChanged(nodeConfig);
 

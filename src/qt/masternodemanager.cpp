@@ -113,7 +113,6 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     CKey key;
     CPubKey pubkey;
 
-
     if(darkSendSigner.SetKey(privkey.toStdString(), errorMessage, key, pubkey))
     {
         // get the collateral address and status of the masternode
@@ -206,60 +205,39 @@ void MasternodeManager::updateNodeList()
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
 
- 	// populate list
-	// Address, Rank, Active, Active Seconds, Last Seen, Pub Key
-    QTableWidgetItem *activeItem = new QTableWidgetItem();
-    activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsEnabled() ? "Y" : "N"));
-    QTableWidgetItem *addressItem = new QTableWidgetItem();
-    addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
-    SortedWidgetItem *rankItem = new SortedWidgetItem();
-    rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
-    rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
-    SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
-    activeSecondsItem->setData(Qt::UserRole, mn.lastTimeSeen - mn.now);
-    activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
-    SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
-    lastSeenItem->setData(Qt::UserRole, mn.lastTimeSeen);
-    lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
-	
-	CScript pubkey;
-    pubkey =GetScriptForDestination(mn.pubkey.GetID());
-    CTxDestination address1;
-    ExtractDestination(pubkey, address1);
-    CBitcoinAddress address2(address1);
-	QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()));
-	
-	ui->tableWidget->setItem(mnRow, 0, addressItem);
-	ui->tableWidget->setItem(mnRow, 1, rankItem);
-	ui->tableWidget->setItem(mnRow, 2, activeItem);
-	ui->tableWidget->setItem(mnRow, 3, activeSecondsItem);
-	ui->tableWidget->setItem(mnRow, 4, lastSeenItem);
-    ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
+        // populate list
+        // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
+        QTableWidgetItem *activeItem = new QTableWidgetItem();
+        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsEnabled() ? "Y" : "N"));
+        QTableWidgetItem *addressItem = new QTableWidgetItem();
+        addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
+        SortedWidgetItem *rankItem = new SortedWidgetItem();
+        rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
+        rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
+        SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
+        activeSecondsItem->setData(Qt::UserRole, mn.lastTimeSeen - mn.now);
+        activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
+        SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
+        lastSeenItem->setData(Qt::UserRole, mn.lastTimeSeen);
+        lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
+
+        CScript pubkey;
+        pubkey =GetScriptForDestination(mn.pubkey.GetID());
+        CTxDestination address1;
+        ExtractDestination(pubkey, address1);
+        CBitcoinAddress address2(address1);
+        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()));
+
+        ui->tableWidget->setItem(mnRow, 0, addressItem);
+        ui->tableWidget->setItem(mnRow, 1, rankItem);
+        ui->tableWidget->setItem(mnRow, 2, activeItem);
+        ui->tableWidget->setItem(mnRow, 3, activeSecondsItem);
+        ui->tableWidget->setItem(mnRow, 4, lastSeenItem);
+        ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
     }
 
     ui->countLabel->setText(QString::number(ui->tableWidget->rowCount()));
     ui->tableWidget->setSortingEnabled(true);
-
-    CMasternodeConfig masternodeConfig;
-    // Add any masternode.conf masternodes to the adrenaline nodes
-    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
-    {
-        CWalletDB walletdb(pwalletMain->strWalletFile);
-        CAdrenalineNodeConfig c;
-        c.sAlias = mne.getAlias();
-        c.sAddress = mne.getIp();
-        c.sMasternodePrivKey = mne.getPrivKey();
-        c.sTxHash = mne.getPrivKey();
-        c.sOutputIndex = mne.getOutputIndex();
-
-        // only add if it doesn't exist already
-        if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
-        {
-            pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
-            walletdb.WriteAdrenalineNodeConfig(c.sAddress, c);
-            uiInterface.NotifyAdrenalineNodeChanged(c);
-        }
-    }
 
     if(pwalletMain)
     {
@@ -358,6 +336,7 @@ void MasternodeManager::on_startButton_clicked()
     bool result = activeMasternode.Register(c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
 
     QMessageBox msg;
+    msg.setWindowTitle("Denarius Message");
     if(result)
         msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " started.");
     else
@@ -387,6 +366,7 @@ void MasternodeManager::on_startAllButton_clicked()
     }
 
     QMessageBox msg;
+    msg.setWindowTitle("Denarius Message");
     msg.setText(QString::fromStdString(results));
     msg.exec();
 }
@@ -408,18 +388,22 @@ void MasternodeManager::on_removeButton_clicked()
         std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
 
         CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
-        CMasternodeConfig masternodeConfig;
         CWalletDB walletdb(pwalletMain->strWalletFile);
 
+        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+        {
+            if (mne.getIp() == sAddress)
+            {
+                masternodeConfig.purge(mne);
+                std::map<std::string, CAdrenalineNodeConfig>::iterator iter = pwalletMain->mapMyAdrenalineNodes.find(sAddress);
+                if (iter != pwalletMain->mapMyAdrenalineNodes.end())
+                    pwalletMain->mapMyAdrenalineNodes.erase(iter);
+                walletdb.EraseAdrenalineNodeConfig(sAddress);
 
-        masternodeConfig.purge(c.sAlias);
-        std::map<std::string, CAdrenalineNodeConfig>::iterator iter = pwalletMain->mapMyAdrenalineNodes.find(sAddress);
-        if (iter != pwalletMain->mapMyAdrenalineNodes.end())
-            pwalletMain->mapMyAdrenalineNodes.erase(iter);
-        walletdb.EraseAdrenalineNodeConfig(c.sAddress);
-
-        //delete the matching row from the list
-        ui->tableWidget_2->removeRow(r);
+                ui->tableWidget_2->removeRow(r);
+                break;
+            }
+        }
     }
 }
 
@@ -439,6 +423,7 @@ void MasternodeManager::on_stopButton_clicked()
     std::string errorMessage;
     bool result = activeMasternode.StopMasterNode(c.sAddress, c.sMasternodePrivKey, errorMessage);
     QMessageBox msg;
+    msg.setWindowTitle("Denarius Message");
     if(result)
     {
         msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " stopped.");
@@ -469,6 +454,7 @@ void MasternodeManager::on_stopAllButton_clicked()
     }
 
     QMessageBox msg;
+    msg.setWindowTitle("Denarius Message");
     msg.setText(QString::fromStdString(results));
     msg.exec();
 }

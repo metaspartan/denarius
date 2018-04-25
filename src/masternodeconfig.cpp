@@ -13,7 +13,7 @@ void CMasternodeConfig::add(std::string alias, std::string ip, std::string privK
     entries.push_back(cme);
 }
 
-void CMasternodeConfig::purge(std::string strAlias) {
+void CMasternodeConfig::purge(CMasternodeEntry cme) {
     std::string line;
     std::string errMsg;
     boost::filesystem::path confPath(GetMasternodeConfigFile());
@@ -27,7 +27,7 @@ void CMasternodeConfig::purge(std::string strAlias) {
         iss.str(line);
         iss.clear();
         iss >> alias >> ip >> privKey >> txHash >> outputIndex;
-        if (alias != strAlias)
+        if (alias != cme.getAlias())
         {
             temp << line << std::endl;
         }
