@@ -1484,7 +1484,7 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue
-                        && pcoin->vout[i].nValue != GetMNCollateral()*COIN // ignore outputs that are valid for MN
+                        && !IsLockedCoin((*it).first, i) // ignore outputs that are locked for MNs
                         )
                     //vCoins.push_back(COutput(pcoin, i, nDepth));
 					          vCoins.push_back(COutput(pcoin, i, nDepth, true));
