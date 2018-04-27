@@ -1276,6 +1276,45 @@ int64_t CWallet::GetBalance() const
     return nTotal;
 }
 
+int64_t CWallet::GetUnlockedBalance() const
+{
+    int64_t nTotal = 0;
+
+    LOCK2(cs_main, cs_wallet); // ListLockedCoins, mapWallet
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true);
+
+     // Filter
+     BOOST_FOREACH (const COutput& out, vCoins) {
+         if (out.fSpendable)
+            nTotal += out.tx->vout[out.i].nValue;
+     }
+
+    return nTotal;
+}
+
+int64_t CWallet::GetLockedBalance() const
+{
+    int64_t nTotal = 0;
+    {
+        LOCK2(cs_main, cs_wallet);
+        std::vector<COutPoint> vLockedCoins;
+        ListLockedCoins(vLockedCoins);
+
+        // add locked coins value up
+        BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)
+        {
+            if (!mapWallet.count(outpoint.hash)) continue;
+            int nDepth = mapWallet[outpoint.hash].GetDepthInMainChain();
+            if (nDepth < 0) continue;
+            COutput out(&mapWallet[outpoint.hash], outpoint.n, nDepth, true);
+            if (outpoint.n < out.tx->vout.size())
+                nTotal += out.tx->vout[out.i].nValue;
+        }
+    }
+    return nTotal;
+}
+
 int64_t CWallet::GetUnconfirmedBalance() const
 {
     int64_t nTotal = 0;
@@ -1299,7 +1338,7 @@ int64_t CWallet::GetImmatureBalance() const
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0 && pcoin->IsInMainChain())
+            if ((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0 && pcoin->IsInMainChain())
                 nTotal += pcoin->GetImmatureCredit();
         }
     }
@@ -1345,7 +1384,8 @@ int64_t CWallet::GetImmatureWatchOnlyBalance() const
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
-            nTotal += pcoin->GetImmatureWatchOnlyCredit();
+            if ((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0 && pcoin->IsInMainChain())
+                nTotal += pcoin->GetImmatureWatchOnlyCredit();
         }
     }
     return nTotal;
@@ -1484,7 +1524,7 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++)
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue
-                        && pcoin->vout[i].nValue != GetMNCollateral()*COIN // ignore outputs that are valid for MN
+                        && !IsLockedCoin((*it).first, i) // ignore outputs that are locked for MNs
                         )
                     //vCoins.push_back(COutput(pcoin, i, nDepth));
 					          vCoins.push_back(COutput(pcoin, i, nDepth, true));
@@ -1530,16 +1570,29 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
     }
 }
 
-// ppcoin: total coins staked (non-spendable until maturity)
+// denarius: total coins available for staking
 int64_t CWallet::GetStake() const
 {
+
+    // Choose coins to use
+    int64_t nBalance = GetBalance();
+
+    if (nBalance <= nReserveBalance)
+        return false;
+
+    vector<const CWalletTx*> vwtxPrev;
+
+    set<pair<const CWalletTx*,unsigned int> > setCoins;
+    int64_t nValueIn = 0;
+
+    if (!SelectCoinsForStaking(nBalance - nReserveBalance, GetTime(), setCoins, nValueIn))
+        return false;
     int64_t nTotal = 0;
-    LOCK2(cs_main, cs_wallet);
-    for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+
+    BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        const CWalletTx* pcoin = &(*it).second;
-        if (pcoin->IsCoinStake() && pcoin->GetBlocksToMaturity() > 0 && pcoin->GetDepthInMainChain() > 0)
-            nTotal += pcoin->GetAvailableCredit();
+        const CWalletTx* tx = pcoin.first;
+        nTotal += tx->GetAvailableCredit();
     }
     return nTotal;
 }
@@ -1552,7 +1605,7 @@ int64_t CWallet::GetNewMint() const
     {
         const CWalletTx* pcoin = &(*it).second;
         if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0 && pcoin->GetDepthInMainChain() > 0)
-            nTotal += pcoin->GetAvailableCredit();
+            nTotal += pcoin->GetImmatureCredit();
     }
     return nTotal;
 }

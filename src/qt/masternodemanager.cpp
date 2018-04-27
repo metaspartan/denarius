@@ -48,6 +48,7 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     ui->tableWidget->setSortingEnabled(true);
     ui->tableWidget_2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidget_2->setSortingEnabled(true);
+    ui->tableWidget_2->sortByColumn(0, Qt::AscendingOrder);
 
     subscribeToCoreSignals();
 
@@ -63,6 +64,15 @@ MasternodeManager::~MasternodeManager()
 {
     delete ui;
 }
+
+class SortedWidgetItem : public QTableWidgetItem
+{
+public:
+    bool operator <( const QTableWidgetItem& other ) const
+    {
+        return (data(Qt::UserRole) < other.data(Qt::UserRole));
+    }
+};
 
 static void NotifyAdrenalineNodeUpdated(MasternodeManager *page, CAdrenalineNodeConfig nodeConfig)
 {
@@ -109,6 +119,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     std::string errorMessage;
     QString status;
     QString collateral;
+    QString rank = QString::fromStdString("-");
 
     CKey key;
     CPubKey pubkey;
@@ -122,7 +133,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         CBitcoinAddress address2(address1);
 
         if (errorMessage == ""){
-            status = QString::fromStdString("Not in the masternode list.");
+            status = QString::fromStdString("Offline");
             collateral = QString::fromStdString(address2.ToString().c_str());
         }
         else {
@@ -132,7 +143,8 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
 
         BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
             if (mn.addr.ToString().c_str() == addr){
-                status = QString::fromStdString("OK");
+                rank = QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight));
+                status = QString::fromStdString("Online");
                 collateral = QString::fromStdString(address2.ToString().c_str());
             }
         }
@@ -157,11 +169,15 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     QTableWidgetItem *addrItem = new QTableWidgetItem(addr);
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
+    SortedWidgetItem *rankItem = new SortedWidgetItem();
+    rankItem->setData(Qt::UserRole, rank == "-" ? 9999 : rank.toInt());
+    rankItem->setData(Qt::DisplayRole, rank);
 
     ui->tableWidget_2->setItem(nodeRow, 0, aliasItem);
     ui->tableWidget_2->setItem(nodeRow, 1, addrItem);
-    ui->tableWidget_2->setItem(nodeRow, 2, statusItem);
-    ui->tableWidget_2->setItem(nodeRow, 3, collateralItem);
+    ui->tableWidget_2->setItem(nodeRow, 2, rankItem);
+    ui->tableWidget_2->setItem(nodeRow, 3, statusItem);
+    ui->tableWidget_2->setItem(nodeRow, 4, collateralItem);
 }
 
 static QString seconds_to_DHMS(quint32 duration)
@@ -179,15 +195,6 @@ static QString seconds_to_DHMS(quint32 duration)
       return res.sprintf("%02dh:%02dm:%02ds", hours, minutes, seconds);
   return res.sprintf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
 }
-
-class SortedWidgetItem : public QTableWidgetItem
-{
-public:
-    bool operator <( const QTableWidgetItem& other ) const
-    {
-        return (data(Qt::UserRole) < other.data(Qt::UserRole));
-    }
-};
 
 void MasternodeManager::updateNodeList()
 {
@@ -215,10 +222,10 @@ void MasternodeManager::updateNodeList()
         rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
         rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
-        activeSecondsItem->setData(Qt::UserRole, mn.lastTimeSeen - mn.now);
+        activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
         SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
-        lastSeenItem->setData(Qt::UserRole, mn.lastTimeSeen);
+        lastSeenItem->setData(Qt::UserRole, (qint64)mn.lastTimeSeen);
         lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
 
         CScript pubkey;
