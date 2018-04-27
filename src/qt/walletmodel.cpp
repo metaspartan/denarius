@@ -675,22 +675,6 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     std::vector<COutput> vCoins;
     wallet->AvailableCoins(vCoins);
 
-    LOCK2(cs_main, wallet->cs_wallet); // ListLockedCoins, mapWallet
-    std::vector<COutPoint> vLockedCoins;
-
-    // add locked coins
-    BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)
-    {
-        if (!wallet->mapWallet.count(outpoint.hash)) continue;
-        int nDepth = wallet->mapWallet[outpoint.hash].GetDepthInMainChain();
-        if (nDepth < 0) continue;
-        //COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth);
-		COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);
-        //vCoins.push_back(out);
-        if (outpoint.n < out.tx->vout.size() && wallet->IsMine(out.tx->vout[outpoint.n]) == ISMINE_SPENDABLE)
-            vCoins.push_back(out);
-    }
-
     BOOST_FOREACH(const COutput& out, vCoins)
     {
         COutput cout = out;
@@ -704,7 +688,8 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
 
         CTxDestination address;
         if(!ExtractDestination(cout.tx->vout[cout.i].scriptPubKey, address)) continue;
-        mapCoins[CBitcoinAddress(address).ToString().c_str()].push_back(out);
+        if (out.n < cout.tx->vout.size() && wallet->IsMine(cout.tx->vout[out.n]) == ISMINE_SPENDABLE)
+            mapCoins[CBitcoinAddress(address).ToString().c_str()].push_back(out);
     }
 }
 
