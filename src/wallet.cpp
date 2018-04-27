@@ -1390,7 +1390,6 @@ int64_t CWallet::GetImmatureWatchOnlyBalance() const
     }
     return nTotal;
 }
-
 // populate vCoins with vector of spendable COutputs
 void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
 {
@@ -1571,7 +1570,7 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
 }
 
 // denarius: total coins available for staking
-int64_t CWallet::GetStake() const
+int64_t CWallet::GetStakeAmount() const
 {
 
     // Choose coins to use
@@ -1597,6 +1596,19 @@ int64_t CWallet::GetStake() const
     return nTotal;
 }
 
+int64_t CWallet::GetStake() const
+{
+    int64_t nTotal = 0;
+    LOCK2(cs_main, cs_wallet);
+    for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+    {
+        const CWalletTx* pcoin = &(*it).second;
+        if (pcoin->IsCoinStake() && pcoin->GetBlocksToMaturity() > 0 && pcoin->GetDepthInMainChain() > 0)
+            nTotal += pcoin->GetCredit(ISMINE_SPENDABLE);
+    }
+    return nTotal;
+}
+
 int64_t CWallet::GetNewMint() const
 {
     int64_t nTotal = 0;
@@ -1605,7 +1617,7 @@ int64_t CWallet::GetNewMint() const
     {
         const CWalletTx* pcoin = &(*it).second;
         if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0 && pcoin->GetDepthInMainChain() > 0)
-            nTotal += pcoin->GetImmatureCredit();
+            nTotal += pcoin->GetCredit(ISMINE_SPENDABLE);
     }
     return nTotal;
 }

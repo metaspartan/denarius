@@ -163,7 +163,6 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         CTxOut vout = CTxOut((GetMNCollateral()-1)*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
-        //if(AcceptableInputs(mempool, state, tx)){
         bool* pfMissingInputs = NULL;
         if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
             if (fDebugNet) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
@@ -620,9 +619,7 @@ void CMasterNode::Check(bool forceCheck)
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
-        //if(!AcceptableInputs(mempool, state, tx)){
         bool* pfMissingInputs = NULL;
-
         if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
                 enabled = 3; //MN input was spent, disable checks for this MN
                 return;

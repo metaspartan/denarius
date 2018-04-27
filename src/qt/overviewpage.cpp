@@ -237,11 +237,13 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
     // for the non-mining users
     bool showImmature = immatureBalance != 0;
     bool showLocked = lockedbalance != 0;
-    bool showWatchOnlyImmature = watchImmatureBalance != 0;
+    bool showWatchImmature = watchImmatureBalance != 0;
     bool showStakeBalance = GetBoolArg("-staking", true);
 
-    ui->labelImmature->setVisible(showImmature || showWatchOnlyImmature);
-    ui->labelImmatureText->setVisible(showImmature || showWatchOnlyImmature);
+    ui->labelImmature->setVisible(showImmature);
+    ui->labelImmatureText->setVisible(showImmature);
+    ui->labelWatchImmature->setVisible(showWatchImmature);
+    ui->labelWatchImmatureText->setVisible(showWatchImmature);
     ui->labelLocked->setVisible(showLocked);
     ui->labelLockedText->setVisible(showLocked);
     ui->labelStake->setVisible(showStakeBalance);
@@ -260,7 +262,7 @@ void OverviewPage::updateWatchOnlyLabels(bool showWatchOnly)
 	
 	ui->watch1->setVisible(showWatchOnly);
 	ui->watch2->setVisible(showWatchOnly);
-	ui->watch3->setVisible(showWatchOnly);
+    ui->labelWatchImmatureText->setVisible(showWatchOnly);
 	ui->watch4->setVisible(showWatchOnly);
 
     if (!showWatchOnly)
@@ -285,7 +287,7 @@ void OverviewPage::setModel(WalletModel *model)
         ui->listTransactions->setModelColumn(TransactionTableModel::ToAddress);
 
         // Keep up to date with wallet
-        setBalance(model->getUnlockedBalance(), model->getLockedBalance(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance(), model->getWatchBalance(), model->getWatchUnconfirmedBalance(), model->getWatchImmatureBalance());
+        setBalance(model->getUnlockedBalance(), model->getLockedBalance(), model->getStakeAmount(), model->getUnconfirmedBalance(), model->getImmatureBalance(), model->getWatchBalance(), model->getWatchUnconfirmedBalance(), model->getWatchImmatureBalance());
         connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, qint64, qint64, qint64, qint64)));
 
         // Watch Only
@@ -304,7 +306,7 @@ void OverviewPage::updateDisplayUnit()
     if(model && model->getOptionsModel())
     {
         if(currentBalance != -1)
-            setBalance(currentBalance, currentLockedBalance, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance, currentWatchOnlyBalance, currentWatchUnconfBalance, currentWatchImmatureBalance);
+            setBalance(currentBalance, currentLockedBalance, model->getStakeAmount(), currentUnconfirmedBalance, currentImmatureBalance, currentWatchOnlyBalance, currentWatchUnconfBalance, currentWatchImmatureBalance);
 
         // Update txdelegate->unit with the current unit
         txdelegate->unit = model->getOptionsModel()->getDisplayUnit();

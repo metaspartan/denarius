@@ -291,6 +291,7 @@ public:
     int64_t GetImmatureWatchOnlyBalance() const;
 
     int64_t GetStake() const;
+    int64_t GetStakeAmount() const;
     int64_t GetNewMint() const;
     bool CreateTransaction(const std::vector<std::pair<CScript, int64_t> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, int32_t& nChangePos, const CCoinControl *coinControl=NULL);
     bool CreateTransaction(CScript scriptPubKey, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
@@ -352,6 +353,10 @@ public:
     isminetype IsMine(const CTxOut& txout) const
     {
         return ::IsMine(*this, txout.scriptPubKey);
+    }
+    isminetype IsMine(const CTxOut& txout, const isminefilter& filter) const
+    {
+        return (::IsMine(*this, txout.scriptPubKey) & filter);
     }
     int64_t GetCredit(const CTxOut& txout, const isminefilter& filter) const
     {
@@ -773,10 +778,6 @@ public:
 
     int64_t GetCredit(const isminefilter& filter) const
     {
-        // Must wait until coinbase is safely deep enough in the chain before valuing it
-        if ((IsCoinBase() || IsCoinStake()) && GetBlocksToMaturity() > 0)
-            return 0;
-
             int64_t credit = 0;
             if (filter & ISMINE_SPENDABLE)
             {
@@ -808,6 +809,7 @@ public:
     {
         if (fUseCache && fImmatureCreditCached)
             return nImmatureCreditCached;
+
         int64_t nCredit = 0;
 
         // If coinbase is safely deep enough in the chain then ignore it

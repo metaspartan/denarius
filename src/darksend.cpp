@@ -968,13 +968,13 @@ void ThreadCheckDarkSendPool(void* parg)
             masternodePayments.CleanPaymentList();
         }
 
-        int mnRefresh = 90; //(5*5)
+        int mnRefresh = 15; //(3*5)
 
         //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes
-        if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
+        if(vNodes.size() > 3 && c % mnRefresh == 0 && RequestedMasterNodeList < 6){
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
-                //LOCK(cs_vNodes);
+                LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
                     if (pnode->nVersion >= darkSendPool.PROTOCOL_VERSION) {
