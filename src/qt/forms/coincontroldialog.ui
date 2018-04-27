@@ -370,18 +370,27 @@
      <property name="frameShadow">
       <enum>QFrame::Sunken</enum>
      </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
      <widget class="QWidget" name="horizontalLayoutWidget">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>0</y>
+        <y>10</y>
         <width>781</width>
-        <height>41</height>
+        <height>25</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0">
        <property name="spacing">
-        <number>14</number>
+        <number>25</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
        </property>
        <item>
         <widget class="QPushButton" name="pushButtonSelectAll">

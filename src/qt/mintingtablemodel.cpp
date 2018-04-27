@@ -73,10 +73,12 @@ public:
             LOCK(wallet->cs_wallet);
             for(std::map<uint256, CWalletTx>::iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             {
-                std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
-                BOOST_FOREACH(KernelRecord& kr, txList) {
-                    if(!kr.spent) {
-                        cachedWallet.append(kr);
+                if (it->second.GetCredit(ISMINE_SPENDABLE) || it->second.GetDebit(ISMINE_SPENDABLE)) {
+                    std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
+                    BOOST_FOREACH(KernelRecord& kr, txList) {
+                        if(!kr.spent) {
+                            cachedWallet.append(kr);
+                        }
                     }
                 }
 
@@ -108,6 +110,11 @@ public:
                 // Find transaction in wallet
                 std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(hash);
                 bool inWallet = mi != wallet->mapWallet.end();
+
+                CWalletTx& tx = mi->second;
+                if (tx.GetCredit(ISMINE_SPENDABLE) + tx.GetDebit(ISMINE_SPENDABLE) == (int64_t)0)
+                    inWallet = false;
+
                 // Find bounds of this transaction in model
                 QList<KernelRecord>::iterator lower = qLowerBound(
                     cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());

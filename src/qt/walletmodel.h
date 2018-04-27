@@ -73,6 +73,7 @@ public:
     qint64 getLockedBalance() const;
     qint64 getUnlockedBalance() const;
     qint64 getStake() const;
+    qint64 getStakeAmount() const;
     qint64 getUnconfirmedBalance() const;
     qint64 getImmatureBalance() const;
     int getNumTransactions() const;
