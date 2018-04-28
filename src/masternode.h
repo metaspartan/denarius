@@ -44,10 +44,13 @@ class CMasternodePaymentWinner;
 
 extern CCriticalSection cs_masternodes;
 extern std::vector<CMasterNode> vecMasternodes;
+extern std::vector<pair<int, CMasterNode*> > vecMasternodeScores;
+extern std::vector<pair<int, CMasterNode> > vecMasternodeRanks;
 extern CMasternodePayments masternodePayments;
 extern std::vector<CTxIn> vecMasternodeAskedFor;
 extern map<uint256, CMasternodePaymentWinner> mapSeenMasternodeVotes;
 extern map<int64_t, uint256> mapCacheBlockHashes;
+
 
 
 // manage the masternode connections
@@ -80,10 +83,13 @@ public:
     bool allowFreeTx;
     int protocolVersion;
     int64_t lastTimeChecked;
+    int nBlockLastPaid;
+    int64_t nTimeLastChecked = 0;
+    int64_t nTimeLastPaid = 0;
+
 
     //the dsq count from the last dsq broadcast of this node
     int64_t nLastDsq;
-
     CMasterNode(CService newAddr, CTxIn newVin, CPubKey newPubkey, std::vector<unsigned char> newSig, int64_t newNow, CPubKey newPubkey2, int protocolVersionIn)
     {
         addr = newAddr;
@@ -102,9 +108,12 @@ public:
         allowFreeTx = true;
         protocolVersion = protocolVersionIn;
         lastTimeChecked = 0;
+        nBlockLastPaid = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
+
+    void UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack);
 
     void UpdateLastSeen(int64_t override=0)
     {
@@ -155,13 +164,14 @@ public:
 };
 
 
+
 // Get the current winner for this block
 int GetCurrentMasterNode(int mod=1, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
 
 int GetMasternodeByVin(CTxIn& vin);
-int GetMasternodeRank(CTxIn& vin, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
+int GetMasternodeRank(CMasterNode& tmn, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
 int GetMasternodeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
-
+bool GetMasternodeRanks();
 
 // for storing the winning payments
 class CMasternodePaymentWinner
@@ -200,6 +210,23 @@ public:
      }
 };
 
+inline bool operator==(const CMasterNode& a, const CMasterNode& b)
+{
+    return a.vin == b.vin;
+}
+inline bool operator!=(const CMasterNode& a, const CMasterNode& b)
+{
+    return !(a.vin == b.vin);
+}
+inline bool operator<(const CMasterNode& a, const CMasterNode& b)
+{
+    return (a.nBlockLastPaid < b.nBlockLastPaid);
+}
+inline bool operator>(const CMasterNode& a, const CMasterNode& b)
+{
+    return (a.nBlockLastPaid > b.nBlockLastPaid);
+}
+
 //
 // Masternode Payments Class
 // Keeps track of who should get paid for which blocks
@@ -232,6 +259,7 @@ public:
     // and get paid this block
     //
 
+    int vecMasternodeRanksLastUpdated;
     uint64_t CalculateScore(uint256 blockHash, CTxIn& vin);
     bool GetWinningMasternode(int nBlockHeight, CTxIn& vinOut);
     bool AddWinningMasternode(CMasternodePaymentWinner& winner);
