@@ -354,10 +354,6 @@ public:
     {
         return ::IsMine(*this, txout.scriptPubKey);
     }
-    isminetype IsMine(const CTxOut& txout, const isminefilter& filter) const
-    {
-        return (::IsMine(*this, txout.scriptPubKey) & filter);
-    }
     int64_t GetCredit(const CTxOut& txout, const isminefilter& filter) const
     {
         if (!MoneyRange(txout.nValue))
