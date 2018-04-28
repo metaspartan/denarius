@@ -489,12 +489,12 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
-	    if(darkSendMaster)
+        if(darkSendMaster)
                 pnode->fDarkSendMaster = true;
 
             pnode->AddRef();
 
-	        pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
+            pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
 
             return pnode;
         }
@@ -502,7 +502,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
 
 
     /// debug print
-    printf("net", "trying connection %s lastseen=%.1fhrs\n",
+        printf("net: trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString().c_str(),
         pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
@@ -514,7 +514,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
     {
         addrman.Attempt(addrConnect);
 
-        printf("net", "connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
+        printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
 
         // Set to non-blocking
 #ifdef WIN32
