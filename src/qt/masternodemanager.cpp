@@ -119,7 +119,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     std::string errorMessage;
     QString status;
     QString collateral;
-    QString rank = QString::fromStdString("-");
+    int rank;
 
     CKey key;
     CPubKey pubkey;
@@ -143,7 +143,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
 
         BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
             if (mn.addr.ToString().c_str() == addr){
-                rank = QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight));
+                rank = GetMasternodeRank(mn, pindexBest->nHeight);
                 status = QString::fromStdString("Online");
                 collateral = QString::fromStdString(address2.ToString().c_str());
             }
@@ -170,8 +170,8 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
-    rankItem->setData(Qt::UserRole, rank == "-" ? 9999 : rank.toInt());
-    rankItem->setData(Qt::DisplayRole, rank);
+    rankItem->setData(Qt::UserRole, rank ? 99 : rank);
+    rankItem->setData(Qt::DisplayRole, rank ? QString::number(rank) : "");
 
     ui->tableWidget_2->setItem(nodeRow, 0, aliasItem);
     ui->tableWidget_2->setItem(nodeRow, 1, addrItem);
@@ -211,7 +211,7 @@ void MasternodeManager::updateNodeList()
     {
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
-
+        int mnRank = GetMasternodeRank(mn, pindexBest->nHeight);
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
@@ -219,8 +219,8 @@ void MasternodeManager::updateNodeList()
         QTableWidgetItem *addressItem = new QTableWidgetItem();
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
-        rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
-        rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
+        rankItem->setData(Qt::UserRole, mnRank);
+        rankItem->setData(Qt::DisplayRole, QString::number(mnRank));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
         activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
