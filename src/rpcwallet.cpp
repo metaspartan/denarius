@@ -23,7 +23,7 @@ static void accountingDeprecationCheck()
 {
     if (!GetBoolArg("-enableaccounts", false))
         throw runtime_error(
-            "Accounting API is deprecated and will be removed in future.\n"
+            "The Accounting API will be updated in the future.\n"
             "It can easily result in negative or odd balances if misused or misunderstood, which has happened in the field.\n"
             "If you still want to enable it, add to your config file enableaccounts=1\n");
 
@@ -91,6 +91,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
+    obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
+    obj.push_back(Pair("watchonly",     ValueFromAmount(pwalletMain->GetWatchOnlyBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
