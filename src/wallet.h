@@ -857,32 +857,60 @@ public:
         return nCredit;
     }
 
-    int64_t GetLockedCredit(bool fUseCache=true) const
+    // Return sum of unlocked coins
+    int64_t GetUnlockedCredit() const
     {
         // Must wait until coinbase is safely deep enough in the chain before valuing it
         if ((IsCoinBase() || IsCoinStake()) && GetBlocksToMaturity() > 0)
             return 0;
 
-        if (fUseCache && fAvailableCreditCached)
-            return nAvailableCreditCached;
-
         int64_t nCredit = 0;
-        for (unsigned int i = 0; i < vout.size(); i++)
-        {
-            if (!IsSpent(i))
-            {
-                const CTxOut &txout = vout[i];
-                nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
-                if (!MoneyRange(nCredit))
-                    throw std::runtime_error("CWalletTx::GetAvailableCredit() : value out of range");
-            }
+        uint256 hashTx = GetHash();
+        for (unsigned int i = 0; i < vout.size(); i++) {
+            const CTxOut& txout = vout[i];
+
+            if (IsSpent(i) || pwallet->IsLockedCoin(hashTx, i)) continue;
+            if (fMasterNode && vout[i].nValue == 5000 * COIN) continue; // do not count MN-like outputs
+
+            nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
+            if (!MoneyRange(nCredit))
+                throw std::runtime_error("CWalletTx::GetUnlockedCredit() : value out of range");
         }
 
-        nAvailableCreditCached = nCredit;
-        fAvailableCreditCached = true;
         return nCredit;
     }
 
+    // Return sum of locked coins
+    int64_t GetLockedCredit() const
+    {
+        // Must wait until coinbase is safely deep enough in the chain before valuing it
+        if ((IsCoinBase() || IsCoinStake()) && GetBlocksToMaturity() > 0)
+            return 0;
+
+        int64_t nCredit = 0;
+        uint256 hashTx = GetHash();
+        for (unsigned int i = 0; i < vout.size(); i++) {
+            const CTxOut& txout = vout[i];
+
+            // Skip spent coins
+            if (IsSpent(i)) continue;
+
+            // Add locked coins
+            if (pwallet->IsLockedCoin(hashTx, i)) {
+                nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
+            }
+
+            // Add masternode collaterals which are handled like locked coins
+            if (fMasterNode && vout[i].nValue == 5000 * COIN) {
+                nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
+            }
+
+            if (!MoneyRange(nCredit))
+                throw std::runtime_error("CWalletTx::GetLockedCredit() : value out of range");
+        }
+
+        return nCredit;
+    }
 
     int64_t GetImmatureWatchOnlyCredit(bool fUseCache=true) const
     {

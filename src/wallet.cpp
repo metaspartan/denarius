@@ -1279,16 +1279,15 @@ int64_t CWallet::GetBalance() const
 int64_t CWallet::GetUnlockedBalance() const
 {
     int64_t nTotal = 0;
+    {
+        LOCK2(cs_main, cs_wallet);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
+            const CWalletTx* pcoin = &(*it).second;
 
-    LOCK2(cs_main, cs_wallet); // ListLockedCoins, mapWallet
-    std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true);
-
-     // Filter
-     BOOST_FOREACH (const COutput& out, vCoins) {
-         if (out.fSpendable)
-            nTotal += out.tx->vout[out.i].nValue;
-     }
+            if (pcoin->IsTrusted() && pcoin->GetDepthInMainChain() > 0)
+                nTotal += pcoin->GetUnlockedCredit();
+        }
+    }
 
     return nTotal;
 }
@@ -1298,18 +1297,11 @@ int64_t CWallet::GetLockedBalance() const
     int64_t nTotal = 0;
     {
         LOCK2(cs_main, cs_wallet);
-        std::vector<COutPoint> vLockedCoins;
-        ListLockedCoins(vLockedCoins);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
+            const CWalletTx* pcoin = &(*it).second;
 
-        // add locked coins value up
-        BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)
-        {
-            if (!mapWallet.count(outpoint.hash)) continue;
-            int nDepth = mapWallet[outpoint.hash].GetDepthInMainChain();
-            if (nDepth < 0) continue;
-            COutput out(&mapWallet[outpoint.hash], outpoint.n, nDepth, true);
-            if (outpoint.n < out.tx->vout.size())
-                nTotal += out.tx->vout[out.i].nValue;
+            if (pcoin->IsTrusted() && pcoin->GetDepthInMainChain() > 0)
+                nTotal += pcoin->GetLockedCredit();
         }
     }
     return nTotal;
