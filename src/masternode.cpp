@@ -19,6 +19,8 @@ CCriticalSection cs_masternodes;
 
 /** The list of active masternodes */
 std::vector<CMasterNode> vecMasternodes;
+std::vector<pair<int, CMasterNode*> > vecMasternodeScores;
+std::vector<pair<int, CMasterNode> > vecMasternodeRanks;
 /** Object for who's going to get paid on which blocks */
 CMasternodePayments masternodePayments;
 // keep track of masternode votes I've seen
@@ -92,7 +94,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         }
 
         CScript pubkeyScript;
-        pubkeyScript =GetScriptForDestination(pubkey.GetID());
+        pubkeyScript = GetScriptForDestination(pubkey.GetID());
 
         if(pubkeyScript.size() != 25) {
             printf("dsee - pubkey the wrong size\n");
@@ -179,6 +181,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             // add our masternode
             CMasterNode mn(addr, vin, pubkey, vchSig, sigTime, pubkey2, protocolVersion);
             mn.UpdateLastSeen(lastUpdated);
+            CBlockIndex* pindex = pindexBest;
+            mn.UpdateLastPaidBlock(pindex, 1000); // do a search back 1000 blocks when receiving a new masternode to find their last payment
             vecMasternodes.push_back(mn);
 
             // if it matches our masternodeprivkey, then we've been remotely activated
@@ -400,6 +404,15 @@ struct CompareValueOnly
     }
 };
 
+struct CompareLastPaidBlock
+{
+    bool operator()(const pair<int, CMasterNode*>& t1,
+                    const pair<int, CMasterNode*>& t2) const
+    {
+        return (t1.first != t2.first ? t1.first > t2.first : t1.second->CalculateScore(1, pindexBest->nHeight) > t1.second->CalculateScore(1, pindexBest->nHeight));
+    }
+};
+
 struct CompareValueOnly2
 {
     bool operator()(const pair<int64_t, int>& t1,
@@ -464,73 +477,60 @@ int GetCurrentMasterNode(int mod, int64_t nBlockHeight, int minProtocol)
 
     return winner;
 }
+bool GetMasternodeRanks()
+{
+    if (masternodePayments.vecMasternodeRanksLastUpdated == pindexBest->nHeight)
+        return true;
+
+    // std::vector<pair<int, CMasterNode*> > vecMasternodeScores;
+
+    vecMasternodeScores.clear();
+
+    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+
+        mn.Check();
+        if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
+
+        if (!mn.nBlockLastPaid || mn.nBlockLastPaid == 0)
+        {
+            CBlockIndex* pindex = pindexBest;
+            mn.UpdateLastPaidBlock(pindex, 2880); // search back 1 day
+        }
+        vecMasternodeScores.push_back(make_pair(mn.nBlockLastPaid, &mn));
+    }
+
+    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPaidBlock());
+
+    masternodePayments.vecMasternodeRanksLastUpdated = pindexBest->nHeight;
+    return true;
+}
+
+int GetMasternodeRank(CMasterNode &tmn, int64_t nBlockHeight, int minProtocol)
+{
+    LOCK(cs_masternodes);
+    GetMasternodeRanks();
+    unsigned int i = 0;
+
+    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+    {
+        i++;
+        if (s.second->vin == tmn.vin)
+            return i;
+    }
+}
 
 int GetMasternodeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
 {
     LOCK(cs_masternodes);
-    int i = 0;
+    GetMasternodeRanks();
+    unsigned int i = 0;
 
-    std::vector<pair<unsigned int, int> > vecMasternodeScores;
-
-    i = 0;
-    BOOST_FOREACH(CMasterNode mn, vecMasternodes) {
-        mn.Check();
-        if(mn.protocolVersion < minProtocol) continue;
-        if(!mn.IsEnabled()) {
-            i++;
-            continue;
-        }
-
-        uint256 n = mn.CalculateScore(1, nBlockHeight);
-        unsigned int n2 = 0;
-        memcpy(&n2, &n, sizeof(n2));
-
-        vecMasternodeScores.push_back(make_pair(n2, i));
+    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+    {
         i++;
+        if (i == findRank)
+            return s.second;
     }
-
-    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareValueOnly2());
-
-    int rank = 0;
-    BOOST_FOREACH (PAIRTYPE(unsigned int, int)& s, vecMasternodeScores){
-        rank++;
-        if(rank == findRank) return s.second;
-    }
-
-    return -1;
-}
-
-int GetMasternodeRank(CTxIn& vin, int64_t nBlockHeight, int minProtocol)
-{
-    LOCK(cs_masternodes);
-    std::vector<pair<unsigned int, CTxIn> > vecMasternodeScores;
-
-    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
-        mn.Check();
-
-        if(mn.protocolVersion < minProtocol) continue;
-        if(!mn.IsEnabled()) {
-            continue;
-        }
-
-        uint256 n = mn.CalculateScore(1, nBlockHeight);
-        unsigned int n2 = 0;
-        memcpy(&n2, &n, sizeof(n2));
-
-        vecMasternodeScores.push_back(make_pair(n2, mn.vin));
-    }
-
-    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareValueOnly());
-
-    unsigned int rank = 0;
-    BOOST_FOREACH (PAIRTYPE(unsigned int, CTxIn)& s, vecMasternodeScores){
-        rank++;
-        if(s.second == vin) {
-            return rank;
-        }
-    }
-
-    return -1;
 }
 
 //Get the last hash that matches the modulus given. Processed in reverse order
@@ -569,6 +569,70 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
     }
 
     return false;
+}
+
+void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack)
+{
+    if(!pindex) return;
+
+    const CBlockIndex *BlockReading = pindex;
+
+    CScript mnpayee = GetScriptForDestination(pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(mnpayee, address1);
+    CBitcoinAddress address2(address1);
+
+    // LogPrint("masternode", "CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s\n", vin.prevout.ToStringShort());
+    uint64_t nCoinAge;
+
+    for (int i = 0; BlockReading && BlockReading->nHeight > nBlockLastPaid && i < nMaxBlocksToScanBack; i++) {
+            CBlock block;
+            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                continue;
+
+    /*  no amount checking for now
+     * TODO: Scan block for payments to calculate reward
+            // Calculate Coin Age for Masternode Reward Calculation
+            if (!block.vtx[1].GetCoinAge(txdb, nCoinAge))
+                return error("CheckBlock-POS : %s unable to get coin age for coinstake, Can't Calculate Masternode Reward\n", block.vtx[1].GetHash().ToString().substr(0,10).c_str());
+            int64_t nCalculatedStakeReward = GetProofOfStakeReward(nCoinAge, nFees);
+            int64_t nMasternodePayment = GetMasternodePayment(BlockReading->nHeight, block.IsProofOfStake() ? nCalculatedStakeReward : block.vtx[0].GetValueOut());
+    */
+            if (block.IsProofOfWork())
+            {
+                // TODO HERE: Scan the block for masternode payment amount
+                BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
+                    if(mnpayee == txout.scriptPubKey) {
+                        nBlockLastPaid = BlockReading->nHeight;
+                        nTimeLastPaid = BlockReading->nTime;
+                        int lastPay = pindexBest->nHeight - nBlockLastPaid;
+                        // TODO HERE: Check the nValue for the masternode payment amount
+                        printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pow %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
+                        return;
+                    }
+            } else if (block.IsProofOfStake())
+            {
+                // TODO HERE: Scan the block for masternode payment amount
+                BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
+                    if(mnpayee == txout.scriptPubKey) {
+                        nBlockLastPaid = BlockReading->nHeight;
+                        nTimeLastPaid = BlockReading->nTime;
+                        int lastPay = pindexBest->nHeight - nBlockLastPaid;
+                        // TODO HERE: Check the nValue for the masternode payment amount
+                        printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pos %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
+                        return;
+                    }
+            }
+
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+
+        BlockReading = BlockReading->pprev;
+    }
+    if (!nBlockLastPaid)
+    {
+        printf("CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s e.g. %s -- NOT FOUND\n", vin.prevout.ToString().c_str(),address2.ToString().c_str());
+        nBlockLastPaid = 1;
+    }
 }
 
 //
@@ -689,7 +753,6 @@ bool CMasternodePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 {
     BOOST_FOREACH(CMasternodePaymentWinner& winner, vWinning){
         if(winner.nBlockHeight == nBlockHeight) {
-
             CTransaction tx;
             uint256 hash;
             if(GetTransaction(winner.vin.prevout.hash, tx, hash)){

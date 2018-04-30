@@ -1019,13 +1019,14 @@ bool AppInit2()
         // add it to wallet db if doesn't exist already
         if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
         {
-
-            if (walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
-                uiInterface.NotifyAdrenalineNodeChanged(c);
+            if (!walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
+                printf("Could not add masternode config %s to adrenaline nodes.", c.sAddress.c_str());
         }
         // add it to adrenaline nodes if it doesn't exist already
         if (!pwalletMain->mapMyAdrenalineNodes.count(c.sAddress))
             pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+
+        uiInterface.NotifyAdrenalineNodeChanged(c);
     }
 
     //Threading still needs reworking

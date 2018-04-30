@@ -103,17 +103,13 @@ public:
         qSort(updated_sorted);
 
         {
-            LOCK(wallet->cs_wallet);
+            LOCK2(cs_main, wallet->cs_wallet);
             for(int update_idx = updated_sorted.size()-1; update_idx >= 0; --update_idx)
             {
                 const uint256 &hash = updated_sorted.at(update_idx);
                 // Find transaction in wallet
                 std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(hash);
                 bool inWallet = mi != wallet->mapWallet.end();
-
-                CWalletTx& tx = mi->second;
-                if (tx.GetCredit(ISMINE_SPENDABLE) + tx.GetDebit(ISMINE_SPENDABLE) == (int64_t)0)
-                    inWallet = false;
 
                 // Find bounds of this transaction in model
                 QList<KernelRecord>::iterator lower = qLowerBound(

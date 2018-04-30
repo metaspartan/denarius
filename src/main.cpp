@@ -2111,6 +2111,24 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             foundPaymentAmount = true;
                         if(vtx[1].vout[i].scriptPubKey == payee )
                             foundPayee = true;
+                            CScript pubScript;
+                            BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
+                            {
+                                pubScript = GetScriptForDestination(mn.pubkey.GetID());
+
+                                if (vtx[1].vout[i].scriptPubKey == pubScript)
+                                {
+                                    int lastPaid = mn.nBlockLastPaid;
+                                    int paidAge = pindex->nHeight+1 - lastPaid;
+                                    printf("Masternode PoS payee found at block %d: %s who got paid %f DNR (last payment was %d blocks ago)\n", pindex->nHeight+1, mn.addr.ToString().c_str(), vtx[1].vout[i].nValue / COIN, paidAge);
+                                    if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                    {
+                                        printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX");
+                                    }
+                                    mn.nBlockLastPaid = pindex->nHeight+1;
+                                    foundPayee = true;
+                                }
+                            }
                     }
 
                     if(!(foundPaymentAmount && foundPayee)) {
@@ -2149,11 +2167,30 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                     // Check transaction for payee and if contains masternode reward payment
                     if(fDebug) { printf("CheckBlock-POW(): Transaction 0 Size : %i\n", vtx[0].vout.size()); }
                     for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
-                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %ld\n",i, vtx[0].vout[i].nValue); }
+                        if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %lld\n",i, vtx[0].vout[i].nValue); }
                         if(vtx[0].vout[i].nValue == masternodePaymentAmount )
                             foundPaymentAmount = true;
                         if(vtx[0].vout[i].scriptPubKey == payee )
                             foundPayee = true;
+
+                        CScript pubScript;
+                        BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
+                        {
+                            pubScript = GetScriptForDestination(mn.pubkey.GetID());
+
+                            if (vtx[0].vout[i].scriptPubKey == pubScript)
+                            {
+                                int lastPaid = mn.nBlockLastPaid;
+                                int paidAge = pindex->nHeight+1 - lastPaid;
+                                printf("Masternode PoW payee found at block %d: %s who got paid %f DNR (last payment was %d blocks ago)\n", pindex->nHeight+1, mn.addr.ToString().c_str(), vtx[0].vout[i].nValue / COIN, paidAge);
+                                if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                {
+                                    printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX\n");
+                                }
+                                mn.nBlockLastPaid = pindex->nHeight+1;
+                                foundPayee = true;
+                            }
+                        }
                     }
                     if(fDebug) {printf("CheckBlock-POW(): foundPaymentAmount= %i ; foundPayee = %i\n", foundPaymentAmount, foundPayee); }
                     if(!(foundPaymentAmount && foundPayee)) {
@@ -3774,6 +3811,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     {
         // Must have a version message before anything else
         pfrom->Misbehaving(1);
+        printf("net: received an out-of-sequence %s from peer at %s\n", strCommand.c_str(), pfrom->addr.ToString().c_str());
+        if (pfrom->nMisbehavior > 10 || pfrom->nTimeConnected < GetTime() - 60)
+            pfrom->fDisconnect = true; // Disconnect them if they don't send us this within a minute or they are spamming us
         return false;
     }
 
@@ -3781,6 +3821,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     else if (strCommand == "verack")
     {
         pfrom->SetRecvVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
+        printf("net: received verack from peer version %d (recvVersion: %d) at %s\n", pfrom->nVersion, pfrom->nRecvVersion, pfrom->addr.ToString().c_str());
     }
 
 

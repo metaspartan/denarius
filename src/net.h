@@ -498,7 +498,7 @@ public:
         assert(ssSend.size() == 0);
         ssSend << CMessageHeader(pszCommand, 0);
         if (fDebug)
-            printf("sending: %s ", pszCommand);
+            printf("net: to %s: %s ", this->addr.ToString().c_str(), pszCommand);
     }
 
     void AbortMessage() UNLOCK_FUNCTION(cs_vSend)

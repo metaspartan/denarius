@@ -10,6 +10,7 @@
 #include "masternodeconfig.h"
 #include "masternode.h"
 #include "walletdb.h"
+#include "walletmodel.h"
 #include "wallet.h"
 #include "init.h"
 #include "bitcoinrpc.h"
@@ -119,34 +120,64 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     std::string errorMessage;
     QString status;
     QString collateral;
-    QString rank = QString::fromStdString("-");
 
-    CKey key;
-    CPubKey pubkey;
+    uint256 mnTxHash;
 
-    if(darkSendSigner.SetKey(privkey.toStdString(), errorMessage, key, pubkey))
-    {
-        // get the collateral address and status of the masternode
-        CScript script = GetScriptForDestination(pubkey.GetID());
-        CTxDestination address1;
-        ExtractDestination(script, address1);
-        CBitcoinAddress address2(address1);
+    CTxDestination address1;
+    CBitcoinAddress address2;
+    int rank;
+    int outputIndex;
+    TRY_LOCK(pwalletMain->cs_wallet, pwalletLock);
 
-        if (errorMessage == ""){
-            status = QString::fromStdString("Offline");
-            collateral = QString::fromStdString(address2.ToString().c_str());
-        }
-        else {
-            status = QString::fromStdString(errorMessage);
-            collateral = QString::fromStdString(address2.ToString().c_str());
-        }
+    if (!pwalletLock)
+        return;
 
-        BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
-            if (mn.addr.ToString().c_str() == addr){
-                rank = QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight));
-                status = QString::fromStdString("Online");
-                collateral = QString::fromStdString(address2.ToString().c_str());
+    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+        if (mne.getAlias() == alias.toStdString())
+        {
+            mnTxHash.SetHex(mne.getTxHash());
+            outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+            if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                if (fDebug) printf("MasternodeManager:: %s %s - IS NOT SPENDABLE, status is bad!\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+                errorMessage = "Output is not spendable. ";
+                break;
             }
+
+            CWalletTx tx;
+            if (pwalletMain->GetTransaction(mnTxHash, tx))
+            {
+                CTxOut vout = tx.vout[outputIndex];
+                if (!ExtractDestination(vout.scriptPubKey, address1))
+                    errorMessage += "Could not get collateral address. ";
+                else
+                    address2.Set(address1);
+                if (vout.nValue != GetMNCollateral()*COIN)
+                    errorMessage += "TX is not equal to 5000 DNR. ";
+            }
+            if (fDebug) printf("MasternodeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
+            break;
+        }
+    }
+
+    if (!address2.IsValid()) {
+        errorMessage += "Could not find collateral address. ";
+    }
+
+    if (errorMessage == ""){
+        status = QString::fromStdString("Loading");
+        collateral = QString::fromStdString(address2.ToString().c_str());
+    }
+    else {
+        status = QString::fromStdString("Error");
+        collateral = QString::fromStdString(errorMessage);
+    }
+
+    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+        if (mn.addr.ToString().c_str() == addr){
+            rank = GetMasternodeRank(mn, pindexBest->nHeight);
+            status = QString::fromStdString("Online");
+            collateral = QString::fromStdString(address2.ToString().c_str());
         }
     }
 
@@ -163,15 +194,18 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     }
 
     if(nodeRow == 0 && !bFound)
-        ui->tableWidget_2->insertRow(0);
+    {
+        ui->tableWidget_2->insertRow(ui->tableWidget_2->rowCount());
+        nodeRow = ui->tableWidget_2->rowCount()-1;
+    }
 
     QTableWidgetItem *aliasItem = new QTableWidgetItem(alias);
     QTableWidgetItem *addrItem = new QTableWidgetItem(addr);
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
-    rankItem->setData(Qt::UserRole, rank == "-" ? 9999 : rank.toInt());
-    rankItem->setData(Qt::DisplayRole, rank);
+    rankItem->setData(Qt::UserRole, rank ? rank : 2000);
+    rankItem->setData(Qt::DisplayRole, rank ? QString::number(rank) : "");
 
     ui->tableWidget_2->setItem(nodeRow, 0, aliasItem);
     ui->tableWidget_2->setItem(nodeRow, 1, addrItem);
@@ -211,7 +245,7 @@ void MasternodeManager::updateNodeList()
     {
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
-
+        int mnRank = GetMasternodeRank(mn, pindexBest->nHeight);
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
@@ -219,8 +253,8 @@ void MasternodeManager::updateNodeList()
         QTableWidgetItem *addressItem = new QTableWidgetItem();
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
-        rankItem->setData(Qt::UserRole, GetMasternodeRank(mn.vin, pindexBest->nHeight));
-        rankItem->setData(Qt::DisplayRole, QString::number(GetMasternodeRank(mn.vin, pindexBest->nHeight)));
+        rankItem->setData(Qt::UserRole, mnRank);
+        rankItem->setData(Qt::DisplayRole, QString::number(mnRank));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
         activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
@@ -269,9 +303,6 @@ void MasternodeManager::setClientModel(ClientModel *model)
 void MasternodeManager::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
-    if(model && model->getOptionsModel())
-    {
-    }
 
 }
 
