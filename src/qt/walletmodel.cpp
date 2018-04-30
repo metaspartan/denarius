@@ -28,7 +28,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
     fHaveWatchOnly = wallet->HaveWatchOnly();
 
     addressTableModel = new AddressTableModel(wallet, this);
-	  mintingTableModel = new MintingTableModel(wallet, this);
+    mintingTableModel = new MintingTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(wallet, this);
 
     // This timer will be fired repeatedly to update the balance
