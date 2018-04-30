@@ -529,7 +529,7 @@ int GetMasternodeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
     {
         i++;
         if (i == findRank)
-            return s.second;
+            return s.first;
     }
 }
 
