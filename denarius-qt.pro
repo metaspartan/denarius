@@ -9,7 +9,7 @@ QT += core gui network widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
-QMAKE_CXXFLAGS = -fpermissive
+QMAKE_CXXFLAGS += -fpermissive
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets printsupport
@@ -76,6 +76,10 @@ contains(USE_QRCODE, 1) {
     message(Building with QRCode support)
     DEFINES += USE_QRCODE
     LIBS += -lqrencode
+}
+contains(USE_PROFILER, 1) {
+    QMAKE_LFLAGS += -pg
+    QMAKE_CXXFLAGS += -pg
 }
 
 # use: qmake "USE_UPNP=1" ( enabled by default; default)
