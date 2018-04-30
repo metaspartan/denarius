@@ -3958,8 +3958,11 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()
                         continue;
                     grouping.insert(txoutAddr);
                 }
-            groupings.insert(grouping);
-            grouping.clear();
+            }
+            if (grouping.size() > 0) {
+                groupings.insert(grouping);
+                grouping.clear();
+            }
         }
 
         // group lone addrs by themselves
