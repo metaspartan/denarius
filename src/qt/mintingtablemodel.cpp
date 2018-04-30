@@ -73,15 +73,12 @@ public:
             LOCK(wallet->cs_wallet);
             for(std::map<uint256, CWalletTx>::iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             {
-                if (it->second.GetCredit(ISMINE_SPENDABLE) || it->second.GetDebit(ISMINE_SPENDABLE)) {
                     std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
                     BOOST_FOREACH(KernelRecord& kr, txList) {
                         if(!kr.spent) {
                             cachedWallet.append(kr);
                         }
                     }
-                }
-
             }
         }
     }
