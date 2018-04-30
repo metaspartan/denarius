@@ -111,10 +111,6 @@ public:
                 std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(hash);
                 bool inWallet = mi != wallet->mapWallet.end();
 
-                CWalletTx& tx = mi->second;
-                if (tx.GetCredit(ISMINE_SPENDABLE) + tx.GetDebit(ISMINE_SPENDABLE) == (int64_t)0)
-                    inWallet = false;
-
                 // Find bounds of this transaction in model
                 QList<KernelRecord>::iterator lower = qLowerBound(
                     cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
