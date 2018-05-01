@@ -164,7 +164,7 @@ void CDarkSendPool::CheckTimeout(){
     if(!fMasterNode) {
         if(state == POOL_STATUS_TRANSMISSION) {
             if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session complete -- Running Check()\n");
-            Check();
+            // Check();
         }
     }
 
