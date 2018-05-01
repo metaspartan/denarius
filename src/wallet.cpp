@@ -1566,26 +1566,19 @@ int64_t CWallet::GetStakeAmount() const
 {
 
     // Choose coins to use
-    int64_t nBalance = GetBalance();
+    int64_t nBalance = GetUnlockedBalance();
 
     if (nBalance <= nReserveBalance)
-        return false;
-
-    vector<const CWalletTx*> vwtxPrev;
+        return 0;
 
     set<pair<const CWalletTx*,unsigned int> > setCoins;
     int64_t nValueIn = 0;
 
-    if (!SelectCoinsForStaking(nBalance - nReserveBalance, GetTime(), setCoins, nValueIn))
-        return false;
-    int64_t nTotal = 0;
+    // Select coins with suitable depth
+    if (!SelectCoinsForStaking(nBalance - nReserveBalance, GetAdjustedTime(), setCoins, nValueIn))
+        return 0;
 
-    BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
-    {
-        const CWalletTx* tx = pcoin.first;
-        nTotal += tx->GetAvailableCredit();
-    }
-    return nTotal;
+    return nValueIn;
 }
 
 int64_t CWallet::GetStake() const
