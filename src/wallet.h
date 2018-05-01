@@ -870,7 +870,6 @@ public:
             const CTxOut& txout = vout[i];
 
             if (IsSpent(i) || pwallet->IsLockedCoin(hashTx, i)) continue;
-            if (fMasterNode && vout[i].nValue == 5000 * COIN) continue; // do not count MN-like outputs
 
             nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
             if (!MoneyRange(nCredit))
@@ -897,11 +896,6 @@ public:
 
             // Add locked coins
             if (pwallet->IsLockedCoin(hashTx, i)) {
-                nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
-            }
-
-            // Add masternode collaterals which are handled like locked coins
-            if (fMasterNode && vout[i].nValue == 5000 * COIN) {
                 nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
             }
 
