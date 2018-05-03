@@ -2115,12 +2115,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                             {
                                 pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                                CTxDestination address1;
+                                ExtractDestination(pubScript, address1);
+                                CBitcoinAddress address2(address1);
 
                                 if (vtx[1].vout[i].scriptPubKey == pubScript)
                                 {
                                     int lastPaid = mn.nBlockLastPaid;
                                     int paidAge = pindex->nHeight+1 - lastPaid;
-                                    printf("Masternode PoS payee found at block %d: %s who got paid %f DNR (last payment was %d blocks ago)\n", pindex->nHeight+1, mn.addr.ToString().c_str(), vtx[1].vout[i].nValue / COIN, paidAge);
+                                    printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[1].vout[i].nValue / COIN).c_str(), paidAge, mn.nBlockLastPaid);
                                     if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
                                     {
                                         printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX");
@@ -2177,12 +2180,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                         BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                         {
                             pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                            CTxDestination address1;
+                            ExtractDestination(pubScript, address1);
+                            CBitcoinAddress address2(address1);
 
                             if (vtx[0].vout[i].scriptPubKey == pubScript)
                             {
                                 int lastPaid = mn.nBlockLastPaid;
                                 int paidAge = pindex->nHeight+1 - lastPaid;
-                                printf("Masternode PoW payee found at block %d: %s who got paid %f DNR (last payment was %d blocks ago)\n", pindex->nHeight+1, mn.addr.ToString().c_str(), vtx[0].vout[i].nValue / COIN, paidAge);
+                                printf("Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid);
                                 if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
                                 {
                                     printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX\n");
