@@ -59,6 +59,7 @@ int CountMasternodesAboveProtocol(int protocolVersion);
 
 
 void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+bool CheckMasternodeVin(CTxIn& vin, std::string& errorMessage);
 
 //
 // The Masternode Class. For managing the darksend process. It contains the input of the 5000 DNR, signature to prove

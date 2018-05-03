@@ -6,6 +6,7 @@
 #include "masternode.h"
 #include "activemasternode.h"
 #include "darksend.h"
+#include "txdb.h"
 #include "main.h"
 #include "util.h"
 #include "addrman.h"
@@ -159,14 +160,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         // make sure it's still unspent
         //  - this is checked later by .check() in many places and by ThreadCheckDarkSendPool()
-
-        CValidationState state;
-        CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut((GetMNCollateral()-1)*COIN, darkSendPool.collateralPubKey);
-        tx.vin.push_back(vin);
-        tx.vout.push_back(vout);
-        bool* pfMissingInputs = NULL;
-        if(AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+        std::string vinError;
+        if(CheckMasternodeVin(vin,vinError)){
             if (fDebugNet) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
 
             if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
@@ -194,16 +189,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                 RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
 
         } else {
-            printf("dsee - Rejected masternode entry %s\n", addr.ToString().c_str());
-
-            int nDoS = 0;
-            if (state.IsInvalid(nDoS))
-            {
-                printf("dsee - %s from %s %s was not accepted into the memory pool\n", tx.GetHash().ToString().c_str(),
-                    pfrom->addr.ToString().c_str());
-                if (nDoS > 0)
-                    Misbehaving(pfrom->GetId(), nDoS);
-            }
+            printf("dsee - Rejected masternode entry %s: %s\n", addr.ToString().c_str(),errorMessage.c_str());
         }
     }
 
@@ -677,20 +663,47 @@ void CMasterNode::Check(bool forceCheck)
     }
 
     if(!unitTest){
-        CValidationState state;
-        CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut((GetMNCollateral()-1)*COIN, darkSendPool.collateralPubKey);
-        tx.vin.push_back(vin);
-        tx.vout.push_back(vout);
-
-        bool* pfMissingInputs = NULL;
-        if(!AcceptableInputs(mempool, tx, false, pfMissingInputs)){
+        std::string vinError;
+        if(!CheckMasternodeVin(vin,vinError)) {
                 enabled = 3; //MN input was spent, disable checks for this MN
+                if (fDebug) printf("error checking masternode %s: %s\n", vin.prevout.ToString().c_str(), vinError.c_str());
                 return;
             }
         }
 
     enabled = 1; // OK
+}
+
+bool CheckMasternodeVin(CTxIn& vin, std::string& errorMessage) {
+    CTxDB txdb("r");
+    CTxIndex txindex;
+    CTransaction ctx;
+    uint256 hashBlock;
+
+    if (!GetTransaction(vin.prevout.hash,ctx,hashBlock))
+    {
+        errorMessage = "could not find transaction";
+        return false;
+    }
+
+    CTxOut vout = ctx.vout[vin.prevout.n];
+    if (vout.nValue != GetMNCollateral()*COIN)
+    {
+        errorMessage = "specified vin was not a masternode capable transaction";
+        return false;
+    }
+
+    if (txdb.ReadTxIndex(vin.prevout.hash, txindex))
+    {
+        if (txindex.vSpent[vin.prevout.n].nTxPos != 0) {
+            errorMessage = "vin was spent";
+            return false;
+        }
+        return true;
+    } else {
+        errorMessage = "specified vin transaction was not found in the txindex\n";
+    }
+    return false;
 }
 
 bool CMasternodePayments::CheckSignature(CMasternodePaymentWinner& winner)
