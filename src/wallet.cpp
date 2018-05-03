@@ -1433,7 +1433,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
     }
 }
 
-void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, AvailableCoinsType coin_type) const
+void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, bool fOnlyUnlocked, const CCoinControl *coinControl, AvailableCoinsType coin_type) const
 {
     vCoins.clear();
 
@@ -1475,16 +1475,16 @@ void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, con
                 }
                 if(!found) continue;
 
+                if (fOnlyUnlocked)
+                {
+                    if (IsLockedCoin(pcoin->GetHash(),i))
+                        continue;
+                }
+
 				        //isminetype mine = IsMine(pcoin->vout[i]);
 		            bool mine = IsMine(pcoin->vout[i]);
 
-                //if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&
-                //    !IsLockedCoin((*it).first, i) && pcoin->vout[i].nValue > 0 &&
-                //    (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
-                //        vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
-		            //if (!(IsSpent(wtxid, i)) && mine &&
-		            if (!(pcoin->IsSpent(i)) &&
-                    !IsLockedCoin((*it).first, i) && pcoin->vout[i].nValue > 0 &&
+                    if (!(pcoin->IsSpent(i)) && pcoin->vout[i].nValue > 0 &&
                     (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
                         vCoins.push_back(COutput(pcoin, i, nDepth, mine));
             }

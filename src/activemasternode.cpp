@@ -342,6 +342,55 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
     return GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey);
 }
 
+bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex, std::string& errorMessage) {
+
+    // Find possible candidates
+    vector<COutput> possibleCoins = SelectCoinsMasternode(false);
+    COutput *selectedOutput;
+
+    // Find the vin
+    if(!strTxHash.empty()) {
+        // Let's find it
+        uint256 txHash(strTxHash);
+        int outputIndex = boost::lexical_cast<int>(strOutputIndex);
+        bool found = false;
+        BOOST_FOREACH(COutput& out, possibleCoins) {
+            if(out.tx->GetHash() == txHash && out.i == outputIndex)
+            {
+                if (out.tx->IsSpent(outputIndex))
+                {
+                        errorMessage = "vin was spent";
+                        return false;
+                }
+                selectedOutput = &out;
+                found = true;
+                break;
+            }
+        }
+        if(!found) {
+            errorMessage = "Could not locate valid vin";
+            return false;
+        }
+    } else {
+        // No output specified,  Select the first one
+        if(possibleCoins.size() > 0) {
+            // May cause problems with multiple transactions.
+            selectedOutput = &possibleCoins[0];
+        } else {
+            errorMessage = "Could not locate specified vin from coins in wallet";
+            return false;
+        }
+    }
+
+    // At this point we have a selected output, retrieve the associated info
+    if (!GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey))
+    {
+        errorMessage = "could not allocate vin";
+        return false;
+    }
+    return true;
+}
+
 bool CActiveMasternode::GetMasterNodeVinForPubKey(std::string collateralAddress, CTxIn& vin, CPubKey& pubkey, CKey& secretKey) {
     return GetMasterNodeVinForPubKey(collateralAddress, vin, pubkey, secretKey, "", "");
 }
@@ -414,14 +463,14 @@ bool CActiveMasternode::GetVinFromOutput(COutput out, CTxIn& vin, CPubKey& pubke
 }
 
 // get all possible outputs for running masternode
-vector<COutput> CActiveMasternode::SelectCoinsMasternode()
+vector<COutput> CActiveMasternode::SelectCoinsMasternode(bool fSelectUnlocked)
 {
     vector<COutput> vCoins;
     vector<COutput> filteredCoins;
     vector<COutPoint> confLockedCoins;
 
     // Temporary unlock MN coins from masternode.conf
-    if(GetBoolArg("-mnconflock", true)) {
+    if(fSelectUnlocked && GetBoolArg("-mnconflock", true)) {
         uint256 mnTxHash;
         BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());
@@ -432,7 +481,7 @@ vector<COutput> CActiveMasternode::SelectCoinsMasternode()
     }
 
     // Retrieve all possible outputs
-    pwalletMain->AvailableCoinsMN(vCoins);
+    pwalletMain->AvailableCoinsMN(vCoins, true, fSelectUnlocked);
 
     // Lock MN coins from masternode.conf back if they where temporary unlocked
     if(!confLockedCoins.empty()) {
