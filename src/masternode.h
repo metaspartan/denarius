@@ -85,8 +85,8 @@ public:
     int protocolVersion;
     int64_t lastTimeChecked;
     int nBlockLastPaid;
-    int64_t nTimeLastChecked = 0;
-    int64_t nTimeLastPaid = 0;
+    int64_t nTimeLastChecked;
+    int64_t nTimeLastPaid;
 
 
     //the dsq count from the last dsq broadcast of this node
@@ -110,6 +110,8 @@ public:
         protocolVersion = protocolVersionIn;
         lastTimeChecked = 0;
         nBlockLastPaid = 0;
+        nTimeLastChecked = 0;
+        nTimeLastPaid = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
