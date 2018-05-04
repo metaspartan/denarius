@@ -926,7 +926,7 @@ void ThreadCheckDarkSendPool(void* parg)
     unsigned int c = 0;
     std::string errorMessage;
 
-    while (true)
+    while (true && !fShutdown)
     {
         c++;
 
