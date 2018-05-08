@@ -30,7 +30,7 @@ Dependencies
  miniupnpc    UPnP Support      Optional firewall-jumping support
  libqrencode  QRCode generation Optional QRCode generation
 
-Note that libexecinfo should be installed, if you building under *BSD systems. 
+Note that libexecinfo should be installed, if you building under *BSD systems.
 This library provides backtrace facility.
 
 miniupnpc may be used for UPnP port mapping.  It can be downloaded from
@@ -77,7 +77,7 @@ Dependency Build Instructions: Gentoo
 emerge -av1 --noreplace boost openssl sys-libs/db
 
 Take the following steps to build (no UPnP support):
- cd ${SHADOWCOIN_DIR}/src
+ cd ${DENARIUS_DIR}/src
  make -f makefile.unix USE_UPNP=
  strip denariusd
 

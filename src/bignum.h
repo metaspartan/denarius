@@ -108,7 +108,8 @@ public:
     * @param range The upper bound on the number.
     * @return
     */
-    static CBigNum  randBignum(const CBigNum& range) {
+    static CBigNum  randBignum(const CBigNum& range)
+    {
         CBigNum ret;
         if(!BN_rand_range(&ret, &range)){
             throw bignum_error("CBigNum:rand element : BN_rand_range failed");
@@ -120,7 +121,8 @@ public:
     * @param k The bit length of the number.
     * @return
     */
-    static CBigNum RandKBitBigum(const uint32_t k){
+    static CBigNum RandKBitBigum(const uint32_t k)
+    {
         CBigNum ret;
         if(!BN_rand(&ret, k, -1, 0)){
             throw bignum_error("CBigNum:rand element : BN_rand failed");
@@ -175,7 +177,8 @@ public:
             n = -(sn + 1);
             ++n;
             fNegative = true;
-        } else {
+        } else
+        {
             n = sn;
             fNegative = false;
         }
@@ -393,6 +396,7 @@ public:
             unsigned int c = rem.getulong();
             str += "0123456789abcdef"[c];
         }
+
         if (BN_is_negative(this))
             str += "-";
         reverse(str.begin(), str.end());
@@ -455,7 +459,7 @@ public:
         CBigNum ret;
         if (!BN_mod_mul(&ret, this, &b, &m, pctx))
             throw bignum_error("CBigNum::mul_mod : BN_mod_mul failed");
-        
+
         return ret;
     }
 
@@ -500,7 +504,8 @@ public:
      * @param safe true for a safe prime
      * @return the prime
      */
-    static CBigNum generatePrime(const unsigned int numBits, bool safe = false) {
+    static CBigNum generatePrime(const unsigned int numBits, bool safe = false)
+    {
         CBigNum ret;
         if(!BN_generate_prime_ex(&ret, numBits, (safe == true), NULL, NULL, NULL))
             throw bignum_error("CBigNum::generatePrime*= :BN_generate_prime_ex");

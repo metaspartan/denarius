@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#include "darksend.h"
+#include "fortuna.h"
 #include "main.h"
 #include "init.h"
 #include "util.h"
@@ -22,33 +22,33 @@
 using namespace std;
 using namespace boost;
 
-CCriticalSection cs_darksend;
+CCriticalSection cs_fortuna;
 
-/** The main object for accessing darksend */
+/** The main object for accessing fortuna */
 CDarkSendPool darkSendPool;
 /** A helper object for signing messages from masternodes */
 CDarkSendSigner darkSendSigner;
-/** The current darksends in progress on the network */
-std::vector<CDarksendQueue> vecDarksendQueue;
+/** The current fortunas in progress on the network */
+std::vector<CFortunaQueue> vecFortunaQueue;
 /** Keep track of the used masternodes */
 std::vector<CTxIn> vecMasternodesUsed;
 // keep track of the scanning errors I've seen
-map<uint256, CDarksendBroadcastTx> mapDarksendBroadcastTxes;
+map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
 //
 CActiveMasternode activeMasternode;
 
 // count peers we've requested the list from
 int RequestedMasterNodeList = 0;
 
-/* *** BEGIN DARKSEND MAGIC  **********
+/* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
 */
 
 int randomizeList (int i) { return std::rand()%i;}
 
-// Recursively determine the rounds of a given input (How deep is the darksend chain for a given input)
-int GetInputDarksendRounds(CTxIn in, int rounds)
+// Recursively determine the rounds of a given input (How deep is the fortuna chain for a given input)
+int GetInputFortunaRounds(CTxIn in, int rounds)
 {
     if(rounds >= 17) return rounds;
 
@@ -61,7 +61,7 @@ int GetInputDarksendRounds(CTxIn in, int rounds)
         // bounds check
         if(in.prevout.n >= tx.vout.size()) return -4;
 
-        if(tx.vout[in.prevout.n].nValue == DARKSEND_FEE) return -3;
+        if(tx.vout[in.prevout.n].nValue == FORTUNA_FEE) return -3;
 
         //make sure the final output is non-denominate
         if(rounds == 0 && !pwalletMain->IsDenominatedAmount(tx.vout[in.prevout.n].nValue)) return -2; //NOT DENOM
@@ -80,7 +80,7 @@ int GetInputDarksendRounds(CTxIn in, int rounds)
             if(pwalletMain->IsMine(in2))
             {
                 //printf("rounds :: %s %s %d NEXT\n", padding.c_str(), in.ToString().c_str(), rounds);
-                int n = GetInputDarksendRounds(in2, rounds+1);
+                int n = GetInputFortunaRounds(in2, rounds+1);
                 if(n != -3) return n;
             }
         }
@@ -145,7 +145,7 @@ bool CDarkSendPool::SetCollateralAddress(std::string strAddress){
 }
 
 //
-// Unlock coins after Darksend fails or succeeds
+// Unlock coins after Fortuna fails or succeeds
 //
 void CDarkSendPool::UnlockCoins(){
     BOOST_FOREACH(CTxIn v, lockedCoins)
@@ -155,7 +155,7 @@ void CDarkSendPool::UnlockCoins(){
 }
 
 //
-// Check for various timeouts (queue objects, darksend, etc)
+// Check for various timeouts (queue objects, fortuna, etc)
 //
 void CDarkSendPool::CheckTimeout(){
     if(!fMasterNode) return;
@@ -168,13 +168,13 @@ void CDarkSendPool::CheckTimeout(){
         }
     }
 
-    // check darksend queue objects for timeouts
+    // check fortuna queue objects for timeouts
     int c = 0;
-    vector<CDarksendQueue>::iterator it;
-    for(it=vecDarksendQueue.begin();it<vecDarksendQueue.end();it++){
+    vector<CFortunaQueue>::iterator it;
+    for(it=vecFortunaQueue.begin();it<vecFortunaQueue.end();it++){
         if((*it).IsExpired()){
             if(fDebug) printf("CDarkSendPool::CheckTimeout() : Removing expired queue entry - %d\n", c);
-            vecDarksendQueue.erase(it);
+            vecFortunaQueue.erase(it);
             break;
         }
         c++;
@@ -182,7 +182,7 @@ void CDarkSendPool::CheckTimeout(){
 
     /* Check to see if we're ready for submissions from clients */
     if(state == POOL_STATUS_QUEUE && sessionUsers == GetMaxPoolTransactions()) {
-        CDarksendQueue dsq;
+        CFortunaQueue dsq;
         dsq.nDenom = sessionDenom;
         dsq.vin = activeMasternode.vin;
         dsq.time = GetTime();
@@ -221,7 +221,7 @@ void CDarkSendPool::CheckTimeout(){
             c++;
         }
 
-        if(GetTimeMillis()-lastTimeChanged >= (DARKSEND_QUEUE_TIMEOUT*1000)+addLagTime){
+        if(GetTimeMillis()-lastTimeChanged >= (FORTUNA_QUEUE_TIMEOUT*1000)+addLagTime){
             lastTimeChanged = GetTimeMillis();
 
             // reset session information for the queue query stage (before entering a masternode, clients will send a queue request to make sure they're compatible denomination wise)
@@ -232,7 +232,7 @@ void CDarkSendPool::CheckTimeout(){
 
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
         }
-    } else if(GetTimeMillis()-lastTimeChanged >= (DARKSEND_QUEUE_TIMEOUT*1000)+addLagTime){
+    } else if(GetTimeMillis()-lastTimeChanged >= (FORTUNA_QUEUE_TIMEOUT*1000)+addLagTime){
         if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session timed out (30s) -- resetting\n");
         SetNull();
         UnlockCoins();
@@ -241,7 +241,7 @@ void CDarkSendPool::CheckTimeout(){
         lastMessage = _("Session timed out (30 seconds), please resubmit.");
     }
 
-    if(state == POOL_STATUS_SIGNING && GetTimeMillis()-lastTimeChanged >= (DARKSEND_SIGNING_TIMEOUT*1000)+addLagTime ) {
+    if(state == POOL_STATUS_SIGNING && GetTimeMillis()-lastTimeChanged >= (FORTUNA_SIGNING_TIMEOUT*1000)+addLagTime ) {
         if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session timed out -- restting\n");
         SetNull();
         UnlockCoins();
@@ -327,8 +327,8 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
         return false;
     }
 
-    //collateral transactions are required to pay out DARKSEND_COLLATERAL as a fee to the miners
-    if(nValueIn-nValueOut < DARKSEND_COLLATERAL) {
+    //collateral transactions are required to pay out FORTUNA_COLLATERAL as a fee to the miners
+    if(nValueIn-nValueOut < FORTUNA_COLLATERAL) {
         if(fDebug) printf("CDarkSendPool::IsCollateralValid - did not include enough fees in transaction %lu\n%s\n", nValueOut-nValueIn, txCollateral.ToString().c_str());
         return false;
     }
@@ -456,7 +456,7 @@ bool CDarkSendPool::SignaturesComplete(){
     return true;
 }
 
-// Incoming message from masternode updating the progress of darksend
+// Incoming message from masternode updating the progress of fortuna
 //    newAccepted:  -1 mean's it'n not a "transaction accepted/not accepted" message, just a standard update
 //                  0 means transaction was not accepted
 //                  1 means transaction was accepted
@@ -628,7 +628,7 @@ bool CDarkSendPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txColla
 
         if(!unitTest){
             //broadcast that I'm accepting entries, only if it's the first entry though
-            CDarksendQueue dsq;
+            CFortunaQueue dsq;
             dsq.nDenom = nDenom;
             dsq.vin = activeMasternode.vin;
             dsq.time = GetTime();
@@ -856,7 +856,7 @@ bool CDarkSendSigner::VerifyMessage(CPubKey pubkey, vector<unsigned char>& vchSi
     return (pubkey2.GetID() == pubkey.GetID());
 }
 
-bool CDarksendQueue::Sign()
+bool CFortunaQueue::Sign()
 {
     if(!fMasterNode) return false;
 
@@ -868,24 +868,24 @@ bool CDarksendQueue::Sign()
 
     if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
     {
-        printf("CDarksendQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
+        printf("CFortunaQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
         return false;
     }
 
     if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchSig, key2)) {
-        printf("CDarksendQueue():Relay - Sign message failed");
+        printf("CFortunaQueue():Relay - Sign message failed");
         return false;
     }
 
     if(!darkSendSigner.VerifyMessage(pubkey2, vchSig, strMessage, errorMessage)) {
-        printf("CDarksendQueue():Relay - Verify message failed");
+        printf("CFortunaQueue():Relay - Verify message failed");
         return false;
     }
 
     return true;
 }
 
-bool CDarksendQueue::Relay()
+bool CFortunaQueue::Relay()
 {
 
     //LOCK(cs_vNodes);
@@ -897,7 +897,7 @@ bool CDarksendQueue::Relay()
     return true;
 }
 
-bool CDarksendQueue::CheckSignature()
+bool CFortunaQueue::CheckSignature()
 {
     BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
 
@@ -906,7 +906,7 @@ bool CDarksendQueue::CheckSignature()
 
             std::string errorMessage = "";
             if(!darkSendSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
-                return error("CDarksendQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.ToString().c_str());
+                return error("CFortunaQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.ToString().c_str());
             }
 
             return true;

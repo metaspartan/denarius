@@ -158,7 +158,8 @@ CDBEnv::VerifyResult CDBEnv::Verify(std::string strFile, bool (*recoverFunc)(CDB
     int result = db.verify(strFile.c_str(), NULL, NULL, 0);
     if (result == 0)
         return VERIFY_OK;
-    else if (recoverFunc == NULL)
+    else
+    if (recoverFunc == NULL)
         return RECOVER_FAIL;
 
     // Try to recover:
@@ -592,4 +593,3 @@ bool CAddrDB::Read(CAddrMan& addr)
 
     return true;
 }
-

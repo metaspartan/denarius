@@ -12,7 +12,7 @@
 #include "init.h"
 #include "ui_interface.h"
 #include "kernel.h"
-#include "darksend.h"
+#include "fortuna.h"
 #include "masternode.h"
 #include "spork.h"
 #include "smessage.h"
@@ -50,7 +50,7 @@ unsigned int nStakeMinAge       = 8 * 60 * 60;      // 8 hour min stake age
 unsigned int nStakeMaxAge       = -1;               // unlimited
 unsigned int nModifierInterval  = 10 * 60;          // time to elapse before new modifier is computed
 
-int nCoinbaseMaturity = 20;
+int nCoinbaseMaturity = 20; //30 on Mainnet D e n a r i u s, 20 for testnet
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 
@@ -67,6 +67,7 @@ bool fAddrIndex = false;
 
 CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
 
+map<int64_t, CAnonOutputCount> mapAnonOutputStats; // display only, not 100% accurate, height could become inaccurate due to undos
 map<uint256, CBlock*> mapOrphanBlocks;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
 set<pair<COutPoint, unsigned int> > setStakeSeenOrphan;
@@ -175,12 +176,21 @@ void SyncWithWallets(const CTransaction& tx, const CBlock* pblock, bool fUpdate,
         if (tx.IsCoinStake())
         {
             BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
+            {
                 if (pwallet->IsFromMe(tx))
                     pwallet->DisableTransaction(tx);
-        }
-        return;
-    }
+            };
+        };
 
+        if (tx.nVersion == ANON_TXN_VERSION)
+        {
+            BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
+                pwallet->UndoAnonTransaction(tx);
+        };
+        return;
+    };
+
+    //uint256 hash = tx.GetHash();
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
         pwallet->AddToWalletIfInvolvingMe(tx, pblock, fUpdate);
 }
@@ -220,7 +230,29 @@ void ResendWalletTransactions(bool fForce)
         pwallet->ResendWalletTransactions(fForce);
 }
 
+bool Finalise()
+{
+    printf("Finalise()");
 
+    LOCK(cs_main);
+
+    SecureMsgShutdown();
+    //nTransactionsUpdated++;
+    mempool.AddTransactionsUpdated(1);
+    bitdb.Flush(false);
+    StopNode();
+    bitdb.Flush(true);
+    boost::filesystem::remove(GetPidFile());
+    UnregisterWallet(pwalletMain);
+    delete pwalletMain;
+
+    finaliseRingSigs();
+
+    CTxDB().Close();
+
+
+    return true;
+}
 
 bool AbortNode(const std::string &strMessage, const std::string &userMessage) {
     strMiscWarning = strMessage;
@@ -261,7 +293,7 @@ bool AddOrphanTx(const CTransaction& tx)
     {
         printf("ignoring large orphan tx (size: %"PRIszu", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
         return false;
-    }
+    };
 
     mapOrphanTransactions[hash] = tx;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
@@ -391,7 +423,7 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
 
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
-    if (tx.nVersion > CTransaction::CURRENT_VERSION) {
+    if (tx.nVersion > CTransaction::CURRENT_VERSION && tx.nVersion != ANON_TXN_VERSION) {
         reason = "version";
         return false;
     }
@@ -436,6 +468,20 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
 
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
+        if (txin.IsAnonInput())
+        {
+            int nRingSize = txin.ExtractRingSize();
+
+            if (tx.nVersion != ANON_TXN_VERSION
+                || nRingSize < (int)MIN_RING_SIZE
+                || nRingSize > (int)MAX_RING_SIZE
+                || txin.scriptSig.size() > sizeof(COutPoint) + 2 + (33 + 32 + 32) * nRingSize)
+            {
+                printf("IsStandard() anon txin failed.\n");
+                return false;
+            };
+            continue;
+        };
         // Biggest 'standard' txin is a 15-of-15 P2SH multisig with compressed
         // keys. (remember the 520 byte limit on redeemScript size) That works
         // out to a (15*(33+1))+3=513 byte redeemScript, 513+1+15*(73+1)+3=1627
@@ -462,6 +508,19 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
 
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+        if (txout.IsAnonOutput())
+        {
+            if (tx.nVersion != ANON_TXN_VERSION
+                || txout.nValue < 1
+                || txout.scriptPubKey.size() > MIN_ANON_OUT_SIZE + MAX_ANON_NARRATION_SIZE)
+            {
+                printf("IsStandard() anon txout failed.\n");
+                return false;
+            }
+            //nTxnOut++; anon outputs don't count (narrations are embedded in scriptPubKey)
+            continue;
+        };
+
          if (!::IsStandard(txout.scriptPubKey, whichType)) {
              reason = "scriptpubkey";
              return false;
@@ -526,6 +585,10 @@ bool AreInputsStandard(const CTransaction& tx, const MapPrevTx& mapInputs)
 
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
+        if (tx.nVersion == ANON_TXN_VERSION
+            && tx.vin[i].IsAnonInput())
+            continue;
+
         const CTxOut& prev = tx.GetOutputFor(tx.vin[i], mapInputs);
 
         vector<vector<unsigned char> > vSolutions;
@@ -578,19 +641,44 @@ bool AreInputsStandard(const CTransaction& tx, const MapPrevTx& mapInputs)
     return true;
 }
 
+bool CTransaction::HasStealthOutput() const
+{
+    // -- todo: scan without using GetOp
 
-unsigned int
-CTransaction::GetLegacySigOpCount() const
+    std::vector<uint8_t> vchEphemPK;
+    opcodetype opCode;
+
+    for (vector<CTxOut>::const_iterator it = vout.begin(); it != vout.end(); ++it)
+    {
+        if (nVersion == ANON_TXN_VERSION
+            && it->IsAnonOutput())
+            continue;
+
+        CScript::const_iterator itScript = it->scriptPubKey.begin();
+
+        if (!it->scriptPubKey.GetOp(itScript, opCode, vchEphemPK)
+            || opCode != OP_RETURN
+            || !it->scriptPubKey.GetOp(itScript, opCode, vchEphemPK) // rule out np narrations
+            || vchEphemPK.size() != ec_compressed_size)
+            continue;
+
+        return true;
+    };
+
+    return false;
+};
+
+unsigned int CTransaction::GetLegacySigOpCount() const
 {
     unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTxIn& txin, vin)
     {
         nSigOps += txin.scriptSig.GetSigOpCount(false);
-    }
+    };
     BOOST_FOREACH(const CTxOut& txout, vout)
     {
         nSigOps += txout.scriptPubKey.GetSigOpCount(false);
-    }
+    };
     return nSigOps;
 }
 
@@ -677,10 +765,54 @@ bool CTransaction::CheckTransaction() const
     set<COutPoint> vInOutPoints;
     BOOST_FOREACH(const CTxIn& txin, vin)
     {
+        if (nVersion == ANON_TXN_VERSION
+            && txin.IsAnonInput())
+        {
+            // -- blank the upper 3 bytes of n to prevent the same keyimage passing with different ring sizes
+            COutPoint opTest = txin.prevout;
+            opTest.n &= 0xFF;
+            if (vInOutPoints.count(opTest))
+            {
+                if (fDebugRingSig)
+                    printf("CheckTransaction() failed - found duplicate keyimage in txn %s\n", GetHash().ToString().c_str());
+                return false;
+            };
+            vInOutPoints.insert(opTest);
+            continue;
+        };
+
         if (vInOutPoints.count(txin.prevout))
             return false;
         vInOutPoints.insert(txin.prevout);
-    }
+    };
+
+    if (nVersion == ANON_TXN_VERSION)
+    {
+        // -- Prevent Anon TXs in mainnet until after block 1,200,000 (1.2m Million) ~ D e n a r i u s
+
+        if (!fTestNet && nBestHeight < 1200000)
+        {
+            printf("CheckTransaction() failed - anon txn in live before block 1.2 million, %s.\n", GetHash().ToString().c_str());
+            return false;
+        };
+
+
+        // -- Check for duplicate anon outputs
+        // NOTE: is this necessary, duplicate coins would not be spendable anyway?
+        set<CPubKey> vAnonOutPubkeys;
+        CPubKey pkTest;
+        BOOST_FOREACH(const CTxOut& txout, vout)
+        {
+            if (!txout.IsAnonOutput())
+                continue;
+
+            const CScript &s = txout.scriptPubKey;
+            pkTest = CPubKey(&s[2+1], 33);
+            if (vAnonOutPubkeys.count(pkTest))
+                return false;
+            vAnonOutPubkeys.insert(pkTest);
+        };
+    };
 
     if (IsCoinBase())
     {
@@ -699,8 +831,19 @@ bool CTransaction::CheckTransaction() const
 
 int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
 {
-    // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
-    int64_t nBaseFee = (mode == GMF_RELAY) ? MIN_RELAY_TX_FEE : MIN_TX_FEE;
+    // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE for standard txns, and MIN_TX_FEE_ANON for anon txns
+
+    // -- force GMF_ANON if anon txn
+    if (nVersion == ANON_TXN_VERSION)
+        mode = GMF_ANON;
+
+    int64_t nBaseFee;
+    switch (mode)
+    {
+        case GMF_RELAY: nBaseFee = MIN_RELAY_TX_FEE; break;
+        case GMF_ANON:  nBaseFee = MIN_TX_FEE_ANON;  break;
+        default:        nBaseFee = MIN_TX_FEE;       break;
+    };
 
     unsigned int nNewBlockSize = nBlockSize + nBytes;
     int64_t nMinFee = (1 + (int64_t)nBytes / 1000) * nBaseFee;
@@ -711,15 +854,15 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
         BOOST_FOREACH(const CTxOut& txout, vout)
             if (txout.nValue < CENT)
                 nMinFee = nBaseFee;
-    }
+    };
 
     // Raise the price as the block approaches full
-    if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)
+    if (mode != GMF_ANON && nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)
     {
         if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)
             return MAX_MONEY;
         nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);
-    }
+    };
 
     if (!MoneyRange(nMinFee))
         nMinFee = MAX_MONEY;
@@ -792,6 +935,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         MapPrevTx mapInputs;
         map<uint256, CTxIndex> mapUnused;
         bool fInvalid = false;
+        int64_t nFees;
         if (!tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
             if (fInvalid)
@@ -801,62 +945,83 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
             return false;
         }
 
-        // Check for non-standard pay-to-script-hash in inputs
-        if (!AreInputsStandard(tx, mapInputs) && !fTestNet)
-            return error("CTxMemPool::accept() : nonstandard transaction input");
+            // Check for non-standard pay-to-script-hash in inputs
+            if (!AreInputsStandard(tx, mapInputs) && !fTestNet)
+                return error("CTxMemPool::accept() : nonstandard transaction input");
 
-        // Note: if you modify this code to accept non-standard transactions, then
-        // you should add code here to check that the transaction does a
-        // reasonable number of ECDSA signature verifications.
+            nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
-        int64_t nFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
-        unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
+            GetMinFee_mode feeMode = GMF_RELAY;
 
-        // Don't accept it if it can't get into a block
-        int64_t txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize);
-        if (nFees < txMinFee)
-            return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,
-                         hash.ToString().c_str(),
-                         nFees, txMinFee);
-
-        // Continuously rate-limit free transactions
-        // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
-        // be annoying or make others' transactions take longer to confirm.
-        if (nFees < MIN_RELAY_TX_FEE)
-        {
-            static CCriticalSection cs;
-            static double dFreeCount;
-            static int64_t nLastTime;
-            int64_t nNow = GetTime();
-
+            if (tx.nVersion == ANON_TXN_VERSION)
             {
-                LOCK(cs);
-                // Use an exponentially decaying ~10-minute window:
-                dFreeCount *= pow(1.0 - 1.0/600.0, (double)(nNow - nLastTime));
-                nLastTime = nNow;
-                // -limitfreerelay unit is thousand-bytes-per-minute
-                // At default rate it would take over a month to fill 1GB
-                if (dFreeCount > GetArg("-limitfreerelay", 15)*10*1000 && !IsFromMe(tx))
-                    return error("CTxMemPool::accept() : free transaction rejected by rate limiter");
-                if (fDebug)
-                    printf("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
-                dFreeCount += nSize;
-            }
-        }
+                int64_t nSumAnon;
+                if (!tx.CheckAnonInputs(txdb, nSumAnon, fInvalid, true))
+                {
+                    if (fInvalid)
+                        return error("CTxMemPool::accept() : CheckAnonInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+                    if (pfMissingInputs)
+                        *pfMissingInputs = true;
+                    return false;
+                };
 
-        // Check against previous transactions
-        // This is done last to help prevent CPU exhaustion denial-of-service attacks.
-        if (!tx.ConnectInputs(txdb, mapInputs, mapUnused, CDiskTxPos(1,1,1), pindexBest, false, false))
-        {
-            return error("CTxMemPool::accept() : ConnectInputs failed %s", hash.ToString().substr(0,10).c_str());
-        }
-    }
+                nFees += nSumAnon;
+
+                feeMode = GMF_ANON;
+            };
+            // Note: if you modify this code to accept non-standard transactions, then
+            // you should add code here to check that the transaction does a
+            // reasonable number of ECDSA signature verifications.
+
+            unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
+            // Don't accept it if it can't get into a block
+
+            int64_t txMinFee = tx.GetMinFee(1000, feeMode, nSize);
+
+            if (nFees < txMinFee)
+            {
+                return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,
+                             hash.ToString().c_str(),
+                             nFees, txMinFee);
+            };
+
+            // Continuously rate-limit free transactions
+            // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
+            // be annoying or make others' transactions take longer to confirm.
+            if (nFees < MIN_RELAY_TX_FEE)
+            {
+                static CCriticalSection cs;
+                static double dFreeCount;
+                static int64_t nLastTime;
+                int64_t nNow = GetTime();
+
+                {
+                    LOCK(cs);
+                    // Use an exponentially decaying ~10-minute window:
+                    dFreeCount *= pow(1.0 - 1.0/600.0, (double)(nNow - nLastTime));
+                    nLastTime = nNow;
+                    // -limitfreerelay unit is thousand-bytes-per-minute
+                    // At default rate it would take over a month to fill 1GB
+                    if (dFreeCount > GetArg("-limitfreerelay", 15)*10*1000 && !IsFromMe(tx))
+                        return error("CTxMemPool::accept() : free transaction rejected by rate limiter");
+                    if (fDebug)
+                        printf("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
+                    dFreeCount += nSize;
+                }
+            };
+
+            // Check against previous transactions
+            // This is done last to help prevent CPU exhaustion denial-of-service attacks.
+            if (!tx.ConnectInputs(txdb, mapInputs, mapUnused, CDiskTxPos(1,1,1), pindexBest, false, false))
+            {
+                return error("CTxMemPool::accept() : ConnectInputs failed %s", hash.ToString().substr(0,10).c_str());
+            };
+        };
 
     // Store transaction in memory
     {
         LOCK(cs);
-        if (ptxOld)
-        {
+        if (ptxOld) {
             printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
             remove(*ptxOld);
         }
@@ -868,9 +1033,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
     if (ptxOld)
         EraseFromWallets(ptxOld->GetHash());
 
-    printf("CTxMemPool::accept() : accepted %s (poolsz %"PRIszu")\n",
-           hash.ToString().substr(0,10).c_str(),
-           mapTx.size());
+    printf("CTxMemPool::accept() : accepted %s (poolsz %"PRIszu")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     return true;
 }
 
@@ -1061,18 +1224,38 @@ bool CTxMemPool::remove(const CTransaction &tx, bool fRecursive)
         uint256 hash = tx.GetHash();
         if (mapTx.count(hash))
         {
-            if (fRecursive) {
-                for (unsigned int i = 0; i < tx.vout.size(); i++) {
+            if (fRecursive)
+            {
+                for (unsigned int i = 0; i < tx.vout.size(); i++)
+                {
                     std::map<COutPoint, CInPoint>::iterator it = mapNextTx.find(COutPoint(hash, i));
                     if (it != mapNextTx.end())
                         remove(*it->second.ptx, true);
-                }
-            }
+                };
+            };
             BOOST_FOREACH(const CTxIn& txin, tx.vin)
                 mapNextTx.erase(txin.prevout);
             mapTx.erase(hash);
+
+            if (tx.nVersion == ANON_TXN_VERSION)
+            {
+                // -- remove key images
+                for (unsigned int i = 0; i < tx.vin.size(); ++i)
+                {
+                    const CTxIn& txin = tx.vin[i];
+
+                    if (!txin.IsAnonInput())
+                        continue;
+
+                    ec_point vchImage;
+                    txin.ExtractKeyImage(vchImage);
+
+                    mapKeyImage.erase(vchImage);
+                };
+            };
+
             nTransactionsUpdated++;
-        }
+        };
     }
     return true;
 }
@@ -1097,6 +1280,7 @@ void CTxMemPool::clear()
     LOCK(cs);
     mapTx.clear();
     mapNextTx.clear();
+    mapKeyImage.clear();
     ++nTransactionsUpdated;
 }
 
@@ -1233,12 +1417,45 @@ bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, b
     return false;
 }
 
+bool GetKeyImage(CTxDB* ptxdb, ec_point& keyImage, CKeyImageSpent& keyImageSpent, bool& fInMempool)
+{
+    AssertLockHeld(cs_main);
 
 
+    // -- check txdb first
+    fInMempool = false;
+    if (ptxdb->ReadKeyImage(keyImage, keyImageSpent))
+        return true;
 
+    if (mempool.lookupKeyImage(keyImage, keyImageSpent))
+    {
+        fInMempool = true;
+        return true;
+    };
 
+    return false;
+};
 
+bool TxnHashInSystem(CTxDB* ptxdb, uint256& txnHash)
+{
+    // -- is the transaction hash known in the system
 
+    AssertLockHeld(cs_main);
+
+    // TODO: thin mode
+
+    if (mempool.exists(txnHash))
+        return true;
+
+    CTxIndex txnIndex;
+    if (ptxdb->ReadTxIndex(txnHash, txnIndex))
+    {
+        if (txnIndex.GetDepthInMainChain() > 0)
+            return true;
+    };
+
+    return false;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1572,6 +1789,10 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
 
     for (unsigned int i = 0; i < vin.size(); i++)
     {
+        if (nVersion == ANON_TXN_VERSION
+            && vin[i].IsAnonInput())
+            continue;
+
         COutPoint prevout = vin[i].prevout;
         if (inputsRet.count(prevout.hash))
             continue; // Got it already
@@ -1613,6 +1834,10 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
     // Make sure all prevout.n indexes are valid:
     for (unsigned int i = 0; i < vin.size(); i++)
     {
+        if (nVersion == ANON_TXN_VERSION
+            && vin[i].IsAnonInput())
+            continue;
+
         const COutPoint prevout = vin[i].prevout;
         assert(inputsRet.count(prevout.hash) != 0);
         const CTxIndex& txindex = inputsRet[prevout.hash].first;
@@ -1628,6 +1853,129 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
 
     return true;
 }
+
+// Ring Signatures - D e n a r i u s
+bool CTransaction::CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInvalid, bool fCheckExists)
+{
+    if (fDebugRingSig)
+        printf("CheckAnonInputs()\n");
+
+    // - fCheckExists should only run for anonInputs entering this node
+
+    AssertLockHeld(cs_main);
+
+    fInvalid = false; // TODO: is it acceptable to not find ring members?
+
+    nSumValue = 0;
+
+    uint256 preimage;
+    if (pwalletMain->GetTxnPreImage(*this, preimage) != 0)
+    {
+        printf("CheckAnonInputs(): Error GetTxnPreImage() failed.\n");
+        fInvalid = true; return false;
+    };
+
+    uint256 txnHash = GetHash();
+
+    for (uint32_t i = 0; i < vin.size(); i++)
+    {
+        const CTxIn& txin = vin[i];
+
+        if (!txin.IsAnonInput())
+            continue;
+
+        const CScript &s = txin.scriptSig;
+
+        std::vector<uint8_t> vchImage;
+        txin.ExtractKeyImage(vchImage);
+
+        CKeyImageSpent spentKeyImage;
+        bool fInMemPool;
+        if (GetKeyImage(&txdb, vchImage, spentKeyImage, fInMemPool))
+        {
+            // -- this can happen for transactions created by the local node
+            if (spentKeyImage.txnHash == txnHash)
+            {
+                if (fDebugRingSig)
+                    printf("Input %d keyimage %s matches txn %s.\n", i, HexStr(vchImage).c_str(), txnHash.ToString().c_str());
+            } else
+            {
+                if (fCheckExists
+                    && !TxnHashInSystem(&txdb, spentKeyImage.txnHash))
+                {
+                    if (fDebugRingSig)
+                        printf("Input %d keyimage %s matches unknown txn %s, continuing.\n", i, HexStr(vchImage).c_str(), spentKeyImage.txnHash.ToString().c_str());
+
+                    // -- spentKeyImage is invalid as points to unknown txnHash
+                    //    continue
+                } else
+                {
+                    printf("CheckAnonInputs(): Error input %d keyimage %s already spent.\n", i, HexStr(vchImage).c_str());
+                    fInvalid = true; return false;
+                };
+            };
+        };
+
+        int64_t nCoinValue = -1;
+        int nRingSize = txin.ExtractRingSize();
+        if (nRingSize < (int)MIN_RING_SIZE
+            || nRingSize > (int)MAX_RING_SIZE)
+        {
+            printf("CheckAnonInputs(): Error input %d ringsize %d not in range [%d, %d].\n", i, nRingSize, MIN_RING_SIZE, MAX_RING_SIZE);
+            fInvalid = true; return false;
+        };
+
+        if (s.size() < 2 + (ec_compressed_size + ec_secret_size + ec_secret_size) * nRingSize)
+        {
+            printf("CheckAnonInputs(): Error input %d scriptSig too small.\n", i);
+            fInvalid = true; return false;
+        };
+
+
+        CPubKey pkRingCoin;
+        CAnonOutput ao;
+        CTxIndex txindex;
+        const unsigned char* pPubkeys = &s[2];
+        const unsigned char* pSigc    = &txin.scriptSig[2 + ec_compressed_size * nRingSize];
+        const unsigned char* pSigr    = &txin.scriptSig[2 + (ec_compressed_size + ec_secret_size) * nRingSize];
+        for (int ri = 0; ri < nRingSize; ++ri)
+        {
+            pkRingCoin = CPubKey(&pPubkeys[ri * ec_compressed_size], ec_compressed_size);
+            if (!txdb.ReadAnonOutput(pkRingCoin, ao))
+            {
+                printf("CheckAnonInputs(): Error input %d, element %d AnonOutput %s not found.\n", i, ri, HexStr(pkRingCoin.Raw()).c_str());
+                fInvalid = true; return false;
+            };
+
+            if (nCoinValue == -1)
+            {
+                nCoinValue = ao.nValue;
+            } else
+            if (nCoinValue != ao.nValue)
+            {
+                printf("CheckAnonInputs(): Error input %d, element %d ring amount mismatch %" PRId64 ", %" PRId64 ".\n", i, ri, nCoinValue, ao.nValue);
+                fInvalid = true; return false;
+            };
+
+            if (ao.nBlockHeight == 0
+                || nBestHeight - ao.nBlockHeight < MIN_ANON_SPEND_DEPTH)
+            {
+                printf("CheckAnonInputs(): Error input %d, element %d depth < MIN_ANON_SPEND_DEPTH.\n", i, ri);
+                fInvalid = true; return false;
+            };
+        };
+
+        if (verifyRingSignature(vchImage, preimage, nRingSize, pPubkeys, pSigc, pSigr) != 0)
+        {
+            printf("CheckAnonInputs(): Error input %d verifyRingSignature() failed.\n", i);
+            fInvalid = true; return false;
+        };
+
+        nSumValue += nCoinValue;
+    };
+
+    return true;
+};
 
 const CTxOut& CTransaction::GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const
 {
@@ -1650,10 +1998,15 @@ int64_t CTransaction::GetValueIn(const MapPrevTx& inputs) const
     int64_t nResult = 0;
     for (unsigned int i = 0; i < vin.size(); i++)
     {
+        if (nVersion == ANON_TXN_VERSION
+            && vin[i].IsAnonInput())
+        {
+            continue;
+        };
         nResult += GetOutputFor(vin[i], inputs).nValue;
-    }
-    return nResult;
+    };
 
+    return nResult;
 }
 
 unsigned int CTransaction::GetP2SHSigOpCount(const MapPrevTx& inputs) const
@@ -1664,10 +2017,14 @@ unsigned int CTransaction::GetP2SHSigOpCount(const MapPrevTx& inputs) const
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < vin.size(); i++)
     {
+        if (nVersion == ANON_TXN_VERSION
+            && vin[i].IsAnonInput())
+            continue;
         const CTxOut& prevout = GetOutputFor(vin[i], inputs);
         if (prevout.scriptPubKey.IsPayToScriptHash())
             nSigOps += prevout.scriptPubKey.GetSigOpCount(vin[i].scriptSig);
-    }
+    };
+
     return nSigOps;
 }
 
@@ -1684,6 +2041,9 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
         {
+            if (nVersion == ANON_TXN_VERSION
+                && vin[i].IsAnonInput())
+                continue;
             COutPoint prevout = vin[i].prevout;
             assert(inputs.count(prevout.hash) > 0);
             CTxIndex& txindex = inputs[prevout.hash].first;
@@ -1713,6 +2073,9 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
         // Helps prevent CPU exhaustion attacks.
         for (unsigned int i = 0; i < vin.size(); i++)
         {
+            if (nVersion == ANON_TXN_VERSION
+                && vin[i].IsAnonInput())
+                continue;
             COutPoint prevout = vin[i].prevout;
             assert(inputs.count(prevout.hash) > 0);
             CTxIndex& txindex = inputs[prevout.hash].first;
@@ -1764,6 +2127,19 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                 mapTestPool[prevout.hash] = txindex;
             }
         }
+
+        if (nVersion == ANON_TXN_VERSION)
+        {
+            int64_t nSumAnon;
+            bool fInvalid;
+            if (!CheckAnonInputs(txdb, nSumAnon, fInvalid, true))
+            {
+                //if (fInvalid)
+                DoS(100, error("ConnectInputs() : CheckAnonInputs found invalid tx %s", GetHash().ToString().substr(0,10).c_str()));
+            };
+
+            nValueIn += nSumAnon;
+        };
 
         if (!IsCoinStake())
         {
@@ -2002,6 +2378,20 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
             int64_t nTxValueIn = tx.GetValueIn(mapInputs);
             int64_t nTxValueOut = tx.GetValueOut();
+
+            if (tx.nVersion == ANON_TXN_VERSION)
+            {
+                int64_t nSumAnon;
+                if (!tx.CheckAnonInputs(txdb, nSumAnon, fInvalid, true))
+                {
+                    if (fInvalid)
+                        return error("ConnectBlock() : CheckAnonInputs found invalid tx %s", tx.GetHash().ToString().substr(0,10).c_str());
+                    return false;
+                };
+
+                nTxValueIn += nSumAnon;
+            };
+
             nValueIn += nTxValueIn;
             nValueOut += nTxValueOut;
             if (!tx.IsCoinStake())
@@ -2902,21 +3292,6 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
     return (nFound >= nRequired);
 }
 
-/*
-
-void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
-{
-    // Filter out duplicate requests
-    if (pindexBegin == pnode->pindexLastGetBlocksBegin && hashEnd == pnode->hashLastGetBlocksEnd)
-        return;
-    pnode->pindexLastGetBlocksBegin = pindexBegin;
-    pnode->hashLastGetBlocksEnd = hashEnd;
-
-    pnode->PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
-}
-
-*/
-
 bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
     AssertLockHeld(cs_main);
@@ -3141,6 +3516,8 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
     return true;
 }
 
+static unsigned int nCurrentBlockFile = 1;
+
 static filesystem::path BlockFilePath(unsigned int nFile)
 {
     string strBlockFn = strprintf("blk%04u.dat", nFile);
@@ -3164,8 +3541,6 @@ FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszM
     }
     return file;
 }
-
-static unsigned int nCurrentBlockFile = 1;
 
 FILE* AppendBlockFile(unsigned int& nFileRet)
 {
@@ -3210,6 +3585,8 @@ bool LoadBlockIndex(bool fAllowNew)
     CTxDB txdb("cr+");
     if (!txdb.LoadBlockIndex())
         return false;
+    if (!pwalletMain->CacheAnonStats())
+        printf("CacheAnonStats() failed.\n");
 
     //
     // Init with genesis block
@@ -3234,8 +3611,9 @@ bool LoadBlockIndex(bool fAllowNew)
         block.nTime    = 1497476511;
         block.nVersion = 1;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
-		block.nNonce   = 41660;
-		if(fTestNet)
+		    block.nNonce   = 41660;
+
+		    if(fTestNet)
         {
             block.nNonce   = 13278;
         }
@@ -3266,6 +3644,13 @@ bool LoadBlockIndex(bool fAllowNew)
         block.print();
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
+
+        // -- debug print
+        if (fDebugChain)
+        {
+            printf("Initialised genesis block:\n");
+            block.print();
+        };
 
         // Start new block file
         unsigned int nFile;
@@ -3528,9 +3913,11 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
     return true;
 }
 
-
 void static ProcessGetData(CNode* pfrom)
 {
+    if (fDebugNet)
+      printf("ProcessGetData\n");
+
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
 
     vector<CInv> vNotFound;
@@ -3541,6 +3928,9 @@ void static ProcessGetData(CNode* pfrom)
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->nSendSize >= SendBufferSize())
             break;
+
+        if (fShutdown)
+            return;
 
         const CInv &inv = *it;
         {
@@ -3583,14 +3973,14 @@ void static ProcessGetData(CNode* pfrom)
                     }
                 }*/
                 if (!pushed && inv.type == MSG_TX) {
-                    if(mapDarksendBroadcastTxes.count(inv.hash)){
+                    if(mapFortunaBroadcastTxes.count(inv.hash)){
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss <<
-                            mapDarksendBroadcastTxes[inv.hash].tx <<
-                            mapDarksendBroadcastTxes[inv.hash].vin <<
-                            mapDarksendBroadcastTxes[inv.hash].vchSig <<
-                            mapDarksendBroadcastTxes[inv.hash].sigTime;
+                            mapFortunaBroadcastTxes[inv.hash].tx <<
+                            mapFortunaBroadcastTxes[inv.hash].vin <<
+                            mapFortunaBroadcastTxes[inv.hash].vchSig <<
+                            mapFortunaBroadcastTxes[inv.hash].sigTime;
 
                         pfrom->PushMessage("dstx", ss);
                         pushed = true;
@@ -3689,8 +4079,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
             oldVersion = true;
 
-        // Disconnect nodes that are over block height 900k and have an old peer version
-        if (nBestHeight >= 900000 && pfrom->nVersion < PROTOCOL_VERSION)
+        // Disconnect nodes that are over block height 1.2m and have an old peer version
+        if (nBestHeight >= 1200000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
@@ -4346,7 +4736,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (fSecMsgEnabled)
             SecureMsgReceiveData(pfrom, strCommand, vRecv);
 
-        //ProcessMessageDarksend(pfrom, strCommand, vRecv);
+        //ProcessMessageFortuna(pfrom, strCommand, vRecv);
         ProcessMessageMasternode(pfrom, strCommand, vRecv);
         //ProcessSpork(pfrom, strCommand, vRecv);
 

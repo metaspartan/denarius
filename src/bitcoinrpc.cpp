@@ -121,6 +121,15 @@ std::string HexBits(unsigned int nBits)
     return HexStr(BEGIN(uBits.cBits), END(uBits.cBits));
 }
 
+bool IsStringBoolPositive(std::string& value)
+{
+    return (value == "+" || value == "on"  || value == "true"  || value == "1" || value == "yes");
+};
+
+bool IsStringBoolNegative(std::string& value)
+{
+    return (value == "-" || value == "off" || value == "false" || value == "0" || value == "no");
+};
 
 //
 // Utilities: convert hex-encoded Values
@@ -165,6 +174,10 @@ vector<unsigned char> ParseHexO(const Object& o, string strKey)
 
 string CRPCTable::help(string strCommand) const
 {
+    //Ring Sigs - D e n a r i u s
+    bool fAllAnon = strCommand == "anon" ? true : false;
+    printf("fAllAnon %d %s\n", fAllAnon, strCommand.c_str());
+
     string strRet;
     set<rpcfn_type> setDone;
     for (map<string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)
@@ -174,25 +187,33 @@ string CRPCTable::help(string strCommand) const
         // We already filter duplicates, but these deprecated screw up the sort order
         if (strMethod.find("label") != string::npos)
             continue;
+
+        if (fAllAnon)
+        {
+                if(strMethod != "anonoutputs"
+                && strMethod != "anoninfo"
+                && strMethod != "reloadanondata")
+            continue;
+        } else
         if (strCommand != "" && strMethod != strCommand)
             continue;
+
         try
         {
             Array params;
             rpcfn_type pfn = pcmd->actor;
             if (setDone.insert(pfn).second)
                 (*pfn)(params, true);
-        }
-        catch (std::exception& e)
+        } catch (std::exception& e)
         {
             // Help text is returned in an exception
             string strHelp = string(e.what());
-            if (strCommand == "")
+            if (fAllAnon || strCommand == "")
                 if (strHelp.find('\n') != string::npos)
                     strHelp = strHelp.substr(0, strHelp.find('\n'));
             strRet += strHelp + "\n";
-        }
-    }
+        };
+    };
     if (strRet == "")
         strRet = strprintf("help: unknown command: %s\n", strCommand.c_str());
     strRet = strRet.substr(0,strRet.size()-1);
@@ -326,6 +347,11 @@ static const CRPCCommand vRPCCommands[] =
     { "scanforalltxns",         &scanforalltxns,         false,  false},
     { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
 
+    // Ring Signatures - D e n a r i u s
+    { "anonoutputs",            &anonoutputs,            false,  false},
+    { "anoninfo",               &anoninfo,               false,  false},
+    { "reloadanondata",         &reloadanondata,         false,  false},
+
     /* Masternode features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
@@ -344,8 +370,6 @@ static const CRPCCommand vRPCCommands[] =
     { "smsginbox",              &smsginbox,              false,  false},
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
-
-
 
 
 

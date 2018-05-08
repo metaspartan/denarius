@@ -2,8 +2,8 @@
 // Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef DARKSEND_H
-#define DARKSEND_H
+#ifndef FORTUNA_H
+#define FORTUNA_H
 
 #include "main.h"
 #include "masternode.h"
@@ -14,8 +14,8 @@ class CDarkSendPool;
 class CDarkSendSigner;
 class CMasterNodeVote;
 class CBitcoinAddress;
-class CDarksendQueue;
-class CDarksendBroadcastTx;
+class CFortunaQueue;
+class CFortunaBroadcastTx;
 class CActiveMasternode;
 
 #define POOL_MAX_TRANSACTIONS                  3 // wait for X transactions to merge and publish
@@ -34,24 +34,24 @@ class CActiveMasternode;
 #define MASTERNODE_REJECTED                    0
 #define MASTERNODE_RESET                       -1
 
-#define DARKSEND_QUEUE_TIMEOUT                 120
-#define DARKSEND_SIGNING_TIMEOUT               30
+#define FORTUNA_QUEUE_TIMEOUT                 120
+#define FORTUNA_SIGNING_TIMEOUT               30
 
 extern CDarkSendPool darkSendPool;
 extern CDarkSendSigner darkSendSigner;
-extern std::vector<CDarksendQueue> vecDarksendQueue;
+extern std::vector<CFortunaQueue> vecFortunaQueue;
 extern std::string strMasterNodePrivKey;
-extern map<uint256, CDarksendBroadcastTx> mapDarksendBroadcastTxes;
+extern map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
 extern CActiveMasternode activeMasternode;
 
-//specific messages for the Darksend protocol
-void ProcessMessageDarksend(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+//specific messages for the Fortuna protocol
+void ProcessMessageFortuna(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
-// get the darksend chain depth for a given input
-int GetInputDarksendRounds(CTxIn in, int rounds=0);
+// get the fortuna chain depth for a given input
+int GetInputFortunaRounds(CTxIn in, int rounds=0);
 
 
-// An input in the darksend pool
+// An input in the fortuna pool
 class CDarkSendEntryVin
 {
 public:
@@ -65,7 +65,7 @@ public:
     }
 };
 
-// A clients transaction in the darksend pool
+// A clients transaction in the fortuna pool
 class CDarkSendEntry
 {
 public:
@@ -120,14 +120,14 @@ public:
 
     bool IsExpired()
     {
-        return (GetTime() - addedTime) > DARKSEND_QUEUE_TIMEOUT;// 120 seconds
+        return (GetTime() - addedTime) > FORTUNA_QUEUE_TIMEOUT;// 120 seconds
     }
 };
 
 //
-// A currently inprogress darksend merge and denomination information
+// A currently inprogress fortuna merge and denomination information
 //
-class CDarksendQueue
+class CFortunaQueue
 {
 public:
     CTxIn vin;
@@ -136,7 +136,7 @@ public:
     bool ready; //ready for submit
     std::vector<unsigned char> vchSig;
 
-    CDarksendQueue()
+    CFortunaQueue()
     {
         nDenom = 0;
         vin = CTxIn();
@@ -184,15 +184,15 @@ public:
 
     bool IsExpired()
     {
-        return (GetTime() - time) > DARKSEND_QUEUE_TIMEOUT;// 120 seconds
+        return (GetTime() - time) > FORTUNA_QUEUE_TIMEOUT;// 120 seconds
     }
 
     bool CheckSignature();
 
 };
 
-// store darksend tx signature information
-class CDarksendBroadcastTx
+// store fortuna tx signature information
+class CFortunaBroadcastTx
 {
 public:
     CTransaction tx;
@@ -213,18 +213,18 @@ public:
     bool VerifyMessage(CPubKey pubkey, std::vector<unsigned char>& vchSig, std::string strMessage, std::string& errorMessage);
 };
 
-class CDarksendSession
+class CFortunaSession
 {
 
 };
 
 //
-// Used to keep track of current status of darksend pool
+// Used to keep track of current status of fortuna pool
 //
 class CDarkSendPool
 {
 public:
-    static const int PROTOCOL_VERSION = 25213; //Latest is 25213
+    static const int PROTOCOL_VERSION = 30000; //Latest is 30000
 
     // clients entries
     std::vector<CDarkSendEntry> myEntries;
@@ -373,12 +373,12 @@ public:
     // Is this amount compatible with other client in the pool?
     bool IsCompatibleWithSession(int64_t nAmount, CTransaction txCollateral, std::string& strReason);
 
-    // Passively run Darksend in the background according to the configuration in settings (only for QT)
+    // Passively run Fortuna in the background according to the configuration in settings (only for QT)
     bool DoAutomaticDenominating(bool fDryRun=false, bool ready=false);
-    bool PrepareDarksendDenominate();
+    bool PrepareFortunaDenominate();
 
 
-    // check for process in Darksend
+    // check for process in Fortuna
     void Check();
     // charge fees to bad actors
     void ChargeFees();
@@ -396,8 +396,8 @@ public:
     // are all inputs signed?
     bool SignaturesComplete();
     // as a client, send a transaction to a masternode to start the denomination process
-    void SendDarksendDenominate(std::vector<CTxIn>& vin, std::vector<CTxOut>& vout, int64_t amount);
-    // get masternode updates about the progress of darksend
+    void SendFortunaDenominate(std::vector<CTxIn>& vin, std::vector<CTxOut>& vout, int64_t amount);
+    // get masternode updates about the progress of fortuna
     bool StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID=0);
 
     // as a client, check and sign the final transaction

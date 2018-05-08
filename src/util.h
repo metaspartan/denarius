@@ -130,7 +130,9 @@ inline void MilliSleep(int64_t n)
 //Masternode features
 
 extern bool fMasterNode;
-extern int nDarksendRounds;
+extern int nFortunaRounds;
+
+extern int nMinStakeInterval;
 
 extern int64_t enforceMasternodePaymentsTime;
 extern std::string strMasterNodeAddr;
@@ -144,6 +146,8 @@ extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
 extern bool fDebugSmsg;
+extern bool fDebugChain;
+extern bool fDebugRingSig;
 extern bool fNoSmsg;
 extern bool fPrintToConsole;
 extern bool fPrintToDebugger;

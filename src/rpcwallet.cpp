@@ -10,6 +10,9 @@
 #include "base58.h"
 #include "stealth.h"
 #include "smessage.h"
+#include "ringsig.h"
+
+#include <sstream>
 
 using namespace json_spirit;
 using namespace std;
@@ -89,8 +92,10 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
+    obj.push_back(Pair("anonbalance",   ValueFromAmount(pwalletMain->GetAnonBalance())));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
+    obj.push_back(Pair("reserve",       ValueFromAmount(nReserveBalance)));
     obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
     obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
@@ -305,9 +310,16 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 5)
         throw runtime_error(
-            "sendtoaddress <denariusaddress> <amount> [narration] [comment] [comment-to]\n"
+            "sendtoaddress <denariusaddress> <amount> [comment] [comment-to] [narration]\n" // Exchanges use the comments internally...
+            "sendtoaddress <denariusaddress> <amount> [narration]\n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
+
+    //EnsureWalletIsUnlocked();
+
+    if (params[0].get_str().length() > 75
+        && IsStealthAddress(params[0].get_str()))
+        return sendtostealthaddress(params, false);
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
@@ -326,10 +338,14 @@ Value sendtoaddress(const Array& params, bool fHelp)
         throw runtime_error("Narration must be 24 characters or less.");
 
     // Wallet comments
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+        wtx.mapValue["comment"] = params[2].get_str();
     if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
-        wtx.mapValue["comment"] = params[3].get_str();
+        wtx.mapValue["to"]      = params[3].get_str();
     if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        wtx.mapValue["to"]      = params[4].get_str();
+        sNarr                   = params[4].get_str();
+    if (sNarr.length() > 24)
+        throw std::runtime_error("Narration must be 24 characters or less.");
 
     if (pwalletMain->IsLocked())
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
@@ -714,9 +730,11 @@ Value sendfrom(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 7)
         throw runtime_error(
-            "sendfrom <fromaccount> <todenariusaddress> <amount> [minconf=1] [narration] [comment] [comment-to]\n"
+            "sendfrom <fromaccount> <toshadowcoinaddress> <amount> [minconf=1] [comment] [comment-to] [narration] \n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
+
+    EnsureWalletIsUnlocked();
 
     string strAccount = AccountFromValue(params[0]);
     CBitcoinAddress address(params[1].get_str());
@@ -731,19 +749,17 @@ Value sendfrom(const Array& params, bool fHelp)
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
 
-    std::string sNarr;
     if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        sNarr = params[4].get_str();
+        wtx.mapValue["comment"] = params[4].get_str();
+    if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
+        wtx.mapValue["to"]      = params[5].get_str();
+
+    std::string sNarr;
+    if (params.size() > 6 && params[6].type() != null_type && !params[6].get_str().empty())
+        sNarr = params[6].get_str();
 
     if (sNarr.length() > 24)
-        throw runtime_error("Narration must be 24 characters or less.");
-
-    if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
-        wtx.mapValue["comment"] = params[5].get_str();
-    if (params.size() > 6 && params[6].type() != null_type && !params[6].get_str().empty())
-        wtx.mapValue["to"]      = params[6].get_str();
-
-    EnsureWalletIsUnlocked();
+        throw std::runtime_error("Narration must be 24 characters or less.");
 
     // Check funds
     int64_t nBalance = GetAccountBalance(strAccount, nMinDepth, ISMINE_SPENDABLE);
@@ -2392,3 +2408,210 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
 
     return result;
 }
+
+Value anonoutputs(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 2)
+        throw std::runtime_error(
+            "anonoutputs [systemTotals] [show_immature_outputs]\n"
+            "[systemTotals] if true displays the total no. of coins in the system.");
+
+    bool fSystemTotals = false;
+    if (params.size() > 0)
+    {
+        std::string value   = params[0].get_str();
+        if (IsStringBoolPositive(value))
+            fSystemTotals = true;
+    };
+
+    bool fMatureOnly = true;
+    if (params.size() > 1)
+    {
+        std::string value   = params[1].get_str();
+        if (IsStringBoolPositive(value))
+            fMatureOnly = false;
+    };
+
+    std::list<COwnedAnonOutput> lAvailableCoins;
+    if (pwalletMain->ListUnspentAnonOutputs(lAvailableCoins, fMatureOnly) != 0)
+        throw std::runtime_error("ListUnspentAnonOutputs() failed.");
+
+
+    Object result;
+
+    if (!fSystemTotals)
+    {
+        result.push_back(Pair("No. of coins", "amount"));
+
+        // -- mAvailableCoins is ordered by value
+        char cbuf[256];
+        int64_t nTotal = 0;
+        int64_t nLast = 0;
+        int nCount = 0;
+        for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+        {
+            if (nLast > 0 && it->nValue != nLast)
+            {
+                snprintf(cbuf, sizeof(cbuf), "%3d", nCount);
+                result.push_back(Pair(cbuf, ValueFromAmount(nLast)));
+                nCount = 0;
+            };
+            nCount++;
+            nLast = it->nValue;
+            nTotal += it->nValue;
+        };
+
+        if (nCount > 0)
+        {
+            snprintf(cbuf, sizeof(cbuf), "%3d", nCount);
+            result.push_back(Pair(cbuf, ValueFromAmount(nLast)));
+        };
+        result.push_back(Pair("total", ValueFromAmount(nTotal)));
+    } else
+    {
+        std::map<int64_t, int> mOutputCounts;
+        for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+            mOutputCounts[it->nValue] = 0;
+
+        if (pwalletMain->CountAnonOutputs(mOutputCounts, fMatureOnly) != 0)
+            throw std::runtime_error("CountAnonOutputs() failed.");
+
+        result.push_back(Pair("No. of coins owned, No. of system coins available", "amount"));
+
+        // -- lAvailableCoins is ordered by value
+        int64_t nTotal = 0;
+        int64_t nLast = 0;
+        int64_t nCount = 0;
+        int64_t nSystemCount;
+        for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+        {
+            if (nLast > 0 && it->nValue != nLast)
+            {
+                nSystemCount = mOutputCounts[nLast];
+                std::string str = strprintf("%4d, %4d", nCount, nSystemCount);
+                result.push_back(Pair(str, ValueFromAmount(nLast)));
+                nCount = 0;
+            };
+            nCount++;
+            nLast = it->nValue;
+            nTotal += it->nValue;
+        };
+
+        if (nCount > 0)
+        {
+            nSystemCount = mOutputCounts[nLast];
+            std::string str = strprintf("%4d, %4d", nCount, nSystemCount);
+            result.push_back(Pair(str, ValueFromAmount(nLast)));
+        };
+        result.push_back(Pair("total currency owned", ValueFromAmount(nTotal)));
+    }
+
+    return result;
+}
+
+Value anoninfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            "anoninfo [recalculate]\n"
+            "list outputs in system.");
+
+    bool fMatureOnly = false; // TODO: add parameter
+
+    bool fRecalculate = false;
+
+    if (params.size() > 0)
+    {
+        std::string value   = params[0].get_str();
+        if (IsStringBoolPositive(value))
+            fRecalculate = true;
+    };
+
+    Object result;
+
+    std::list<CAnonOutputCount> lOutputCounts;
+
+    if (fRecalculate)
+    {
+        if (pwalletMain->CountAllAnonOutputs(lOutputCounts, fMatureOnly) != 0)
+            throw runtime_error("CountAllAnonOutputs() failed.");
+    } else
+    {
+        // TODO: make mapAnonOutputStats a vector preinitialised with all possible coin values?
+        for (std::map<int64_t, CAnonOutputCount>::iterator mi = mapAnonOutputStats.begin(); mi != mapAnonOutputStats.end(); ++mi)
+        {
+            bool fProcessed = false;
+            CAnonOutputCount aoc = mi->second;
+            if (aoc.nLeastDepth > 0)
+                aoc.nLeastDepth = nBestHeight - aoc.nLeastDepth;
+            for (std::list<CAnonOutputCount>::iterator it = lOutputCounts.begin(); it != lOutputCounts.end(); ++it)
+            {
+                if (aoc.nValue > it->nValue)
+                    continue;
+                lOutputCounts.insert(it, aoc);
+                fProcessed = true;
+                break;
+            };
+            if (!fProcessed)
+                lOutputCounts.push_back(aoc);
+        };
+    }
+
+    result.push_back(Pair("No. Exists, No. Spends, Least Depth", "value"));
+
+
+    // -- lOutputCounts is ordered by value
+    char cbuf[256];
+    int64_t nTotalIn = 0;
+    int64_t nTotalOut = 0;
+    int64_t nTotalCoins = 0;
+    for (std::list<CAnonOutputCount>::iterator it = lOutputCounts.begin(); it != lOutputCounts.end(); ++it)
+    {
+        snprintf(cbuf, sizeof(cbuf), "%05d, %05d, %05d", it->nExists, it->nSpends, it->nLeastDepth);
+        result.push_back(Pair(cbuf, ValueFromAmount(it->nValue)));
+
+
+        nTotalIn += it->nValue * it->nExists;
+        nTotalOut += it->nValue * it->nSpends;
+        nTotalCoins += it->nExists;
+    };
+
+    result.push_back(Pair("total anon value in", ValueFromAmount(nTotalIn)));
+    result.push_back(Pair("total anon value out", ValueFromAmount(nTotalOut)));
+    result.push_back(Pair("total anon outputs", nTotalCoins));
+
+    return result;
+}
+
+Value reloadanondata(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "reloadanondata \n"
+            "clears all anon txn data from system, and runs scanforalltxns.\n"
+            "WARNING: Intended for development use only."
+            + HelpRequiringPassphrase());
+
+    CBlockIndex *pindex = pindexGenesisBlock;
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+
+        if (!pwalletMain->EraseAllAnonData())
+            throw runtime_error("EraseAllAnonData() failed.");
+
+        pwalletMain->MarkDirty();
+        pwalletMain->ScanForWalletTransactions(pindex, true);
+        pwalletMain->ReacceptWalletTransactions();
+
+        pwalletMain->CacheAnonStats();
+    }
+
+    Object result;
+    result.push_back(Pair("result", "reloadanondata complete."));
+    return result;
+}
+
+static bool compareTxnTime(const CWalletTx* pa, const CWalletTx* pb)
+{
+    return pa->nTime < pb->nTime;
+};

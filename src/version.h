@@ -30,7 +30,7 @@ static const int DATABASE_VERSION = 21212;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 25213; //Protocol remains the same with v2.0.0.0 (Protocol changes to 25213 in Denarius v2.5)
+static const int PROTOCOL_VERSION = 30000; //Protocol is now 30000 as of DNR v3.0.0.0 - Block Height of 1.2m
 
 // intial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 21212;
@@ -38,7 +38,7 @@ static const int INIT_PROTO_VERSION = 21212;
 // disconnect from peers older than this proto version
 static const int MIN_PEER_PROTO_VERSION = 21213;
 
-// Don't forget to change proto in DARKSEND.h as well!!
+// Don't forget to change proto in FORTUNA.h as well!!
 static const int MIN_MN_PROTO_VERSION = 21213;
 
 // nTime field added to CAddress, starting with this version;

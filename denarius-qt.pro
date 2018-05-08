@@ -1,10 +1,11 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 2.5.2.0
+VERSION = 3.0.0.0
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
+#CONFIG += static
 QT += core gui network widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -131,7 +132,7 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 #  or: qmake "USE_LEVELDB=-" (not supported)
 contains(USE_LEVELDB, -) {
 	message(Building with Berkeley DB transaction index)
-	
+
 	    SOURCES += src/txdb-bdb.cpp \
 		src/bloom.cpp \
 		src/hash.cpp \
@@ -139,13 +140,13 @@ contains(USE_LEVELDB, -) {
 		src/echo.c \
 		src/jh.c \
 		src/keccak.c
-		
+
 } else {
 	message(Building with LevelDB transaction index)
 	count(USE_LEVELDB, 0) {
         USE_LEVELDB=1
     }
-	
+
 	DEFINES += USE_LEVELDB
 
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
@@ -245,7 +246,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/strlcpy.h \
     src/smessage.h \
     src/main.h \
-	src/core.h \
+	  src/core.h \
+    src/ringsig.h \
     src/miner.h \
     src/net.h \
     src/key.h \
@@ -254,11 +256,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
-	src/darksend.h \
-	src/activemasternode.h \
-	src/masternode.h \
-	src/masternodeconfig.h \
-	src/spork.h \
+	  src/fortuna.h \
+	  src/activemasternode.h \
+	  src/masternode.h \
+	  src/masternodeconfig.h \
+	  src/spork.h \
     src/init.h \
     src/mruset.h \
     src/json/json_spirit_writer_template.h \
@@ -347,13 +349,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
-	src/qt/multisigaddressentry.cpp \
+	  src/qt/multisigaddressentry.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
     src/alert.cpp \
-	src/base58.cpp \
+	  src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
@@ -362,7 +364,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
-	src/core.cpp \
+	  src/core.cpp \
+    src/ringsig.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
@@ -390,7 +393,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
-	src/rpcdarksend.cpp \
+	src/rpcfortuna.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -425,7 +428,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
-	src/darksend.cpp \
+	src/fortuna.cpp \
 	src/activemasternode.cpp \
 	src/masternode.cpp \
 	src/masternodeconfig.cpp \
@@ -575,5 +578,10 @@ contains(RELEASE, 1) {
         LIBS += -Wl,-Bdynamic
     }
 }
+
+!windows:!macx:!android:!ios {
+     DEFINES += LINUX
+     LIBS += -lrt -ldl
+ }
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)

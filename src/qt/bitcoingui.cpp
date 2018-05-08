@@ -25,7 +25,7 @@
 #include "blockbrowser.h"
 #include "marketbrowser.h"
 #include "masternodemanager.h"
-#include "darksend.h"
+#include "fortuna.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
 #include "bitcoinunits.h"
