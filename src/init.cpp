@@ -781,7 +781,7 @@ bool AppInit2()
             };
             fProxy = true;
         };
-        /*
+        
         // -tor can override normal proxy, -notor disables tor entirely
         if (!(mapArgs.count("-tor") && mapArgs["-tor"] == "0") && (fProxy || mapArgs.count("-tor")))
         {
@@ -796,7 +796,7 @@ bool AppInit2()
             SetProxy(NET_TOR, addrOnion, 5);
             SetReachable(NET_TOR);
         };
-        */
+
     };
 
     // Native Tor Onion and -tor flag integration

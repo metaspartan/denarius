@@ -13,9 +13,12 @@
 #include "ringsig.h"
 
 #include <sstream>
+#include <sys/stat.h>
 
 using namespace json_spirit;
 using namespace std;
+
+namespace fs = boost::filesystem;
 
 int64_t nWalletUnlockTime;
 static CCriticalSection cs_nWalletUnlockTime;
@@ -103,7 +106,21 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
-    obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
+    if(fNativeTor)
+    {
+        string automatic_onion;
+        fs::path const hostname_path = GetDefaultDataDir() / "onion" / "hostname";
+
+        if (!fs::exists(hostname_path)) {
+            printf("No external address found.");
+        }
+
+        ifstream file(hostname_path.string().c_str());
+        file >> automatic_onion;
+        obj.push_back(Pair("tor",       (automatic_onion)));
+    }
+    if(!fNativeTor)
+        obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
@@ -111,6 +128,7 @@ Value getinfo(const Array& params, bool fHelp)
 
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("masternode",    fMasterNode));
+    obj.push_back(Pair("nativetor",     fNativeTor));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
