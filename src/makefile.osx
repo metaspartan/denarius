@@ -64,7 +64,7 @@ OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	obj/alert.o \
+	  obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -102,7 +102,15 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
-    obj/stealth.o 
+    obj/stealth.o \
+	  obj/activemasternode.o \
+	  obj/masternodeconfig.o \
+    obj/masternode.o \
+    obj/rpcfortuna.o \
+    obj/spork.o \
+    obj/fortuna.o \
+	  obj/eccryptoverify.o \
+    obj/ringsig.o
 
 ifndef USE_UPNP
 	override USE_UPNP = -

@@ -1,7 +1,7 @@
 TEMPLATE = app
 TARGET = Denarius
 VERSION = 3.0.0.0
-INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
+INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
@@ -434,7 +434,171 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/masternodeconfig.cpp \
 	src/spork.cpp
 
-#### DNR sources
+#### D e n a r i u s sources
+
+### liboqs - Post Quantum Algorithm sources
+HEADERS += src/liboqs/src/oqs.h
+
+### Tor native integration sources
+SOURCES += src/tor/anonymize.cpp \
+    src/tor/address.c \
+    src/tor/addressmap.c \
+    src/tor/aes.c \
+    src/tor/backtrace.c \
+    src/tor/blinding.c \
+    src/tor/bridges.c \
+    src/tor/buffers.c \
+    src/tor/cell_common.c \
+    src/tor/cell_establish_intro.c \
+    src/tor/cell_introduce1.c \
+    src/tor/channel.c \
+    src/tor/channeltls.c \
+    src/tor/circpathbias.c \
+    src/tor/circuitbuild.c \
+    src/tor/circuitlist.c \
+    src/tor/circuitmux.c \
+    src/tor/circuitmux_ewma.c \
+    src/tor/circuitstats.c \
+    src/tor/circuituse.c \
+    src/tor/command.c \
+    src/tor/compat_libevent.c \
+    src/tor/compat_threads.c \
+    src/tor/compat_time.c \
+    src/tor/config.c \
+    src/tor/confparse.c \
+    src/tor/connection.c \
+    src/tor/connection_edge.c \
+    src/tor/connection_or.c \
+    src/tor/container.c \
+    src/tor/control.c \
+    src/tor/crypto.c \
+    src/tor/crypto_curve25519.c \
+    src/tor/crypto_ed25519.c \
+    src/tor/crypto_format.c \
+    src/tor/crypto_pwbox.c \
+    src/tor/crypto_s2k.c \
+    src/tor/cpuworker.c \
+    src/tor/csiphash.c \
+    src/tor/curve25519-donna.c \
+    src/tor/di_ops.c \
+    src/tor/dircollate.c \
+    src/tor/directory.c \
+    src/tor/dirserv.c \
+    src/tor/dirvote.c \
+    src/tor/dns.c \
+    src/tor/dnsserv.c \
+    src/tor/ed25519_cert.c \
+    src/tor/ed25519_tor.c \
+    src/tor/entrynodes.c \
+    src/tor/ext_orport.c \
+    src/tor/fe_copy.c \
+    src/tor/fe_cmov.c \
+    src/tor/fe_isnegative.c \
+    src/tor/fe_sq.c \
+    src/tor/fe_pow22523.c \
+    src/tor/fe_isnonzero.c \
+    src/tor/fe_neg.c \
+    src/tor/fe_frombytes.c \
+    src/tor/fe_invert.c \
+    src/tor/fe_sub.c \
+    src/tor/fe_add.c \
+    src/tor/fe_1.c \
+    src/tor/fe_mul.c \
+    src/tor/fe_tobytes.c \
+    src/tor/fe_0.c \
+    src/tor/fe_sq2.c \
+    src/tor/fp_pair.c \
+    src/tor/ge_scalarmult_base.c \
+    src/tor/ge_p3_tobytes.c \
+    src/tor/ge_frombytes.c \
+    src/tor/ge_double_scalarmult.c \
+    src/tor/ge_tobytes.c \
+    src/tor/ge_p3_to_cached.c \
+    src/tor/ge_p3_to_p2.c \
+    src/tor/ge_p3_dbl.c \
+    src/tor/ge_p3_0.c \
+    src/tor/ge_p1p1_to_p2.c \
+    src/tor/ge_p1p1_to_p3.c \
+    src/tor/ge_add.c \
+    src/tor/ge_p2_0.c \
+    src/tor/ge_p2_dbl.c \
+    src/tor/ge_madd.c \
+    src/tor/ge_msub.c \
+    src/tor/ge_sub.c \
+    src/tor/ge_precomp_0.c \
+    src/tor/geoip.c \
+    src/tor/hibernate.c \
+    src/tor/hs_cache.c \
+    src/tor/hs_circuitmap.c \
+    src/tor/hs_common.c \
+    src/tor/hs_descriptor.c \
+    src/tor/hs_intropoint.c \
+    src/tor/hs_service.c \
+    src/tor/keyconv.c \
+    src/tor/keypair.c \
+    src/tor/keypin.c \
+    src/tor/keccak-tiny-unrolled.c \
+    src/tor/link_handshake.c \
+    src/tor/log.c \
+    src/tor/tormain.c \
+    src/tor/memarea.c \
+    src/tor/microdesc.c \
+    src/tor/networkstatus.c \
+    src/tor/nodelist.c \
+    src/tor/ntmain.c \
+    src/tor/onion.c \
+    src/tor/onion_fast.c \
+    src/tor/onion_ntor.c \
+    src/tor/onion_tap.c \
+    src/tor/open.c \
+    src/tor/parsecommon.c \
+    src/tor/periodic.c \
+    src/tor/policies.c \
+    src/tor/procmon.c \
+    src/tor/protover.c \
+    src/tor/pwbox.c \
+    src/tor/reasons.c \
+    src/tor/relay.c \
+    src/tor/rendcache.c \
+    src/tor/rendclient.c \
+    src/tor/rendcommon.c \
+    src/tor/rendmid.c \
+    src/tor/rendservice.c \
+    src/tor/rephist.c \
+    src/tor/replaycache.c \
+    src/tor/router.c \
+    src/tor/routerkeys.c \
+    src/tor/routerlist.c \
+    src/tor/routerparse.c \
+    src/tor/routerset.c \
+    src/tor/sandbox.c \
+    src/tor/sc_reduce.c \
+    src/tor/sc_muladd.c \
+    src/tor/scheduler.c \
+    src/tor/shared_random.c \
+    src/tor/shared_random_state.c \
+    src/tor/sign.c \
+    src/tor/statefile.c \
+    src/tor/status.c \
+    src/tor/torcert.c \
+    src/tor/torcompat.c \
+    src/tor/tor_main.c \
+    src/tor/torgzip.c \
+    src/tor/tortls.c \
+    src/tor/torutil.c \
+    src/tor/transports.c \
+    src/tor/trunnel.c \
+    src/tor/util_bug.c \
+    src/tor/util_format.c \
+    src/tor/util_process.c \
+    src/tor/workqueue.c \
+
+win32 {
+    SOURCES += src/tor/compat_winthreads.c
+} else {
+    SOURCES += src/tor/compat_pthreads.c \
+        src/tor/readpassphrase.c
+}
 
 RESOURCES += \
     src/qt/bitcoin.qrc \
@@ -455,15 +619,15 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
     src/qt/forms/messagepage.ui \
-	src/qt/forms/statisticspage.ui \
-	src/qt/forms/blockbrowser.ui \
-	src/qt/forms/marketbrowser.ui \
+	  src/qt/forms/statisticspage.ui \
+	  src/qt/forms/blockbrowser.ui \
+	  src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
     src/qt/forms/masternodemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \
-	src/qt/forms/multisigaddressentry.ui \
+	  src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
@@ -563,9 +727,10 @@ macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+LIBS += -lz -levent
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32

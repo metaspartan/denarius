@@ -151,7 +151,6 @@ OBJS= \
     obj/spork.o \
     obj/fortuna.o \
 	  obj/eccryptoverify.o \
-    obj/state.o \
     obj/ringsig.o
 
 
