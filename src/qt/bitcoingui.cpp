@@ -237,8 +237,11 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     labelStakingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
+    labelConnectTypeIcon = new QLabel();
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
+    frameBlocksLayout->addStretch();
+    frameBlocksLayout->addWidget(labelConnectTypeIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelStakingIcon);
     frameBlocksLayout->addStretch();
@@ -756,6 +759,12 @@ void BitcoinGUI::setNumConnections(int count)
     }
     labelConnectionsIcon->setPixmap(QIcon(icon).pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
     labelConnectionsIcon->setToolTip(tr("%n active connection(s) to Denarius network", "", count));
+
+    if(fNativeTor)
+    {
+        labelConnectTypeIcon->setPixmap(QIcon(":/icons/tor").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        labelConnectTypeIcon->setToolTip(tr("Connected to Denarius with the Native Tor Onion Relay"));
+    }
 }
 
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
