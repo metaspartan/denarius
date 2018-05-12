@@ -34,6 +34,8 @@ std::map<CNetAddr, int64_t> askedForMasternodeList;
 std::map<COutPoint, int64_t> askedForMasternodeListEntry;
 // cache block hashes as we calculate them
 std::map<int64_t, uint256> mapCacheBlockHashes;
+CMedianFilter<int> mnMedianCount(10, 0);
+int mnCount;
 
 // manage the masternode connections
 void ProcessMasternodeConnections(){
@@ -187,9 +189,13 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
             if(count == -1 && !isLocal)
                 RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
+            if (count > 0) {
+                mnMedianCount.input(count);
+                mnCount = mnMedianCount.median();
+            }
 
         } else {
-            printf("dsee - Rejected masternode entry %s: %s\n", addr.ToString().c_str(),errorMessage.c_str());
+            printf("dsee - Rejected masternode entry %s: %s\n", addr.ToString().c_str(),vinError.c_str());
         }
     }
 

@@ -1662,7 +1662,7 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
+    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate() || nBestHeight < (GetNumBlocksOfPeers() - nCoinbaseMaturity*2))
         return true;
     static int64_t nLastUpdate;
     static CBlockIndex* pindexLastBest;
@@ -1672,7 +1672,7 @@ bool IsInitialBlockDownload()
         nLastUpdate = GetTime();
     }
     return (GetTime() - nLastUpdate < 15 &&
-            pindexBest->GetBlockTime() < GetTime() - 2 * 60 * 60);
+            pindexBest->GetBlockTime() < GetTime() - 15 * 60); // last block is more than 15 minutes old
 }
 
 void static InvalidChainFound(CBlockIndex* pindexNew)

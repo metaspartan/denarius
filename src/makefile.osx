@@ -181,12 +181,14 @@ obj/%.o: json/%.cpp
 	rm -f $(@:%.o=%.d)
 
 denariusd: $(OBJS:obj/%=obj/%)
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f denariusd
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/*.d
 	-rm -f obj/build.h
+	-cd leveldb && $(MAKE) clean || true
 
 FORCE:
