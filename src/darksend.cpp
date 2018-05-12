@@ -804,8 +804,15 @@ bool CDarkSendSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
                 if(out.scriptPubKey == payee2) return true;
             }
         }
+    } else {
+        printf("IsVinAssociatedWithPubKey:: GetTransaction failed for %s\n",vin.prevout.hash.ToString().c_str());
     }
 
+    CTxDestination address1;
+    ExtractDestination(payee2, address1);
+    CBitcoinAddress address2(address1);
+    printf("IsVinAssociatedWithPubKey:: vin %s is not associated with pubkey %s for address %s\n",
+           vin.ToString().c_str(), pubkey.GetHash().ToString().c_str(), address2.ToString().c_str());
     return false;
 }
 
@@ -968,10 +975,10 @@ void ThreadCheckDarkSendPool(void* parg)
             masternodePayments.CleanPaymentList();
         }
 
-        int mnRefresh = 15; //(3*5)
+        int mnRefresh = 10; //(3*5)
 
-        //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes
-        if(vNodes.size() > 3 && c % mnRefresh == 0 && RequestedMasterNodeList < 6){
+        //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes until we have them all
+        if(vNodes.size() > 2 && c % mnRefresh == 0 && RequestedMasterNodeList < 10 && (mnCount == 0 || vecMasternodes.size() < mnCount)) {
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
@@ -983,7 +990,7 @@ void ThreadCheckDarkSendPool(void* parg)
                         if(pnode->HasFulfilledRequest("mnsync")) continue;
                         pnode->FulfilledRequest("mnsync");
 
-                        printf("Successfully synced, asking for Masternode list and payment list\n");
+                        printf("Asking for Masternode list from %s\n",pnode->addr.ToStringIPPort().c_str());
 
                         pnode->PushMessage("dseg", CTxIn()); //request full mn list
                         pnode->PushMessage("mnget"); //sync payees
