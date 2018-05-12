@@ -70,7 +70,7 @@ int64_t enforceMasternodePaymentsTime = 4085657524;
 bool fSuccessfullyLoaded = false;
 
 /** All denominations used by fortuna */
-std::vector<int64_t> darkSendDenominations;
+std::vector<int64_t> forTunaDenominations;
 
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;

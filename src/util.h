@@ -138,7 +138,7 @@ extern int64_t enforceMasternodePaymentsTime;
 extern std::string strMasterNodeAddr;
 extern int keysLoaded;
 extern bool fSuccessfullyLoaded;
-extern std::vector<int64_t> darkSendDenominations;
+extern std::vector<int64_t> forTunaDenominations;
 
 
 extern std::map<std::string, std::string> mapArgs;

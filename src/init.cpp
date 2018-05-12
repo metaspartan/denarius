@@ -1154,7 +1154,7 @@ bool AppInit2()
             CKey key;
             CPubKey pubkey;
 
-            if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
+            if(!forTunaSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
             {
                 return InitError(_("Invalid masternodeprivkey. Please see documenation."));
             }
@@ -1206,7 +1206,7 @@ bool AppInit2()
     }
 
     //Threading still needs reworking
-    NewThread(ThreadCheckDarkSendPool, NULL);
+    NewThread(ThreadCheckForTunaPool, NULL);
 
     RandAddSeedPerfmon();
 

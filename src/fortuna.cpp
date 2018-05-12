@@ -25,9 +25,9 @@ using namespace boost;
 CCriticalSection cs_fortuna;
 
 /** The main object for accessing fortuna */
-CDarkSendPool darkSendPool;
+CForTunaPool forTunaPool;
 /** A helper object for signing messages from masternodes */
-CDarkSendSigner darkSendSigner;
+CForTunaSigner forTunaSigner;
 /** The current fortunas in progress on the network */
 std::vector<CFortunaQueue> vecFortunaQueue;
 /** Keep track of the used masternodes */
@@ -89,14 +89,14 @@ int GetInputFortunaRounds(CTxIn in, int rounds)
     return rounds-1;
 }
 
-void CDarkSendPool::Reset(){
+void CForTunaPool::Reset(){
     cachedLastSuccess = 0;
     vecMasternodesUsed.clear();
     UnlockCoins();
     SetNull();
 }
 
-void CDarkSendPool::SetNull(bool clearEverything){
+void CForTunaPool::SetNull(bool clearEverything){
     finalTransaction.vin.clear();
     finalTransaction.vout.clear();
 
@@ -133,11 +133,11 @@ void CDarkSendPool::SetNull(bool clearEverything){
     std::srand(seed);
 }
 
-bool CDarkSendPool::SetCollateralAddress(std::string strAddress){
+bool CForTunaPool::SetCollateralAddress(std::string strAddress){
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
     {
-        printf("CDarkSendPool::SetCollateralAddress - Invalid DarkSend collateral address\n");
+        printf("CForTunaPool::SetCollateralAddress - Invalid ForTuna collateral address\n");
         return false;
     }
     collateralPubKey= GetScriptForDestination(address.Get());
@@ -147,7 +147,7 @@ bool CDarkSendPool::SetCollateralAddress(std::string strAddress){
 //
 // Unlock coins after Fortuna fails or succeeds
 //
-void CDarkSendPool::UnlockCoins(){
+void CForTunaPool::UnlockCoins(){
     BOOST_FOREACH(CTxIn v, lockedCoins)
         pwalletMain->UnlockCoin(v.prevout);
 
@@ -157,13 +157,13 @@ void CDarkSendPool::UnlockCoins(){
 //
 // Check for various timeouts (queue objects, fortuna, etc)
 //
-void CDarkSendPool::CheckTimeout(){
+void CForTunaPool::CheckTimeout(){
     if(!fMasterNode) return;
 
     // catching hanging sessions
     if(!fMasterNode) {
         if(state == POOL_STATUS_TRANSMISSION) {
-            if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session complete -- Running Check()\n");
+            if(fDebug) printf("CForTunaPool::CheckTimeout() -- Session complete -- Running Check()\n");
             // Check();
         }
     }
@@ -173,7 +173,7 @@ void CDarkSendPool::CheckTimeout(){
     vector<CFortunaQueue>::iterator it;
     for(it=vecFortunaQueue.begin();it<vecFortunaQueue.end();it++){
         if((*it).IsExpired()){
-            if(fDebug) printf("CDarkSendPool::CheckTimeout() : Removing expired queue entry - %d\n", c);
+            if(fDebug) printf("CForTunaPool::CheckTimeout() : Removing expired queue entry - %d\n", c);
             vecFortunaQueue.erase(it);
             break;
         }
@@ -200,21 +200,21 @@ void CDarkSendPool::CheckTimeout(){
         c = 0;
 
         // if it's a masternode, the entries are stored in "entries", otherwise they're stored in myEntries
-        std::vector<CDarkSendEntry> *vec = &myEntries;
+        std::vector<CForTunaEntry> *vec = &myEntries;
         if(fMasterNode) vec = &entries;
 
         // check for a timeout and reset if needed
-        vector<CDarkSendEntry>::iterator it2;
+        vector<CForTunaEntry>::iterator it2;
         for(it2=vec->begin();it2<vec->end();it2++){
             if((*it2).IsExpired()){
-                if(fDebug) printf("CDarkSendPool::CheckTimeout() : Removing expired entry - %d\n", c);
+                if(fDebug) printf("CForTunaPool::CheckTimeout() : Removing expired entry - %d\n", c);
                 vec->erase(it2);
                 if(entries.size() == 0 && myEntries.size() == 0){
                     SetNull(true);
                     UnlockCoins();
                 }
                 if(fMasterNode){
-                    RelayDarkSendStatus(darkSendPool.sessionID, darkSendPool.GetState(), darkSendPool.GetEntriesCount(), MASTERNODE_RESET);
+                    RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
                 }
                 break;
             }
@@ -233,7 +233,7 @@ void CDarkSendPool::CheckTimeout(){
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
         }
     } else if(GetTimeMillis()-lastTimeChanged >= (FORTUNA_QUEUE_TIMEOUT*1000)+addLagTime){
-        if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session timed out (30s) -- resetting\n");
+        if(fDebug) printf("CForTunaPool::CheckTimeout() -- Session timed out (30s) -- resetting\n");
         SetNull();
         UnlockCoins();
 
@@ -242,7 +242,7 @@ void CDarkSendPool::CheckTimeout(){
     }
 
     if(state == POOL_STATUS_SIGNING && GetTimeMillis()-lastTimeChanged >= (FORTUNA_SIGNING_TIMEOUT*1000)+addLagTime ) {
-        if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session timed out -- restting\n");
+        if(fDebug) printf("CForTunaPool::CheckTimeout() -- Session timed out -- restting\n");
         SetNull();
         UnlockCoins();
         //add my transactions to the new session
@@ -253,7 +253,7 @@ void CDarkSendPool::CheckTimeout(){
 }
 
 // check to see if the signature is valid
-bool CDarkSendPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
+bool CForTunaPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
     CTransaction txNew;
     txNew.vin.clear();
     txNew.vout.clear();
@@ -262,11 +262,11 @@ bool CDarkSendPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
     CScript sigPubKey = CScript();
     unsigned int i = 0;
 
-    BOOST_FOREACH(CDarkSendEntry e, entries) {
+    BOOST_FOREACH(CForTunaEntry e, entries) {
         BOOST_FOREACH(const CTxOut out, e.vout)
             txNew.vout.push_back(out);
 
-        BOOST_FOREACH(const CDarkSendEntryVin s, e.sev){
+        BOOST_FOREACH(const CForTunaEntryVin s, e.sev){
             txNew.vin.push_back(s.vin);
 
             if(s.vin == newVin){
@@ -280,19 +280,19 @@ bool CDarkSendPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
     if(found >= 0){ //might have to do this one input at a time?
         int n = found;
         txNew.vin[n].scriptSig = newSig;
-        if(fDebug) printf("CDarkSendPool::SignatureValid() - Sign with sig %s\n", newSig.ToString().substr(0,24).c_str());
+        if(fDebug) printf("CForTunaPool::SignatureValid() - Sign with sig %s\n", newSig.ToString().substr(0,24).c_str());
         if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, txNew, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0)){
-            if(fDebug) printf("CDarkSendPool::SignatureValid() - Signing - Error signing input %u\n", n);
+            if(fDebug) printf("CForTunaPool::SignatureValid() - Signing - Error signing input %u\n", n);
             return false;
         }
     }
 
-    if(fDebug) printf("CDarkSendPool::SignatureValid() - Signing - Succesfully signed input\n");
+    if(fDebug) printf("CForTunaPool::SignatureValid() - Signing - Succesfully signed input\n");
     return true;
 }
 
 // check to make sure the collateral provided by the client is valid
-bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
+bool CForTunaPool::IsCollateralValid(const CTransaction& txCollateral){
     if(txCollateral.vout.size() < 1) return false;
     if(txCollateral.nLockTime != 0) return false;
 
@@ -304,7 +304,7 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
         nValueOut += o.nValue;
 
         if(!o.scriptPubKey.IsNormalPaymentScript()){
-            printf("CDarkSendPool::IsCollateralValid - Invalid Script %s\n", txCollateral.ToString().c_str());
+            printf("CForTunaPool::IsCollateralValid - Invalid Script %s\n", txCollateral.ToString().c_str());
             return false;
         }
     }
@@ -323,23 +323,23 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
     }
 
     if(missingTx){
-        if(fDebug) printf("CDarkSendPool::IsCollateralValid - Unknown inputs in collateral transaction - %s\n", txCollateral.ToString().c_str());
+        if(fDebug) printf("CForTunaPool::IsCollateralValid - Unknown inputs in collateral transaction - %s\n", txCollateral.ToString().c_str());
         return false;
     }
 
     //collateral transactions are required to pay out FORTUNA_COLLATERAL as a fee to the miners
     if(nValueIn-nValueOut < FORTUNA_COLLATERAL) {
-        if(fDebug) printf("CDarkSendPool::IsCollateralValid - did not include enough fees in transaction %lu\n%s\n", nValueOut-nValueIn, txCollateral.ToString().c_str());
+        if(fDebug) printf("CForTunaPool::IsCollateralValid - did not include enough fees in transaction %lu\n%s\n", nValueOut-nValueIn, txCollateral.ToString().c_str());
         return false;
     }
 
-    if(fDebug) printf("CDarkSendPool::IsCollateralValid %s\n", txCollateral.ToString().c_str());
+    if(fDebug) printf("CForTunaPool::IsCollateralValid %s\n", txCollateral.ToString().c_str());
 
     CValidationState state;
     //if(!AcceptableInputs(mempool, state, txCollateral)){
     bool* pfMissingInputs;
     if(!AcceptableInputs(mempool, txCollateral, false, pfMissingInputs)){
-        if(fDebug) printf("CDarkSendPool::IsCollateralValid - didn't pass IsAcceptable\n");
+        if(fDebug) printf("CForTunaPool::IsCollateralValid - didn't pass IsAcceptable\n");
         return false;
     }
 
@@ -350,12 +350,12 @@ bool CDarkSendPool::IsCollateralValid(const CTransaction& txCollateral){
 //
 // Add a clients transaction to the pool
 //
-bool CDarkSendPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& newOutput, std::string& error){
+bool CForTunaPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& newOutput, std::string& error){
     if (!fMasterNode) return false;
 
     BOOST_FOREACH(CTxIn in, newInput) {
         if (in.prevout.IsNull() || nAmount < 0) {
-            if(fDebug) printf("CDarkSendPool::AddEntry - input not valid!\n");
+            if(fDebug) printf("CForTunaPool::AddEntry - input not valid!\n");
             error = _("Input is not valid.");
             sessionUsers--;
             return false;
@@ -363,14 +363,14 @@ bool CDarkSendPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& 
     }
 
     if (!IsCollateralValid(txCollateral)){
-        if(fDebug) printf("CDarkSendPool::AddEntry - collateral not valid!\n");
+        if(fDebug) printf("CForTunaPool::AddEntry - collateral not valid!\n");
         error = _("Collateral is not valid.");
         sessionUsers--;
         return false;
     }
 
     if((int)entries.size() >= GetMaxPoolTransactions()){
-        if(fDebug) printf("CDarkSendPool::AddEntry - entries is full!\n");
+        if(fDebug) printf("CForTunaPool::AddEntry - entries is full!\n");
         error = _("Entries are full.");
         sessionUsers--;
         return false;
@@ -378,10 +378,10 @@ bool CDarkSendPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& 
 
     BOOST_FOREACH(CTxIn in, newInput) {
         if(fDebug) printf("looking for vin -- %s\n", in.ToString().c_str());
-        BOOST_FOREACH(const CDarkSendEntry v, entries) {
-            BOOST_FOREACH(const CDarkSendEntryVin s, v.sev){
+        BOOST_FOREACH(const CForTunaEntry v, entries) {
+            BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
                 if(s.vin == in) {
-                    if(fDebug) printf("CDarkSendPool::AddEntry - found in vin\n");
+                    if(fDebug) printf("CForTunaPool::AddEntry - found in vin\n");
                     error = _("Already have that input.");
                     sessionUsers--;
                     return false;
@@ -391,65 +391,65 @@ bool CDarkSendPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& 
     }
 
     if(state == POOL_STATUS_ACCEPTING_ENTRIES) {
-        CDarkSendEntry v;
+        CForTunaEntry v;
         v.Add(newInput, nAmount, txCollateral, newOutput);
         entries.push_back(v);
 
-        if(fDebug) printf("CDarkSendPool::AddEntry -- adding %s\n", newInput[0].ToString().c_str());
+        if(fDebug) printf("CForTunaPool::AddEntry -- adding %s\n", newInput[0].ToString().c_str());
         error = "";
 
         return true;
     }
 
-    if(fDebug) printf("CDarkSendPool::AddEntry - can't accept new entry, wrong state!\n");
+    if(fDebug) printf("CForTunaPool::AddEntry - can't accept new entry, wrong state!\n");
     error = _("Wrong state.");
     sessionUsers--;
     return false;
 }
 
-bool CDarkSendPool::AddScriptSig(const CTxIn newVin){
-    if(fDebug) printf("CDarkSendPool::AddScriptSig -- new sig  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
+bool CForTunaPool::AddScriptSig(const CTxIn newVin){
+    if(fDebug) printf("CForTunaPool::AddScriptSig -- new sig  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
 
-    BOOST_FOREACH(const CDarkSendEntry v, entries) {
-        BOOST_FOREACH(const CDarkSendEntryVin s, v.sev){
+    BOOST_FOREACH(const CForTunaEntry v, entries) {
+        BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
             if(s.vin.scriptSig == newVin.scriptSig) {
-                printf("CDarkSendPool::AddScriptSig - already exists \n");
+                printf("CForTunaPool::AddScriptSig - already exists \n");
                 return false;
             }
         }
     }
 
     if(!SignatureValid(newVin.scriptSig, newVin)){
-        if(fDebug) printf("CDarkSendPool::AddScriptSig - Invalid Sig\n");
+        if(fDebug) printf("CForTunaPool::AddScriptSig - Invalid Sig\n");
         return false;
     }
 
-    if(fDebug) printf("CDarkSendPool::AddScriptSig -- sig %s\n", newVin.ToString().c_str());
+    if(fDebug) printf("CForTunaPool::AddScriptSig -- sig %s\n", newVin.ToString().c_str());
 
     if(state == POOL_STATUS_SIGNING) {
         BOOST_FOREACH(CTxIn& vin, finalTransaction.vin){
             if(newVin.prevout == vin.prevout && vin.nSequence == newVin.nSequence){
                 vin.scriptSig = newVin.scriptSig;
                 vin.prevPubKey = newVin.prevPubKey;
-                if(fDebug) printf("CDarkSendPool::AddScriptSig -- adding to finalTransaction  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
+                if(fDebug) printf("CForTunaPool::AddScriptSig -- adding to finalTransaction  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
             }
         }
         for(unsigned int i = 0; i < entries.size(); i++){
             if(entries[i].AddSig(newVin)){
-                if(fDebug) printf("CDarkSendPool::AddScriptSig -- adding  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
+                if(fDebug) printf("CForTunaPool::AddScriptSig -- adding  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
                 return true;
             }
         }
     }
 
-    printf("CDarkSendPool::AddScriptSig -- Couldn't set sig!\n" );
+    printf("CForTunaPool::AddScriptSig -- Couldn't set sig!\n" );
     return false;
 }
 
 // check to make sure everything is signed
-bool CDarkSendPool::SignaturesComplete(){
-    BOOST_FOREACH(const CDarkSendEntry v, entries) {
-        BOOST_FOREACH(const CDarkSendEntryVin s, v.sev){
+bool CForTunaPool::SignaturesComplete(){
+    BOOST_FOREACH(const CForTunaEntry v, entries) {
+        BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
             if(!s.isSigSet) return false;
         }
     }
@@ -461,7 +461,7 @@ bool CDarkSendPool::SignaturesComplete(){
 //                  0 means transaction was not accepted
 //                  1 means transaction was accepted
 
-bool CDarkSendPool::StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID){
+bool CForTunaPool::StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID){
     if(fMasterNode) return false;
     if(state == POOL_STATUS_ERROR || state == POOL_STATUS_SUCCESS) return false;
 
@@ -480,19 +480,19 @@ bool CDarkSendPool::StatusUpdate(int newState, int newEntriesCount, int newAccep
 
         if(newAccepted == 1) {
             sessionID = newSessionID;
-            printf("CDarkSendPool::StatusUpdate - set sessionID to %d\n", sessionID);
+            printf("CForTunaPool::StatusUpdate - set sessionID to %d\n", sessionID);
             sessionFoundMasternode = true;
         }
     }
 
     if(newState == POOL_STATUS_ACCEPTING_ENTRIES){
         if(newAccepted == 1){
-            printf("CDarkSendPool::StatusUpdate - entry accepted! \n");
+            printf("CForTunaPool::StatusUpdate - entry accepted! \n");
             sessionFoundMasternode = true;
             //wait for other users. Masternode will report when ready
             UpdateState(POOL_STATUS_QUEUE);
         } else if (newAccepted == 0 && sessionID == 0 && !sessionFoundMasternode) {
-            printf("CDarkSendPool::StatusUpdate - entry not accepted by masternode \n");
+            printf("CForTunaPool::StatusUpdate - entry not accepted by masternode \n");
             UnlockCoins();
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
         }
@@ -507,22 +507,22 @@ bool CDarkSendPool::StatusUpdate(int newState, int newEntriesCount, int newAccep
 // check it to make sure it's what we want, then sign it if we agree.
 // If we refuse to sign, it's possible we'll be charged collateral
 //
-bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode* node){
-    if(fDebug) printf("CDarkSendPool::AddFinalTransaction - Got Finalized Transaction\n");
+bool CForTunaPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode* node){
+    if(fDebug) printf("CForTunaPool::AddFinalTransaction - Got Finalized Transaction\n");
 
     if(!finalTransaction.vin.empty()){
-        printf("CDarkSendPool::AddFinalTransaction - Rejected Final Transaction!\n");
+        printf("CForTunaPool::AddFinalTransaction - Rejected Final Transaction!\n");
         return false;
     }
 
     finalTransaction = finalTransactionNew;
-    printf("CDarkSendPool::SignFinalTransaction %s\n", finalTransaction.ToString().c_str());
+    printf("CForTunaPool::SignFinalTransaction %s\n", finalTransaction.ToString().c_str());
 
     vector<CTxIn> sigs;
 
     //make sure my inputs/outputs are present, otherwise refuse to sign
-    BOOST_FOREACH(const CDarkSendEntry e, myEntries) {
-        BOOST_FOREACH(const CDarkSendEntryVin s, e.sev) {
+    BOOST_FOREACH(const CForTunaEntry e, myEntries) {
+        BOOST_FOREACH(const CForTunaEntryVin s, e.sev) {
             /* Sign my transaction and all outputs */
             int mine = -1;
             CScript prevPubKey = CScript();
@@ -557,13 +557,13 @@ bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNod
                 if(foundOutputs < targetOuputs || nValue1 != nValue2) {
                     // in this case, something went wrong and we'll refuse to sign. It's possible we'll be charged collateral. But that's
                     // better then signing if the transaction doesn't look like what we wanted.
-                    printf("CDarkSendPool::Sign - My entries are not correct! Refusing to sign. %d entries %d target. \n", foundOutputs, targetOuputs);
+                    printf("CForTunaPool::Sign - My entries are not correct! Refusing to sign. %d entries %d target. \n", foundOutputs, targetOuputs);
                     return false;
                 }
 
-                if(fDebug) printf("CDarkSendPool::Sign - Signing my input %i\n", mine);
+                if(fDebug) printf("CForTunaPool::Sign - Signing my input %i\n", mine);
                 if(!SignSignature(*pwalletMain, prevPubKey, finalTransaction, mine, int(SIGHASH_ALL|SIGHASH_ANYONECANPAY))) { // changes scriptSig
-                    if(fDebug) printf("CDarkSendPool::Sign - Unable to sign my own transaction! \n");
+                    if(fDebug) printf("CForTunaPool::Sign - Unable to sign my own transaction! \n");
                     // not sure what to do here, it will timeout...?
                 }
 
@@ -573,7 +573,7 @@ bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNod
 
         }
 
-        if(fDebug) printf("CDarkSendPool::Sign - txNew:\n%s", finalTransaction.ToString().c_str());
+        if(fDebug) printf("CForTunaPool::Sign - txNew:\n%s", finalTransaction.ToString().c_str());
     }
 
     // push all of our signatures to the masternode
@@ -583,15 +583,15 @@ bool CDarkSendPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNod
     return true;
 }
 
-void CDarkSendPool::NewBlock()
+void CForTunaPool::NewBlock()
 {
-    if(fDebug) printf("CDarkSendPool::NewBlock \n");
+    if(fDebug) printf("CForTunaPool::NewBlock \n");
 
     //we we're processing lots of blocks, we'll just leave
     if(GetTime() - lastNewBlock < 10) return;
     lastNewBlock = GetTime();
 
-    darkSendPool.CheckTimeout();
+    forTunaPool.CheckTimeout();
 
     if(!fMasterNode){
         //denominate all non-denominated inputs every 50 blocks (25 minutes)
@@ -603,17 +603,17 @@ void CDarkSendPool::NewBlock()
     }
 }
 
-void CDarkSendPool::ClearLastMessage()
+void CForTunaPool::ClearLastMessage()
 {
     lastMessage = "";
 }
 
-bool CDarkSendPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txCollateral, std::string& strReason)
+bool CForTunaPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txCollateral, std::string& strReason)
 {
-    printf("CDarkSendPool::IsCompatibleWithSession - sessionDenom %d sessionUsers %d\n", sessionDenom, sessionUsers);
+    printf("CForTunaPool::IsCompatibleWithSession - sessionDenom %d sessionUsers %d\n", sessionDenom, sessionUsers);
 
     if (!unitTest && !IsCollateralValid(txCollateral)){
-        if(fDebug) printf("CDarkSendPool::IsCompatibleWithSession - collateral not valid!\n");
+        if(fDebug) printf("CForTunaPool::IsCompatibleWithSession - collateral not valid!\n");
         strReason = _("Collateral not valid.");
         return false;
     }
@@ -644,7 +644,7 @@ bool CDarkSendPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txColla
     if((state != POOL_STATUS_ACCEPTING_ENTRIES && state != POOL_STATUS_QUEUE) || sessionUsers >= GetMaxPoolTransactions()){
         if((state != POOL_STATUS_ACCEPTING_ENTRIES && state != POOL_STATUS_QUEUE)) strReason = _("Incompatible mode.");
         if(sessionUsers >= GetMaxPoolTransactions()) strReason = _("Masternode queue is full.");
-        printf("CDarkSendPool::IsCompatibleWithSession - incompatible mode, return false %d %d\n", state != POOL_STATUS_ACCEPTING_ENTRIES, sessionUsers >= GetMaxPoolTransactions());
+        printf("CForTunaPool::IsCompatibleWithSession - incompatible mode, return false %d %d\n", state != POOL_STATUS_ACCEPTING_ENTRIES, sessionUsers >= GetMaxPoolTransactions());
         return false;
     }
 
@@ -653,7 +653,7 @@ bool CDarkSendPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txColla
         return false;
     }
 
-    printf("CDarkSendPool::IsCompatibleWithSession - compatible\n");
+    printf("CForTunaPool::IsCompatibleWithSession - compatible\n");
 
     sessionUsers++;
     lastTimeChanged = GetTimeMillis();
@@ -663,7 +663,7 @@ bool CDarkSendPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txColla
 }
 
 //create a nice string to show the denominations
-void CDarkSendPool::GetDenominationsToString(int nDenom, std::string& strDenom){
+void CForTunaPool::GetDenominationsToString(int nDenom, std::string& strDenom){
     // Function returns as follows:
     //
     // bit 0 - 100DNR+1 ( bit on if present )
@@ -697,11 +697,11 @@ void CDarkSendPool::GetDenominationsToString(int nDenom, std::string& strDenom){
 }
 
 // return a bitshifted integer representing the denominations in this list
-int CDarkSendPool::GetDenominations(const std::vector<CTxOut>& vout){
+int CForTunaPool::GetDenominations(const std::vector<CTxOut>& vout){
     std::vector<pair<int64_t, int> > denomUsed;
 
     // make a list of denominations, with zero uses
-    BOOST_FOREACH(int64_t d, darkSendDenominations)
+    BOOST_FOREACH(int64_t d, forTunaDenominations)
         denomUsed.push_back(make_pair(d, 0));
 
     // look for denominations and update uses to 1
@@ -734,7 +734,7 @@ int CDarkSendPool::GetDenominations(const std::vector<CTxOut>& vout){
 }
 
 
-int CDarkSendPool::GetDenominationsByAmounts(std::vector<int64_t>& vecAmount){
+int CForTunaPool::GetDenominationsByAmounts(std::vector<int64_t>& vecAmount){
     CScript e = CScript();
     std::vector<CTxOut> vout1;
 
@@ -750,14 +750,14 @@ int CDarkSendPool::GetDenominationsByAmounts(std::vector<int64_t>& vecAmount){
     return GetDenominations(vout1);
 }
 
-int CDarkSendPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
+int CForTunaPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
     CScript e = CScript();
     int64_t nValueLeft = nAmount;
 
     std::vector<CTxOut> vout1;
 
     // Make outputs by looping through denominations, from small to large
-    BOOST_REVERSE_FOREACH(int64_t v, darkSendDenominations){
+    BOOST_REVERSE_FOREACH(int64_t v, forTunaDenominations){
         if(nDenomTarget != 0){
             bool fAccepted = false;
             if((nDenomTarget & (1 << 0)) &&      v == ((100000*COIN)+100000000)) {fAccepted = true;}
@@ -791,7 +791,7 @@ int CDarkSendPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
     return GetDenominations(vout1);
 }
 
-bool CDarkSendSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
+bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
     CScript payee2;
     payee2= GetScriptForDestination(pubkey.GetID());
 
@@ -816,7 +816,7 @@ bool CDarkSendSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
     return false;
 }
 
-bool CDarkSendSigner::SetKey(std::string strSecret, std::string& errorMessage, CKey& key, CPubKey& pubkey){
+bool CForTunaSigner::SetKey(std::string strSecret, std::string& errorMessage, CKey& key, CPubKey& pubkey){
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(strSecret);
 
@@ -831,7 +831,7 @@ bool CDarkSendSigner::SetKey(std::string strSecret, std::string& errorMessage, C
     return true;
 }
 
-bool CDarkSendSigner::SignMessage(std::string strMessage, std::string& errorMessage, vector<unsigned char>& vchSig, CKey key)
+bool CForTunaSigner::SignMessage(std::string strMessage, std::string& errorMessage, vector<unsigned char>& vchSig, CKey key)
 {
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
@@ -845,7 +845,7 @@ bool CDarkSendSigner::SignMessage(std::string strMessage, std::string& errorMess
     return true;
 }
 
-bool CDarkSendSigner::VerifyMessage(CPubKey pubkey, vector<unsigned char>& vchSig, std::string strMessage, std::string& errorMessage)
+bool CForTunaSigner::VerifyMessage(CPubKey pubkey, vector<unsigned char>& vchSig, std::string strMessage, std::string& errorMessage)
 {
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
@@ -858,7 +858,7 @@ bool CDarkSendSigner::VerifyMessage(CPubKey pubkey, vector<unsigned char>& vchSi
     }
 
     if (fDebug && pubkey2.GetID() != pubkey.GetID())
-        printf("CDarkSendSigner::VerifyMessage -- keys don't match: %s %s", pubkey2.GetID().ToString().c_str(), pubkey.GetID().ToString().c_str());
+        printf("CForTunaSigner::VerifyMessage -- keys don't match: %s %s", pubkey2.GetID().ToString().c_str(), pubkey.GetID().ToString().c_str());
 
     return (pubkey2.GetID() == pubkey.GetID());
 }
@@ -873,18 +873,18 @@ bool CFortunaQueue::Sign()
     CPubKey pubkey2;
     std::string errorMessage = "";
 
-    if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
+    if(!forTunaSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
     {
         printf("CFortunaQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
         return false;
     }
 
-    if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchSig, key2)) {
+    if(!forTunaSigner.SignMessage(strMessage, errorMessage, vchSig, key2)) {
         printf("CFortunaQueue():Relay - Sign message failed");
         return false;
     }
 
-    if(!darkSendSigner.VerifyMessage(pubkey2, vchSig, strMessage, errorMessage)) {
+    if(!forTunaSigner.VerifyMessage(pubkey2, vchSig, strMessage, errorMessage)) {
         printf("CFortunaQueue():Relay - Verify message failed");
         return false;
     }
@@ -912,7 +912,7 @@ bool CFortunaQueue::CheckSignature()
             std::string strMessage = vin.ToString() + boost::lexical_cast<std::string>(nDenom) + boost::lexical_cast<std::string>(time) + boost::lexical_cast<std::string>(ready);
 
             std::string errorMessage = "";
-            if(!darkSendSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
+            if(!forTunaSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
                 return error("CFortunaQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.ToString().c_str());
             }
 
@@ -925,7 +925,7 @@ bool CFortunaQueue::CheckSignature()
 
 
 //TODO: Rename/move to core
-void ThreadCheckDarkSendPool(void* parg)
+void ThreadCheckForTunaPool(void* parg)
 {
     // Make this thread recognisable as the wallet flushing thread
     RenameThread("denarius-mn");
@@ -938,8 +938,8 @@ void ThreadCheckDarkSendPool(void* parg)
         c++;
 
         MilliSleep(1000);
-        //printf("ThreadCheckDarkSendPool::check timeout\n");
-        //darkSendPool.CheckTimeout();
+        //printf("ThreadCheckForTunaPool::check timeout\n");
+        //forTunaPool.CheckTimeout();
 
         int mnTimeout = 150; //2.5 minutes
 
@@ -984,7 +984,7 @@ void ThreadCheckDarkSendPool(void* parg)
                 LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
-                    if (pnode->nVersion >= darkSendPool.PROTOCOL_VERSION) {
+                    if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
 
                         //keep track of who we've asked for the list
                         if(pnode->HasFulfilledRequest("mnsync")) continue;

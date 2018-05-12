@@ -959,7 +959,7 @@ bool CWallet::IsDenominated(const CTxIn &txin) const
 
 bool CWallet::IsDenominatedAmount(int64_t nInputAmount) const
 {
-    BOOST_FOREACH(int64_t d, darkSendDenominations)
+    BOOST_FOREACH(int64_t d, forTunaDenominations)
         if(nInputAmount == d)
             return true;
     return false;
@@ -2044,7 +2044,7 @@ bool less_then_denom (const COutput& out1, const COutput& out2)
 
     bool found1 = false;
     bool found2 = false;
-    BOOST_FOREACH(int64_t d, darkSendDenominations) // loop through predefined denoms
+    BOOST_FOREACH(int64_t d, forTunaDenominations) // loop through predefined denoms
     {
         if(pcoin1->vout[out1.i].nValue == d) found1 = true;
         if(pcoin2->vout[out2.i].nValue == d) found2 = true;
@@ -2366,7 +2366,7 @@ bool CWallet::CreateCollateralTransaction(CTransaction& txCollateral, std::strin
             BOOST_FOREACH(CTxIn v, vCoinsCollateral)
                 UnlockCoin(v.prevout);
 
-            strReason = "CDarkSendPool::Sign - Unable to sign collateral transaction! \n";
+            strReason = "CForTunaPool::Sign - Unable to sign collateral transaction! \n";
             return false;
         }
         vinNumber++;

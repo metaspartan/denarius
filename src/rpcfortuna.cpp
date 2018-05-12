@@ -28,9 +28,9 @@ Value getpoolinfo(const Array& params, bool fHelp)
 
     Object obj;
     obj.push_back(Pair("current_masternode",        GetCurrentMasterNode()));
-    obj.push_back(Pair("state",        darkSendPool.GetState()));
-    obj.push_back(Pair("entries",      darkSendPool.GetEntriesCount()));
-    obj.push_back(Pair("entries_accepted",      darkSendPool.GetCountEntriesAccepted()));
+    obj.push_back(Pair("state",        forTunaPool.GetState()));
+    obj.push_back(Pair("entries",      forTunaPool.GetEntriesCount()));
+    obj.push_back(Pair("entries_accepted",      forTunaPool.GetCountEntriesAccepted()));
     return obj;
 }
 
@@ -563,12 +563,12 @@ Value masternode(const Array& params, bool fHelp)
                 CPubKey pubKeyMasternode;
                 CKey keyMasternode;
                 std::string errorMessage;
-                std::string darkSendError;
+                std::string forTunaError;
                 std::string vinError;
 
-                if(!darkSendSigner.SetKey(mne.getPrivKey(), darkSendError, keyMasternode, pubKeyMasternode))
+                if(!forTunaSigner.SetKey(mne.getPrivKey(), forTunaError, keyMasternode, pubKeyMasternode))
                 {
-                    errorMessage = darkSendError;
+                    errorMessage = forTunaError;
                 }
 
                 if (!amn.GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, mne.getTxHash(), mne.getOutputIndex(), vinError))

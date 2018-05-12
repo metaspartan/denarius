@@ -486,7 +486,7 @@ CNode* FindNode(const CService& addr)
     return NULL;
 }
 
-CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaster)
+CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster)
 {
     if (pszDest == NULL) {
         if (IsLocal(addrConnect))
@@ -496,8 +496,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
-        if(darkSendMaster)
-                pnode->fDarkSendMaster = true;
+        if(forTunaMaster)
+                pnode->fForTunaMaster = true;
 
             pnode->AddRef();
 
@@ -2372,7 +2372,7 @@ void RelayTransactionLockReq(const CTransaction& tx, const uint256& hash, bool r
 
 }
 
-void RelayDarkSendFinalTransaction(const int sessionID, const CTransaction& txNew)
+void RelayForTunaFinalTransaction(const int sessionID, const CTransaction& txNew)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2381,19 +2381,19 @@ void RelayDarkSendFinalTransaction(const int sessionID, const CTransaction& txNe
     }
 }
 
-void RelayDarkSendIn(const std::vector<CTxIn>& in, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& out)
+void RelayForTunaIn(const std::vector<CTxIn>& in, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& out)
 {
     LOCK(cs_vNodes);
 
     BOOST_FOREACH(CNode* pnode, vNodes)
     {
-        if((CNetAddr)darkSendPool.submittedToMasternode != (CNetAddr)pnode->addr) continue;
-        printf("RelayDarkSendIn - found master, relaying message - %s \n", pnode->addr.ToString().c_str());
+        if((CNetAddr)forTunaPool.submittedToMasternode != (CNetAddr)pnode->addr) continue;
+        printf("RelayForTunaIn - found master, relaying message - %s \n", pnode->addr.ToString().c_str());
         pnode->PushMessage("dsi", in, nAmount, txCollateral, out);
     }
 }
 
-void RelayDarkSendStatus(const int sessionID, const int newState, const int newEntriesCount, const int newAccepted, const std::string error)
+void RelayForTunaStatus(const int sessionID, const int newState, const int newEntriesCount, const int newAccepted, const std::string error)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2402,7 +2402,7 @@ void RelayDarkSendStatus(const int sessionID, const int newState, const int newE
     }
 }
 
-void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
+void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2414,7 +2414,7 @@ void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std:
 }
 
 /*
-void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64 lastUpdated)
+void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64 lastUpdated)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2424,7 +2424,7 @@ void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std:
 }
 */
 
-void SendDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
+void SendForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2433,7 +2433,7 @@ void SendDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::
     }
 }
 
-void RelayDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
+void RelayForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2444,7 +2444,7 @@ void RelayDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned 
     }
 }
 
-void SendDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
+void SendForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2453,7 +2453,7 @@ void SendDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned c
     }
 }
 
-void RelayDarkSendCompletedTransaction(const int sessionID, const bool error, const std::string errorMessage)
+void RelayForTunaCompletedTransaction(const int sessionID, const bool error, const std::string errorMessage)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)

@@ -10,8 +10,8 @@
 #include "activemasternode.h"
 
 class CTxIn;
-class CDarkSendPool;
-class CDarkSendSigner;
+class CForTunaPool;
+class CForTunaSigner;
 class CMasterNodeVote;
 class CBitcoinAddress;
 class CFortunaQueue;
@@ -37,8 +37,8 @@ class CActiveMasternode;
 #define FORTUNA_QUEUE_TIMEOUT                 120
 #define FORTUNA_SIGNING_TIMEOUT               30
 
-extern CDarkSendPool darkSendPool;
-extern CDarkSendSigner darkSendSigner;
+extern CForTunaPool forTunaPool;
+extern CForTunaSigner forTunaSigner;
 extern std::vector<CFortunaQueue> vecFortunaQueue;
 extern std::string strMasterNodePrivKey;
 extern map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
@@ -52,13 +52,13 @@ int GetInputFortunaRounds(CTxIn in, int rounds=0);
 
 
 // An input in the fortuna pool
-class CDarkSendEntryVin
+class CForTunaEntryVin
 {
 public:
     bool isSigSet;
     CTxIn vin;
 
-    CDarkSendEntryVin()
+    CForTunaEntryVin()
     {
         isSigSet = false;
         vin = CTxIn();
@@ -66,18 +66,18 @@ public:
 };
 
 // A clients transaction in the fortuna pool
-class CDarkSendEntry
+class CForTunaEntry
 {
 public:
     bool isSet;
-    std::vector<CDarkSendEntryVin> sev;
+    std::vector<CForTunaEntryVin> sev;
     int64_t amount;
     CTransaction collateral;
     std::vector<CTxOut> vout;
     CTransaction txSupporting;
     int64_t addedTime;
 
-    CDarkSendEntry()
+    CForTunaEntry()
     {
         isSet = false;
         collateral = CTransaction();
@@ -89,7 +89,7 @@ public:
         if(isSet){return false;}
 
         BOOST_FOREACH(const CTxIn v, vinIn) {
-            CDarkSendEntryVin s = CDarkSendEntryVin();
+            CForTunaEntryVin s = CForTunaEntryVin();
             s.vin = v;
             sev.push_back(s);
         }
@@ -104,7 +104,7 @@ public:
 
     bool AddSig(const CTxIn& vin)
     {
-        BOOST_FOREACH(CDarkSendEntryVin& s, sev) {
+        BOOST_FOREACH(CForTunaEntryVin& s, sev) {
             if(s.vin.prevout == vin.prevout && s.vin.nSequence == vin.nSequence){
                 if(s.isSigSet){return false;}
                 s.vin.scriptSig = vin.scriptSig;
@@ -204,7 +204,7 @@ public:
 //
 // Helper object for signing and checking signatures
 //
-class CDarkSendSigner
+class CForTunaSigner
 {
 public:
     bool IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey);
@@ -221,15 +221,15 @@ class CFortunaSession
 //
 // Used to keep track of current status of fortuna pool
 //
-class CDarkSendPool
+class CForTunaPool
 {
 public:
     static const int PROTOCOL_VERSION = 30000; //Latest is 30000
 
     // clients entries
-    std::vector<CDarkSendEntry> myEntries;
+    std::vector<CForTunaEntry> myEntries;
     // masternode entries
-    std::vector<CDarkSendEntry> entries;
+    std::vector<CForTunaEntry> entries;
     // the finalized transaction ready for signing
     CTransaction finalTransaction;
 
@@ -273,9 +273,9 @@ public:
     //incremented whenever a DSQ comes through
     int64_t nDsqCount;
 
-    CDarkSendPool()
+    CForTunaPool()
     {
-        /* DarkSend uses collateral addresses to trust parties entering the pool
+        /* ForTuna uses collateral addresses to trust parties entering the pool
             to behave themselves. If they don't it takes their money. */
 
         cachedLastSuccess = 0;
@@ -342,15 +342,15 @@ public:
     void UpdateState(unsigned int newState)
     {
         if (fMasterNode && (newState == POOL_STATUS_ERROR || newState == POOL_STATUS_SUCCESS)){
-            printf("CDarkSendPool::UpdateState() - Can't set state to ERROR or SUCCESS as a masternode. \n");
+            printf("CForTunaPool::UpdateState() - Can't set state to ERROR or SUCCESS as a masternode. \n");
             return;
         }
 
-        printf("CDarkSendPool::UpdateState() == %d | %d \n", state, newState);
+        printf("CForTunaPool::UpdateState() == %d | %d \n", state, newState);
         if(state != newState){
             lastTimeChanged = GetTimeMillis();
             if(fMasterNode) {
-                RelayDarkSendStatus(darkSendPool.sessionID, darkSendPool.GetState(), darkSendPool.GetEntriesCount(), MASTERNODE_RESET);
+                RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
             }
         }
         state = newState;
@@ -426,8 +426,8 @@ public:
 };
 
 
-void ConnectToDarkSendMasterNodeWinner();
+void ConnectToForTunaMasterNodeWinner();
 
-void ThreadCheckDarkSendPool(void* parg);
+void ThreadCheckForTunaPool(void* parg);
 
 #endif

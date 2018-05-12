@@ -3353,8 +3353,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
                 printf("ProcessBlock() : Got BlockPayee for block : - %d\n", pindexBest->nHeight);
             }
 
-            darkSendPool.CheckTimeout();
-            darkSendPool.NewBlock();
+            forTunaPool.CheckTimeout();
+            forTunaPool.NewBlock();
             masternodePayments.ProcessBlock((pindexBest->nHeight)+10);
 
         }
