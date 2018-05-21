@@ -3815,11 +3815,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else if (pfrom->nVersion == 0)
     {
-        // Must have a version message before anything else
+        // Must have a version message before anything else, as it is sent as soon as the socket opens
         pfrom->Misbehaving(1);
-        printf("net: received an out-of-sequence %s from peer at %s\n", strCommand.c_str(), pfrom->addr.ToString().c_str());
-        if (pfrom->nMisbehavior > 10 || pfrom->nTimeConnected < GetTime() - 60)
-            pfrom->fDisconnect = true; // Disconnect them if they don't send us this within a minute or they are spamming us
+        if (fDebug) printf("net: received an out-of-sequence %s from peer at %s\n", strCommand.c_str(), pfrom->addr.ToString().c_str());
+        if (pfrom->nMisbehavior > 10 || pfrom->nTimeConnected < GetTime() - 10)
+            pfrom->fDisconnect = true; // Disconnect them so we can reconnect and try for another version message
         return false;
     }
 
