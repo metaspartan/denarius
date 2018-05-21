@@ -79,7 +79,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	  obj/core.o \
+	obj/core.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -102,7 +102,14 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
-    obj/stealth.o 
+    obj/stealth.o \
+	obj/activemasternode.o \
+	obj/masternodeconfig.o \
+    obj/masternode.o \
+    obj/rpcdarksend.o \
+    obj/spork.o \
+    obj/darksend.o \
+	obj/eccryptoverify.o
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -173,12 +180,14 @@ obj/%.o: json/%.cpp
 	rm -f $(@:%.o=%.d)
 
 denariusd: $(OBJS:obj/%=obj/%)
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f denariusd
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/*.d
 	-rm -f obj/build.h
+	-cd leveldb && $(MAKE) clean || true
 
 FORCE:
