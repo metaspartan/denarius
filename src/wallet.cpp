@@ -1564,21 +1564,18 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
 // denarius: total coins available for staking
 int64_t CWallet::GetStakeAmount() const
 {
+    int64_t nTotal = 0;
+    {
+        LOCK2(cs_main, cs_wallet);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
+            const CWalletTx* pcoin = &(*it).second;
+            if (pcoin->IsTrusted()) //Just pulls GetBalance() currently
+                nTotal += pcoin->GetAvailableCredit();
+        }
+    }
 
-    // Choose coins to use
-    int64_t nBalance = GetUnlockedBalance();
-
-    if (nBalance <= nReserveBalance)
-        return 0;
-
-    set<pair<const CWalletTx*,unsigned int> > setCoins;
-    int64_t nValueIn = 0;
-
-    // Select coins with suitable depth
-    if (!SelectCoinsForStaking(nBalance - nReserveBalance, GetAdjustedTime(), setCoins, nValueIn))
-        return 0;
-
-    return nValueIn;
+    return nTotal;
 }
 
 int64_t CWallet::GetStake() const
@@ -2237,10 +2234,36 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
 
                 int64_t nTotalValue = nValue + nFeeRet;
                 double dPriority = 0;
-                // vouts to the payees
-                BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+
+                // vouts to the payees with UTXO splitter - D E N A R I U S
+                if(coinControl && !coinControl->fSplitBlock)
                 {
-                    wtxNew.vout.push_back(CTxOut(s.second, s.first));
+                    BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+                    {
+                        wtxNew.vout.push_back(CTxOut(s.second, s.first));
+                    }
+                }
+                else //UTXO Splitter Transaction
+                {
+                    int nSplitBlock;
+                    if(coinControl)
+                        nSplitBlock = coinControl->nSplitBlock;
+                    else
+                        nSplitBlock = 1;
+
+                    BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+                    {
+                        for(int i = 0; i < nSplitBlock; i++)
+                        {
+                            if(i == nSplitBlock - 1)
+                            {
+                                uint64_t nRemainder = s.second % nSplitBlock;
+                                wtxNew.vout.push_back(CTxOut((s.second / nSplitBlock) + nRemainder, s.first));
+                            }
+                            else
+                                wtxNew.vout.push_back(CTxOut(s.second / nSplitBlock, s.first));
+                        }
+                    }
                 }
 
                 // Choose coins to use
