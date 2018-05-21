@@ -13,6 +13,9 @@ public:
     //! Includes watch only addresses which match the ISMINE_WATCH_SOLVABLE criteria
     bool fAllowWatchOnly;
 
+    bool fSplitBlock;
+    int nSplitBlock;
+
     CCoinControl()
     {
         SetNull();
@@ -24,6 +27,8 @@ public:
         setSelected.clear();
         fAllowOtherInputs = false;
         fAllowWatchOnly = false;
+        fSplitBlock = false;
+        nSplitBlock = 1;
     }
 
     bool HasSelected() const

@@ -106,11 +106,13 @@ TransactionView::TransactionView(QWidget *parent) :
     QLabel* transactionSumLabel = new QLabel();
     transactionSumLabel->setObjectName("transactionSumLabel");
     transactionSumLabel->setText(tr("Selected amount:"));
+    transactionSumLabel->setContentsMargins(5,8,5,0);
     hbox2->addWidget(transactionSumLabel);
 
     transactionSum = new QLabel();
     transactionSum->setObjectName("transactionSum");
     transactionSum->setMinimumSize(200, 8);
+    transactionSum->setContentsMargins(355,8,5,0);
     transactionSum->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     hbox2->addWidget(transactionSum);

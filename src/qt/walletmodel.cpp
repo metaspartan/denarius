@@ -756,6 +756,11 @@ void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
     return;
 }
 
+bool WalletModel::isMine(CBitcoinAddress address)
+{
+    return IsMine(*wallet, address.Get());
+}
+
 CWallet* WalletModel::getWallet()
 {
     return wallet;

@@ -46,6 +46,10 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addEntry()));
     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));
 
+    // UTXO Splitter
+    connect(ui->splitBlockCheckBox, SIGNAL(stateChanged(int)), this, SLOT(splitBlockChecked(int)));
+    connect(ui->splitBlockLineEdit, SIGNAL(textChanged(const QString &)), this, SLOT(splitBlockLineEditChanged(const QString &)));
+
     // Coin Control
     ui->lineEditCoinControlChange->setFont(GUIUtil::bitcoinAddressFont());
     connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));
@@ -124,6 +128,17 @@ void SendCoinsDialog::on_sendButton_clicked()
     for(int i = 0; i < ui->entries->count(); ++i)
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry*>(ui->entries->itemAt(i)->widget());
+        //UTXO splitter - address should be our own
+        CBitcoinAddress address = entry->getValue().address.toStdString();
+        if(!model->isMine(address) && ui->splitBlockCheckBox->checkState() == Qt::Checked)
+        {
+            CoinControlDialog::coinControl->fSplitBlock = false;
+            ui->splitBlockCheckBox->setCheckState(Qt::Unchecked);
+            QMessageBox::warning(this, tr("Send Coins"),
+                tr("The split UTXOs tool does not work when sending to outside addresses. Try again!"),
+                QMessageBox::Ok, QMessageBox::Ok);
+            return;
+        }
         if(entry)
         {
             if(entry->validate())
@@ -142,8 +157,25 @@ void SendCoinsDialog::on_sendButton_clicked()
         return;
     }
 
+    //set split block in model
+    CoinControlDialog::coinControl->fSplitBlock = ui->splitBlockCheckBox->checkState() == Qt::Checked;
+
+    if (ui->entries->count() > 1 && ui->splitBlockCheckBox->checkState() == Qt::Checked)
+    {
+        CoinControlDialog::coinControl->fSplitBlock = false;
+        ui->splitBlockCheckBox->setCheckState(Qt::Unchecked);
+        QMessageBox::warning(this, tr("Send Coins"),
+            tr("The split UTXOs tool does not work with multiple addresses. Try again!"),
+            QMessageBox::Ok, QMessageBox::Ok);
+        return;
+    }
+
+    if (CoinControlDialog::coinControl->fSplitBlock)
+        CoinControlDialog::coinControl->nSplitBlock = int(ui->splitBlockLineEdit->text().toInt());
+
     // Format confirmation message
     QStringList formatted;
+    QString recipientElement;
     foreach(const SendCoinsRecipient &rcp, recipients)
     {
         formatted.append(tr("<b>%1</b> to %2 (%3)").arg(BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, rcp.amount), Qt::escape(rcp.label), rcp.address));
@@ -168,6 +200,11 @@ void SendCoinsDialog::on_sendButton_clicked()
         // Unlock wallet was cancelled
         fNewRecipientAllowed = true;
         return;
+    }
+
+    if(fSplitBlock)
+    {
+        recipientElement.append(tr(" split into %1 outputs using the UTXO splitter.").arg(CoinControlDialog::coinControl->nSplitBlock));
     }
 
     WalletModel::SendCoinsReturn sendstatus;
@@ -253,6 +290,45 @@ void SendCoinsDialog::reject()
 void SendCoinsDialog::accept()
 {
     clear();
+}
+
+// UTXO splitter
+void SendCoinsDialog::splitBlockChecked(int state)
+{
+    if (model)
+    {
+        CoinControlDialog::coinControl->fSplitBlock = (state == Qt::Checked);
+        fSplitBlock = (state == Qt::Checked);
+        ui->splitBlockLineEdit->setEnabled((state == Qt::Checked));
+        ui->labelBlockSizeText->setEnabled((state == Qt::Checked));
+        ui->labelBlockSize->setEnabled((state == Qt::Checked));
+        coinControlUpdateLabels();
+    }
+}
+
+//UTXO splitter
+void SendCoinsDialog::splitBlockLineEditChanged(const QString & text)
+{
+    //grab the amount in Coin Control AFter Fee field
+    QString qAfterFee = ui->labelCoinControlAfterFee->text().left(ui->labelCoinControlAfterFee->text().indexOf(" "))
+            .replace("~", "").simplified().replace(" ", "");
+
+    //convert to CAmount
+    CAmount nAfterFee;
+    ParseMoney(qAfterFee.toStdString().c_str(), nAfterFee);
+
+    //if greater than 0 then divide after fee by the amount of blocks
+    CAmount nSize = nAfterFee;
+    int nBlocks = text.toInt();
+    if (nAfterFee && nBlocks)
+        nSize = nAfterFee / nBlocks;
+
+    //assign to split block dummy, which is used to recalculate the fee amount more outputs
+    CoinControlDialog::nSplitBlockDummy = nBlocks;
+
+    //update labels
+    ui->labelBlockSize->setText(QString::fromStdString(FormatMoney(nSize)));
+    coinControlUpdateLabels();
 }
 
 SendCoinsEntry *SendCoinsDialog::addEntry()
