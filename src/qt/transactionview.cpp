@@ -99,6 +99,21 @@ TransactionView::TransactionView(QWidget *parent) :
     amountWidget->setValidator(new QDoubleValidator(0, 1e20, 8, this));
     hlayout->addWidget(amountWidget);
 
+
+    QHBoxLayout *hbox2 = new QHBoxLayout();
+
+    // Sum of selected transactions
+    QLabel* transactionSumLabel = new QLabel();
+    transactionSumLabel->setObjectName("transactionSumLabel");
+    transactionSumLabel->setText(tr("Selected amount:"));
+    hbox2->addWidget(transactionSumLabel);
+
+    transactionSum = new QLabel();
+    transactionSum->setObjectName("transactionSum");
+    transactionSum->setMinimumSize(200, 8);
+    transactionSum->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    hbox2->addWidget(transactionSum);
     QVBoxLayout *vlayout = new QVBoxLayout(this);
     vlayout->setContentsMargins(0,0,0,0);
     vlayout->setSpacing(0);
@@ -107,6 +122,7 @@ TransactionView::TransactionView(QWidget *parent) :
     vlayout->addLayout(hlayout);
     vlayout->addWidget(createDateRangeWidget());
     vlayout->addWidget(view);
+    vlayout->addLayout(hbox2);
     vlayout->setSpacing(0);
     int width = view->verticalScrollBar()->sizeHint().width();
     // Cover scroll bar width with spacing
@@ -186,6 +202,9 @@ void TransactionView::setModel(WalletModel *model)
                 TransactionTableModel::ToAddress, QHeaderView::Stretch);
         transactionView->horizontalHeader()->resizeSection(
                 TransactionTableModel::Amount, 100);
+
+        connect(transactionView->selectionModel(), SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this, SLOT(computeSum()));
+
     }
 }
 
@@ -382,6 +401,29 @@ void TransactionView::showDetails()
         dlg.exec();
     }
 }
+
+void TransactionView::computeSum()
+{
+    qint64 amount = 0;
+    int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
+    if (!transactionView->selectionModel())
+        return;
+    QModelIndexList selection = transactionView->selectionModel()->selectedRows();
+
+    foreach (QModelIndex index, selection) {
+        amount += index.data(TransactionTableModel::AmountRole).toLongLong();
+    }
+    QString strAmount(BitcoinUnits::formatWithUnit(nDisplayUnit, amount, true));
+    if (amount < 0) strAmount = "<span style='color:red;'>" + strAmount + "</span>";
+    emit trxAmount(strAmount);
+}
+
+/** Update wallet with the sum of the selected transactions */
+void TransactionView::trxAmount(QString amount)
+{
+    transactionSum->setText(amount);
+}
+
 
 QWidget *TransactionView::createDateRangeWidget()
 {
