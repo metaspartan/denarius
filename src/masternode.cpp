@@ -39,7 +39,6 @@ int mnCount;
 
 // manage the masternode connections
 void ProcessMasternodeConnections(){
-    return;
     LOCK(cs_vNodes);
 
     BOOST_FOREACH(CNode* pnode, vNodes)
