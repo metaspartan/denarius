@@ -654,16 +654,20 @@ void StakeMiner(CWallet *pwallet)
         // Trying to sign a block
         if (pblock->SignBlock(*pwallet, nFees))
         {
+            bool staked;
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
-            CheckStake(pblock.get(), *pwallet);
+            staked = CheckStake(pblock.get(), *pwallet);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
-            MilliSleep(nMinerSleep);
 			if (fShutdown)
                 return;
+            MilliSleep(nMinerSleep);
+            if (staked) MilliSleep(60000); // sleep for a minute after successfully staking
         }
         else
-            MilliSleep(nMinerSleep);
+        {
 			if (fShutdown)
                 return;
+            MilliSleep(nMinerSleep);
+        }
     }
 }
