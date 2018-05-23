@@ -627,12 +627,20 @@ void StakeMiner(CWallet *pwallet)
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
-				vnThreadsRunning[THREAD_STAKE_MINER]--;
+                vnThreadsRunning[THREAD_STAKE_MINER]--;
                 MilliSleep(60000);
                 vnThreadsRunning[THREAD_STAKE_MINER]++;
 				if (fShutdown)
                     return;
             }
+        }
+
+        if (vecMasternodes.size() == 0 || (mnCount > 0 && vecMasternodes.size() < mnCount))
+        {
+            vnThreadsRunning[THREAD_STAKE_MINER]--;
+            MilliSleep(10000);
+            vnThreadsRunning[THREAD_STAKE_MINER]++;
+            continue;
         }
 
         //
