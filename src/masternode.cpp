@@ -46,7 +46,10 @@ void ProcessMasternodeConnections(){
         //if it's our masternode, let it be
         if(darkSendPool.submittedToMasternode == pnode->addr) continue;
 
-        if(pnode->fDarkSendMaster){
+        if( pnode->fDarkSendMaster ||
+            (pnode->addr.GetPort() == 9999 && pnode->nStartingHeight > (nBestHeight - 120)) // disconnect masternodes that were in sync when they connected recently
+                )
+        {
             printf("Closing masternode connection %s \n", pnode->addr.ToString().c_str());
             pnode->CloseSocketDisconnect();
         }

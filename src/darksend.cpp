@@ -597,8 +597,8 @@ void CDarkSendPool::NewBlock()
         //denominate all non-denominated inputs every 50 blocks (25 minutes)
         if(pindexBest->nHeight % 50 == 0)
             UnlockCoins();
-        // free up masternode connections unless we are syncing
-        if(!IsInitialBlockDownload())
+        // free up masternode connections every 30 blocks unless we are syncing
+        if(pindexBest->nHeight % 60 == 0 && !IsInitialBlockDownload())
             ProcessMasternodeConnections();
     }
 }
