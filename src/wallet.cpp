@@ -1561,7 +1561,7 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
     }
 }
 
-// denarius: total coins available for staking
+// denarius: total coins available for staking - WIP needs updating
 int64_t CWallet::GetStakeAmount() const
 {
     int64_t nTotal = 0;
@@ -1570,7 +1570,7 @@ int64_t CWallet::GetStakeAmount() const
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted()) //Just pulls GetBalance() currently
+            if (pcoin->IsTrusted() && pcoin->GetDepthInMainChain() > 0) //Just pulls GetBalance() currently
                 nTotal += pcoin->GetAvailableCredit();
         }
     }
