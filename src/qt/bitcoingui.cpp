@@ -644,6 +644,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		statisticsPage->setModel(clientModel);
 		blockBrowser->setModel(clientModel);
 		marketBrowser->setModel(clientModel);
+        masternodeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
