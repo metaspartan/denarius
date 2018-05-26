@@ -354,6 +354,7 @@ std::string HelpMessage()
         "\n" + _("Masternode options:") + "\n" +
         "  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
+        "  -mnconflock=<n>            " + _("Lock masternodes from masternode configuration file (default: 1)") +
         "  -masternodeprivkey=<n>     " + _("Set the masternode private key") + "\n" +
         "  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
         "  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
@@ -434,7 +435,7 @@ bool AppInit2()
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
-    nMinerSleep = GetArg("-minersleep", 500);
+    nMinerSleep = GetArg("-minersleep", 30000);
 
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
@@ -490,7 +491,7 @@ bool AppInit2()
     std::string err;
     masternodeConfig.read(err);
     if (!err.empty())
-        InitError("error while parsing masternode.conf Error: " + err);
+        InitError("error while parsing masternode.conf Error: " + err);    
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
@@ -989,7 +990,44 @@ bool AppInit2()
         }
     }
 
-    printf("fMasterNode %d\n", fMasterNode);
+    if(GetBoolArg("-mnconflock", true) && pwalletMain) {
+        LOCK(pwalletMain->cs_wallet);
+        printf("Locking Masternodes:\n");
+        uint256 mnTxHash;
+        int outputIndex;
+        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+            mnTxHash.SetHex(mne.getTxHash());
+            outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+            // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
+            if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                printf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+                continue;
+            }
+            pwalletMain->LockCoin(outpoint);
+            printf("  %s %s - locked successfully\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+        }
+    }
+
+
+    // Add any masternode.conf masternodes to the adrenaline nodes
+    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+    {
+        CAdrenalineNodeConfig c(mne.getAlias(), mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex());
+        CWalletDB walletdb(strWalletFileName);
+
+        // add it to wallet db if doesn't exist already
+        if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
+        {
+            if (!walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
+                printf("Could not add masternode config %s to adrenaline nodes.", c.sAddress.c_str());
+        }
+        // add it to adrenaline nodes if it doesn't exist already
+        if (!pwalletMain->mapMyAdrenalineNodes.count(c.sAddress))
+            pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+
+        uiInterface.NotifyAdrenalineNodeChanged(c);
+    }
 
     //Threading still needs reworking
     NewThread(ThreadCheckDarkSendPool, NULL);

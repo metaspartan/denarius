@@ -370,6 +370,7 @@ public:
         nPingUsecStart = 0;
         nPingUsecTime = 0;
         fPingQueued = false;
+        fDarkSendMaster = false;
 
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
@@ -498,7 +499,7 @@ public:
         assert(ssSend.size() == 0);
         ssSend << CMessageHeader(pszCommand, 0);
         if (fDebug)
-            printf("sending: %s ", pszCommand);
+            printf("net: to %s: %s ", this->addr.ToString().c_str(), pszCommand);
     }
 
     void AbortMessage() UNLOCK_FUNCTION(cs_vSend)

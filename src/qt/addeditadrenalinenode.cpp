@@ -67,20 +67,30 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     }
     else
     {
-        std::string sAlias = ui->aliasLineEdit->text().toStdString();
-        std::string sAddress = ui->addressLineEdit->text().toStdString();
-        std::string sMasternodePrivKey = ui->privkeyLineEdit->text().toStdString();
-        std::string sTxHash = ui->txhashLineEdit->text().toStdString();
-        std::string sOutputIndex = ui->outputindexLineEdit->text().toStdString();
 
-        boost::filesystem::path pathConfigFile = GetDataDir() / "masternode.conf";
-        boost::filesystem::ofstream stream (pathConfigFile.string(), std::ios::out | std::ios::app);
+        CAdrenalineNodeConfig c;
+
+        c.sAlias = ui->aliasLineEdit->text().toStdString();
+        c.sAddress = ui->addressLineEdit->text().toStdString();
+        c.sMasternodePrivKey = ui->privkeyLineEdit->text().toStdString();
+        c.sTxHash = ui->txhashLineEdit->text().toStdString();
+        c.sOutputIndex = ui->outputindexLineEdit->text().toStdString();
+
+        CWalletDB walletdb(pwalletMain->strWalletFile);
+
+        boost::filesystem::path pathConfigFile = GetMasternodeConfigFile();
+        boost::filesystem::ofstream stream(pathConfigFile.string(), std::ios::out | std::ios::app);
         if (stream.is_open())
         {
-            stream << sAlias << " " << sAddress << " " << sMasternodePrivKey << " " << sTxHash << " " << sOutputIndex << std::endl;
+            stream << c.sAlias << " " << c.sAddress << " " << c.sMasternodePrivKey << " " << c.sTxHash << " " << c.sOutputIndex << std::endl;
             stream.close();
         }
-        masternodeConfig.add(sAlias, sAddress, sMasternodePrivKey, sTxHash, sOutputIndex);
+        masternodeConfig.add(c.sAlias, c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex);
+
+        pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+        walletdb.WriteAdrenalineNodeConfig(c.sAddress, c);
+        uiInterface.NotifyAdrenalineNodeChanged(c);
+
         accept();
     }
 }

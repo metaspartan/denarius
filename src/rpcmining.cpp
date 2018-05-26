@@ -535,9 +535,16 @@ Value getblocktemplate(const Array& params, bool fHelp)
 	
     if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no masternode detected
-        int winningNode = GetCurrentMasterNode(1);
+        int winningNode = GetMasternodeByRank(1);
         if(winningNode >= 0){
-            payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+            BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+            {
+                if (s.first == winningNode)
+                {
+                    payee.SetDestination(s.second->pubkey.GetID());
+                    break;
+                }
+            }
         } else {
             printf("getblocktemplate() RPC: Failed to detect masternode to pay, burning coins\n");
             // masternodes are in-eligible for payment, burn the coins in-stead

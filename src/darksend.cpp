@@ -164,7 +164,7 @@ void CDarkSendPool::CheckTimeout(){
     if(!fMasterNode) {
         if(state == POOL_STATUS_TRANSMISSION) {
             if(fDebug) printf("CDarkSendPool::CheckTimeout() -- Session complete -- Running Check()\n");
-            Check();
+            // Check();
         }
     }
 
@@ -597,8 +597,8 @@ void CDarkSendPool::NewBlock()
         //denominate all non-denominated inputs every 50 blocks (25 minutes)
         if(pindexBest->nHeight % 50 == 0)
             UnlockCoins();
-        // free up masternode connections every 120 blocks (1 hour) unless we are syncing
-        if(pindexBest->nHeight % 120 == 0 && !IsInitialBlockDownload())
+        // free up masternode connections every 30 blocks unless we are syncing
+        if(pindexBest->nHeight % 60 == 0 && !IsInitialBlockDownload())
             ProcessMasternodeConnections();
     }
 }
@@ -804,8 +804,15 @@ bool CDarkSendSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
                 if(out.scriptPubKey == payee2) return true;
             }
         }
+    } else {
+        printf("IsVinAssociatedWithPubKey:: GetTransaction failed for %s\n",vin.prevout.hash.ToString().c_str());
     }
 
+    CTxDestination address1;
+    ExtractDestination(payee2, address1);
+    CBitcoinAddress address2(address1);
+    printf("IsVinAssociatedWithPubKey:: vin %s is not associated with pubkey %s for address %s\n",
+           vin.ToString().c_str(), pubkey.GetHash().ToString().c_str(), address2.ToString().c_str());
     return false;
 }
 
@@ -926,7 +933,7 @@ void ThreadCheckDarkSendPool(void* parg)
     unsigned int c = 0;
     std::string errorMessage;
 
-    while (true)
+    while (true && !fShutdown)
     {
         c++;
 
@@ -968,27 +975,31 @@ void ThreadCheckDarkSendPool(void* parg)
             masternodePayments.CleanPaymentList();
         }
 
-        int mnRefresh = 90; //(5*5)
+        int mnRefresh = 30;
 
-        //try to sync the masternode list and payment list every 90 seconds from at least 3 nodes
-        if(c % mnRefresh == 0 && RequestedMasterNodeList < 3){
+        //try to sync the masternode list and payment list every 30 seconds from at least 3 nodes until we have them all
+        if(vNodes.size() > 2 && c % mnRefresh == 0 && (mnCount == 0 || vecMasternodes.size() < mnCount)) {
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
-                //LOCK(cs_vNodes);
+                LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
                     if (pnode->nVersion >= darkSendPool.PROTOCOL_VERSION) {
 
                         //keep track of who we've asked for the list
-                        if(pnode->HasFulfilledRequest("mnsync")) continue;
-                        pnode->FulfilledRequest("mnsync");
+                        if(pnode->HasFulfilledRequest("mnsync"))
+                        {
+                            continue;
+                        } else {
+                            pnode->FulfilledRequest("mnsync");
+                            printf("Asking for Masternode list from %s\n",pnode->addr.ToStringIPPort().c_str());
 
-                        printf("Successfully synced, asking for Masternode list and payment list\n");
-
-                        pnode->PushMessage("dseg", CTxIn()); //request full mn list
-                        pnode->PushMessage("mnget"); //sync payees
-                        pnode->PushMessage("getsporks"); //get current network sporks
-                        RequestedMasterNodeList++;
+                            pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                            pnode->PushMessage("mnget"); //sync payees
+                            pnode->PushMessage("getsporks"); //get current network sporks
+                            RequestedMasterNodeList++;
+                            break;
+                        }
                     }
                 }
             }

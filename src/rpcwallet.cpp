@@ -23,7 +23,7 @@ static void accountingDeprecationCheck()
 {
     if (!GetBoolArg("-enableaccounts", false))
         throw runtime_error(
-            "Accounting API is deprecated and will be removed in future.\n"
+            "The Accounting API will be updated in the future.\n"
             "It can easily result in negative or odd balances if misused or misunderstood, which has happened in the field.\n"
             "If you still want to enable it, add to your config file enableaccounts=1\n");
 
@@ -91,6 +91,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
+    obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
+    obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
@@ -563,6 +565,30 @@ int64_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminef
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
 }
 
+//D e n a r i u s v2.5.2 fetchbalance RPC Command
+Value fetchbalance(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "fetchbalance\n"
+            "Returns an object containing various wallet balance info.");
+    Object obj, watchonly;
+    obj.push_back(Pair("totalbalance",  ValueFromAmount(pwalletMain->GetBalance())));
+    obj.push_back(Pair("locked",        ValueFromAmount(pwalletMain->GetLockedBalance())));
+    obj.push_back(Pair("unlocked",      ValueFromAmount(pwalletMain->GetUnlockedBalance())));
+    obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
+    obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
+    obj.push_back(Pair("stakeable",     ValueFromAmount(pwalletMain->GetStakeAmount())));
+    obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
+    obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
+
+    watchonly.push_back(Pair("balance",     ValueFromAmount(pwalletMain->GetWatchOnlyBalance())));
+    watchonly.push_back(Pair("unconfirmed", ValueFromAmount(pwalletMain->GetUnconfirmedWatchOnlyBalance())));
+    watchonly.push_back(Pair("immature",     ValueFromAmount(pwalletMain->GetImmatureWatchOnlyBalance())));
+    obj.push_back(Pair("watchonly",    watchonly));
+
+    return obj;
+}
 
 Value getbalance(const Array& params, bool fHelp)
 {
@@ -946,7 +972,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 continue;
 
             isminefilter mine = IsMine(*pwalletMain, address);
-            if(!mine && filter)
+            if(!(mine & filter))
                 continue;
 
             tallyitem& item = mapTally[address];

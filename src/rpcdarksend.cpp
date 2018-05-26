@@ -245,7 +245,7 @@ Value masternode(const Array& params, bool fHelp)
             } else if (strCommand == "activeseconds") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetMasternodeRank(mn.vin, pindexBest->nHeight))));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetMasternodeRank(mn, pindexBest->nHeight))));
             }
         }
         return obj;
@@ -523,20 +523,91 @@ Value masternode(const Array& params, bool fHelp)
     {
         std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
         mnEntries = masternodeConfig.getEntries();
-
-        CScript pubkey;
-        pubkey = GetScriptForDestination(activeMasternode.pubKeyMasternode.GetID());
-        CTxDestination address1;
-        ExtractDestination(pubkey, address1);
-        CBitcoinAddress address2(address1);
-
         Object mnObj;
-        mnObj.push_back(Pair("vin", activeMasternode.vin.ToString().c_str()));
-        mnObj.push_back(Pair("service", activeMasternode.service.ToString().c_str()));
-        mnObj.push_back(Pair("status", activeMasternode.status));
-        mnObj.push_back(Pair("pubKeyMasternode", address2.ToString().c_str()));
-        mnObj.push_back(Pair("notCapableReason", activeMasternode.notCapableReason.c_str()));
-        return mnObj;
+
+            CScript pubkey;
+            pubkey = GetScriptForDestination(activeMasternode.pubKeyMasternode.GetID());
+            CTxDestination address1;
+            ExtractDestination(pubkey, address1);
+            CBitcoinAddress address2(address1);
+            if (activeMasternode.pubKeyMasternode.IsFullyValid()) {
+                CScript pubkey;
+                pubkey = GetScriptForDestination(activeMasternode.pubKeyMasternode.GetID());
+                CTxDestination address1;
+                ExtractDestination(pubkey, address1);
+                if (pubkey.IsPayToScriptHash())
+                CBitcoinAddress address2(address1);
+
+                Object localObj;
+                localObj.push_back(Pair("vin", activeMasternode.vin.ToString().c_str()));
+                localObj.push_back(Pair("service", activeMasternode.service.ToString().c_str()));
+                localObj.push_back(Pair("status", activeMasternode.status));
+                localObj.push_back(Pair("address", address2.ToString().c_str()));
+                localObj.push_back(Pair("notCapableReason", activeMasternode.notCapableReason.c_str()));
+                mnObj.push_back(Pair("local",localObj));
+            } else {
+                Object localObj;
+                localObj.push_back(Pair("status", "unconfigured"));
+                mnObj.push_back(Pair("local",localObj));
+            }
+
+            BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry& mne, masternodeConfig.getEntries()) {
+                Object remoteObj;
+                std::string address = mne.getIp();
+
+                CTxIn vin;
+                CTxDestination address1;
+                CActiveMasternode amn;
+                CPubKey pubKeyCollateralAddress;
+                CKey keyCollateralAddress;
+                CPubKey pubKeyMasternode;
+                CKey keyMasternode;
+                std::string errorMessage;
+                std::string darkSendError;
+                std::string vinError;
+
+                if(!darkSendSigner.SetKey(mne.getPrivKey(), darkSendError, keyMasternode, pubKeyMasternode))
+                {
+                    errorMessage = darkSendError;
+                }
+
+                if (!amn.GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, mne.getTxHash(), mne.getOutputIndex(), vinError))
+                {
+                    errorMessage = vinError;
+                }
+
+                CScript pubkey = GetScriptForDestination(pubKeyCollateralAddress.GetID());
+                ExtractDestination(pubkey, address1);
+                CBitcoinAddress address2(address1);
+
+                remoteObj.push_back(Pair("alias", mne.getAlias()));
+                remoteObj.push_back(Pair("ipaddr", address));
+                remoteObj.push_back(Pair("collateral", address2.ToString()));
+
+                bool mnfound = false;
+                BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
+                {
+                    if (mn.addr.ToString() == mne.getIp()) {
+                        remoteObj.push_back(Pair("status", "online"));
+                        remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
+                        remoteObj.push_back(Pair("version",mn.protocolVersion));
+                        mnfound = true;
+                        break;
+                    }
+                }
+                if (!mnfound)
+                {
+                    if (!errorMessage.empty()) {
+                        remoteObj.push_back(Pair("status", "error"));
+                        remoteObj.push_back(Pair("error", errorMessage));
+                    } else {
+                        remoteObj.push_back(Pair("status", "notfound"));
+                    }
+                }
+                mnObj.push_back(Pair(mne.getAlias(),remoteObj));
+            }
+
+            return mnObj;
     }
 
 

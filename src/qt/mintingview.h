@@ -38,6 +38,7 @@ private:
 
     MintingFilterProxy *mintingProxyModel;
 
+    QLineEdit *addressWidget;
     QMenu *contextMenu;
 
 signals:
@@ -50,6 +51,7 @@ public slots:
     void showHideAddress();
     void showHideTxID();
     void contextualMenu(const QPoint &point);
+    void changedPrefix(const QString &prefix);
 };
 
 #endif // MINTINGVIEW_H

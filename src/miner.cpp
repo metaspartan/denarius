@@ -203,9 +203,16 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
             CScript payee;
             if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
                 //no masternode detected
-                int winningNode = GetCurrentMasterNode(1);
+                int winningNode = GetMasternodeByRank(1);
                 if(winningNode >= 0){
-                    payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    {
+                        if (s.first == winningNode)
+                        {
+                            payee.SetDestination(s.second->pubkey.GetID());
+                            break;
+                        }
+                    }
                 } else {
                     printf("CreateNewBlock: Failed to detect masternode to pay\n");
                     // pay the burn address if it can't detect
@@ -627,12 +634,20 @@ void StakeMiner(CWallet *pwallet)
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
-				vnThreadsRunning[THREAD_STAKE_MINER]--;
+                vnThreadsRunning[THREAD_STAKE_MINER]--;
                 MilliSleep(60000);
                 vnThreadsRunning[THREAD_STAKE_MINER]++;
 				if (fShutdown)
                     return;
             }
+        }
+
+        if (vecMasternodes.size() == 0 || (mnCount > 0 && vecMasternodes.size() < mnCount))
+        {
+            vnThreadsRunning[THREAD_STAKE_MINER]--;
+            MilliSleep(10000);
+            vnThreadsRunning[THREAD_STAKE_MINER]++;
+            continue;
         }
 
         //
@@ -646,16 +661,20 @@ void StakeMiner(CWallet *pwallet)
         // Trying to sign a block
         if (pblock->SignBlock(*pwallet, nFees))
         {
+            bool staked;
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
-            CheckStake(pblock.get(), *pwallet);
+            staked = CheckStake(pblock.get(), *pwallet);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
-            MilliSleep(500);
 			if (fShutdown)
                 return;
+            MilliSleep(nMinerSleep);
+            if (staked) MilliSleep(nMinerSleep*10); // sleep for a while after successfully staking
         }
         else
-            MilliSleep(nMinerSleep);
+        {
 			if (fShutdown)
                 return;
+            MilliSleep(nMinerSleep);
+        }
     }
 }
