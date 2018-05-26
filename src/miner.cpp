@@ -203,9 +203,16 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
             CScript payee;
             if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
                 //no masternode detected
-                int winningNode = GetCurrentMasterNode(1);
+                int winningNode = GetMasternodeByRank(1);
                 if(winningNode >= 0){
-                    payee.SetDestination(vecMasternodes[winningNode].pubkey.GetID());
+                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    {
+                        if (s.first == 1)
+                        {
+                            payee.SetDestination(s.second->pubkey.GetID());
+                            break;
+                        }
+                    }
                 } else {
                     printf("CreateNewBlock: Failed to detect masternode to pay\n");
                     // pay the burn address if it can't detect
