@@ -539,7 +539,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if(winningNode >= 0){
             BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
             {
-                if (s.first == 1)
+                if (s.first == winningNode)
                 {
                     payee.SetDestination(s.second->pubkey.GetID());
                     break;
