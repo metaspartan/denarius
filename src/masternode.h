@@ -50,7 +50,7 @@ extern CMasternodePayments masternodePayments;
 extern std::vector<CTxIn> vecMasternodeAskedFor;
 extern map<uint256, CMasternodePaymentWinner> mapSeenMasternodeVotes;
 extern map<int64_t, uint256> mapCacheBlockHashes;
-extern int mnCount;
+extern unsigned int mnCount;
 
 
 

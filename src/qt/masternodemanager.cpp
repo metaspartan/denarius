@@ -166,7 +166,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         errorMessage += "Could not find collateral address. ";
     }
 
-    if (errorMessage == "" || mnCount < vecMasternodes.size()) {
+    if (errorMessage == "" || mnCount > vecMasternodes.size()) {
         status = QString::fromStdString("Loading");
         collateral = QString::fromStdString(address2.ToString().c_str());
     }
@@ -183,7 +183,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         }
     }
 
-    if (mnCount >= vecMasternodes.size() && rank == 0)
+    if (vecMasternodes.size() >= mnCount && rank == 0)
     {
         status = QString::fromStdString("Offline");
     }
@@ -290,6 +290,9 @@ void MasternodeManager::updateNodeList()
         ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecMasternodes.size()).arg(mnCount));
     else
         ui->countLabel->setText("Loading...");
+
+    if (mnCount < vecMasternodes.size())
+        ui->countLabel->setText(QString("%1 active").arg(vecMasternodes.size()));
 
     ui->tableWidget->setSortingEnabled(true);
 
