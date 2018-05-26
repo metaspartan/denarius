@@ -661,7 +661,7 @@ void StakeMiner(CWallet *pwallet)
 			if (fShutdown)
                 return;
             MilliSleep(nMinerSleep);
-            if (staked) MilliSleep(60000); // sleep for a minute after successfully staking
+            if (staked) MilliSleep(nMinerSleep*10); // sleep for a while after successfully staking
         }
         else
         {
