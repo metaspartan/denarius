@@ -12,6 +12,7 @@ class QComboBox;
 class QLineEdit;
 class QModelIndex;
 class QMenu;
+class QLabel;
 class QFrame;
 class QDateTimeEdit;
 QT_END_NAMESPACE
@@ -43,6 +44,7 @@ private:
     WalletModel *model;
     TransactionFilterProxy *transactionProxyModel;
     QTableView *transactionView;
+    QLabel* transactionSum;
 
     QComboBox *dateWidget;
     QComboBox *typeWidget;
@@ -77,6 +79,8 @@ public slots:
     void changedAmount(const QString &amount);
     void exportClicked();
     void focusTransaction(const QModelIndex&);
+    void trxAmount(QString amount);
+    void computeSum();
 
 };
 

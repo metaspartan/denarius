@@ -34,12 +34,11 @@ std::map<CNetAddr, int64_t> askedForMasternodeList;
 std::map<COutPoint, int64_t> askedForMasternodeListEntry;
 // cache block hashes as we calculate them
 std::map<int64_t, uint256> mapCacheBlockHashes;
-CMedianFilter<int> mnMedianCount(10, 0);
-int mnCount;
+CMedianFilter<unsigned int> mnMedianCount(10, 0);
+unsigned int mnCount;
 
 // manage the masternode connections
 void ProcessMasternodeConnections(){
-    return;
     LOCK(cs_vNodes);
 
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -47,7 +46,10 @@ void ProcessMasternodeConnections(){
         //if it's our masternode, let it be
         if(forTunaPool.submittedToMasternode == pnode->addr) continue;
 
-        if(pnode->fForTunaMaster){
+        if( pnode->fForTunaMaster ||
+            (pnode->addr.GetPort() == 9999 && pnode->nStartingHeight > (nBestHeight - 120)) // disconnect masternodes that were in sync when they connected recently
+                )
+        {
             printf("Closing masternode connection %s \n", pnode->addr.ToString().c_str());
             pnode->CloseSocketDisconnect();
         }
@@ -267,7 +269,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         if (fDebugNet) printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
         pfrom->PushMessage("dseg", vin);
-        int64_t askAgain = GetTime()+(60*60*24);
+        int64_t askAgain = GetTime()+(60*60*1); // only ask for each dsee once per hour
         askedForMasternodeListEntry[vin.prevout] = askAgain;
 
     } else if (strCommand == "dseg") { //Get masternode list or specific entry
@@ -298,7 +300,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                     }
                 }
 
-                int64_t askAgain = GetTime()+(60*60*3);
+                int64_t askAgain = GetTime()+(60*60*1); // only allow nodes to do a dseg all once per hour
                 askedForMasternodeList[pfrom->addr] = askAgain;
             //}
               }
@@ -574,7 +576,6 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
     ExtractDestination(mnpayee, address1);
     CBitcoinAddress address2(address1);
 
-    // LogPrint("masternode", "CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s\n", vin.prevout.ToStringShort());
     uint64_t nCoinAge;
 
     for (int i = 0; BlockReading && BlockReading->nHeight > nBlockLastPaid && i < nMaxBlocksToScanBack; i++) {
@@ -599,7 +600,7 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
                         nTimeLastPaid = BlockReading->nTime;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         // TODO HERE: Check the nValue for the masternode payment amount
-                        printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pow %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
+                        if (fDebug) printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pow %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
                         return;
                     }
             } else if (block.IsProofOfStake())
@@ -611,7 +612,7 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
                         nTimeLastPaid = BlockReading->nTime;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         // TODO HERE: Check the nValue for the masternode payment amount
-                        printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pos %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
+                        if (fDebug) printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pos %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
                         return;
                     }
             }
@@ -622,7 +623,7 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
     }
     if (!nBlockLastPaid)
     {
-        printf("CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s e.g. %s -- NOT FOUND\n", vin.prevout.ToString().c_str(),address2.ToString().c_str());
+        if (fDebug) printf("CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s e.g. %s -- NOT FOUND\n", vin.prevout.ToString().c_str(),address2.ToString().c_str());
         nBlockLastPaid = 1;
     }
 }

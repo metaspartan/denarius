@@ -464,9 +464,8 @@ bool AppInit2()
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
-
     nMinStakeInterval = GetArg("-minstakeinterval", 30);
-    nMinerSleep = GetArg("-minersleep", 1000); //500
+    nMinerSleep = GetArg("-minersleep", 30000); //500
 
     // Largest block you're willing to create.
     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
@@ -493,7 +492,7 @@ bool AppInit2()
 
     if (fDebug)
         printf("nMinerSleep %u\n", nMinerSleep);
-
+        
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
 

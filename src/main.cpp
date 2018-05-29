@@ -2512,10 +2512,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                 {
                                     int lastPaid = mn.nBlockLastPaid;
                                     int paidAge = pindex->nHeight+1 - lastPaid;
-                                    printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[1].vout[i].nValue / COIN).c_str(), paidAge, mn.nBlockLastPaid);
+                                    if (fDebug) printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[1].vout[i].nValue / COIN).c_str(), paidAge, mn.nBlockLastPaid);
                                     if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
                                     {
-                                        printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX");
+                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
                                     }
                                     mn.nBlockLastPaid = pindex->nHeight+1;
                                     foundPayee = true;
@@ -2577,10 +2577,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             {
                                 int lastPaid = mn.nBlockLastPaid;
                                 int paidAge = pindex->nHeight+1 - lastPaid;
-                                printf("Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid);
+                                if (fDebug) printf("Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid);
                                 if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
                                 {
-                                    printf("WARNING: This masternode payment is too aggressive and will not be accepted after block XXXX\n");
+                                    if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
                                 }
                                 mn.nBlockLastPaid = pindex->nHeight+1;
                                 foundPayee = true;
@@ -4204,11 +4204,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else if (pfrom->nVersion == 0)
     {
-        // Must have a version message before anything else
+        // Must have a version message before anything else, as it is sent as soon as the socket opens
         pfrom->Misbehaving(1);
-        printf("net: received an out-of-sequence %s from peer at %s\n", strCommand.c_str(), pfrom->addr.ToString().c_str());
-        if (pfrom->nMisbehavior > 10 || pfrom->nTimeConnected < GetTime() - 60)
-            pfrom->fDisconnect = true; // Disconnect them if they don't send us this within a minute or they are spamming us
+        if (fDebug) printf("net: received an out-of-sequence %s from peer at %s\n", strCommand.c_str(), pfrom->addr.ToString().c_str());
+        if (pfrom->nMisbehavior > 10 || pfrom->nTimeConnected < GetTime() - 10)
+            pfrom->fDisconnect = true; // Disconnect them so we can reconnect and try for another version message
         return false;
     }
 

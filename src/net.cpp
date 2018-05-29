@@ -496,9 +496,9 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
+
         if(forTunaMaster)
                 pnode->fForTunaMaster = true;
-
             pnode->AddRef();
 
             pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));

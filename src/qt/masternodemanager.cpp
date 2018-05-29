@@ -14,6 +14,7 @@
 #include "wallet.h"
 #include "init.h"
 #include "bitcoinrpc.h"
+#include "askpassphrasedialog.h"
 
 #include <boost/lexical_cast.hpp>
 #include <fstream>
@@ -40,6 +41,7 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     ui->setupUi(this);
 
     ui->editButton->setEnabled(false);
+    ui->editButton->setVisible(false);
     ui->getConfigButton->setEnabled(false);
     ui->startButton->setEnabled(false);
     ui->stopButton->setEnabled(false);
@@ -125,7 +127,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
 
     CTxDestination address1;
     CBitcoinAddress address2;
-    int rank;
+    int rank = 0;
     int outputIndex;
     TRY_LOCK(pwalletMain->cs_wallet, pwalletLock);
 
@@ -164,7 +166,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         errorMessage += "Could not find collateral address. ";
     }
 
-    if (errorMessage == ""){
+    if (errorMessage == "" || mnCount > vecMasternodes.size()) {
         status = QString::fromStdString("Loading");
         collateral = QString::fromStdString(address2.ToString().c_str());
     }
@@ -179,6 +181,11 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
         }
+    }
+
+    if (vecMasternodes.size() >= mnCount && rank == 0)
+    {
+        status = QString::fromStdString("Offline");
     }
 
     bool bFound = false;
@@ -205,7 +212,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
     rankItem->setData(Qt::UserRole, rank ? rank : 2000);
-    rankItem->setData(Qt::DisplayRole, rank ? QString::number(rank) : "");
+    rankItem->setData(Qt::DisplayRole, rank > 0 && rank < 500000 ? QString::number(rank) : "");
 
     ui->tableWidget_2->setItem(nodeRow, 0, aliasItem);
     ui->tableWidget_2->setItem(nodeRow, 1, addrItem);
@@ -237,6 +244,8 @@ void MasternodeManager::updateNodeList()
         return;
 
     ui->countLabel->setText("Updating...");
+    if (mnCount == 0) return;
+
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
     ui->tableWidget->setSortingEnabled(false);
@@ -277,7 +286,14 @@ void MasternodeManager::updateNodeList()
         ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
     }
 
-    ui->countLabel->setText(QString::number(ui->tableWidget->rowCount()));
+    if (mnCount > 0)
+        ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecMasternodes.size()).arg(mnCount));
+    else
+        ui->countLabel->setText("Loading...");
+
+    if (mnCount < vecMasternodes.size())
+        ui->countLabel->setText(QString("%1 active").arg(vecMasternodes.size()));
+
     ui->tableWidget->setSortingEnabled(true);
 
     if(pwalletMain)
@@ -385,28 +401,53 @@ void MasternodeManager::on_startButton_clicked()
 
 void MasternodeManager::on_startAllButton_clicked()
 {
-    std::string results;
-    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
+    QString results;
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+
+    if(!ctx.isValid())
     {
-        CAdrenalineNodeConfig c = adrenaline.second;
+        results = "Wallet failed to unlock.\n";
+    } else {
+        std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
+        mnEntries = masternodeConfig.getEntries();
 
-    std::string errorMessage;
-    bool result = activeMasternode.Register(c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
+        int total = 0;
+        int successful = 0;
+        int fail = 0;
 
-	if(result)
-	{
-   	    results += c.sAddress + ": STARTED\n";
-	}	
-	else
-	{
-	    results += c.sAddress + ": ERROR: " + errorMessage + "\n";
-	}
+        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+            total++;
+
+            std::string errorMessage;
+            bool result = activeMasternode.Register(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage);
+
+            if(result)
+            {
+                results.append(QString("%1 (%2): OK\n").arg(QString::fromStdString(mne.getIp())).arg(QString::fromStdString(mne.getAlias())));
+                updateAdrenalineNode(QString::fromStdString(mne.getAlias()),QString::fromStdString(mne.getIp()),QString::fromStdString(mne.getPrivKey()));
+                successful++;
+            }
+            else
+            {
+                results.append(QString("%1 (%2): %3\n").arg(QString::fromStdString(mne.getIp())).arg(QString::fromStdString(mne.getAlias())).arg(QString::fromStdString(errorMessage)));
+                fail++;
+            }
+        }
+
+        results += QString::fromStdString("Successfully started " + boost::lexical_cast<std::string>(successful) + " masternodes, failed to start " +
+                boost::lexical_cast<std::string>(fail) + ", total " + boost::lexical_cast<std::string>(total));
+    }
+
+    if(ctx.isValid())
+    {
+        pwalletMain->Lock();
     }
 
     QMessageBox msg;
     msg.setWindowTitle("Denarius Message");
-    msg.setText(QString::fromStdString(results));
+    msg.setText(results);
     msg.exec();
+
 }
 
 void MasternodeManager::on_removeButton_clicked()
