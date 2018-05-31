@@ -217,9 +217,9 @@ Value masternode(const Array& params, bool fHelp)
             strCommand = params[1].get_str().c_str();
         }
 
-        if (strCommand != "active" && strCommand != "vin" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "txindex" && strCommand != "full" && strCommand != "protocol"){
+        if (strCommand != "active" && strCommand != "txid" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "n" && strCommand != "full" && strCommand != "protocol"){
             throw runtime_error(
-                "list supports 'active', 'vin', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'txindex', 'protocol', 'full'\n");
+                "list supports 'active', 'txid', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'n', 'protocol', 'full'\n");
         }
 
         Object obj;
@@ -228,7 +228,7 @@ Value masternode(const Array& params, bool fHelp)
 
             if(strCommand == "active"){
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsEnabled()));
-            } else if (strCommand == "vin") {
+            } else if (strCommand == "txid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
                 CScript pubkey;
@@ -240,7 +240,7 @@ Value masternode(const Array& params, bool fHelp)
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       address2.ToString().c_str()));
             } else if (strCommand == "protocol") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.protocolVersion));
-            } else if (strCommand == "txindex") {
+            } else if (strCommand == "n") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.vin.prevout.n));
             } else if (strCommand == "lastpaid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.nBlockLastPaid));
@@ -254,8 +254,8 @@ Value masternode(const Array& params, bool fHelp)
 			else if (strCommand == "full") {
                 Object list;
                 list.push_back(Pair("active",        (int)mn.IsEnabled()));
-                list.push_back(Pair("vin",           mn.vin.prevout.hash.ToString().c_str()));
-                list.push_back(Pair("txindex",       (int64_t)mn.vin.prevout.n));
+                list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
+                list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
 				
                 CScript pubkey;
                 pubkey =GetScriptForDestination(mn.pubkey.GetID());
