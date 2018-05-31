@@ -264,7 +264,7 @@ Value masternode(const Array& params, bool fHelp)
                 CBitcoinAddress address2(address1);
 				
                 list.push_back(Pair("pubkey",         address2.ToString().c_str()));
-                list.push_back(Pair("protocol",       (int64_t)mn.protocolVersion));
+                list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
                 list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
                 list.push_back(Pair("rank",           (int)(GetMasternodeRank(mn, pindexBest->nHeight))));
