@@ -69,8 +69,8 @@ void CActiveMasternode::ManageStatus()
 
         if(GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
 
-            if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
-                printf("CActiveMasternode::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS, GetInputAge(vin));
+            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)){
+                printf("CActiveMasternode::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS), GetInputAge(vin));
                 status = MASTERNODE_INPUT_TOO_NEW;
                 return;
             }

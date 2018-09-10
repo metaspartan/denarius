@@ -224,7 +224,7 @@ class CDarksendSession
 class CDarkSendPool
 {
 public:
-    static const int PROTOCOL_VERSION = 25213; //Latest is 25213
+    static const int PROTOCOL_VERSION = 26213; //Latest is 26213
 
     // clients entries
     std::vector<CDarkSendEntry> myEntries;
