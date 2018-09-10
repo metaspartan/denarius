@@ -168,8 +168,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         if(CheckMasternodeVin(vin,vinError)){
             if (fDebugNet) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
 
-            if(GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS){
-                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
+            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)){
+                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS));
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
