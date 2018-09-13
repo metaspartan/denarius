@@ -9,11 +9,13 @@
 #include "util.h"
 #include "serialize.h"
 
-#include <stdlib.h> 
-#include <stdio.h> 
+#include <stdlib.h>
+#include <stdio.h>
 #include <vector>
 #include <inttypes.h>
+#include "types.h"
 
+const uint32_t MAX_STEALTH_NARRATION_SIZE = 48;
 
 typedef std::vector<uint8_t> data_chunk;
 
@@ -23,6 +25,9 @@ const size_t ec_uncompressed_size = 65;
 
 typedef struct ec_secret { uint8_t e[ec_secret_size]; } ec_secret;
 typedef data_chunk ec_point;
+
+const uint256 MAX_SECRET("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140");
+const uint256 MIN_SECRET(16000); // increase? min valid key is 1
 
 typedef uint32_t stealth_bitfield;
 
@@ -61,38 +66,38 @@ public:
     {
         options = 0;
     }
-    
+
     uint8_t options;
     ec_point scan_pubkey;
     ec_point spend_pubkey;
     //std::vector<ec_point> spend_pubkeys;
     size_t number_signatures;
     stealth_prefix prefix;
-    
+
     mutable std::string label;
     data_chunk scan_secret;
     data_chunk spend_secret;
-    
+
     bool SetEncoded(const std::string& encodedAddress);
     std::string Encoded() const;
-    
+
     bool operator <(const CStealthAddress& y) const
     {
         return memcmp(&scan_pubkey[0], &y.scan_pubkey[0], ec_compressed_size) < 0;
     }
-    
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(this->options);
         READWRITE(this->scan_pubkey);
         READWRITE(this->spend_pubkey);
         READWRITE(this->label);
-        
+
         READWRITE(this->scan_secret);
         READWRITE(this->spend_secret);
     );
-    
-    
+
+
 
 };
 
@@ -112,4 +117,3 @@ bool IsStealthAddress(const std::string& encodedAddress);
 
 
 #endif  // BITCOIN_STEALTH_H
-

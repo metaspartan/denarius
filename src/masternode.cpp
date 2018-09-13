@@ -5,7 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #include "masternode.h"
 #include "activemasternode.h"
-#include "darksend.h"
+#include "fortuna.h"
 #include "txdb.h"
 #include "main.h"
 #include "util.h"
@@ -44,9 +44,9 @@ void ProcessMasternodeConnections(){
     BOOST_FOREACH(CNode* pnode, vNodes)
     {
         //if it's our masternode, let it be
-        if(darkSendPool.submittedToMasternode == pnode->addr) continue;
+        if(forTunaPool.submittedToMasternode == pnode->addr) continue;
 
-        if( pnode->fDarkSendMaster ||
+        if( pnode->fForTunaMaster ||
             (pnode->addr.GetPort() == 9999 && pnode->nStartingHeight > (nBestHeight - 120)) // disconnect masternodes that were in sync when they connected recently
                 )
         {
@@ -59,7 +59,7 @@ void ProcessMasternodeConnections(){
 void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
 
-    if (strCommand == "dsee") { //DarkSend Election Entry
+    if (strCommand == "dsee") { //ForTuna Election Entry
 
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
@@ -117,7 +117,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         }
 
         std::string errorMessage = "";
-        if(!darkSendSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)){
+        if(!forTunaSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)){
             printf("dsee - Got bad masternode address signature\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
@@ -144,7 +144,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                         mn.protocolVersion = protocolVersion;
                         mn.addr = addr;
 
-                        RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
+                        RelayForTunaElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
                     }
                 }
 
@@ -154,7 +154,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         // make sure the vout that was signed is related to the transaction that spawned the masternode
         //  - this is expensive, so it's only done once per masternode
-        if(!darkSendSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
+        if(!forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
             printf("dsee - Got mismatched pubkey and vin\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
@@ -163,7 +163,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         if(fDebug) printf("dsee - Got NEW masternode entry %s\n", addr.ToString().c_str());
 
         // make sure it's still unspent
-        //  - this is checked later by .check() in many places and by ThreadCheckDarkSendPool()
+        //  - this is checked later by .check() in many places and by ThreadCheckForTunaPool()
         std::string vinError;
         if(CheckMasternodeVin(vin,vinError)){
             if (fDebugNet) printf("dsee - Accepted input for masternode entry %i %i\n", count, current);
@@ -190,7 +190,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             }
 
             if(count == -1 && !isLocal)
-                RelayDarkSendElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
+                RelayForTunaElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
             if (count > 0) {
                 mnMedianCount.input(count);
                 mnCount = mnMedianCount.median();
@@ -201,7 +201,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         }
     }
 
-    else if (strCommand == "dseep") { //DarkSend Election Entry Ping
+    else if (strCommand == "dseep") { //ForTuna Election Entry Ping
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
 
@@ -233,7 +233,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                     std::string strMessage = mn.addr.ToString() + boost::lexical_cast<std::string>(sigTime) + boost::lexical_cast<std::string>(stop);
 
                     std::string errorMessage = "";
-                    if(!darkSendSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
+                    if(!forTunaSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
                         printf("dseep - Got bad masternode address signature %s \n", vin.ToString().c_str());
                         //Misbehaving(pfrom->GetId(), 100);
                         return;
@@ -247,7 +247,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                             mn.Disable();
                             mn.Check(true);
                         }
-                        RelayDarkSendElectionEntryPing(vin, vchSig, sigTime, stop);
+                        RelayForTunaElectionEntryPing(vin, vchSig, sigTime, stop);
                     }
                 }
                 return;
@@ -721,7 +721,7 @@ bool CMasternodePayments::CheckSignature(CMasternodePaymentWinner& winner)
     CPubKey pubkey(ParseHex(strPubKey));
 
     std::string errorMessage = "";
-    if(!darkSendSigner.VerifyMessage(pubkey, winner.vchSig, strMessage, errorMessage)){
+    if(!forTunaSigner.VerifyMessage(pubkey, winner.vchSig, strMessage, errorMessage)){
         return false;
     }
 
@@ -736,18 +736,18 @@ bool CMasternodePayments::Sign(CMasternodePaymentWinner& winner)
     CPubKey pubkey2;
     std::string errorMessage = "";
 
-    if(!darkSendSigner.SetKey(strMasterPrivKey, errorMessage, key2, pubkey2))
+    if(!forTunaSigner.SetKey(strMasterPrivKey, errorMessage, key2, pubkey2))
     {
         printf("CMasternodePayments::Sign - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
         return false;
     }
 
-    if(!darkSendSigner.SignMessage(strMessage, errorMessage, winner.vchSig, key2)) {
+    if(!forTunaSigner.SignMessage(strMessage, errorMessage, winner.vchSig, key2)) {
         printf("CMasternodePayments::Sign - Sign message failed");
         return false;
     }
 
-    if(!darkSendSigner.VerifyMessage(pubkey2, winner.vchSig, strMessage, errorMessage)) {
+    if(!forTunaSigner.VerifyMessage(pubkey2, winner.vchSig, strMessage, errorMessage)) {
         printf("CMasternodePayments::Sign - Verify message failed");
         return false;
     }

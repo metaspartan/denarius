@@ -9,7 +9,8 @@
 #include "strlcpy.h"
 #include "addrman.h"
 #include "ui_interface.h"
-#include "darksend.h"
+#include "fortuna.h"
+#include <sys/stat.h>
 
 #ifdef WIN32
 #include <string.h>
@@ -24,6 +25,12 @@
 
 using namespace std;
 using namespace boost;
+
+namespace fs = boost::filesystem;
+
+extern "C" {
+    int tor_main(int argc, char *argv[]);
+}
 
 static const int MAX_OUTBOUND_CONNECTIONS = 16;
 
@@ -479,7 +486,7 @@ CNode* FindNode(const CService& addr)
     return NULL;
 }
 
-CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaster)
+CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster)
 {
     if (pszDest == NULL) {
         if (IsLocal(addrConnect))
@@ -489,9 +496,9 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool darkSendMaste
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
-            if(darkSendMaster)
-                pnode->fDarkSendMaster = true;
 
+        if(forTunaMaster)
+                pnode->fForTunaMaster = true;
             pnode->AddRef();
 
             pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
@@ -1306,7 +1313,45 @@ void MapPort()
 
 
 
+/* Tor implementation ---------------------------------*/
 
+// hidden service seeds
+static const char *strMainNetOnionSeed[][1] = {
+    {NULL}
+};
+
+static const char *strTestNetOnionSeed[][1] = {
+    {NULL}
+};
+
+void ThreadOnionSeed(void* parg)
+{
+    if(fNativeTor)
+    {
+        // Make this thread recognisable as the Tor Onion Thread
+        RenameThread("toronion");
+
+        static const char *(*strOnionSeed)[1] = fTestNet ? strTestNetOnionSeed : strMainNetOnionSeed;
+
+        int found = 0;
+        printf("Loading addresses from .onion seeds\n");
+
+        for (unsigned int seed_idx = 0; strOnionSeed[seed_idx][0] != NULL; seed_idx++) {
+            CNetAddr parsed;
+            if (!parsed.SetSpecial(strOnionSeed[seed_idx][0]))
+            {
+                throw runtime_error("ThreadOnionSeed() : invalid .onion seed");
+            }
+            int nOneDay = 24*3600;
+            CAddress addr = CAddress(CService(parsed, GetDefaultPort()));
+            addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old
+            found++;
+            addrman.Add(addr, parsed);
+        }
+
+        printf("%d addresses found from .onion seeds\n", found);
+    }
+};
 
 
 
@@ -1331,59 +1376,64 @@ static const char *strDNSSeed[][2] = {
 
 void ThreadDNSAddressSeed(void* parg)
 {
-    // Make this thread recognisable as the DNS seeding thread
-    RenameThread("denarius-dnsseed");
-
-    try
+    if(!fNativeTor)
     {
-        vnThreadsRunning[THREAD_DNSSEED]++;
-        ThreadDNSAddressSeed2(parg);
-        vnThreadsRunning[THREAD_DNSSEED]--;
+        // Make this thread recognisable as the DNS seeding thread
+        RenameThread("denarius-dnsseed");
+
+        try
+        {
+            vnThreadsRunning[THREAD_DNSSEED]++;
+            ThreadDNSAddressSeed2(parg);
+            vnThreadsRunning[THREAD_DNSSEED]--;
+        }
+        catch (std::exception& e) {
+            vnThreadsRunning[THREAD_DNSSEED]--;
+            PrintException(&e, "ThreadDNSAddressSeed()");
+        } catch (...) {
+            vnThreadsRunning[THREAD_DNSSEED]--;
+            throw; // support pthread_cancel()
+        }
+        printf("ThreadDNSAddressSeed exited\n");
     }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_DNSSEED]--;
-        PrintException(&e, "ThreadDNSAddressSeed()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_DNSSEED]--;
-        throw; // support pthread_cancel()
-    }
-    printf("ThreadDNSAddressSeed exited\n");
-}
+};
 
 void ThreadDNSAddressSeed2(void* parg)
 {
-    printf("ThreadDNSAddressSeed started\n");
-    int found = 0;
-
-    if (!fTestNet)
+    if(!fNativeTor)
     {
-        printf("Loading addresses from DNS seeds (could take a while)\n");
+        printf("ThreadDNSAddressSeed started\n");
+        int found = 0;
 
-        for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
-            if (HaveNameProxy()) {
-                AddOneShot(strDNSSeed[seed_idx][1]);
-            } else {
-                vector<CNetAddr> vaddr;
-                vector<CAddress> vAdd;
-                if (LookupHost(strDNSSeed[seed_idx][1], vaddr))
-                {
-                    BOOST_FOREACH(CNetAddr& ip, vaddr)
+        if (!fTestNet)
+        {
+            printf("Loading addresses from DNS seeds (could take a while)\n");
+
+            for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
+                if (HaveNameProxy()) {
+                    AddOneShot(strDNSSeed[seed_idx][1]);
+                } else {
+                    vector<CNetAddr> vaddr;
+                    vector<CAddress> vAdd;
+                    if (LookupHost(strDNSSeed[seed_idx][1], vaddr))
                     {
-                        int nOneDay = 24*3600;
-                        CAddress addr = CAddress(CService(ip, GetDefaultPort()));
-                        addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old
-                        vAdd.push_back(addr);
-                        found++;
+                        BOOST_FOREACH(CNetAddr& ip, vaddr)
+                        {
+                            int nOneDay = 24*3600;
+                            CAddress addr = CAddress(CService(ip, GetDefaultPort()));
+                            addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old
+                            vAdd.push_back(addr);
+                            found++;
+                        }
                     }
+                    addrman.Add(vAdd, CNetAddr(strDNSSeed[seed_idx][0], true));
                 }
-                addrman.Add(vAdd, CNetAddr(strDNSSeed[seed_idx][0], true));
             }
         }
+
+        printf("%d addresses found from DNS seeds\n", found);
     }
-
-    printf("%d addresses found from DNS seeds\n", found);
-}
-
+};
 
 
 
@@ -1640,78 +1690,6 @@ void ThreadOpenAddedConnections(void* parg)
     }
     printf("ThreadOpenAddedConnections exited\n");
 }
-/*
-void ThreadOpenAddedConnections2(void* parg)
-{
-    printf("ThreadOpenAddedConnections started\n");
-
-    if (mapArgs.count("-addnode") == 0)
-        return;
-
-    if (HaveNameProxy()) {
-        while(!fShutdown) {
-            BOOST_FOREACH(string& strAddNode, mapMultiArgs["-addnode"]) {
-                CAddress addr;
-                CSemaphoreGrant grant(*semOutbound);
-                OpenNetworkConnection(addr, &grant, strAddNode.c_str());
-                MilliSleep(500);
-            }
-            vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-            MilliSleep(120000); // Retry every 2 minutes
-            vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
-        }
-        return;
-    }
-
-    vector<vector<CService> > vservAddressesToAdd(0);
-    BOOST_FOREACH(string& strAddNode, mapMultiArgs["-addnode"])
-    {
-        vector<CService> vservNode(0);
-        if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))
-        {
-            vservAddressesToAdd.push_back(vservNode);
-            {
-                LOCK(cs_setservAddNodeAddresses);
-                BOOST_FOREACH(CService& serv, vservNode)
-                    setservAddNodeAddresses.insert(serv);
-            }
-        }
-    }
-    while (true)
-    {
-        vector<vector<CService> > vservConnectAddresses = vservAddressesToAdd;
-        // Attempt to connect to each IP for each addnode entry until at least one is successful per addnode entry
-        // (keeping in mind that addnode entries can have many IPs if fNameLookup)
-        {
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
-                for (vector<vector<CService> >::iterator it = vservConnectAddresses.begin(); it != vservConnectAddresses.end(); it++)
-                    BOOST_FOREACH(CService& addrNode, *(it))
-                        if (pnode->addr == addrNode)
-                        {
-                            it = vservConnectAddresses.erase(it);
-                            it--;
-                            break;
-                        }
-        }
-        BOOST_FOREACH(vector<CService>& vserv, vservConnectAddresses)
-        {
-            CSemaphoreGrant grant(*semOutbound);
-            OpenNetworkConnection(CAddress(*(vserv.begin())), &grant);
-            MilliSleep(500);
-            if (fShutdown)
-                return;
-        }
-        if (fShutdown)
-            return;
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-        MilliSleep(120000); // Retry every 2 minutes
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
-        if (fShutdown)
-            return;
-    }
-}
-*/
 
 void ThreadOpenAddedConnections2(void* parg)
 {
@@ -2088,9 +2066,10 @@ bool BindListenPort(const CService &addrBind, string& strError)
     return true;
 }
 
+
 void static Discover()
 {
-    if (!fDiscover)
+    if (!fDiscover || fNativeTor)
         return;
 
 #ifdef WIN32
@@ -2142,6 +2121,80 @@ void static Discover()
         NewThread(ThreadGetMyExternalIP, NULL);
 }
 
+static char *convert_str(const std::string &s) {
+    char *pc = new char[s.size()+1];
+    std::strcpy(pc, s.c_str());
+    return pc;
+}
+
+// Start Tor Threads
+static void run_tor() {
+  if(fNativeTor)
+  {
+      printf("Tor Onion Thread Started!\n");
+
+      std::string logDecl = "notice file " + GetDataDir().string() + "/tor/tor.log";
+      char *argvLogDecl = (char*) logDecl.c_str();
+      std::string rc = GetDataDir().string() + "/tor/torrc";
+      char *rc_c = (char*) rc.c_str();
+
+      char * clientTransportPlugin = NULL;
+
+      struct stat sb;
+
+      if ((stat("obfs4proxy", &sb) == 0 && sb.st_mode & S_IXUSR) || !std::system("which obfs4proxy")) {
+          clientTransportPlugin = "obfs4 exec obfs4proxy";
+      } else if (stat("obfs4proxy.exe", &sb) == 0 && sb.st_mode & S_IXUSR) {
+          clientTransportPlugin = "obfs4 exec obfs4proxy.exe";
+      }
+
+      if (clientTransportPlugin != NULL) {
+          printf("Using OBFS4.\n");
+          char* argv[] = {
+            "tor",
+            "--Log", argvLogDecl,
+            "--SocksPort", "9089",
+            "--ClientTransportPlugin", clientTransportPlugin,
+            "--UseBridges", "1",
+            "--Bridge", "obfs4 144.217.20.138:40927 FB70B257C162BF1038CA669D568D76F5B7F0BABB cert=vYIV5MgrghGQvZPIi1tJwnzorMgqgmlKaB77Y3Z9Q/v94wZBOAXkW+fdx4aSxLVnKO+xNw iat-mode=0",
+            "--Bridge", "obfs4 94.242.249.2:44939 E53EEA7DE6E170328F0A2C4338EE4E4DC2398218 cert=VpistQqdnS5zgkARR3he8rt03OrKhk2oobUUhLmFWAWK27pYMvjrBi6zAn1ebIcPH2xbcQ iat-mode=0",
+            "--Bridge", "obfs4 192.237.202.171:9443 5A8906F2661C5022D01D2480CAC60F977B8C2373 cert=yNYPKGK6muwdpby94ShTFU45dgCOcLZKveijCNcibdWYV3FkOX4JBVvuvwABgSNq/VatQQ iat-mode=0",
+            "--ignore-missing-torrc",
+            "-f", rc_c,
+          };
+          tor_main(16, argv);
+      }
+      else {
+          printf("No OBFS4 found, not using it.\n");
+          char* argv[] = {
+            "tor",
+            "--Log", argvLogDecl,
+            "--SocksPort", "9089",
+            "--ignore-missing-torrc",
+            "-f", rc_c,
+          };
+          tor_main(6, argv);
+      }
+  }
+}
+
+void StartTor(void* parg)
+{
+  if(fNativeTor)
+  {
+      // Make this thread recognisable as the onion thread
+      RenameThread("onion");
+      try
+      {
+        run_tor();
+      }
+      catch (std::exception& e) {
+        PrintException(&e, "StartTor()");
+      }
+      printf("Onion thread exited.");
+  }
+}
+
 void StartNode(void* parg)
 {
     // Make this thread recognisable as the startup thread
@@ -2162,11 +2215,22 @@ void StartNode(void* parg)
     // Start threads
     //
 
-    if (!GetBoolArg("-dnsseed", true))
-        printf("DNS seeding disabled\n");
-    else
-        if (!NewThread(ThreadDNSAddressSeed, NULL))
-            printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
+    if(!fNativeTor)
+    {
+        if (!GetBoolArg("-dnsseed", true))
+            printf("DNS seeding disabled\n");
+        else
+            if (!NewThread(ThreadDNSAddressSeed, NULL))
+                printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
+    } else
+    {
+        // start the onion seeder
+        if (!GetBoolArg("-onionseed", true))
+            printf(".onion seeding disabled\n");
+        else
+            if (!NewThread(ThreadOnionSeed, NULL))
+        printf("Error: could not start .onion seeding\n");
+    };
 
     // Map ports with UPnP
     if (fUseUPnP)
@@ -2308,7 +2372,7 @@ void RelayTransactionLockReq(const CTransaction& tx, const uint256& hash, bool r
 
 }
 
-void RelayDarkSendFinalTransaction(const int sessionID, const CTransaction& txNew)
+void RelayForTunaFinalTransaction(const int sessionID, const CTransaction& txNew)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2317,19 +2381,19 @@ void RelayDarkSendFinalTransaction(const int sessionID, const CTransaction& txNe
     }
 }
 
-void RelayDarkSendIn(const std::vector<CTxIn>& in, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& out)
+void RelayForTunaIn(const std::vector<CTxIn>& in, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& out)
 {
     LOCK(cs_vNodes);
 
     BOOST_FOREACH(CNode* pnode, vNodes)
     {
-        if((CNetAddr)darkSendPool.submittedToMasternode != (CNetAddr)pnode->addr) continue;
-        printf("RelayDarkSendIn - found master, relaying message - %s \n", pnode->addr.ToString().c_str());
+        if((CNetAddr)forTunaPool.submittedToMasternode != (CNetAddr)pnode->addr) continue;
+        printf("RelayForTunaIn - found master, relaying message - %s \n", pnode->addr.ToString().c_str());
         pnode->PushMessage("dsi", in, nAmount, txCollateral, out);
     }
 }
 
-void RelayDarkSendStatus(const int sessionID, const int newState, const int newEntriesCount, const int newAccepted, const std::string error)
+void RelayForTunaStatus(const int sessionID, const int newState, const int newEntriesCount, const int newAccepted, const std::string error)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2338,7 +2402,7 @@ void RelayDarkSendStatus(const int sessionID, const int newState, const int newE
     }
 }
 
-void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
+void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2350,7 +2414,7 @@ void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std:
 }
 
 /*
-void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64 lastUpdated)
+void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64 lastUpdated)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2360,7 +2424,7 @@ void RelayDarkSendElectionEntry(const CTxIn vin, const CService addr, const std:
 }
 */
 
-void SendDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
+void SendForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2369,7 +2433,7 @@ void SendDarkSendElectionEntry(const CTxIn vin, const CService addr, const std::
     }
 }
 
-void RelayDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
+void RelayForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2380,7 +2444,7 @@ void RelayDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned 
     }
 }
 
-void SendDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
+void SendForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -2389,7 +2453,7 @@ void SendDarkSendElectionEntryPing(const CTxIn vin, const std::vector<unsigned c
     }
 }
 
-void RelayDarkSendCompletedTransaction(const int sessionID, const bool error, const std::string errorMessage)
+void RelayForTunaCompletedTransaction(const int sessionID, const bool error, const std::string errorMessage)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)

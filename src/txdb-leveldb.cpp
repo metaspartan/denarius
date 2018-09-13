@@ -152,6 +152,36 @@ bool CTxDB::TxnCommit()
     return true;
 }
 
+bool CTxDB::WriteKeyImage(ec_point& keyImage, CKeyImageSpent& keyImageSpent)
+{
+    return Write(make_pair(string("ki"), keyImage), keyImageSpent);
+};
+
+bool CTxDB::ReadKeyImage(ec_point& keyImage, CKeyImageSpent& keyImageSpent)
+{
+    return Read(make_pair(string("ki"), keyImage), keyImageSpent);
+};
+
+bool CTxDB::EraseKeyImage(ec_point& keyImage)
+{
+    return Erase(make_pair(string("ki"), keyImage));
+}
+
+bool CTxDB::WriteAnonOutput(CPubKey& pkCoin, CAnonOutput& ao)
+{
+    return Write(make_pair(string("ao"), pkCoin), ao);
+};
+
+bool CTxDB::ReadAnonOutput(CPubKey& pkCoin, CAnonOutput& ao)
+{
+    return Read(make_pair(string("ao"), pkCoin), ao);
+};
+
+bool CTxDB::EraseAnonOutput(CPubKey& pkCoin)
+{
+    return Erase(make_pair(string("ao"), pkCoin));
+};
+
 class CBatchScanner : public leveldb::WriteBatch::Handler {
 public:
     std::string needle;
@@ -206,7 +236,7 @@ bool CTxDB::WriteAddrIndex(uint160 addrHash, uint256 txHash)
     }
     else
     {
-	if(std::find(txHashes.begin(), txHashes.end(), txHash) == txHashes.end()) 
+	if(std::find(txHashes.begin(), txHashes.end(), txHash) == txHashes.end())
     	{
     	    txHashes.push_back(txHash);
             return Write(make_pair(string("adr"), addrHash), txHashes);

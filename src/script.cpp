@@ -325,7 +325,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP7                   : return "OP_NOP7";
     case OP_NOP8                   : return "OP_NOP8";
     case OP_NOP9                   : return "OP_NOP9";
-    case OP_NOP10                  : return "OP_NOP10";
+    case OP_ANON_MARKER            : return "OP_ANON_MARKER"; // Ring Sigs
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
@@ -598,7 +598,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
     }
 
                 case OP_NOP1: case OP_NOP3: case OP_NOP4: case OP_NOP5:
-                case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
+                case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9:
                 {
                     if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
                         return false;

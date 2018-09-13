@@ -130,13 +130,15 @@ inline void MilliSleep(int64_t n)
 //Masternode features
 
 extern bool fMasterNode;
-extern int nDarksendRounds;
+extern int nFortunaRounds;
+
+extern int nMinStakeInterval;
 
 extern int64_t enforceMasternodePaymentsTime;
 extern std::string strMasterNodeAddr;
 extern int keysLoaded;
 extern bool fSuccessfullyLoaded;
-extern std::vector<int64_t> darkSendDenominations;
+extern std::vector<int64_t> forTunaDenominations;
 
 
 extern std::map<std::string, std::string> mapArgs;
@@ -144,6 +146,8 @@ extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
 extern bool fDebugSmsg;
+extern bool fDebugChain;
+extern bool fDebugRingSig;
 extern bool fNoSmsg;
 extern bool fPrintToConsole;
 extern bool fPrintToDebugger;
@@ -154,6 +158,7 @@ extern bool fServer;
 extern bool fCommandLine;
 extern std::string strMiscWarning;
 extern bool fTestNet;
+extern bool fNativeTor;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;

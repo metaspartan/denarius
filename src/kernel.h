@@ -6,6 +6,7 @@
 #define DENARIUS_KERNEL_H
 
 #include "main.h"
+#include "core.h"
 
 // MODIFIER_INTERVAL: time to elapse before new modifier is computed
 extern unsigned int nModifierInterval;

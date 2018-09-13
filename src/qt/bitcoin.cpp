@@ -9,7 +9,7 @@
 #include "guiutil.h"
 #include "guiconstants.h"
 #include "intro.h"
-
+#include "ringsig.h"
 #include "init.h"
 #include "ui_interface.h"
 #include "qtipcserver.h"

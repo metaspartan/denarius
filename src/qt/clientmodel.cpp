@@ -133,6 +133,11 @@ bool ClientModel::isTestNet() const
     return fTestNet;
 }
 
+bool ClientModel::isNativeTor() const
+{
+    return fNativeTor;
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();

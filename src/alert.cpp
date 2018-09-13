@@ -209,15 +209,16 @@ bool CAlert::ProcessAlert(bool fThread)
                 printf("cancelling alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
-            }
-            else if (!alert.IsInEffect())
+            } else
+            if (!alert.IsInEffect())
             {
                 printf("expiring alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
                 mapAlerts.erase(mi++);
-            }
-            else
+            } else
+            {
                 mi++;
+            }
         }
 
         // Check if this alert has been cancelled
