@@ -787,9 +787,9 @@ bool CTransaction::CheckTransaction() const
 
     if (nVersion == ANON_TXN_VERSION)
     {
-        // -- Prevent Anon TXs in mainnet until after block 1,200,000 (1.2m Million) ~ D e n a r i u s
+        // -- Prevent Anon TXs in mainnet until after block 1,350,000 (1.35m Million) ~ D e n a r i u s
 
-        if (!fTestNet && nBestHeight < 1200000)
+        if (!fTestNet && nBestHeight < 1350000)
         {
             printf("CheckTransaction() failed - anon txn in live before block 1.2 million, %s.\n", GetHash().ToString().c_str());
             return false;
@@ -4078,8 +4078,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
             oldVersion = true;
 
-        // Disconnect nodes that are over block height 1.2m and have an old peer version
-        if (nBestHeight >= 1200000 && pfrom->nVersion < PROTOCOL_VERSION)
+        // Disconnect nodes that are over block height 1.35m and have an old peer version
+        if (nBestHeight >= 1350000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
