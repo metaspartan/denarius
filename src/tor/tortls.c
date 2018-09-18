@@ -1330,7 +1330,22 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 {
   const SSL_CIPHER *c;
 #ifdef HAVE_SSL_CIPHER_FIND
-
+/*
+  (void) m;
+  {
+    unsigned char cipherid[3];
+    tor_assert(ssl);
+    set_uint16(cipherid, htons(cipher));
+    cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
+                      * with a two-byte 'cipherid', it may look for a v2
+                      * cipher with the appropriate 3 bytes. */
+	/*
+    c = SSL_CIPHER_find((SSL*)ssl, cipherid);
+    if (c)
+      tor_assert((SSL_CIPHER_get_id(c) & 0xffff) == cipher);
+    return c != NULL;
+  }
+  */
 #else
 
 # if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
