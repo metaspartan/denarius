@@ -2229,7 +2229,7 @@ void StartNode(void* parg)
             printf(".onion seeding disabled\n");
         else
             if (!NewThread(ThreadOnionSeed, NULL))
-        printf("Error: could not start .onion seeding\n");
+				printf("Error: could not start .onion seeding\n");
     };
 
     // Map ports with UPnP
