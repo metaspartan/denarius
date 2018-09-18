@@ -5,12 +5,13 @@ INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
-#CONFIG += static
+CONFIG += static
 QT += core gui network widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
 QMAKE_CXXFLAGS += -fpermissive
+QMAKE_CFLAGS += -std=c99
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets printsupport
@@ -23,14 +24,16 @@ BOOST_INCLUDE_PATH=C:/deps/boost_1_57_0
 BOOST_LIB_PATH=C:/deps/boost_1_57_0/stage/lib
 BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
 BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1l/include
+OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1l
 MINIUPNPC_INCLUDE_PATH=C:/deps/
 MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
 LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
 LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
 QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
+LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
@@ -68,7 +71,8 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
 # win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
 win32:QMAKE_LFLAGS *= -static
-win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
+#win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
+#win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
 # use: qmake "USE_QRCODE=1"
@@ -437,7 +441,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 #### D e n a r i u s sources
 
 ### liboqs - Post Quantum Algorithm sources
-HEADERS += src/liboqs/src/oqs.h
 
 ### Tor native integration sources
 SOURCES += src/tor/anonymize.cpp \

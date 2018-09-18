@@ -40,7 +40,7 @@ int check_interrupted() {
 }
 
 static boost::mutex initializing;
-static std::auto_ptr<boost::unique_lock<boost::mutex>> uninitialized(new boost::unique_lock<boost::mutex>(initializing));
+static std::auto_ptr<boost::unique_lock<boost::mutex> > uninitialized(new boost::unique_lock<boost::mutex>(initializing));
 
 void set_initialized() {
     uninitialized.reset();
