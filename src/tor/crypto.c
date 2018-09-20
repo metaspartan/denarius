@@ -68,7 +68,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <sys/syscall.h>
 #endif
 #ifdef HAVE_SYS_RANDOM_H
-#include <sys/random.h>
+#include <linux/random.h>
 #endif
 
 #include "torlog.h"
@@ -3277,7 +3277,7 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   RtlSecureZeroMemory(mem,sz);
 #elif defined(HAVE_EXPLICIT_BZERO)
   /* The BSDs provide this. */
-  explicit_bzero(mem, sz);
+  //explicit_bzero(mem, sz);
 #elif defined(HAVE_MEMSET_S)
   /* This is in the C99 standard. */
   memset_s(mem, sz, 0, sz);

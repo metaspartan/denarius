@@ -13,6 +13,7 @@
 #include "ringsig.h"
 
 #include <sstream>
+#include <fstream>
 #include <sys/stat.h>
 
 using namespace json_spirit;
