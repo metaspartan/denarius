@@ -18,6 +18,7 @@ Ticker: DNR
 
 Denarius [DNR] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
 10,000,000 DNR will be created in approx. about 3 years during the PoW phase. Denarius had a 10% Premine of 1,000,000 DNR for bounties, distribution, and marketing.
+
 Specifications
 ==========================
 * Total number of coins: 10,000,000 DNR

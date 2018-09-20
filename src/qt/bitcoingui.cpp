@@ -72,6 +72,9 @@
 #include <QTextDocument>
 
 #include <iostream>
+#include <fstream>
+
+namespace fs = boost::filesystem;
 
 extern CWallet* pwalletMain;
 extern int64_t nLastCoinStakeSearchInterval;
@@ -764,7 +767,21 @@ void BitcoinGUI::setNumConnections(int count)
     if(fNativeTor)
     {
         labelConnectTypeIcon->setPixmap(QIcon(":/icons/tor").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-        labelConnectTypeIcon->setToolTip(tr("Connected to Denarius with the Native Tor Onion Relay"));
+
+        string automatic_onion;
+        fs::path const hostname_path = GetDefaultDataDir() / "onion" / "hostname";
+        if (!fs::exists(hostname_path)) {
+            printf("No external address found.");
+        }
+        ifstream file(hostname_path.string().c_str());
+        file >> automatic_onion;
+
+        QString onionauto;
+        onionauto = tr("Connected via the Tor Network - ") + QString::fromStdString(automatic_onion);
+        labelConnectTypeIcon->setToolTip(onionauto);
+    } else {
+        labelConnectTypeIcon->setPixmap(QIcon(":/icons/toroff").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        labelConnectTypeIcon->setToolTip(tr("Not Connected via the Tor Network, Start Denarius with the flag nativetor=1"));
     }
 }
 
@@ -773,7 +790,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     // don't bother showing anything if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
-        progressBarLabel->setText(tr("Connecting to Denarius network..."));
+        progressBarLabel->setText(tr("Connecting to the Denarius network..."));
         progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
         return;
@@ -832,7 +849,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
         if (strStatusBarWarnings.isEmpty())
         {
-            progressBarLabel->setText(tr("Synchronizing with network..."));
+            progressBarLabel->setText(tr("Synchronizing with the network..."));
             progressBarLabel->setVisible(true);
             if (nBlocksPerSec>0)
                 progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
