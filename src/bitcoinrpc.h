@@ -239,7 +239,6 @@ extern json_spirit::Value importstealthaddress(const json_spirit::Array& params,
 extern json_spirit::Value sendtostealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value clearwallettransactions(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value scanforstealthtxns(const json_spirit::Array& params, bool fHelp);
 
 //RPC Ring Sigs - D e n a r i u s
 extern json_spirit::Value senddnrtoanon(const json_spirit::Array& params, bool fHelp);
@@ -249,6 +248,7 @@ extern json_spirit::Value estimateanonfee(const json_spirit::Array& params, bool
 extern json_spirit::Value anonoutputs(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value anoninfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value reloadanondata(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value txnreport(const json_spirit::Array& params, bool fHelp);
 
 //rpcfortuna.cpp
 extern json_spirit::Value spork(const json_spirit::Array& params, bool fHelp);

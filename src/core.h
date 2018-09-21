@@ -249,6 +249,12 @@ public:
         if (IsEmpty()) return "CTxOut(empty)";
         return strprintf("CTxOut(nValue=%s, scriptPubKey=%s)", FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
     }
+
+    CPubKey ExtractAnonPk() const
+    {
+        // always use IsAnonOutput to check length
+        return CPubKey(&scriptPubKey[2+1], EC_COMPRESSED_SIZE);
+    };
 };
 
 // D e n a r i u s - Anon

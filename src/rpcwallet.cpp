@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2017-2018 Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +12,7 @@
 #include "stealth.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "txdb.h"
 
 #include <sstream>
 #include <fstream>
@@ -2361,69 +2363,201 @@ Value scanforalltxns(const Array& params, bool fHelp)
     return result;
 }
 
-Value scanforstealthtxns(const Array& params, bool fHelp)
+Value senddnrtoanon(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 1)
-        throw runtime_error(
-            "scanforstealthtxns [fromHeight]\n"
-            "Scan blockchain for owned stealth transactions.");
+    if (fHelp || params.size() < 2 || params.size() > 5)
+        throw std::runtime_error(
+            "senddnrtoanon <stealth_address> <amount> [narration] [comment] [comment-to]\n"
+            "<amount> is a real number and is rounded to the nearest 0.000001"
+            + HelpRequiringPassphrase());
+
+    if (pwalletMain->IsLocked())
+        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
+
+    std::string sEncoded = params[0].get_str();
+
+    int64_t nAmount = AmountFromValue(params[1]);
+
+    std::string sNarr;
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+        sNarr = params[2].get_str();
+
+    if (sNarr.length() > 24)
+        throw std::runtime_error("Narration must be 24 characters or less.");
+
+    CStealthAddress sxAddr;
+
+    if (!sxAddr.SetEncoded(sEncoded))
+        throw std::runtime_error("Invalid Denarius stealth address.");
+
+    CWalletTx wtx;
+    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
+        wtx.mapValue["comment"] = params[3].get_str();
+    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
+        wtx.mapValue["to"]      = params[4].get_str();
+
+    std::string sError;
+    if (!pwalletMain->SendDnrToAnon(sxAddr, nAmount, sNarr, wtx, sError))
+    {
+        printf("SendDnrToAnon failed %s\n", sError.c_str());
+        throw JSONRPCError(RPC_WALLET_ERROR, sError);
+    };
+    return wtx.GetHash().GetHex();
+}
+
+Value sendanontoanon(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 3 || params.size() > 6)
+        throw std::runtime_error(
+            "sendanontoanon <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
+            "<amount> is a real number and is rounded to the nearest 0.000001\n"
+            "<ring_size> is a number of outputs of the same amount to include in the signature\n"
+            "  warning: using a ring_size less than 5 is not recommended"
+            + HelpRequiringPassphrase());
+
+    if (pwalletMain->IsLocked())
+        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
+
+    std::string sEncoded = params[0].get_str();
+    int64_t nAmount = AmountFromValue(params[1]);
+
+    uint32_t nRingSize = (uint32_t)params[2].get_int();
 
     Object result;
-    uint32_t nBlocks = 0;
-    uint32_t nTransactions = 0;
-    int32_t nFromHeight = 0;
+    std::ostringstream ssThrow;
+    if (nRingSize < MIN_RING_SIZE)
+        result.push_back(Pair("warning", "Ring size was below the recommended size, your existing will be marked as compromised."));
 
-    CBlockIndex *pindex = pindexGenesisBlock;
-
-
-    if (params.size() > 0)
-        nFromHeight = params[0].get_int();
+    if (nRingSize > MAX_RING_SIZE)
+        ssThrow << "Ring size must be >= " << MIN_RING_SIZE << " and <= " << MAX_RING_SIZE << ".", throw std::runtime_error(ssThrow.str());
 
 
-    if (nFromHeight > 0)
+    std::string sNarr;
+    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
+        sNarr = params[3].get_str();
+
+    if (sNarr.length() > 24)
+        throw std::runtime_error("Narration must be 24 characters or less.");
+
+    CStealthAddress sxAddr;
+
+    if (!sxAddr.SetEncoded(sEncoded))
+        throw std::runtime_error("Invalid Denarius stealth address.");
+
+    CWalletTx wtx;
+    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
+        wtx.mapValue["comment"] = params[4].get_str();
+    if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
+        wtx.mapValue["to"]      = params[5].get_str();
+
+
+    std::string sError;
+    if (!pwalletMain->SendAnonToAnon(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
     {
-        pindex = mapBlockIndex[hashBestChain];
-        while (pindex->nHeight > nFromHeight
-            && pindex->pprev)
-            pindex = pindex->pprev;
+        printf("SendAnonToAnon failed %s\n", sError.c_str());
+        throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
 
-    if (pindex == NULL)
-        throw runtime_error("Genesis Block is not set.");
-
-    // -- locks in AddToWalletIfInvolvingMe
-
-    bool fUpdate = true; // todo: option?
-
-    pwalletMain->nStealth = 0;
-    pwalletMain->nFoundStealth = 0;
-
-    while (pindex)
+    if (result.size() > 0)
     {
-        nBlocks++;
-        CBlock block;
-        block.ReadFromDisk(pindex, true);
+        result.push_back(Pair("txid", wtx.GetHash().ToString()));
+        return result;
+    }
+    return wtx.GetHash().GetHex();
+}
 
-        BOOST_FOREACH(CTransaction& tx, block.vtx)
-        {
+Value sendanontodnr(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 3 || params.size() > 6)
+        throw std::runtime_error(
+            "sendanontodnr <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
+            "<amount> is a real number and is rounded to the nearest 0.000001\n"
+            "<ring_size> is a number of outputs of the same amount to include in the signature"
+            + HelpRequiringPassphrase());
 
-            nTransactions++;
+    if (pwalletMain->IsLocked())
+        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
 
-            pwalletMain->AddToWalletIfInvolvingMe(tx, &block, fUpdate);
-        };
+    std::string sEncoded = params[0].get_str();
+    int64_t nAmount = AmountFromValue(params[1]);
 
-        pindex = pindex->pnext;
+    uint32_t nRingSize = (uint32_t)params[2].get_int();
+
+    std::ostringstream ssThrow;
+    if (nRingSize < 1 || nRingSize > MAX_RING_SIZE)
+        ssThrow << "Ring size must be >= 1 and <= " << MAX_RING_SIZE << ".", throw std::runtime_error(ssThrow.str());
+
+
+    std::string sNarr;
+    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
+        sNarr = params[3].get_str();
+
+    if (sNarr.length() > 24)
+        throw std::runtime_error("Narration must be 24 characters or less.");
+
+    CStealthAddress sxAddr;
+
+    if (!sxAddr.SetEncoded(sEncoded))
+        throw std::runtime_error("Invalid Denarius stealth address.");
+
+    CWalletTx wtx;
+    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
+        wtx.mapValue["comment"] = params[4].get_str();
+    if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
+        wtx.mapValue["to"]      = params[5].get_str();
+
+
+    std::string sError;
+    if (!pwalletMain->SendAnonToDnr(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
+    {
+        printf("SendAnonToDnr failed %s\n", sError.c_str());
+        throw JSONRPCError(RPC_WALLET_ERROR, sError);
+    };
+    return wtx.GetHash().GetHex();
+}
+
+Value estimateanonfee(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw std::runtime_error(
+            "estimateanonfee <amount> <ring_size> [narration]\n"
+            "<amount>is a real number and is rounded to the nearest 0.000001\n"
+            "<ring_size> is a number of outputs of the same amount to include in the signature");
+
+    int64_t nAmount = AmountFromValue(params[0]);
+
+    uint32_t nRingSize = (uint32_t)params[1].get_int();
+
+    std::ostringstream ssThrow;
+    if (nRingSize < MIN_RING_SIZE || nRingSize > MAX_RING_SIZE)
+        ssThrow << "Ring size must be >= " << MIN_RING_SIZE << " and <= " << MAX_RING_SIZE << ".", throw std::runtime_error(ssThrow.str());
+
+
+    std::string sNarr;
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+        sNarr = params[2].get_str();
+
+    if (sNarr.length() > 24)
+        throw std::runtime_error("Narration must be 24 characters or less.");
+
+
+    CWalletTx wtx;
+    int64_t nFee = 0;
+    std::string sError;
+    if (!pwalletMain->EstimateAnonFee(nAmount, nRingSize, sNarr, wtx, nFee, sError))
+    {
+        printf("EstimateAnonFee failed %s\n", sError.c_str());
+        throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
 
-    printf("Scanned %u blocks, %u transactions\n", nBlocks, nTransactions);
-    printf("Found %u stealth transactions in blockchain.\n", pwalletMain->nStealth);
-    printf("Found %u new owned stealth transactions.\n", pwalletMain->nFoundStealth);
+    uint32_t nBytes = ::GetSerializeSize(*(CTransaction*)&wtx, SER_NETWORK, PROTOCOL_VERSION);
 
-    char cbuf[256];
-    snprintf(cbuf, sizeof(cbuf), "%u new stealth transactions.", pwalletMain->nFoundStealth);
+    Object result;
 
-    result.push_back(Pair("result", "Scan complete."));
-    result.push_back(Pair("found", std::string(cbuf)));
+    result.push_back(Pair("Estimated bytes", (int)nBytes));
+    result.push_back(Pair("Estimated inputs", (int)wtx.vin.size()));
+    result.push_back(Pair("Estimated outputs", (int)wtx.vout.size()));
+    result.push_back(Pair("Estimated fee", ValueFromAmount(nFee)));
 
     return result;
 }
@@ -2634,3 +2768,285 @@ static bool compareTxnTime(const CWalletTx* pa, const CWalletTx* pb)
 {
     return pa->nTime < pb->nTime;
 };
+
+Value txnreport(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 2)
+        throw std::runtime_error(
+            "txnreport [collate_amounts] [show_key_images]\n"
+            "List transactions at output level.\n");
+
+    bool fCollateAmounts = false;
+    bool fShowKeyImage = false;
+
+    // TODO: trust CWalletTx::vfSpent?
+
+    if (params.size() > 0)
+    {
+        std::string value = params[0].get_str();
+        if (IsStringBoolPositive(value))
+            fCollateAmounts = true;
+    };
+
+    if (params.size() > 1)
+    {
+        std::string value = params[1].get_str();
+        if (IsStringBoolPositive(value))
+            fShowKeyImage = true;
+    };
+
+    int64_t nWalletIn = 0;      // total inputs from owned addresses
+    int64_t nWalletOut = 0;     // total outputs from owned addresses
+
+    Object result;
+    {
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+
+        std::list<CWalletTx*> listOrdered;
+        for (std::map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
+        {
+            if (it->second.GetDepthInMainChain() > 0) // exclude txns not in the chain
+                listOrdered.push_back(&it->second);
+        };
+
+        listOrdered.sort(compareTxnTime);
+
+        std::list<CWalletTx*>::iterator it;
+
+        Array headings;
+        headings.push_back("When");
+        headings.push_back("Txn Hash");
+        headings.push_back("In/Output Type");
+        headings.push_back("Txn Type");
+
+        headings.push_back("Address");
+        headings.push_back("Ring Size");
+
+        if (fShowKeyImage)
+            headings.push_back("Key Image");
+
+        headings.push_back("Owned");
+        headings.push_back("Spent");
+
+        headings.push_back("Value In");
+        headings.push_back("Value Out");
+
+        if (fCollateAmounts)
+        {
+            headings.push_back("Wallet In");
+            headings.push_back("Wallet Out");
+        };
+
+        result.push_back(Pair("headings", headings));
+
+        if (pwalletMain->IsLocked())
+        {
+            result.push_back(Pair("warning", "Wallet is locked - owned inputs may not be detected correctly."));
+        };
+
+        Array lines;
+
+        CTxDB txdb("r");
+        CWalletDB walletdb(pwalletMain->strWalletFile, "r");
+
+        char cbuf[256];
+        for (it = listOrdered.begin(); it != listOrdered.end(); ++it)
+        {
+            CWalletTx* pwtx = (*it);
+
+            Array entryTxn;
+            entryTxn.push_back(getTimeString(pwtx->nTime, cbuf, sizeof(cbuf)));
+            entryTxn.push_back(pwtx->GetHash().GetHex());
+
+            bool fCoinBase = pwtx->IsCoinBase();
+            bool fCoinStake = pwtx->IsCoinStake();
+
+            for (uint32_t i = 0; i < pwtx->vin.size(); ++i)
+            {
+                const CTxIn& txin = pwtx->vin[i];
+
+                int64_t nInputValue = 0;
+
+                Array entry = entryTxn;
+
+                std::string sAddr = "";
+                std::string sKeyImage = "";
+                bool fOwnCoin = false;
+                int nRingSize = 0;
+                if (pwtx->nVersion == ANON_TXN_VERSION
+                    && txin.IsAnonInput())
+                {
+                    entry.push_back("DENARIUS in");
+                    entry.push_back("");
+                    std::vector<uint8_t> vchImage;
+                    txin.ExtractKeyImage(vchImage);
+                    nRingSize = txin.ExtractRingSize();
+
+                    sKeyImage = HexStr(vchImage);
+
+                    CKeyImageSpent ski;
+                    bool fInMemPool;
+                    if (GetKeyImage(&txdb, vchImage, ski, fInMemPool))
+                        nInputValue = ski.nValue;
+
+                    COwnedAnonOutput oao;
+                    if (walletdb.ReadOwnedAnonOutput(vchImage, oao))
+                    {
+                        fOwnCoin = true;
+                    } else
+                    if (pwalletMain->IsCrypted())
+                    {
+                        // - tokens received with locked wallet won't have oao until wallet unlocked
+                        //   No way to tell if locked input is owned
+                        //   need vchImage
+
+                        // TODO, closest would be to tell if it's possible for the input to be owned
+                        sKeyImage = "locked?";
+                    };
+
+                } else
+                {
+                    if (txin.prevout.IsNull()) // coinbase
+                        continue;
+
+                    entry.push_back("DNR in");
+                    entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
+
+                    if (pwalletMain->IsMine(txin))
+                        fOwnCoin = true;
+
+                    CTransaction prevTx;
+                    if (txdb.ReadDiskTx(txin.prevout.hash, prevTx))
+                    {
+                        if (txin.prevout.n < prevTx.vout.size())
+                        {
+                            const CTxOut &vout = prevTx.vout[txin.prevout.n];
+                            nInputValue = vout.nValue;
+
+                            CTxDestination address;
+                            if (ExtractDestination(vout.scriptPubKey, address))
+                                sAddr = CBitcoinAddress(address).ToString();
+                        } else
+                        {
+                            nInputValue = 0;
+                        };
+                    };
+
+                };
+
+                if (fOwnCoin)
+                    nWalletIn += nInputValue;
+
+
+                entry.push_back(sAddr);
+                entry.push_back(nRingSize == 0 ? "" : strprintf("%d", nRingSize));
+
+                if (fShowKeyImage)
+                    entry.push_back(sKeyImage);
+
+                entry.push_back(fOwnCoin);
+                entry.push_back(""); // spent
+                entry.push_back(strprintf("%f", (double)nInputValue / (double)COIN));
+                entry.push_back(""); // out
+
+                if (fCollateAmounts)
+                {
+                    entry.push_back(strprintf("%f", (double)nWalletIn / (double)COIN));
+                    entry.push_back(strprintf("%f", (double)nWalletOut / (double)COIN));
+                };
+
+                lines.push_back(entry);
+            };
+
+            for (uint32_t i = 0; i < pwtx->vout.size(); i++)
+            {
+                const CTxOut& txout = pwtx->vout[i];
+
+                if (txout.nValue < 1) // metadata output, narration or stealth
+                    continue;
+
+                Array entry = entryTxn;
+
+
+                std::string sAddr = "";
+                std::string sKeyImage = "";
+                bool fOwnCoin = false;
+                bool fSpent = false;
+
+                if (pwtx->nVersion == ANON_TXN_VERSION
+                    && txout.IsAnonOutput())
+                {
+                    entry.push_back("DENARIUS out");
+                    entry.push_back("");
+
+                    CPubKey pkCoin    = txout.ExtractAnonPk();
+
+                    std::vector<uint8_t> vchImage;
+                    COwnedAnonOutput oao;
+
+                    if (walletdb.ReadOwnedAnonOutputLink(pkCoin, vchImage)
+                        && walletdb.ReadOwnedAnonOutput(vchImage, oao))
+                    {
+                        sKeyImage = HexStr(vchImage);
+                        fOwnCoin = true;
+                    } else
+                    if (pwalletMain->IsCrypted())
+                    {
+                        // - tokens received with locked wallet won't have oao until wallet unlocked
+                        CKeyID ckCoinId = pkCoin.GetID();
+
+                        CLockedAnonOutput lockedAo;
+                        if (walletdb.ReadLockedAnonOutput(ckCoinId, lockedAo))
+                            fOwnCoin = true;
+
+                        sKeyImage = "locked?";
+                    };
+                } else
+                {
+                    entry.push_back("DNR out");
+                    entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
+
+
+                    CTxDestination address;
+                    if (ExtractDestination(txout.scriptPubKey, address))
+                        sAddr = CBitcoinAddress(address).ToString();
+
+                    if (pwalletMain->IsMine(txout))
+                        fOwnCoin = true;
+                };
+
+                if (fOwnCoin)
+                {
+                    nWalletOut += txout.nValue;
+                    fSpent = pwtx->IsSpent(i);
+                };
+
+                entry.push_back(sAddr);
+
+                entry.push_back(""); // ring size (only for inputs)
+
+                if (fShowKeyImage)
+                    entry.push_back(sKeyImage);
+
+                entry.push_back(fOwnCoin);
+                entry.push_back(fSpent);
+
+                entry.push_back(""); // in
+                entry.push_back(ValueFromAmount(txout.nValue));
+
+                if (fCollateAmounts)
+                {
+                    entry.push_back(strprintf("%f", (double)nWalletIn / (double)COIN));
+                    entry.push_back(strprintf("%f", (double)nWalletOut / (double)COIN));
+                };
+
+                lines.push_back(entry);
+            };
+        };
+        result.push_back(Pair("data", lines));
+    }
+
+
+    result.push_back(Pair("result", "txnreport complete."));
+    return result;
+}

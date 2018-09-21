@@ -301,7 +301,7 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
-	{ "getblockheader",         &getblockheader,         false,  false },
+	  { "getblockheader",         &getblockheader,         false,  false },
     { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
@@ -346,9 +346,13 @@ static const CRPCCommand vRPCCommands[] =
     { "sendtostealthaddress",   &sendtostealthaddress,   false,  false},
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
-    { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
 
-    // Ring Signatures - D e n a r i u s
+    // Ring Signatures - D e n a r i u s v3.0.0
+    { "senddnrtoanon",          &senddnrtoanon,          false,  false},
+    { "sendanontoanon",         &sendanontoanon,         false,  false},
+    { "sendanontodnr",          &sendanontodnr,          false,  false},
+    { "estimateanonfee",        &estimateanonfee,        false,  false},
+    { "txnreport",              &txnreport,              false,  false},
     { "anonoutputs",            &anonoutputs,            false,  false},
     { "anoninfo",               &anoninfo,               false,  false},
     { "reloadanondata",         &reloadanondata,         false,  false},
@@ -1309,7 +1313,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
-	if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
+	  if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
@@ -1356,6 +1360,10 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
 
     if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
+
+    if (strMethod == "senddnrtoanon"          && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontoanon"         && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontodnr"          && n > 1) ConvertTo<double>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 

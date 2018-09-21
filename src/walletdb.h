@@ -221,6 +221,11 @@ public:
         return Erase(std::make_pair(std::string("tx"), hash));
     }
 
+    bool ReadLockedAnonOutput(const CKeyID& keyId, CLockedAnonOutput& lockedAo)
+    {
+        return Read(std::make_pair(std::string("lao"), keyId), lockedAo);
+    };
+
     bool WriteLockedAnonOutput(const CKeyID& keyId, const CLockedAnonOutput& lockedAo)
     {
         nWalletDBUpdated++;
