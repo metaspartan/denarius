@@ -11,6 +11,7 @@
 #include <map>
 
 class CBlockIndex;
+class CBlockThinIndex;
 
 #include "json/json_spirit_reader_template.h"
 #include "json/json_spirit_writer_template.h"
@@ -88,6 +89,9 @@ void RPCTypeCheck(const json_spirit::Array& params,
 void RPCTypeCheck(const json_spirit::Object& o,
                   const std::map<std::string, json_spirit::Value_type>& typesExpected, bool fAllowNull=false);
 
+bool IsStringBoolPositive(std::string& value);
+bool IsStringBoolNegative(std::string& value);
+
 typedef json_spirit::Value(*rpcfn_type)(const json_spirit::Array& params, bool fHelp);
 
 class CRPCCommand
@@ -127,6 +131,7 @@ extern int64_t nWalletUnlockTime;
 extern int64_t AmountFromValue(const json_spirit::Value& value);
 extern json_spirit::Value ValueFromAmount(int64_t amount);
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
+extern double GetHeaderDifficulty(const CBlockThinIndex* blockindex = NULL);
 
 extern double GetPoWMHashPS();
 extern double GetPoSKernelPS();
@@ -221,6 +226,7 @@ extern json_spirit::Value settxfee(const json_spirit::Array& params, bool fHelp)
 extern json_spirit::Value getrawmempool(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockhash(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getblockheader(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblock_old(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockbynumber(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool fHelp);
@@ -233,9 +239,18 @@ extern json_spirit::Value importstealthaddress(const json_spirit::Array& params,
 extern json_spirit::Value sendtostealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value clearwallettransactions(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value scanforstealthtxns(const json_spirit::Array& params, bool fHelp);
 
-//rpcdarksend.cpp
+//RPC Ring Sigs - D e n a r i u s
+extern json_spirit::Value senddnrtoanon(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value sendanontoanon(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value sendanontodnr(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value estimateanonfee(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value anonoutputs(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value anoninfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value reloadanondata(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value txnreport(const json_spirit::Array& params, bool fHelp);
+
+//rpcfortuna.cpp
 extern json_spirit::Value spork(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getpoolinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value masternode(const json_spirit::Array& params, bool fHelp);

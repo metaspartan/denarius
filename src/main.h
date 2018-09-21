@@ -20,14 +20,15 @@ class CValidationState;
 
 #define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Masternode payments enabled block 81k5
 #define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Masternode payments not enabled until block 645k
+#define BLOCK_START_MASTERNODE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
 
 //#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
 //#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
 
-static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
-static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
+static const int64_t FORTUNA_COLLATERAL = (5000*COIN); // 5,000 DNR
+static const int64_t FORTUNA_FEE = (0.010000*COIN); //0.01 DNR
 static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
-static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
+static const int64_t FORTUNA_POOL_MAX = (11000*COIN); //11,000 DNR
 
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
@@ -43,6 +44,7 @@ typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
 #define MASTERNODE_REMOTELY_ENABLED            9
 
 class CWallet;
+class CWalletTx;
 class CBlock;
 class CBlockIndex;
 class CKeyItem;
@@ -68,6 +70,7 @@ static const unsigned int MAX_TX_SIGOPS = MAX_BLOCK_SIGOPS/5;
 static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;
 static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
+static const int64_t MIN_TX_FEE_ANON = 10000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
 static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 DNR Denarius Max
 static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
@@ -121,6 +124,10 @@ extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
 extern unsigned char pchMessageStart[4];
 extern std::map<uint256, CBlock*> mapOrphanBlocks;
+extern std::map<int64_t, CAnonOutputCount> mapAnonOutputStats;
+
+extern CBigNum bnProofOfWorkLimit;
+extern CBigNum bnProofOfWorkLimitTestNet;
 
 //extern CTxMemPool mempool;
 
@@ -137,6 +144,8 @@ extern unsigned int nCoinCacheSize;
 extern bool fEnforceCanonical;
 
 extern bool fMinimizeCoinAge;
+
+extern int64_t nMinTxFee;
 
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64_t nMinDiskSpace = 52428800; //52 MB Minimum, Raise?
@@ -171,12 +180,14 @@ int GetNumBlocksOfPeers();
 bool IsInitialBlockDownload();
 std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s=false);
+bool GetKeyImage(CTxDB* ptxdb, ec_point& keyImage, CKeyImageSpent& keyImageSpent, bool& fInMempool);
+bool TxnHashInSystem(CTxDB* ptxdb, uint256& txnHash);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);
 void ResendWalletTransactions(bool fForce = false);
 
-
+bool Finalise();
 
 bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint256> &vtxhash);
 
@@ -247,14 +258,6 @@ public:
     {
         printf("%s", ToString().c_str());
     }
-};
-
-
-enum GetMinFee_mode
-{
-    GMF_BLOCK,
-    GMF_RELAY,
-    GMF_SEND,
 };
 
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
@@ -368,6 +371,8 @@ public:
         // ppcoin: the coin stake transaction is marked with the first output empty
         return (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
+
+    bool HasStealthOutput() const;
 
     /** Check for standard transaction types
         @param[in] mapInputs	Map of previous transactions that have outputs we're spending
@@ -506,6 +511,8 @@ public:
      */
     bool FetchInputs(CTxDB& txdb, const std::map<uint256, CTxIndex>& mapTestPool,
                      bool fBlock, bool fMiner, MapPrevTx& inputsRet, bool& fInvalid);
+
+    bool CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInvalid, bool fCheckExists);
 
     /** Sanity check previous transactions, then, if all checks succeed,
         mark them as spent by this transaction.
@@ -1467,6 +1474,8 @@ public:
     std::map<uint256, CTransaction> mapTx;
     std::map<COutPoint, CInPoint> mapNextTx;
 
+    std::map<std::vector<uint8_t>, CKeyImageSpent> mapKeyImage;
+
     bool accept(CTxDB& txdb, CTransaction &tx,
                 bool* pfMissingInputs);
     bool addUnchecked(const uint256& hash, CTransaction &tx);
@@ -1495,6 +1504,27 @@ public:
         std::map<uint256, CTransaction>::const_iterator i = mapTx.find(hash);
         if (i == mapTx.end()) return false;
         result = i->second;
+        return true;
+    }
+
+    bool insertKeyImage(const std::vector<uint8_t>& vchImage, CKeyImageSpent& kis)
+    {
+        LOCK(cs);
+
+        mapKeyImage[vchImage] = kis;
+
+        return true;
+    }
+    bool lookupKeyImage(const std::vector<uint8_t>& vchImage, CKeyImageSpent& result) const
+    {
+        LOCK(cs);
+
+        std::map<std::vector<uint8_t>, CKeyImageSpent>::const_iterator it = mapKeyImage.find(vchImage);
+        if (it == mapKeyImage.end())
+            return false;
+
+        result = it->second;
+
         return true;
     }
 };

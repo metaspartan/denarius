@@ -96,6 +96,50 @@ double GetPoSKernelPS()
 
     return nStakesTime ? dStakeKernelsTriedAvg / nStakesTime : 0;
 }
+/*
+Object blockheaderToJSON(const CBlockIndex* blockindex)
+{
+    Object result;
+    result.push_back(Pair("hash", blockindex->GetBlockHash().GetHex()));
+	//CMerkleTx txGen(blockindex->vtx[0]);
+    //txGen.SetMerkleBranch(&blockindex);
+    //result.push_back(Pair("confirmations", (int)txGen.GetDepthInMainChain()));
+    result.push_back(Pair("height", blockindex->nHeight));
+    result.push_back(Pair("version", blockindex->nVersion));
+    result.push_back(Pair("merkleroot", blockindex->hashMerkleRoot.GetHex()));
+    result.push_back(Pair("time", (int64_t)blockindex->nTime));
+    result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
+    result.push_back(Pair("nonce", (uint64_t)blockindex->nNonce));
+    result.push_back(Pair("bits", strprintf("%08x", blockindex->nBits)));
+    result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
+	result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
+	result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
+
+    if (blockindex->pprev)
+        result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
+    if (blockindex->pnext)
+        result.push_back(Pair("nextblockhash", blockindex->pnext->GetBlockHash().GetHex()));
+	
+	result.push_back(Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
+    result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
+    result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
+    result.push_back(Pair("modifier", strprintf("%016"PRIx64, blockindex->nStakeModifier)));
+	result.push_back(Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
+    return result;
+} */
+
+Object blockHeaderToJSON(const CBlock& block, const CBlockIndex* blockindex)
+{
+    Object result;
+    result.push_back(Pair("version", block.nVersion));
+    if (blockindex->pprev)
+        result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
+    result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
+    result.push_back(Pair("time", block.GetBlockTime()));
+    result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
+    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
+    return result;
+}
 
 Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPrintTransactionDetail)
 {
@@ -358,6 +402,64 @@ Value getblock(const Array& params, bool fHelp)
 
     //return blockToJSON(block, pblockindex, verbosity >= 2);
 	return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
+}
+
+Value getblockheader(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "getblockheader \"hash\" ( verbose )\n"
+            "\nIf verbose is false, returns a string that is serialized, hex-encoded data for block 'hash' header.\n"
+            "If verbose is true, returns an Object with information about block <hash> header.\n"
+            "\nArguments:\n"
+            "1. \"hash\"          (string, required) The block hash\n"
+            "2. verbose           (boolean, optional, default=true) true for a json object, false for the hex encoded data\n"
+            "\nResult (for verbose = true):\n"
+            "{\n"
+            "  \"version\" : n,         (numeric) The block version\n"
+            "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
+            "  \"merkleroot\" : \"xxxx\", (string) The merkle root\n"
+            "  \"time\" : ttt,          (numeric) The block time in seconds since epoch (Jan 1 1970 GMT)\n"
+            "  \"bits\" : \"1d00ffff\", (string) The bits\n"
+            "  \"nonce\" : n,           (numeric) The nonce\n"
+            "}\n"
+            "\nResult (for verbose=false):\n"
+            "\"data\"             (string) A string that is serialized, hex-encoded data for block 'hash' header.\n"
+            "\nExamples:\n"
+            );
+
+    std::string strHash = params[0].get_str();
+    uint256 hash(strHash);
+
+    bool fVerbose = true;
+    if (params.size() > 1)
+        fVerbose = params[1].get_bool();
+
+    if (mapBlockIndex.count(hash) == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hash];
+
+	if(!block.ReadFromDisk(pblockindex, true)){
+        // Block not found on disk. This could be because we have the block
+        // header in our index but don't have the block (for example if a
+        // non-whitelisted node sends us an unrequested long chain of valid
+        // blocks, we add the headers to our index, but don't accept the
+        // block).
+		throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+	}
+
+	block.ReadFromDisk(pblockindex, true);
+
+    if (!fVerbose) {
+        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+        ssBlock << block;
+        std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
+        return strHex;
+    }
+
+    return blockHeaderToJSON(block, pblockindex);
 }
 
 //Old getblock RPC Command, Not deprecated

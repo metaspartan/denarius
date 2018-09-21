@@ -61,20 +61,24 @@ using namespace std;
 bool fMasterNode = false;
 string strMasterNodePrivKey = "";
 string strMasterNodeAddr = "";
-int nDarksendRounds = 2;
+int nFortunaRounds = 2;
+
+int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
 
 /** Spork enforcement enabled time */
 int64_t enforceMasternodePaymentsTime = 4085657524;
 bool fSuccessfullyLoaded = false;
 
-/** All denominations used by darksend */
-std::vector<int64_t> darkSendDenominations;
+/** All denominations used by fortuna */
+std::vector<int64_t> forTunaDenominations;
 
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
 bool fDebugSmsg = false;
+bool fDebugChain = false;
+bool fDebugRingSig = false;
 bool fNoSmsg = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugger = false;
@@ -85,6 +89,7 @@ bool fServer = false;
 bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
+bool fNativeTor = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);

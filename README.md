@@ -3,18 +3,21 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 ![logo](http://i.imgur.com/gIe5vnw.png)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
-[![Join the chat at https://gitter.im/denariusproject/Lobby](https://badges.gitter.im/carsenk/denarius.svg)](https://gitter.im/denariusproject/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+[![GitHub version](https://img.shields.io/github/release/carsenk/denarius.svg?maxAge=2592000)](https://badge.fury.io/gh/carsenk%2Fdenarius)
+[![License: GPL v3](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/carsenk/denarius/blob/master/COPYING)
+[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg?maxAge=2592000)](https://github.com/carsenk/denarius/releases)
+[![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
+
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
 
 Intro
 ==========================
-Denarius is an anonymous, untraceable and secure hybrid cryptocurrency. 
+Denarius is a true optional anonymous, untraceable, and secure hybrid cryptocurrency.
 
 Ticker: DNR
 
 Denarius [DNR] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
-
-10,000,000 DNR will be created in about 3 years during the PoW phase. Denarius has a 10% Premine of 1,000,000 DNR for bounties, distribution, and marketing.
+10,000,000 DNR will be created in approx. about 3 years during the PoW phase. Denarius had a 10% Premine of 1,000,000 DNR for bounties, distribution, and marketing.
 
 Specifications
 ==========================
@@ -31,8 +34,12 @@ Technology
 ==========================
 * Hybrid PoW/PoS Masternodes
 * Stealth addresses
+* Ring Signatures
+* Native Optional Tor Onion Node (-nativetor=1)
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
+* Atomic Swaps using UTXOs (BIP65 CLTV)
+* Proof of Data (Image/Data Timestamping)
 * Fast 30 Second Block Times
 * New Tribus PoW Algorithm comprising of 3 NIST5 algos
 * Tribus PoW/PoS Hybrid
@@ -43,7 +50,13 @@ LINKS
 * Official Website(https://denarius.io/)
 * Official Forums(https://denariustalk.org/)
 * Denarius Twitter(https://twitter.com/denariuscoin)
+* Denarius Discord Chat(https://discord.gg/C64HXbc)
 
+ASCII CAST TUTORIALS
+==========================
+[![asciicast](https://asciinema.org/a/179356.png)](https://asciinema.org/a/179356)
+[![asciicast](https://asciinema.org/a/179362.png)](https://asciinema.org/a/179362)
+[![asciicast](https://asciinema.org/a/179355.png)](https://asciinema.org/a/179355)
 
 Development process
 ===========================
@@ -70,5 +83,5 @@ after the warning if action is not taken by the author. Pull requests closed
 in this manner will have their corresponding issue labeled 'stagnant'.
 
 Issues with no commits will be given a similar warning, and closed after
-15 days from their last activity. Issues closed in this manner will be 
+15 days from their last activity. Issues closed in this manner will be
 labeled 'stale'.
