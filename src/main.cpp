@@ -2510,14 +2510,24 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                                 if (vtx[1].vout[i].scriptPubKey == pubScript)
                                 {
+                                    int64_t value = vtx[1].vout[i].nValue;
                                     int lastPaid = mn.nBlockLastPaid;
                                     int paidAge = pindex->nHeight+1 - lastPaid;
-                                    if (fDebug) printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[1].vout[i].nValue / COIN).c_str(), paidAge, mn.nBlockLastPaid);
-                                    if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                    if (fDebug) printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid);
+                                    if (mn.payRate > 110) // MN is being paid over 10% more regularly than it should
                                     {
-                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
+                                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                            // check here if there is overpayment
+                                            return error("CheckBlock-POS() : Out-of-cycle masternode payment detected, rejecting block.");
+                                        } else {
+                                            if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block 1.1m\n");
+                                        }
                                     }
+                                    // add mn payment data
                                     mn.nBlockLastPaid = pindex->nHeight+1;
+                                    mn.payData.push_back(make_pair(pindex->nHeight+1, value));
+                                    mn.SetPayRate(pindex->nHeight+1);
+
                                     foundPayee = true;
                                 }
                             }
@@ -2578,11 +2588,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                 int lastPaid = mn.nBlockLastPaid;
                                 int paidAge = pindex->nHeight+1 - lastPaid;
                                 if (fDebug) printf("Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid);
-                                if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                if (mn.payRate > 110) // if MN is being paid over 10% more regularly than it should
                                 {
-                                    if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
+                                    if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                        return error("CheckBlock-POW() : Masternode overpayment detected, rejecting block.");
+                                    } else {
+                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block 1.1m\n");
+                                    }
                                 }
                                 mn.nBlockLastPaid = pindex->nHeight+1;
+                                mn.payData.push_back(make_pair(pindex->nHeight+1, vtx[0].vout[i].nValue));
+                                mn.SetPayRate(pindex->nHeight+1);
                                 foundPayee = true;
                             }
                         }

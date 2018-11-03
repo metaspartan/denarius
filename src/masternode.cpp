@@ -35,7 +35,7 @@ std::map<COutPoint, int64_t> askedForMasternodeListEntry;
 // cache block hashes as we calculate them
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
-unsigned int mnCount;
+unsigned int mnCount = 0;
 
 // manage the masternode connections
 void ProcessMasternodeConnections(){
@@ -74,6 +74,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         int current;
         int64_t lastUpdated;
         int protocolVersion;
+        bool isLocal;
         std::string strMessage;
 
         // 70047 and greater
@@ -85,7 +86,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             return;
         }
 
-        bool isLocal = addr.IsRFC1918() || addr.IsLocal();
+        isLocal = addr.IsRFC1918() || addr.IsLocal();
         //if(Params().MineBlocksOnDemand()) isLocal = false;
 
         std::string vchPubKey(pubkey.begin(), pubkey.end());
@@ -181,8 +182,6 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             CMasterNode mn(addr, vin, pubkey, vchSig, sigTime, pubkey2, protocolVersion);
             mn.UpdateLastSeen(lastUpdated);
             CBlockIndex* pindex = pindexBest;
-            mn.UpdateLastPaidBlock(pindex, 1000); // do a search back 1000 blocks when receiving a new masternode to find their last payment
-            vecMasternodes.push_back(mn);
 
             // if it matches our masternodeprivkey, then we've been remotely activated
             if(pubkey2 == activeMasternode.pubKeyMasternode && protocolVersion == PROTOCOL_VERSION){
@@ -195,6 +194,14 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                 mnMedianCount.input(count);
                 mnCount = mnMedianCount.median();
             }
+
+            // mn.UpdateLastPaidBlock(pindex, 1000); // do a search back 1000 blocks when receiving a new masternode to find their last payment
+            int value;
+            int payments = mn.UpdateLastPaidAmounts(pindex, 1000, value); // do a search back 1000 blocks when receiving a new masternode to find their last payment, payments = number of payments received, value = amount
+            if (payments > 0) {
+                printf("Registered new masternode %s(%i/%i) - paid %d times for %f DNR\n", addr, count, current, payments, value);
+            }
+            vecMasternodes.push_back(mn);
 
         } else {
             printf("dsee - Rejected masternode entry %s: %s\n", addr.ToString().c_str(),vinError.c_str());
@@ -212,14 +219,13 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         vRecv >> vin >> vchSig >> sigTime >> stop;
 
         if (fDebug) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
-
-        if (sigTime > GetAdjustedTime() + 60 * 60) {
-            printf("dseep - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
+        if (sigTime > GetAdjustedTime() + (60 * 60)*2) {
+            printf("dseep - Signature rejected, too far into the future %s, sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
-        if (sigTime <= GetAdjustedTime() - 60 * 60) {
-            printf("dseep - Signature rejected, too far into the past %s - %d %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
+        if (sigTime <= GetAdjustedTime() - (60 * 60)*2) {
+            printf("dseep - Signature rejected, too far into the past %s - sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
@@ -407,6 +413,15 @@ struct CompareLastPaidBlock
     }
 };
 
+struct CompareLastPayRate
+{
+    bool operator()(const pair<int, CMasterNode*>& t1,
+                    const pair<int, CMasterNode*>& t2) const
+    {
+        return (t1.second->payRate == t2.second->payRate ? t1.first > t2.first : t1.second->payRate > t2.second->payRate);
+    }
+};
+
 struct CompareValueOnly2
 {
     bool operator()(const pair<int64_t, int>& t1,
@@ -493,7 +508,7 @@ bool GetMasternodeRanks()
         vecMasternodeScores.push_back(make_pair(mn.nBlockLastPaid, &mn));
     }
 
-    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPaidBlock());
+    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPayRate());
 
     masternodePayments.vecMasternodeRanksLastUpdated = pindexBest->nHeight;
     return true;
@@ -565,6 +580,193 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
     return false;
 }
 
+bool CMasterNode::GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValue, double &actualRate)
+{
+    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    double requiredRate = scanBack / (int)mnCount;
+    int actualPayments = GetPaymentAmount(pindex, scanBack, totalValue);
+    actualRate = actualPayments / requiredRate;
+    // TODO: stop payment if masternode vin age is under mnCount*30 old
+    if (actualRate > 0) return true;
+}
+
+float CMasterNode::GetPaymentRate(const CBlockIndex *pindex)
+{
+    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    double requiredRate = scanBack / (int)mnCount;
+    int64_t totalValue;
+    int actualPayments = GetPaymentAmount(pindex, scanBack, totalValue);
+    float actualRate = actualPayments/requiredRate;
+    return actualRate;
+}
+
+int CMasterNode::SetPayRate(int nHeight)
+{
+     int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+     if (nHeight > pindexBest->nHeight) {
+         scanBack += nHeight - pindexBest->nHeight;
+     } // if going past current height, add to scan back height to account for how far it is - e.g. 200 in front will get 200 more blocks to smooth it out
+
+     if (payData.size()>0) {
+         printf("Using masternode cached payments data for pay rate");
+         printf(" (payInfo:%d@%f)...", payCount, payRate);
+         int64_t amount = 0;
+         int matches = 0;
+         BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
+         {
+             if (item.first > nHeight - scanBack) { // find payments in last scanrange
+                amount += item.second;
+                matches++;
+             }
+         }
+         if (matches > 0) {
+             payCount = matches;
+             payValue = amount;
+             payRate = ((double)payValue / (scanBack / mnCount))*100;
+             printf("%d found with %s value = %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
+             return matches;
+         }
+     }
+}
+
+int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int64_t &totalValue)
+{
+    if(!pindex) return;
+    CScript mnpayee = GetScriptForDestination(pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(mnpayee, address1);
+    CBitcoinAddress address2(address1);
+    totalValue = 0;
+    if (payData.size()>0) {
+        printf("Using masternode cached payments data");
+        printf("(payInfo:%d@%f)...", payCount, payRate);
+        int64_t amount = 0;
+        int matches = 0;
+        BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
+        {
+            amount += item.second;
+            matches++;
+        }
+        printf("done checking for matches: %d found with %s value\n", matches, FormatMoney(amount).c_str());
+        if (matches > 0) {
+            totalValue = amount;
+            return matches;
+        }
+    }
+    const CBlockIndex *BlockReading = pindex;
+
+    int blocksFound = 0;
+    totalValue = 0;
+    for (int i = 0; BlockReading && BlockReading->nHeight > nBlockLastPaid && i < nMaxBlocksToScanBack; i++) {
+            CBlock block;
+            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                continue;
+
+            if (block.IsProofOfWork())
+            {
+                BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
+                    if(mnpayee == txout.scriptPubKey) {
+                        blocksFound++;
+                        totalValue += txout.nValue / COIN;
+                    }
+            } else if (block.IsProofOfStake())
+            {
+                BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
+                    if(mnpayee == txout.scriptPubKey) {
+                        blocksFound++;
+                        totalValue += txout.nValue / COIN;
+                    }
+            }
+
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+
+        BlockReading = BlockReading->pprev;
+    }
+    return totalValue;
+
+}
+
+int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
+{
+    if(!pindex) return;
+
+    const CBlockIndex *BlockReading = pindex;
+    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+
+    CScript mnpayee = GetScriptForDestination(pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(mnpayee, address1);
+    CBitcoinAddress address2(address1);
+    int rewardCount = 0;
+    int64_t rewardValue = 0;
+    int64_t val = 0;
+    value = 0;
+
+    // reset counts
+    payCount = 0;
+    payValue = 0;
+    payData.clear();
+
+    LOCK(cs_masternodes);
+    for (int i = 0; i < scanBack; i++) {
+            val = 0;
+            CBlock block;
+            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                continue;
+
+            // if it's a legit block, then count it against this node and record it in a vector
+            if (block.IsProofOfWork() || block.IsProofOfStake())
+            {
+                BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                {
+                    if(mnpayee == txout.scriptPubKey) {
+                        int height = BlockReading->nHeight;
+                        if (rewardCount == 0) {
+                            nBlockLastPaid = height;
+                            nTimeLastPaid = BlockReading->nTime;
+                        }
+                        // values
+                        val = txout.nValue;
+
+                        // add this profit & the reward itself
+                        rewardValue += val;
+                        rewardCount++;
+
+                        // make a note in the node for later lookup
+                        payData.push_back(make_pair(height, val));
+                    }
+                }
+            }
+
+
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+
+        BlockReading = BlockReading->pprev;
+    }
+
+    if (rewardCount > 0)
+    {
+        // return the count and value
+        value = rewardValue / COIN;
+        payCount = rewardCount;
+        payValue = rewardValue;
+
+        // set the node's current 'reward rate'
+        payRate = ((double)rewardCount / (scanBack / mnCount))*100;
+
+        if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s DNR, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
+
+        return rewardCount;
+    } else {
+        payCount = rewardCount;
+        payValue = rewardValue;
+        payRate = 0;
+        value = 0;
+        return 0;
+    }
+
+}
+
 void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack)
 {
     if(!pindex) return;
@@ -575,7 +777,6 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
     CTxDestination address1;
     ExtractDestination(mnpayee, address1);
     CBitcoinAddress address2(address1);
-
     uint64_t nCoinAge;
 
     for (int i = 0; BlockReading && BlockReading->nHeight > nBlockLastPaid && i < nMaxBlocksToScanBack; i++) {
@@ -599,6 +800,7 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
                         nBlockLastPaid = BlockReading->nHeight;
                         nTimeLastPaid = BlockReading->nTime;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
+                        int value = txout.nValue;
                         // TODO HERE: Check the nValue for the masternode payment amount
                         if (fDebug) printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pow %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
                         return;
@@ -611,6 +813,7 @@ void CMasterNode::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksT
                         nBlockLastPaid = BlockReading->nHeight;
                         nTimeLastPaid = BlockReading->nTime;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
+                        int value = txout.nValue;
                         // TODO HERE: Check the nValue for the masternode payment amount
                         if (fDebug) printf("CMasterNode::UpdateLastPaidBlock -- searching for block with payment to %s -- found pos %d (%d blocks ago)\n", address2.ToString().c_str(), nBlockLastPaid, lastPay);
                         return;

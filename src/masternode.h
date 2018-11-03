@@ -39,6 +39,9 @@ class uint256;
 #define MASTERNODE_REMOVAL_SECONDS             (130*60)
 #define MASTERNODE_CHECK_SECONDS               10
 
+#define MASTERNODE_FAIR_PAYMENT_MINIMUM         200
+#define MASTERNODE_FAIR_PAYMENT_ROUNDS          3
+
 using namespace std;
 
 class CMasternodePaymentWinner;
@@ -77,6 +80,11 @@ public:
     CPubKey pubkey;
     CPubKey pubkey2;
     std::vector<unsigned char> sig;
+    std::vector<pair<int, int64_t> > payData;
+    pair<int, int64_t> payInfo;
+    double payRate;
+    int payCount;
+    int64_t payValue;
     int64_t now; //dsee message times
     int64_t lastDseep;
     int cacheInputAge;
@@ -118,6 +126,11 @@ public:
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
 
+    int SetPayRate(int nHeight);
+    bool GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValue, double &actualRate);
+    float GetPaymentRate(const CBlockIndex *pindex);
+    int GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int64_t &totalValue);
+    int UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value);
     void UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack);
 
     void UpdateLastSeen(int64_t override=0)

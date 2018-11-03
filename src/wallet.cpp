@@ -3583,7 +3583,14 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
             int winningNode = GetCurrentMasterNode(1);
                 if(winningNode >= 0){
-                    payee =GetScriptForDestination(vecMasternodes[winningNode].pubkey.GetID());
+                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    {
+                        if (s.first == winningNode)
+                        {
+                            payee.SetDestination(s.second->pubkey.GetID());
+                            break;
+                        }
+                    }
                 } else {
                     if(fDebug) { printf("CreateCoinStake() : Failed to detect masternode to pay\n"); }
                     // masternodes are in-eligible for payment, burn the coins in-stead

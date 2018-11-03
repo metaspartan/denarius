@@ -122,6 +122,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     std::string errorMessage;
     QString status;
     QString collateral;
+    QString payrate;
 
     uint256 mnTxHash;
 
@@ -180,6 +181,10 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
             rank = GetMasternodeRank(mn, pindexBest->nHeight);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
+            int64_t value;
+            double rate;
+            mn.GetPaymentInfo(pindexBest, value, rate);
+            payrate = QString::fromStdString(strprintf("%sDNR/%d", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
         }
     }
 
@@ -211,6 +216,8 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
+    SortedWidgetItem *payrateItem = new QTableWidgetItem(payrate);
+
     rankItem->setData(Qt::UserRole, rank ? rank : 2000);
     rankItem->setData(Qt::DisplayRole, rank > 0 && rank < 500000 ? QString::number(rank) : "");
 
@@ -218,7 +225,8 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     ui->tableWidget_2->setItem(nodeRow, 1, addrItem);
     ui->tableWidget_2->setItem(nodeRow, 2, rankItem);
     ui->tableWidget_2->setItem(nodeRow, 3, statusItem);
-    ui->tableWidget_2->setItem(nodeRow, 4, collateralItem);
+    ui->tableWidget_2->setItem(nodeRow, 4, payrateItem);
+    ui->tableWidget_2->setItem(nodeRow, 5, collateralItem);
 }
 
 static QString seconds_to_DHMS(quint32 duration)
@@ -255,6 +263,10 @@ void MasternodeManager::updateNodeList()
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
         int mnRank = GetMasternodeRank(mn, pindexBest->nHeight);
+        int64_t value;
+        double rate;
+        mn.GetPaymentInfo(pindexBest, value, rate);
+        QString payrate = QString::fromStdString(strprintf("%sDNR/%d", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
@@ -263,7 +275,7 @@ void MasternodeManager::updateNodeList()
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
         rankItem->setData(Qt::UserRole, mnRank);
-        rankItem->setData(Qt::DisplayRole, QString::number(mnRank));
+        rankItem->setData(Qt::DisplayRole, QString("%1 %2").arg(QString::number(mnRank)).arg(payrate));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
         activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
@@ -276,7 +288,7 @@ void MasternodeManager::updateNodeList()
         CTxDestination address1;
         ExtractDestination(pubkey, address1);
         CBitcoinAddress address2(address1);
-        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()));
+        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()+strprintf(" (%3.0f%%, D%.2f)", mn.payRate, mn.payValue)));
 
         ui->tableWidget->setItem(mnRow, 0, addressItem);
         ui->tableWidget->setItem(mnRow, 1, rankItem);
