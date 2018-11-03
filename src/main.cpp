@@ -2517,10 +2517,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (mn.payRate > 110) // MN is being paid over 10% more regularly than it should
                                     {
                                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                            // check here if there is overpayment
                                             return error("CheckBlock-POS() : Out-of-cycle masternode payment detected, rejecting block.");
                                         } else {
-                                            if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block 1.1m\n");
+                                            if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                         }
                                     }
                                     // add mn payment data
@@ -2593,7 +2592,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
                                         return error("CheckBlock-POW() : Masternode overpayment detected, rejecting block.");
                                     } else {
-                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block 1.1m\n");
+                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                     }
                                 }
                                 mn.nBlockLastPaid = pindex->nHeight+1;
