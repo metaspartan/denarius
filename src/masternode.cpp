@@ -422,6 +422,15 @@ struct CompareLastPayRate
     }
 };
 
+struct CompareLastPayValue
+{
+    bool operator()(const pair<int, CMasterNode*>& t1,
+                    const pair<int, CMasterNode*>& t2) const
+    {
+        return (t1.second->payValue == t2.second->payValue ? t1.first > t2.first : t1.second->payValue > t2.second->payValue);
+    }
+};
+
 struct CompareValueOnly2
 {
     bool operator()(const pair<int64_t, int>& t1,
@@ -503,7 +512,7 @@ bool GetMasternodeRanks()
         if (!mn.nBlockLastPaid || mn.nBlockLastPaid == 0)
         {
             CBlockIndex* pindex = pindexBest;
-            mn.UpdateLastPaidBlock(pindex, 2880); // search back 1 day
+            mn.UpdateLastPaidBlock(pindex, max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS); // search back to the payment round end
         }
         vecMasternodeScores.push_back(make_pair(mn.nBlockLastPaid, &mn));
     }
@@ -623,7 +632,7 @@ int CMasterNode::SetPayRate(int nHeight)
              payCount = matches;
              payValue = amount;
              payRate = ((double)payValue / (scanBack / mnCount))*100;
-             printf("%d found with %s value = %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
+             printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
      }
@@ -650,7 +659,7 @@ int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToSca
         printf("done checking for matches: %d found with %s value\n", matches, FormatMoney(amount).c_str());
         if (matches > 0) {
             totalValue = amount;
-            return matches;
+            return totalValue / COIN;
         }
     }
     const CBlockIndex *BlockReading = pindex;

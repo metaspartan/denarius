@@ -184,7 +184,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
             int64_t value;
             double rate;
             mn.GetPaymentInfo(pindexBest, value, rate);
-            payrate = QString::fromStdString(strprintf("%sDNR/%d", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
+            payrate = QString::fromStdString(strprintf("%sDNR/%dblocks", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
         }
     }
 
@@ -266,7 +266,7 @@ void MasternodeManager::updateNodeList()
         int64_t value;
         double rate;
         mn.GetPaymentInfo(pindexBest, value, rate);
-        QString payrate = QString::fromStdString(strprintf("%sDNR/%d", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
+        QString payrate = QString::fromStdString(strprintf("%sDNR", FormatMoney(value).c_str()));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
@@ -275,7 +275,7 @@ void MasternodeManager::updateNodeList()
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
         rankItem->setData(Qt::UserRole, mnRank);
-        rankItem->setData(Qt::DisplayRole, QString("%1 %2").arg(QString::number(mnRank)).arg(payrate));
+        rankItem->setData(Qt::DisplayRole, QString("%2 (%1)").arg(QString::number(mnRank)).arg(payrate));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
         activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
         activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
@@ -288,7 +288,7 @@ void MasternodeManager::updateNodeList()
         CTxDestination address1;
         ExtractDestination(pubkey, address1);
         CBitcoinAddress address2(address1);
-        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()+strprintf(" (%3.0f%%, D%.2f)", mn.payRate, mn.payValue)));
+        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString())); // +strprintf(" - %.2fDNR (%3.0f%%)", FormatMoney(value).c_str(), rate)
 
         ui->tableWidget->setItem(mnRow, 0, addressItem);
         ui->tableWidget->setItem(mnRow, 1, rankItem);
