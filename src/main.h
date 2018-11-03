@@ -76,6 +76,7 @@ static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 DNR Denarius Max
 static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
+static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1375000; // Enforce masternode payments after this height
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
