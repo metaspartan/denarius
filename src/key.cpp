@@ -267,7 +267,8 @@ bool CKey::IsCompressed() const
 
 bool CKey::SetSecret(const CSecret& vchSecret, bool fCompressed)
 {
-    EC_KEY_free(pkey);
+    if (pkey != NULL)
+        EC_KEY_free(pkey);
     pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
     if (pkey == NULL)
         throw key_error("CKey::SetSecret() : EC_KEY_new_by_curve_name failed");
