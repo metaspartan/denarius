@@ -1363,7 +1363,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 
     if (strMethod == "senddnrtoanon"          && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontoanon"         && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendanontodnr"          && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontodnr"          && n > 2) ConvertTo<int64_t>(params[2]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
