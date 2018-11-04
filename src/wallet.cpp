@@ -6529,14 +6529,12 @@ bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRin
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
     std::string sError2;
-    /*
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
         printf("SendAnonToDnr() AddAnonInputs failed %s.\n", sError2.c_str());
         sError = "AddAnonInputs() failed: " + sError2;
         return false;
     };
-    */
 
     if (!CommitTransaction(wtxNew, reservekey))
     {
