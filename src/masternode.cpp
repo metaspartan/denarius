@@ -617,8 +617,8 @@ int CMasterNode::SetPayRate(int nHeight)
      } // if going past current height, add to scan back height to account for how far it is - e.g. 200 in front will get 200 more blocks to smooth it out
 
      if (payData.size()>0) {
-         printf("Using masternode cached payments data for pay rate");
-         printf(" (payInfo:%d@%f)...", payCount, payRate);
+         // printf("Using masternode cached payments data for pay rate");
+         // printf(" (payInfo:%d@%f)...", payCount, payRate);
          int64_t amount = 0;
          int matches = 0;
          BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
@@ -632,7 +632,7 @@ int CMasterNode::SetPayRate(int nHeight)
              payCount = matches;
              payValue = amount;
              payRate = ((double)payValue / (scanBack / mnCount))*100;
-             printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
+             // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
      }
@@ -647,8 +647,8 @@ int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToSca
     CBitcoinAddress address2(address1);
     totalValue = 0;
     if (payData.size()>0) {
-        printf("Using masternode cached payments data");
-        printf("(payInfo:%d@%f)...", payCount, payRate);
+        //printf("Using masternode cached payments data");
+        //printf("(payInfo:%d@%f)...", payCount, payRate);
         int64_t amount = 0;
         int matches = 0;
         BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
@@ -656,7 +656,7 @@ int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToSca
             amount += item.second;
             matches++;
         }
-        printf("done checking for matches: %d found with %s value\n", matches, FormatMoney(amount).c_str());
+        //printf("done checking for matches: %d found with %s value\n", matches, FormatMoney(amount).c_str());
         if (matches > 0) {
             totalValue = amount;
             return totalValue / COIN;
