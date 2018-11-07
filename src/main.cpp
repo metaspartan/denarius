@@ -791,7 +791,7 @@ bool CTransaction::CheckTransaction() const
 
         if (!fTestNet && nBestHeight < 1350000)
         {
-            printf("CheckTransaction() failed - anon txn in live before block 1.2 million, %s.\n", GetHash().ToString().c_str());
+            printf("CheckTransaction() failed - anon txn in live before block 1.35 million, %s.\n", GetHash().ToString().c_str());
             return false;
         };
 
@@ -823,8 +823,16 @@ bool CTransaction::CheckTransaction() const
         BOOST_FOREACH(const CTxIn& txin, vin)
             if (txin.prevout.IsNull())
                 return DoS(10, error("CTransaction::CheckTransaction() : prevout is null"));
-    }
-
+    } //New ban code for hybrid masternodes and FMPS - Not for prime time yet, may or may not be used
+	/*
+	else
+	{
+		BOOST_FOREACH(const CTxIn& txin, vin)
+			if (txin.prevout.IsBanned()) 
+				return DoS(10, error("You have been caught trying to cheat. Kthxbai"));
+	}
+	*/
+	
     return true;
 }
 
@@ -4169,13 +4177,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
             oldVersion = true;
 
-        // Disconnect nodes that are over block height 1.35m and have an old peer version
-        if (nBestHeight >= 1350000 && pfrom->nVersion < PROTOCOL_VERSION)
+        // Disconnect nodes that are over block height 1.45m and have an old peer version
+        if (nBestHeight >= 1450000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
         {
-          printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+          printf("Partner %s using obsolete version %i; DISCONNECTING\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
           pfrom->fDisconnect = true;
           return false;
         }
