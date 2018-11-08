@@ -640,7 +640,7 @@ int CMasterNode::SetPayRate(int nHeight)
 
 int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int64_t &totalValue)
 {
-    if(!pindex) return;
+    if(!pindex) return 0;
     CScript mnpayee = GetScriptForDestination(pubkey.GetID());
     CTxDestination address1;
     ExtractDestination(mnpayee, address1);
@@ -697,7 +697,7 @@ int CMasterNode::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToSca
 
 int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
-    if(!pindex) return;
+    if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;
     int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
