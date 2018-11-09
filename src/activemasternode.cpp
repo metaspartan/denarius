@@ -9,7 +9,7 @@
 #include "clientversion.h"
 
 //
-// Bootup the masternode, look for a 5000 DNR input and register on the network
+// Bootup the masternode, look for a 5000 D input and register on the network
 //
 void CActiveMasternode::ManageStatus()
 {
@@ -492,7 +492,7 @@ vector<COutput> CActiveMasternode::SelectCoinsMasternode(bool fSelectUnlocked)
     // Filter
     BOOST_FOREACH(const COutput& out, vCoins)
     {
-        if(out.tx->vout[out.i].nValue == GetMNCollateral()*COIN) { //exactly 5,000 DNR
+        if(out.tx->vout[out.i].nValue == GetMNCollateral()*COIN) { //exactly 5,000 D
             filteredCoins.push_back(out);
         }
     }
@@ -514,7 +514,7 @@ vector<COutput> CActiveMasternode::SelectCoinsMasternodeForPubKey(std::string co
     // Filter
     BOOST_FOREACH(const COutput& out, vCoins)
     {
-        if(out.tx->vout[out.i].scriptPubKey == scriptPubKey && out.tx->vout[out.i].nValue == GetMNCollateral()*COIN) { //exactly 5,000 DNR
+        if(out.tx->vout[out.i].scriptPubKey == scriptPubKey && out.tx->vout[out.i].nValue == GetMNCollateral()*COIN) { //exactly 5,000 D
             filteredCoins.push_back(out);
         }
     }

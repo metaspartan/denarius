@@ -828,8 +828,10 @@ bool CTransaction::CheckTransaction() const
 	else
 	{
 		BOOST_FOREACH(const CTxIn& txin, vin)
-			if (txin.prevout.IsBanned()) 
-				return DoS(10, error("You have been caught trying to cheat. Kthxbai"));
+			if (txin.prevout.IsBanned()){ // new function that checks if the txin.prevout matches an address
+				txin.prevout.SetNull(); // this should set the UTXO to null
+				return DoS(10, error("CheckTransaction(): You have been caught trying to cheat. Kthxbai"));
+			}
 	}
 	*/
 	
@@ -1527,11 +1529,11 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 		nSubsidy = 1000000 * COIN;  // 10% Premine
 	else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
         nSubsidy = 1 * COIN/2;
-	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m DNR (33% will go to hybrid masternodes)
+	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m D (33% will go to hybrid masternodes)
 		nSubsidy = 3 * COIN;
-	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m DNR
+	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m D
 		nSubsidy = 4 * COIN;
-	else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m DNR
+	else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
 		nSubsidy = 3 * COIN;
     else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
 		nSubsidy = 0; // PoW Ends
@@ -2436,12 +2438,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     }
 
     // ----------- masternode payments -----------
-    // Once upon a time, People were really interested in DNR.
-    // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
+    // Once upon a time, People were really interested in D.
+    // So much so, People wanted to bring D to the moon. Even Mars, Sooner than the roadster...
     // The Discord was active, People discussed how they would reach that goal.
     // There was one person, named Thi3rryzz watching all this from a save distance.
     // Then, the word MASTERNODES came to the table.
-    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of DNR
+    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of D
     // So Thi3rryzz decided to jump in..
     // After a lot of: "How much for MN" and "When MN?"
     // We hope to proudly present you:
@@ -2512,13 +2514,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             CScript pubScript;
 
                             if (pubScript == vtx[1].vout[i].scriptPubKey) {
-                                printf("CheckBlock-POS() : Found masternode payment: %s DNR to anonymous payee.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                printf("CheckBlock-POS() : Found masternode payment: %s D to anonymous payee.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
                                 foundPayee = true;
                             } else {
                                 CTxDestination mnDest;
                                 ExtractDestination(vtx[1].vout[i].scriptPubKey, mnDest);
                                 CBitcoinAddress mnAddress(mnDest);
-                                if (fDebug) printf("CheckBlock-POS() : Found masternode payment: %s DNR to %s.\n",FormatMoney(vtx[1].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
+                                if (fDebug) printf("CheckBlock-POS() : Found masternode payment: %s D to %s.\n",FormatMoney(vtx[1].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
                                 BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                                 {
                                     pubScript = GetScriptForDestination(mn.pubkey.GetID());
@@ -2532,7 +2534,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         int lastPaid = mn.nBlockLastPaid;
                                         int paidAge = pindex->nHeight+1 - lastPaid;
                                         int vinAge = GetInputAge(mn.vin);
-                                        if (fDebug) printf("CheckBlock-POS() : Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d) - input age: %d\n\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
+                                        if (fDebug) printf("CheckBlock-POS() : Masternode PoS payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
                                         if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
@@ -2623,7 +2625,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             payee = vtx[0].vout[i].scriptPubKey;
                             ExtractDestination(payee, mnDest);
                             CBitcoinAddress mnAddress(mnDest);
-                            if (fDebug) printf("CheckBlock-POW() : Found masternode payment: %s DNR to %s.\n",FormatMoney(vtx[0].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
+                            if (fDebug) printf("CheckBlock-POW() : Found masternode payment: %s D to %s.\n",FormatMoney(vtx[0].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
 
                             foundPaymentAmount = true;
 
@@ -2641,7 +2643,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     int lastPaid = mn.nBlockLastPaid;
                                     int paidAge = pindex->nHeight+1 - lastPaid;
                                     int vinAge = GetInputAge(mn.vin);
-                                    if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d) - input age: %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
+                                    if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
                                     if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
                                     {
                                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {

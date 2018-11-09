@@ -1647,7 +1647,7 @@ void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, boo
                     found = true;
                     if (IsCollateralAmount(pcoin->vout[i].nValue)) continue; // do not use collateral amounts
                     found = !IsDenominatedAmount(pcoin->vout[i].nValue);
-                    if(found && coin_type == ONLY_NONDENOMINATED_NOTMN) found = (pcoin->vout[i].nValue != GetMNCollateral()*COIN); // do not use MN funds 5,000 DNR
+                    if(found && coin_type == ONLY_NONDENOMINATED_NOTMN) found = (pcoin->vout[i].nValue != GetMNCollateral()*COIN); // do not use MN funds 5,000 D
                 } else {
                     found = true;
                 }
@@ -3596,7 +3596,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                     // masternodes are in-eligible for payment, burn the coins in-stead
                     std::string burnAddress;
                     if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
-                    else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+                    else burnAddress = "DOOTSXXE0XX3X69XXXXXdDXXXXZeeDTw";
                     CBitcoinAddress burnDestination;
                     burnDestination.SetString(burnAddress);
                     payee = GetScriptForDestination(burnDestination.Get());
@@ -4289,7 +4289,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
         {
             if (IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && (txindex.vSpent.size() <= n || txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found lost coin %s DNR %s[%d], %s\n",
+                printf("FixSpentCoins found lost coin %s D %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -4301,7 +4301,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
             }
             else if (IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && (txindex.vSpent.size() > n && !txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found spent coin %s DNR %s[%d], %s\n",
+                printf("FixSpentCoins found spent coin %s D %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -6254,10 +6254,10 @@ bool CWallet::CacheAnonStats()
 };
 
 
-bool CWallet::SendDnrToAnon(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
+bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
 {
     if (fDebugRingSig)
-        printf("SendDnrToAnon()\n");
+        printf("SendDToAnon()\n");
 
     if (IsLocked())
     {
@@ -6402,7 +6402,7 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient Anonymous DNR funds";
+        sError = "Insufficient Anonymous D funds";
         return false;
     };
 
@@ -6460,10 +6460,10 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
     return true;
 };
 
-bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
+bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
 {
     if (fDebug)
-        printf("SendAnonToDnr()\n");
+        printf("SendAnonToD()\n");
 
     if (IsLocked())
     {
@@ -6498,7 +6498,7 @@ bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRin
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient Anonymous DNR Funds";
+        sError = "Insufficient Anonymous D Funds";
         return false;
     };
 
@@ -6531,7 +6531,7 @@ bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRin
     std::string sError2;
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
-        printf("SendAnonToDnr() AddAnonInputs failed %s.\n", sError2.c_str());
+        printf("SendAnonToD() AddAnonInputs failed %s.\n", sError2.c_str());
         sError = "AddAnonInputs() failed: " + sError2;
         return false;
     };
@@ -6849,7 +6849,7 @@ bool CWallet::EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr,
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient Anonymous DNR funds";
+        sError = "Insufficient Anonymous D funds";
         return false;
     };
 

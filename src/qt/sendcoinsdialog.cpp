@@ -38,7 +38,7 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
 
 #if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
-    ui->lineEditCoinControlChange->setPlaceholderText(tr("Enter a Denarius address (e.g. DNRyvGBZBowrppUwwNUo1GCRDTibzJi7g2M)"));
+    ui->lineEditCoinControlChange->setPlaceholderText(tr("Enter a Denarius address (e.g. DyvGBZBowrppUwwNUo1GCRDTibzJi7g2M)"));
 #endif
 
     addEntry();

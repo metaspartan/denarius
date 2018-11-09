@@ -156,7 +156,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
                 else
                     address2.Set(address1);
                 if (vout.nValue != GetMNCollateral()*COIN)
-                    errorMessage += "TX is not equal to 5000 DNR. ";
+                    errorMessage += "TX is not equal to 5000 D. ";
             }
             if (fDebug) printf("MasternodeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
             break;
@@ -184,7 +184,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
             int64_t value;
             double rate;
             mn.GetPaymentInfo(pindexBest, value, rate);
-            payrate = QString::fromStdString(strprintf("%sDNR/%dblocks", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
+            payrate = QString::fromStdString(strprintf("%sD/%dblocks", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
         }
     }
 
@@ -266,7 +266,7 @@ void MasternodeManager::updateNodeList()
         int64_t value;
         double rate;
         mn.GetPaymentInfo(pindexBest, value, rate);
-        QString payrate = QString::fromStdString(strprintf("%sDNR", FormatMoney(value).c_str()));
+        QString payrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
@@ -288,7 +288,7 @@ void MasternodeManager::updateNodeList()
         CTxDestination address1;
         ExtractDestination(pubkey, address1);
         CBitcoinAddress address2(address1);
-        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString())); // +strprintf(" - %.2fDNR (%3.0f%%)", FormatMoney(value).c_str(), rate)
+        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString())); // +strprintf(" - %.2fD (%3.0f%%)", FormatMoney(value).c_str(), rate)
 
         ui->tableWidget->setItem(mnRow, 0, addressItem);
         ui->tableWidget->setItem(mnRow, 1, rankItem);

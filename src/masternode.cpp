@@ -199,7 +199,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             int value;
             int payments = mn.UpdateLastPaidAmounts(pindex, 1000, value); // do a search back 1000 blocks when receiving a new masternode to find their last payment, payments = number of payments received, value = amount
             if (payments > 0) {
-                printf("Registered new masternode %s(%i/%i) - paid %d times for %f DNR\n", addr, count, current, payments, value);
+                printf("Registered new masternode %s(%i/%i) - paid %d times for %f D\n", addr, count, current, payments, value);
             }
             vecMasternodes.push_back(mn);
 
@@ -763,7 +763,7 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
         // set the node's current 'reward rate'
         payRate = ((double)rewardCount / (scanBack / mnCount))*100;
 
-        if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s DNR, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
+        if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
 
         return rewardCount;
     } else {

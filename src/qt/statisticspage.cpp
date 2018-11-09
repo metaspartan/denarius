@@ -66,15 +66,15 @@ void StatisticsPage::updateStatistics()
     QString subsidy = "";
 	if (pindexBest->nHeight < 1000000)
     {
-        subsidy = "3 DNR per block";
+        subsidy = "3 D per block";
     }
 	else if (pindexBest->nHeight < 2000000)
     {
-        subsidy = "4 DNR per block";
+        subsidy = "4 D per block";
     }
 	else if (pindexBest->nHeight < 3000000)
     {
-        subsidy = "3 DNR per block";
+        subsidy = "3 D per block";
     }
     else if (pindexBest->nHeight > 3000000)
     {
@@ -87,7 +87,7 @@ void StatisticsPage::updateStatistics()
 
     QString QPeers = QString::number(peers);
     QString qVolume = QString::number(volume);
-	QString mn = "5,000 DNR";
+	QString mn = "5,000 D";
 	QString mn2 = "33% of PoW/PoS block reward";
 	
 	ui->mncost->setText("<b><font color=\"orange\">" + mn + "</font></b>");	
@@ -181,11 +181,11 @@ void StatisticsPage::updateStatistics()
 
     if(volume > volumePrevious)
     {
-        ui->volumeBox->setText("<b><font color=\"yellow\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"yellow\">" + qVolume + " D" + "</font></b>");
     } else if(volume < volumePrevious) {
-        ui->volumeBox->setText("<b><font color=\"red\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"red\">" + qVolume + " D" + "</font></b>");
     } else {
-        ui->volumeBox->setText("<b><font color=\"orange\">" + qVolume + " DNR" + "</font></b>");
+        ui->volumeBox->setText("<b><font color=\"orange\">" + qVolume + " D" + "</font></b>");
     }
 	
     updatePrevious(nHeight, nMinWeight, nNetworkWeight, phase, subsidy, pHardness, pHardness2, pPawrate2, Qlpawrate, peers, volume, marketcap);

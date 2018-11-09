@@ -2397,9 +2397,9 @@ Value senddnrtoanon(const Array& params, bool fHelp)
         wtx.mapValue["to"]      = params[4].get_str();
 
     std::string sError;
-    if (!pwalletMain->SendDnrToAnon(sxAddr, nAmount, sNarr, wtx, sError))
+    if (!pwalletMain->SendDToAnon(sxAddr, nAmount, sNarr, wtx, sError))
     {
-        printf("SendDnrToAnon failed %s\n", sError.c_str());
+        printf("SendDToAnon failed %s\n", sError.c_str());
         throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
     return wtx.GetHash().GetHex();
@@ -2508,9 +2508,9 @@ Value sendanontodnr(const Array& params, bool fHelp)
 
 
     std::string sError;
-    if (!pwalletMain->SendAnonToDnr(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
+    if (!pwalletMain->SendAnonToD(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
     {
-        printf("SendAnonToDnr failed %s\n", sError.c_str());
+        printf("SendAnonToD failed %s\n", sError.c_str());
         throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
     return wtx.GetHash().GetHex();
@@ -2909,7 +2909,7 @@ Value txnreport(const Array& params, bool fHelp)
                     if (txin.prevout.IsNull()) // coinbase
                         continue;
 
-                    entry.push_back("DNR in");
+                    entry.push_back("D in");
                     entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
 
                     if (pwalletMain->IsMine(txin))
@@ -3003,7 +3003,7 @@ Value txnreport(const Array& params, bool fHelp)
                     };
                 } else
                 {
-                    entry.push_back("DNR out");
+                    entry.push_back("D out");
                     entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
 
 

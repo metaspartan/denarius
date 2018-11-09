@@ -25,10 +25,10 @@ class CValidationState;
 //#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
 //#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
 
-static const int64_t FORTUNA_COLLATERAL = (5000*COIN); // 5,000 DNR
-static const int64_t FORTUNA_FEE = (0.010000*COIN); //0.01 DNR
-static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
-static const int64_t FORTUNA_POOL_MAX = (11000*COIN); //11,000 DNR
+static const int64_t FORTUNA_COLLATERAL = (5000*COIN); // 5,000 D
+static const int64_t FORTUNA_FEE = (0.010000*COIN); //0.01 D
+static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 D
+static const int64_t FORTUNA_POOL_MAX = (11000*COIN); //11,000 D
 
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
@@ -72,7 +72,7 @@ static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
 static const int64_t MIN_TX_FEE_ANON = 10000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
-static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 DNR Denarius Max
+static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 D Denarius Max
 static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
