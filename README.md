@@ -1,4 +1,4 @@
-# Denarius [DNR]
+# Denarius [D]
 Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 ![logo](http://i.imgur.com/gIe5vnw.png)
@@ -14,34 +14,34 @@ Intro
 ==========================
 Denarius is a true optional anonymous, untraceable, and secure hybrid cryptocurrency.
 
-Ticker: DNR
+Ticker: D
 
-Denarius [DNR] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
-10,000,000 DNR will be created in approx. about 3 years during the PoW phase. Denarius had a 10% Premine of 1,000,000 DNR for bounties, distribution, and marketing.
+Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
+10,000,000 D will be created in approx. about 3 years during the PoW phase. Denarius had a 10% Premine of 1,000,000 D for bounties, distribution, and marketing.
 
 Specifications
 ==========================
-* Total number of coins: 10,000,000 DNR
+* Total number of coins: 10,000,000 D
 * Ideal block time: 30 seconds
 * Stake interest: 6% annual static inflation
 * Confirmations: 10 blocks
 * Maturity: 30 blocks (15 minutes)
 * Min stake age: 8 hours
-* Cost of Hybrid Masternode: 5,000 DNR
+* Cost of Hybrid Masternode: 5,000 D
 * Hybrid Masternode Reward: 33% of current block reward
 
 Technology
 ==========================
 * Hybrid PoW/PoS Masternodes
 * Stealth addresses
-* Ring Signatures
+* Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
 * Proof of Data (Image/Data Timestamping)
 * Fast 30 Second Block Times
-* New Tribus PoW Algorithm comprising of 3 NIST5 algos
+* New/First Tribus PoW Algorithm comprising of 3 NIST5 algorithms
 * Tribus PoW/PoS Hybrid
 * Full decentralization
 
