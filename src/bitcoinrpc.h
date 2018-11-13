@@ -241,9 +241,9 @@ extern json_spirit::Value clearwallettransactions(const json_spirit::Array& para
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
 
 //RPC Ring Sigs - D e n a r i u s
-extern json_spirit::Value senddnrtoanon(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value senddtoanon(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendanontoanon(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value sendanontodnr(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value sendanontod(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value estimateanonfee(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value anonoutputs(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value anoninfo(const json_spirit::Array& params, bool fHelp);

@@ -2363,11 +2363,11 @@ Value scanforalltxns(const Array& params, bool fHelp)
     return result;
 }
 
-Value senddnrtoanon(const Array& params, bool fHelp)
+Value senddtoanon(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 5)
         throw std::runtime_error(
-            "senddnrtoanon <stealth_address> <amount> [narration] [comment] [comment-to]\n"
+            "senddtoanon <stealth_address> <amount> [narration] [comment] [comment-to]\n"
             "<amount> is a real number and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -2466,11 +2466,11 @@ Value sendanontoanon(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value sendanontodnr(const Array& params, bool fHelp)
+Value sendanontod(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 6)
         throw std::runtime_error(
-            "sendanontodnr <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
+            "sendanontod <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
             "<amount> is a real number and is rounded to the nearest 0.000001\n"
             "<ring_size> is a number of outputs of the same amount to include in the signature"
             + HelpRequiringPassphrase());
