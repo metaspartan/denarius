@@ -238,29 +238,29 @@ public:
         return Erase(std::make_pair(std::string("lao"), keyId));
     }
 
-    bool ReadOwnedAnonOutput(const ec_point& vchImage, COwnedAnonOutput& ownAo)
+    bool ReadOwnedAnonOutput(const std::vector<uint8_t>& vchImage, COwnedAnonOutput& ownAo)
     {
         return Read(std::make_pair(std::string("oao"), vchImage), ownAo);
     }
 
-    bool WriteOwnedAnonOutput(const ec_point& vchImage, const COwnedAnonOutput& ownAo)
+    bool WriteOwnedAnonOutput(const std::vector<uint8_t>& vchImage, const COwnedAnonOutput& ownAo)
     {
         nWalletDBUpdated++;
         return Write(std::make_pair(std::string("oao"), vchImage), ownAo, true);
     }
 
-    bool EraseOwnedAnonOutput(const ec_point& vchImage)
+    bool EraseOwnedAnonOutput(const std::vector<uint8_t>& vchImage)
     {
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("oao"), vchImage));
     }
 
-    bool ReadOwnedAnonOutputLink(const CPubKey& pkCoin, ec_point& vchImage)
+    bool ReadOwnedAnonOutputLink(const CPubKey& pkCoin, std::vector<uint8_t>& vchImage)
     {
         return Read(std::make_pair(std::string("oal"), pkCoin), vchImage);
     }
 
-    bool WriteOwnedAnonOutputLink(const CPubKey& pkCoin, const ec_point& vchImage)
+    bool WriteOwnedAnonOutputLink(const CPubKey& pkCoin, const std::vector<uint8_t>& vchImage)
     {
         nWalletDBUpdated++;
         return Write(std::make_pair(std::string("oal"), pkCoin), vchImage, true);
@@ -272,18 +272,18 @@ public:
         return Erase(std::make_pair(std::string("oal"), pkCoin));
     }
 
-    bool ReadOldOutputLink(const ec_point& pkImage, ec_point& vchImage)
+    bool ReadOldOutputLink(const std::vector<uint8_t>& pkImage, std::vector<uint8_t>& vchImage)
     {
         return Read(std::make_pair(std::string("ool"), pkImage), vchImage);
     }
 
-    bool WriteOldOutputLink(const ec_point& pkImage, const ec_point& vchImage)
+    bool WriteOldOutputLink(const std::vector<uint8_t>& pkImage, const std::vector<uint8_t>& vchImage)
     {
         nWalletDBUpdated++;
         return Write(std::make_pair(std::string("ool"), pkImage), vchImage, true);
     }
 
-    bool EraseOldOutputLink(const ec_point& pkImage)
+    bool EraseOldOutputLink(const std::vector<uint8_t>& pkImage)
     {
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("ool"), pkImage));
