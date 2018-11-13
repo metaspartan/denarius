@@ -272,6 +272,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
         }
 
         UnlockStealthAddresses(vMasterKey);
+		ProcessLockedAnonOutputs(); //Process Locked Anon Outputs when unlocked, D E N A R I U S - v3.1
         SecureMsgWalletUnlocked();
         return true;
     }
@@ -6315,8 +6316,6 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
 
     int64_t nFeeRequired;
     if (!CreateTransaction(scriptNarration, nValue, sNarr, wtxNew, reservekey, nFeeRequired))
-    //if (!CreateTransaction(vecSend, wtxNew, nFeeRequired, nChangePos, reservekey))
-    //if (!CreateTransaction(vecSend, wtxNew, nFeeRequired, nChangePos, NULL))
     {
         sError = "CreateTransaction() failed.";
         return false;
@@ -6863,17 +6862,263 @@ bool CWallet::EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr,
         return false;
     };
 
-    int64_t nFeeRequired;
-    /*
-    if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, true, sError))
+    int64_t nFeeRequired;	
+	if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, true, sError))
     {
         printf("EstimateAnonFee() AddAnonInputs failed %s.\n", sError.c_str());
         sError = "AddAnonInputs() failed.";
         return false;
     };
-    */
 
     nFeeRet = nFeeRequired;
+
+    return true;
+};
+
+bool CWallet::ExpandLockedAnonOutput(CWalletDB *pwdb, CKeyID &ckeyId, CLockedAnonOutput &lao, std::set<uint256> &setUpdated)
+{
+    if (fDebugRingSig)
+    {
+        CBitcoinAddress addrTo(ckeyId);
+        printf("%s %s\n", __func__, addrTo.ToString().c_str());
+        AssertLockHeld(cs_main);
+        AssertLockHeld(cs_wallet);
+    };
+
+    CStealthAddress sxFind;
+    //sxFind.SetScanPubKey(lao.pkScan);
+
+    bool fFound = false;
+    ec_secret sSpendR;
+    ec_secret sSpend;
+    ec_secret sScan;
+
+    ec_point pkEphem;
+
+
+    std::set<CStealthAddress>::iterator si = stealthAddresses.find(sxFind);
+    if (si != stealthAddresses.end())
+    {
+        fFound = true;
+
+        if (si->spend_secret.size() != EC_SECRET_SIZE
+         || si->scan_secret .size() != EC_SECRET_SIZE)
+            return error("%s: Stealth address has no secret.", __func__);
+
+        memcpy(&sScan.e[0], &si->scan_secret[0], EC_SECRET_SIZE);
+        memcpy(&sSpend.e[0], &si->spend_secret[0], EC_SECRET_SIZE);
+
+        pkEphem.resize(lao.pkEphem.size());
+        memcpy(&pkEphem[0], lao.pkEphem.begin(), lao.pkEphem.size());
+
+        if (StealthSecretSpend(sScan, pkEphem, sSpend, sSpendR) != 0)
+            return error("%s: StealthSecretSpend() failed.", __func__);
+
+    };
+	/*
+    // - check ext account stealth keys
+    ExtKeyAccountMap::const_iterator mi;
+    if (!fFound)
+    for (mi = mapExtAccounts.begin(); mi != mapExtAccounts.end(); ++mi)
+    {
+        fFound = true;
+
+        CExtKeyAccount *ea = mi->second;
+
+        CKeyID sxId = lao.pkScan.GetID();
+
+        AccStealthKeyMap::const_iterator miSk = ea->mapStealthKeys.find(sxId);
+        if (miSk == ea->mapStealthKeys.end())
+            continue;
+
+        const CEKAStealthKey &aks = miSk->second;
+        if (ea->IsLocked(aks))
+            return error("%s: Stealth is locked.", __func__);
+
+        ec_point pkExtracted;
+        ec_secret sShared;
+
+        pkEphem.resize(lao.pkEphem.size());
+        memcpy(&pkEphem[0], lao.pkEphem.begin(), lao.pkEphem.size());
+        memcpy(&sScan.e[0], aks.skScan.begin(), EC_SECRET_SIZE);
+
+        // - need sShared to extract key
+        if (StealthSecret(sScan, pkEphem, aks.pkSpend, sShared, pkExtracted) != 0)
+            return error("%s: StealthSecret() failed.", __func__);
+
+        CKey kChild;
+
+        if (0 != ea->ExpandStealthChildKey(&aks, sShared, kChild))
+            return error("%s: ExpandStealthChildKey() failed %s.", __func__, aks.ToStealthAddress().c_str());
+
+        memcpy(&sSpendR.e[0], kChild.begin(), EC_SECRET_SIZE);
+    };
+	*/
+
+
+    if (!fFound)
+        return error("%s: No stealth key found.", __func__);
+
+    ec_point pkTestSpendR;
+    if (SecretToPublicKey(sSpendR, pkTestSpendR) != 0)
+        return error("%s: SecretToPublicKey() failed.", __func__);
+
+
+    CKey key;
+    if (!key.IsValid())
+        return error("%s: Reconstructed key is invalid.", __func__);
+
+    CPubKey pkCoin = key.GetPubKey();
+    if (!pkCoin.IsValid())
+        return error("%s: pkCoin is invalid.", __func__);
+
+    CKeyID keyIDTest = pkCoin.GetID();
+    if (keyIDTest != ckeyId)
+    {
+        printf("%s: Error: Generated secret does not match.\n", __func__);
+        if (fDebugRingSig)
+        {
+            printf("test   %s\n", keyIDTest.ToString().c_str());
+            printf("gen    %s\n", ckeyId.ToString().c_str());
+        };
+        return false;
+    };
+
+    if (fDebugRingSig)
+    {
+        CBitcoinAddress coinAddress(keyIDTest);
+        printf("Adding secret to key %s.\n", coinAddress.ToString().c_str());
+    };
+
+    if (!AddKeyInDBTxn(pwdb, key))
+        return error("%s: AddKeyInDBTxn failed.", __func__);
+
+    // -- store keyimage
+    ec_point pkImage;
+    ec_point pkOldImage;
+    getOldKeyImage(pkCoin, pkOldImage);
+    if (generateKeyImage(pkTestSpendR, sSpendR, pkImage) != 0)
+        return error("%s: generateKeyImage failed.", __func__);
+
+    bool fSpentAOut = false;
+
+
+    setUpdated.insert(lao.outpoint.hash);
+
+    {
+        // -- check if this output is already spent
+        CTxDB txdb;
+
+        CKeyImageSpent kis;
+
+        bool fInMemPool;
+        CAnonOutput ao;
+        txdb.ReadAnonOutput(pkCoin, ao);
+        if ((GetKeyImage(&txdb, pkImage, kis, fInMemPool) && !fInMemPool)
+          ||(GetKeyImage(&txdb, pkOldImage, kis, fInMemPool) && !fInMemPool)) // shouldn't be possible for kis to be in mempool here
+        {
+            fSpentAOut = true;
+
+            WalletTxMap::iterator miw = mapWallet.find(lao.outpoint.hash);
+            if (miw != mapWallet.end())
+            {
+                CWalletTx& wtx = (*miw).second;
+                wtx.MarkSpent(lao.outpoint.n);
+
+                if (!pwdb->WriteTx(lao.outpoint.hash, wtx))
+                    return error("%s: WriteTx %s failed.", __func__, wtx.ToString().c_str());
+
+                wtx.MarkDirty();
+            };
+        };
+    } // txdb
+
+    COwnedAnonOutput oao(lao.outpoint, fSpentAOut);
+    if (!pwdb->WriteOwnedAnonOutput(pkImage, oao)
+      ||!pwdb->WriteOldOutputLink(pkOldImage, pkImage)
+      ||!pwdb->WriteOwnedAnonOutputLink(pkCoin, pkImage))
+    {
+        return error("%s: WriteOwnedAnonOutput() failed.", __func__);
+    };
+
+    if (fDebugRingSig)
+        printf("Adding anon output to wallet: %s.\n", HexStr(pkImage).c_str());
+
+    return true;
+};
+
+bool CWallet::ProcessLockedAnonOutputs()
+{
+    if (fDebugRingSig)
+    {
+        printf("%s\n", __func__);
+        AssertLockHeld(cs_main);
+        AssertLockHeld(cs_wallet);
+    };
+    // -- process owned anon outputs received when wallet was locked.
+
+
+    std::set<uint256> setUpdated;
+
+    CWalletDB walletdb(strWalletFile, "cr+");
+    walletdb.TxnBegin();
+    Dbc *pcursor = walletdb.GetTxnCursor();
+
+    if (!pcursor)
+        throw runtime_error(strprintf("%s : cannot create DB cursor.", __func__).c_str());
+    unsigned int fFlags = DB_SET_RANGE;
+    while (true)
+    {
+        // Read next record
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        if (fFlags == DB_SET_RANGE)
+            ssKey << std::string("lao");
+        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+        int ret = walletdb.ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        fFlags = DB_NEXT;
+        if (ret == DB_NOTFOUND)
+        {
+            break;
+        } else
+        if (ret != 0)
+        {
+            pcursor->close();
+            throw runtime_error(strprintf("%s : error scanning DB.", __func__).c_str());
+        };
+
+        // Unserialize
+        string strType;
+        ssKey >> strType;
+        if (strType != "lao")
+            break;
+        CLockedAnonOutput lockedAnonOutput;
+        CKeyID ckeyId;
+        ssKey >> ckeyId;
+        ssValue >> lockedAnonOutput;
+
+        if (ExpandLockedAnonOutput(&walletdb, ckeyId, lockedAnonOutput, setUpdated))
+        {
+            if ((ret = pcursor->del(0)) != 0)
+               printf("%s : Delete failed %d, %s\n", __func__, ret, db_strerror(ret));
+        };
+    };
+
+    pcursor->close();
+
+    walletdb.TxnCommit();
+
+    std::set<uint256>::iterator it;
+    for (it = setUpdated.begin(); it != setUpdated.end(); ++it)
+    {
+        WalletTxMap::iterator miw = mapWallet.find(*it);
+        if (miw == mapWallet.end())
+            continue;
+        CWalletTx& wtx = (*miw).second;
+        wtx.MarkDirty();
+        wtx.fDebitCached = 2; // force update
+
+        NotifyTransactionChanged(this, *it, CT_UPDATED);
+    };
 
     return true;
 };

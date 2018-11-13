@@ -130,6 +130,7 @@ bool VerifyChecksum(const data_chunk& data)
 };
 
 
+
 int GenerateRandomSecret(ec_secret& out)
 {
     RandAddSeedPerfmon();
