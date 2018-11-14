@@ -1242,11 +1242,10 @@ bool AppInit2()
     else
         printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
 	
-	if (fDebug)
-		printf("Debugging is Enabled.");
-	
-	if (fDebugRingSig)
-		printf("Ring Signature Debugging is Enabled.");
+    if (fDebug)
+        printf("Debugging is Enabled.");
+	else
+		printf("Debugging is not enabled.");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));

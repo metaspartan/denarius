@@ -6316,7 +6316,7 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
 
     int64_t nFeeRequired;
     if (!CreateTransaction(scriptNarration, nValue, sNarr, wtxNew, reservekey, nFeeRequired))
-	{
+    {
         sError = "CreateTransaction() failed.";
         return false;
     };
