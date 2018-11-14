@@ -1245,7 +1245,7 @@ bool AppInit2()
     if (fDebug)
         printf("Debugging is Enabled.");
 	else
-		printf("Debugging is not enabled.");
+        printf("Debugging is not enabled.");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
