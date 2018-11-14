@@ -3597,7 +3597,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                     // masternodes are in-eligible for payment, burn the coins in-stead
                     std::string burnAddress;
                     if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
-                    else burnAddress = "DOOTSXXE0XX3X69XXXXXdDXXXXZeeDTw";
+                    else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
                     CBitcoinAddress burnDestination;
                     burnDestination.SetString(burnAddress);
                     payee = GetScriptForDestination(burnDestination.Get());
