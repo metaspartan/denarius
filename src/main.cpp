@@ -791,7 +791,7 @@ bool CTransaction::CheckTransaction() const
 
         if (!fTestNet && nBestHeight < 1350000)
         {
-            printf("CheckTransaction() failed - anon txn in live before block 1.2 million, %s.\n", GetHash().ToString().c_str());
+            printf("CheckTransaction() failed - anon txn in live before block 1.35 million, %s.\n", GetHash().ToString().c_str());
             return false;
         };
 
@@ -823,8 +823,18 @@ bool CTransaction::CheckTransaction() const
         BOOST_FOREACH(const CTxIn& txin, vin)
             if (txin.prevout.IsNull())
                 return DoS(10, error("CTransaction::CheckTransaction() : prevout is null"));
-    }
-
+    } //New ban code for hybrid masternodes and FMPS - Not for prime time yet, may or may not be used
+	/*
+	else
+	{
+		BOOST_FOREACH(const CTxIn& txin, vin)
+			if (txin.prevout.IsBanned()){ // new function that checks if the txin.prevout matches an address
+				txin.prevout.SetNull(); // this should set the UTXO to null
+				return DoS(10, error("CheckTransaction(): You have been caught trying to cheat. Kthxbai"));
+			}
+	}
+	*/
+	
     return true;
 }
 
@@ -1519,11 +1529,11 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 		nSubsidy = 1000000 * COIN;  // 10% Premine
 	else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
         nSubsidy = 1 * COIN/2;
-	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m DNR (33% will go to hybrid masternodes)
+	else if (pindexBest->nHeight <= 1000000) // Block 1m ~ 3m D (33% will go to hybrid masternodes)
 		nSubsidy = 3 * COIN;
-	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m DNR
+	else if (pindexBest->nHeight <= 2000000) // Block 2m ~ 4m D
 		nSubsidy = 4 * COIN;
-	else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m DNR
+	else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
 		nSubsidy = 3 * COIN;
     else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
 		nSubsidy = 0; // PoW Ends
@@ -2428,12 +2438,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     }
 
     // ----------- masternode payments -----------
-    // Once upon a time, People were really interested in DNR.
-    // So much so, People wanted to bring DNR to the moon. Even Mars, Sooner than the roadster...
+    // Once upon a time, People were really interested in D.
+    // So much so, People wanted to bring D to the moon. Even Mars, Sooner than the roadster...
     // The Discord was active, People discussed how they would reach that goal.
     // There was one person, named Thi3rryzz watching all this from a save distance.
     // Then, the word MASTERNODES came to the table.
-    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of DNR
+    // People wanted masternodes... Really Bad. But King Carsen was already busy with the rest of D
     // So Thi3rryzz decided to jump in..
     // After a lot of: "How much for MN" and "When MN?"
     // We hope to proudly present you:
@@ -2476,13 +2486,14 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                 int64_t nCalculatedStakeReward = GetProofOfStakeReward(nCoinAge, nFees);
 
                 // Calculate expected masternodePaymentAmmount
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, nCalculatedStakeReward);
+                int64_t masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, nCalculatedStakeReward);
 
                 // If we don't already have its previous block, skip masternode payment step
                 if (pindex != NULL)
                 {
                     bool foundPaymentAmount = false;
                     bool foundPayee = false;
+                    bool paymentOK = false;
 
                     CScript payee;
 
@@ -2494,40 +2505,86 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     // Check transaction for payee and if contains masternode reward payment
                     if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[1].vout.size()); }
+                    if(fDebug) { printf("CheckBlock-POS() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
                     for (unsigned int i = 0; i < vtx[1].vout.size(); i++) {
                         if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %ld\n",i, vtx[1].vout[i].nValue); }
                         if(vtx[1].vout[i].nValue == masternodePaymentAmount )
+                        {
                             foundPaymentAmount = true;
-                        if(vtx[1].vout[i].scriptPubKey == payee )
-                            foundPayee = true;
                             CScript pubScript;
-                            BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
-                            {
-                                pubScript = GetScriptForDestination(mn.pubkey.GetID());
-                                CTxDestination address1;
-                                ExtractDestination(pubScript, address1);
-                                CBitcoinAddress address2(address1);
 
-                                if (vtx[1].vout[i].scriptPubKey == pubScript)
+                            if (pubScript == vtx[1].vout[i].scriptPubKey) {
+                                printf("CheckBlock-POS() : Found masternode payment: %s D to anonymous payee.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                foundPayee = true;
+                            } else {
+                                CTxDestination mnDest;
+                                ExtractDestination(vtx[1].vout[i].scriptPubKey, mnDest);
+                                CBitcoinAddress mnAddress(mnDest);
+                                if (fDebug) printf("CheckBlock-POS() : Found masternode payment: %s D to %s.\n",FormatMoney(vtx[1].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
+                                BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                                 {
-                                    int lastPaid = mn.nBlockLastPaid;
-                                    int paidAge = pindex->nHeight+1 - lastPaid;
-                                    if (fDebug) printf("Masternode PoS payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[1].vout[i].nValue / COIN).c_str(), paidAge, mn.nBlockLastPaid);
-                                    if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                                    CTxDestination address1;
+                                    ExtractDestination(pubScript, address1);
+                                    CBitcoinAddress address2(address1);
+
+                                    if (vtx[1].vout[i].scriptPubKey == pubScript)
                                     {
-                                        if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
+                                        int64_t value = vtx[1].vout[i].nValue;
+                                        int lastPaid = mn.nBlockLastPaid;
+                                        int paidAge = pindex->nHeight+1 - lastPaid;
+                                        int vinAge = GetInputAge(mn.vin);
+                                        if (fDebug) printf("CheckBlock-POS() : Masternode PoS payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
+                                        if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
+                                        {
+                                            if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                                return error("CheckBlock-POS() : Masternode has only %d confirmations (requires %d) - rejecting block.", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY);
+                                            } else {
+                                                if (fDebug) printf("WARNING: Masternode has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                            }
+                                            break;
+                                        }
+                                        if (mn.payRate > 110) // MN is being paid over 10% more regularly than it should
+                                        {
+                                            if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                                return error("CheckBlock-POS() : Out-of-cycle masternode payment detected, rejecting block.");
+                                            } else {
+                                                if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                            }
+                                            break;
+                                        }
+                                        // add mn payment data
+                                        mn.nBlockLastPaid = pindex->nHeight+1;
+                                        mn.payData.push_back(make_pair(pindex->nHeight+1, value));
+                                        mn.SetPayRate(pindex->nHeight+1);
+                                        foundPayee = true;
+                                        paymentOK = true;
+                                        break;
                                     }
-                                    mn.nBlockLastPaid = pindex->nHeight+1;
-                                    foundPayee = true;
                                 }
                             }
+                        }
+                    }
+
+                    if (!foundPayee) {
+                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            return error("CheckBlock-POS() : Did not find this payee in the masternode list, rejecting block.");
+                        } else {
+                            if (fDebug) printf("WARNING: Did not find this payee in the masternode list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                            foundPayee = true;
+                        }
+                    } else if (paymentOK) {
+                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            if (fDebug) printf("CheckBlock-POS() : This payment has been determined as legitimate, and will be allowed.\n");
+                        } else {
+                            if (fDebug) printf("CheckBlock-POS() : This payment has been determined as legitimate, and will be allowed after block %d.\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                        }
                     }
 
                     if(!(foundPaymentAmount && foundPayee)) {
                         CTxDestination address1;
                         ExtractDestination(payee, address1);
                         CBitcoinAddress address2(address1);
-                        if(fDebug) { printf("CheckBlock-POS() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
                         if(fDebug) { printf("CheckBlock-POS() : Couldn't find masternode payment(%d|%ld) or payee(%d|%s) nHeight %ld. \n", foundPaymentAmount, masternodePaymentAmount, foundPayee, address2.ToString().c_str(), pindexBest->nHeight+1); }
                         return DoS(100, error("CheckBlock-POS() : Couldn't find masternode payment or payee"));
                     } else {
@@ -2541,52 +2598,96 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             }
         }else if(IsProofOfWork() && pindex != NULL){
             if(pindex->GetBlockHash() == hashPrevBlock){
-                CAmount masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
+                int64_t masternodePaymentAmount = GetMasternodePayment(pindex->nHeight+1, vtx[0].GetValueOut());
 
                 // If we don't already have its previous block, skip masternode payment step
                 if (pindex != NULL)
                 {
                     bool foundPaymentAmount = false;
                     bool foundPayee = false;
+                    bool paymentOK = true;
 
                     CScript payee;
 
                     if(!masternodePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
-                        foundPayee = true; //doesn't require a specific payee
+                        // foundPayee = true; //doesn't require a specific payee
                         if(fDebug) { printf("CheckBlock-POW() : Using non-specific masternode payments %ld\n", pindexBest->nHeight+1); }
                     }
 
                     // Check transaction for payee and if contains masternode reward payment
                     if(fDebug) { printf("CheckBlock-POW(): Transaction 0 Size : %i\n", vtx[0].vout.size()); }
+                    if(fDebug) { printf("CheckBlock-POW() : Expected Masternode reward of: %ld\n", masternodePaymentAmount); }
                     for (unsigned int i = 0; i < vtx[0].vout.size(); i++) {
                         if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %lld\n",i, vtx[0].vout[i].nValue); }
                         if(vtx[0].vout[i].nValue == masternodePaymentAmount )
-                            foundPaymentAmount = true;
-                        if(vtx[0].vout[i].scriptPubKey == payee )
-                            foundPayee = true;
-
-                        CScript pubScript;
-                        BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                         {
-                            pubScript = GetScriptForDestination(mn.pubkey.GetID());
-                            CTxDestination address1;
-                            ExtractDestination(pubScript, address1);
-                            CBitcoinAddress address2(address1);
+                            CTxDestination mnDest;
+                            payee = vtx[0].vout[i].scriptPubKey;
+                            ExtractDestination(payee, mnDest);
+                            CBitcoinAddress mnAddress(mnDest);
+                            if (fDebug) printf("CheckBlock-POW() : Found masternode payment: %s D to %s.\n",FormatMoney(vtx[0].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
 
-                            if (vtx[0].vout[i].scriptPubKey == pubScript)
+                            foundPaymentAmount = true;
+
+                            CScript pubScript;
+
+                            BOOST_FOREACH(CMasterNode& mn, vecMasternodes)
                             {
-                                int lastPaid = mn.nBlockLastPaid;
-                                int paidAge = pindex->nHeight+1 - lastPaid;
-                                if (fDebug) printf("Masternode PoW payee found at block %d: %s who got paid %s DNR (last payment was %d blocks ago at %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid);
-                                if (paidAge < 150) // TODO: Probably make this check the MN is in the top 50?
+                                pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                                CTxDestination address1;
+                                ExtractDestination(pubScript, address1);
+                                CBitcoinAddress address2(address1);
+
+                                if (vtx[0].vout[i].scriptPubKey == pubScript)
                                 {
-                                    if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted in v3+\n");
+                                    int lastPaid = mn.nBlockLastPaid;
+                                    int paidAge = pindex->nHeight+1 - lastPaid;
+                                    int vinAge = GetInputAge(mn.vin);
+                                    if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
+                                    if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
+                                    {
+                                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                            return error("CheckBlock-POW() : Masternode has only %d confirmations (requires %d) - rejecting block.", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY);
+                                        } else {
+                                            if (fDebug) printf("WARNING: Masternode has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge ,MASTERNODE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                        }
+                                        break;
+                                    }
+                                    if (mn.payRate > 110) // if MN is being paid over 10% more regularly than it should
+                                    {
+                                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                            return error("CheckBlock-POW() : Masternode overpayment detected, rejecting block.");
+                                        } else {
+                                            if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                        }
+                                        break;
+                                    }
+                                    mn.nBlockLastPaid = pindex->nHeight+1;
+                                    mn.payData.push_back(make_pair(pindex->nHeight+1, vtx[0].vout[i].nValue));
+                                    mn.SetPayRate(pindex->nHeight+1);
+                                    foundPayee = true;
+                                    paymentOK = true;
+                                    break;
                                 }
-                                mn.nBlockLastPaid = pindex->nHeight+1;
-                                foundPayee = true;
                             }
                         }
                     }
+
+                    if (!foundPayee) {
+                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            return error("CheckBlock-POW() : Did not find this payee in the masternode list, rejecting block.");
+                        } else {
+                            if (fDebug) printf("WARNING: Did not find this payee in  the masternode list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                            foundPayee = true;
+                        }
+                    } else if (paymentOK) {
+                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            if (fDebug) printf("CheckBlock-POW() : This payment has been determined as legitimate, and will be allowed.\n");
+                        } else {
+                            if (fDebug) printf("CheckBlock-POW() : This payment has been determined as legitimate, and will be allowed after block %d.\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                        }
+                    }
+
                     if(fDebug) {printf("CheckBlock-POW(): foundPaymentAmount= %i ; foundPayee = %i\n", foundPaymentAmount, foundPayee); }
                     if(!(foundPaymentAmount && foundPayee)) {
                         CTxDestination address1;
@@ -4078,13 +4179,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
             oldVersion = true;
 
-        // Disconnect nodes that are over block height 1.35m and have an old peer version
-        if (nBestHeight >= 1350000 && pfrom->nVersion < PROTOCOL_VERSION)
+        // Disconnect nodes that are over block height 1.45m and have an old peer version
+        if (nBestHeight >= 1450000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
         {
-          printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+          printf("Partner %s using obsolete version %i; DISCONNECTING\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
           pfrom->fDisconnect = true;
           return false;
         }

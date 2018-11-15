@@ -338,10 +338,6 @@ Value sendtoaddress(const Array& params, bool fHelp)
 
     //EnsureWalletIsUnlocked();
 
-    if (params[0].get_str().length() > 75
-        && IsStealthAddress(params[0].get_str()))
-        return sendtostealthaddress(params, false);
-
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Denarius address");
@@ -2148,55 +2144,6 @@ Value importstealthaddress(const Array& params, bool fHelp)
     return result;
 }
 
-
-Value sendtostealthaddress(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() < 2 || params.size() > 5)
-        throw runtime_error(
-            "sendtostealthaddress <stealth_address> <amount> [narration] [comment] [comment-to]\n"
-            "<amount> is a real and is rounded to the nearest 0.000001"
-            + HelpRequiringPassphrase());
-
-    if (pwalletMain->IsLocked())
-        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
-
-    std::string sEncoded = params[0].get_str();
-    int64_t nAmount = AmountFromValue(params[1]);
-
-    std::string sNarr;
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
-        sNarr = params[2].get_str();
-
-    if (sNarr.length() > 24)
-        throw runtime_error("Narration must be 24 characters or less.");
-
-    CStealthAddress sxAddr;
-    Object result;
-
-    if (!sxAddr.SetEncoded(sEncoded))
-    {
-        result.push_back(Pair("result", "Invalid Denarius stealth address."));
-        return result;
-    };
-
-
-    CWalletTx wtx;
-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
-        wtx.mapValue["comment"] = params[3].get_str();
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        wtx.mapValue["to"]      = params[4].get_str();
-
-    std::string sError;
-    if (!pwalletMain->SendStealthMoneyToDestination(sxAddr, nAmount, sNarr, wtx, sError))
-        throw JSONRPCError(RPC_WALLET_ERROR, sError);
-
-    return wtx.GetHash().GetHex();
-
-    result.push_back(Pair("result", "Not implemented yet."));
-
-    return result;
-}
-
 Value clearwallettransactions(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
@@ -2363,11 +2310,11 @@ Value scanforalltxns(const Array& params, bool fHelp)
     return result;
 }
 
-Value senddnrtoanon(const Array& params, bool fHelp)
+Value senddtoanon(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 5)
         throw std::runtime_error(
-            "senddnrtoanon <stealth_address> <amount> [narration] [comment] [comment-to]\n"
+            "senddtoanon <stealth_address> <amount> [narration] [comment] [comment-to]\n"
             "<amount> is a real number and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -2397,9 +2344,9 @@ Value senddnrtoanon(const Array& params, bool fHelp)
         wtx.mapValue["to"]      = params[4].get_str();
 
     std::string sError;
-    if (!pwalletMain->SendDnrToAnon(sxAddr, nAmount, sNarr, wtx, sError))
+    if (!pwalletMain->SendDToAnon(sxAddr, nAmount, sNarr, wtx, sError))
     {
-        printf("SendDnrToAnon failed %s\n", sError.c_str());
+        printf("SendDToAnon failed %s\n", sError.c_str());
         throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
     return wtx.GetHash().GetHex();
@@ -2466,11 +2413,11 @@ Value sendanontoanon(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value sendanontodnr(const Array& params, bool fHelp)
+Value sendanontod(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 6)
         throw std::runtime_error(
-            "sendanontodnr <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
+            "sendanontod <stealth_address> <amount> <ring_size> [narration] [comment] [comment-to]\n"
             "<amount> is a real number and is rounded to the nearest 0.000001\n"
             "<ring_size> is a number of outputs of the same amount to include in the signature"
             + HelpRequiringPassphrase());
@@ -2508,9 +2455,9 @@ Value sendanontodnr(const Array& params, bool fHelp)
 
 
     std::string sError;
-    if (!pwalletMain->SendAnonToDnr(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
+    if (!pwalletMain->SendAnonToD(sxAddr, nAmount, nRingSize, sNarr, wtx, sError))
     {
-        printf("SendAnonToDnr failed %s\n", sError.c_str());
+        printf("SendAnonToD failed %s\n", sError.c_str());
         throw JSONRPCError(RPC_WALLET_ERROR, sError);
     };
     return wtx.GetHash().GetHex();
@@ -2909,7 +2856,7 @@ Value txnreport(const Array& params, bool fHelp)
                     if (txin.prevout.IsNull()) // coinbase
                         continue;
 
-                    entry.push_back("DNR in");
+                    entry.push_back("D in");
                     entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
 
                     if (pwalletMain->IsMine(txin))
@@ -3003,7 +2950,7 @@ Value txnreport(const Array& params, bool fHelp)
                     };
                 } else
                 {
-                    entry.push_back("DNR out");
+                    entry.push_back("D out");
                     entry.push_back(fCoinBase ? "coinbase" : fCoinStake ? "coinstake" : "");
 
 

@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef DNR_RINGSIG_H
-#define DNR_RINGSIG_H
+#ifndef D_RINGSIG_H
+#define D_RINGSIG_H
 
 #include "stealth.h"
 #include "types.h"
@@ -45,4 +45,4 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
 int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize, const uint8_t *pPubkeys, const data_chunk &sigC, const uint8_t *pSigS);
 
 
-#endif  // DNR_RINGSIG_H
+#endif  // D_RINGSIG_H

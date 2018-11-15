@@ -272,6 +272,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
         }
 
         UnlockStealthAddresses(vMasterKey);
+		ProcessLockedAnonOutputs(); //Process Locked Anon Outputs when unlocked, D E N A R I U S - v3.1
         SecureMsgWalletUnlocked();
         return true;
     }
@@ -1647,7 +1648,7 @@ void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, boo
                     found = true;
                     if (IsCollateralAmount(pcoin->vout[i].nValue)) continue; // do not use collateral amounts
                     found = !IsDenominatedAmount(pcoin->vout[i].nValue);
-                    if(found && coin_type == ONLY_NONDENOMINATED_NOTMN) found = (pcoin->vout[i].nValue != GetMNCollateral()*COIN); // do not use MN funds 5,000 DNR
+                    if(found && coin_type == ONLY_NONDENOMINATED_NOTMN) found = (pcoin->vout[i].nValue != GetMNCollateral()*COIN); // do not use MN funds 5,000 D
                 } else {
                     found = true;
                 }
@@ -3583,7 +3584,14 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
             int winningNode = GetCurrentMasterNode(1);
                 if(winningNode >= 0){
-                    payee =GetScriptForDestination(vecMasternodes[winningNode].pubkey.GetID());
+                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    {
+                        if (s.first == winningNode)
+                        {
+                            payee.SetDestination(s.second->pubkey.GetID());
+                            break;
+                        }
+                    }
                 } else {
                     if(fDebug) { printf("CreateCoinStake() : Failed to detect masternode to pay\n"); }
                     // masternodes are in-eligible for payment, burn the coins in-stead
@@ -4282,7 +4290,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
         {
             if (IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && (txindex.vSpent.size() <= n || txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found lost coin %s DNR %s[%d], %s\n",
+                printf("FixSpentCoins found lost coin %s D %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -4294,7 +4302,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
             }
             else if (IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && (txindex.vSpent.size() > n && !txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found spent coin %s DNR %s[%d], %s\n",
+                printf("FixSpentCoins found spent coin %s D %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -5081,7 +5089,10 @@ bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTrans
             memcpy(&vchSecret[0], &sSpendR.e[0], ec_secret_size);
             CKey ckey;
 
-            try { ckey.SetSecret(vchSecret, true); } catch (std::exception& e)
+            try {
+                ckey.Set(vchSecret.begin(), vchSecret.end(), true);
+                //ckey.SetSecret(vchSecret, true);
+            } catch (std::exception& e)
             {
                 printf("ckey.SetSecret() threw: %s.\n", e.what());
                 continue;
@@ -6244,10 +6255,10 @@ bool CWallet::CacheAnonStats()
 };
 
 
-bool CWallet::SendDnrToAnon(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
+bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
 {
     if (fDebugRingSig)
-        printf("SendDnrToAnon()\n");
+        printf("SendDToAnon()\n");
 
     if (IsLocked())
     {
@@ -6305,8 +6316,6 @@ bool CWallet::SendDnrToAnon(CStealthAddress& sxAddress, int64_t nValue, std::str
 
     int64_t nFeeRequired;
     if (!CreateTransaction(scriptNarration, nValue, sNarr, wtxNew, reservekey, nFeeRequired))
-    //if (!CreateTransaction(vecSend, wtxNew, nFeeRequired, nChangePos, reservekey))
-    //if (!CreateTransaction(vecSend, wtxNew, nFeeRequired, nChangePos, NULL))
     {
         sError = "CreateTransaction() failed.";
         return false;
@@ -6392,7 +6401,7 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient Anonymous DNR funds";
+        sError = "Insufficient Anonymous D funds";
         return false;
     };
 
@@ -6414,14 +6423,14 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
     std::string sError2;
-    /*
+
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
         printf("SendAnonToAnon() AddAnonInputs failed %s.\n", sError2.c_str());
         sError = "AddAnonInputs() failed : " + sError2;
         return false;
     };
-    */
+
 
     if (scriptNarration.size() > 0)
     {
@@ -6450,10 +6459,10 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
     return true;
 };
 
-bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
+bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee)
 {
     if (fDebug)
-        printf("SendAnonToDnr()\n");
+        printf("SendAnonToD()\n");
 
     if (IsLocked())
     {
@@ -6488,7 +6497,7 @@ bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRin
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient Anonymous DNR Funds";
+        sError = "Insufficient Anonymous D Funds";
         return false;
     };
 
@@ -6519,19 +6528,304 @@ bool CWallet::SendAnonToDnr(CStealthAddress& sxAddress, int64_t nValue, int nRin
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
     std::string sError2;
-    /*
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
-        printf("SendAnonToDnr() AddAnonInputs failed %s.\n", sError2.c_str());
+        printf("SendAnonToD() AddAnonInputs failed %s.\n", sError2.c_str());
         sError = "AddAnonInputs() failed: " + sError2;
         return false;
     };
-    */
 
     if (!CommitTransaction(wtxNew, reservekey))
     {
         sError = "Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.";
         UndoAnonTransaction(wtxNew);
+        return false;
+    };
+
+    return true;
+};
+
+bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError)
+{
+    if (fDebugRingSig)
+        printf("AddAnonInputs() %d, %d, rsType:%d\n", nTotalOut, nRingSize, rsType);
+
+    std::list<COwnedAnonOutput> lAvailableCoins;
+    if (ListUnspentAnonOutputs(lAvailableCoins, true) != 0)
+    {
+        sError = "ListUnspentAnonOutputs() failed";
+        return false;
+    };
+
+    std::map<int64_t, int> mOutputCounts;
+    for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+        mOutputCounts[it->nValue] = 0;
+
+    if (CountAnonOutputs(mOutputCounts, true) != 0)
+    {
+        sError = "CountAnonOutputs() failed";
+        return false;
+    };
+
+    if (fDebugRingSig)
+    {
+        for (std::map<int64_t, int>::iterator it = mOutputCounts.begin(); it != mOutputCounts.end(); ++it)
+            printf("mOutputCounts %ld %d\n", it->first, it->second);
+    };
+
+    int64_t nAmountCheck = 0;
+    // -- remove coins that don't have enough same value anonoutputs in the system for the ring size
+    std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin();
+    while (it != lAvailableCoins.end())
+    {
+        std::map<int64_t, int>::iterator mi = mOutputCounts.find(it->nValue);
+        if (mi == mOutputCounts.end()
+            || mi->second < nRingSize)
+        {
+            // -- not enough coins of same value, drop coin
+            lAvailableCoins.erase(it++);
+            continue;
+        };
+
+        nAmountCheck += it->nValue;
+        ++it;
+    };
+
+    if (fDebugRingSig)
+        printf("%u coins available with ring size %d, total %d\n", lAvailableCoins.size(), nRingSize, nAmountCheck);
+
+    // -- estimate fee
+
+    uint32_t nSizeOutputs = 0;
+    for (uint32_t i = 0; i < vecSend.size(); ++i) // need to sum due to narration
+        nSizeOutputs += GetSizeOfCompactSize(vecSend[i].first.size()) + vecSend[i].first.size() + sizeof(int64_t); // CTxOut
+
+    bool fFound = false;
+    int64_t nFee;
+    int nExpectChangeOuts = 1;
+    std::string sPickError;
+    std::vector<COwnedAnonOutput*> vPickedCoins;
+    for (int k = 0; k < 50; ++k) // safety
+    {
+        // -- nExpectChangeOuts is raised if needed (rv == 2)
+        int rv = PickAnonInputs(rsType, nTotalOut, nFee, nRingSize, wtxNew, vecSend.size(), nSizeOutputs, nExpectChangeOuts, lAvailableCoins, vPickedCoins, vecChange, false, sPickError);
+        if (rv == 0)
+            break;
+        if (rv == 3)
+        {
+            nFeeRequired = nFee; // set in PickAnonInputs()
+            sError = sPickError;
+            return false;
+        };
+        if (rv == 1)
+        {
+            fFound = true;
+            break;
+        };
+    };
+
+    if (!fFound)
+    {
+        sError = "No combination of coins matches amount and ring size.";
+        return false;
+    };
+
+    nFeeRequired = nFee; // set in PickAnonInputs()
+    int nSigSize = GetRingSigSize(rsType, nRingSize);
+
+    // -- need hash of tx without signatures
+    std::vector<int> vCoinOffsets;
+    uint32_t ii = 0;
+    wtxNew.vin.resize(vPickedCoins.size());
+    vCoinOffsets.resize(vPickedCoins.size());
+    for (std::vector<COwnedAnonOutput*>::iterator it = vPickedCoins.begin(); it != vPickedCoins.end(); ++it)
+    {
+        CTxIn& txin = wtxNew.vin[ii];
+        if (fDebugRingSig)
+            printf("pickedCoin %s %d\n", HexStr((*it)->vchImage).c_str(), (*it)->nValue);
+
+        // -- overload prevout to hold keyImage
+        memcpy(txin.prevout.hash.begin(), &(*it)->vchImage[0], EC_SECRET_SIZE);
+
+        txin.prevout.n = 0 | (((*it)->vchImage[32]) & 0xFF) | (int32_t)(((int16_t) nRingSize) << 16);
+
+        // -- size for full signature, signature is added later after hash
+        try { txin.scriptSig.resize(nSigSize); } catch (std::exception& e)
+        {
+            printf("Error: AddAnonInputs() txin.scriptSig.resize threw: %s.\n", e.what());
+            sError = "resize failed.\n";
+            return false;
+        };
+
+        txin.scriptSig[0] = OP_RETURN;
+        txin.scriptSig[1] = OP_ANON_MARKER;
+
+        if (fTestOnly)
+            continue;
+
+        int nCoinOutId = (*it)->outpoint.n;
+        WalletTxMap::iterator mi = mapWallet.find((*it)->outpoint.hash);
+        if (mi == mapWallet.end()
+            || mi->second.nVersion != ANON_TXN_VERSION
+            || (int)mi->second.vout.size() < nCoinOutId)
+        {
+            printf("Error: AddAnonInputs() picked coin not in wallet, %s version %d.\n", (*it)->outpoint.hash.ToString().c_str(), (*mi).second.nVersion);
+            sError = "picked coin not in wallet.\n";
+            return false;
+        };
+
+        CWalletTx& wtxAnonCoin = mi->second;
+
+        const CTxOut& txout = wtxAnonCoin.vout[nCoinOutId];
+        const CScript &s = txout.scriptPubKey;
+
+        if (!txout.IsAnonOutput())
+        {
+            sError = "picked coin not an anon output.\n";
+            return false;
+        };
+
+        CPubKey pkCoin = CPubKey(&s[2+1], EC_COMPRESSED_SIZE);
+
+        if (!pkCoin.IsValid())
+        {
+            sError = "pkCoin is invalid.\n";
+            return false;
+        };
+
+        vCoinOffsets[ii] = GetRand(nRingSize);
+
+        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
+
+        memcpy(pPubkeyStart + vCoinOffsets[ii] * EC_COMPRESSED_SIZE, pkCoin.begin(), EC_COMPRESSED_SIZE);
+        if (PickHidingOutputs((*it)->nValue, nRingSize, pkCoin, vCoinOffsets[ii], pPubkeyStart) != 0)
+        {
+            sError = "PickHidingOutputs() failed.\n";
+            return false;
+        };
+        ii++;
+    };
+
+    for (uint32_t i = 0; i < vecSend.size(); ++i)
+        wtxNew.vout.push_back(CTxOut(vecSend[i].second, vecSend[i].first));
+    for (uint32_t i = 0; i < vecChange.size(); ++i)
+        wtxNew.vout.push_back(CTxOut(vecChange[i].second, vecChange[i].first));
+
+    std::sort(wtxNew.vout.begin(), wtxNew.vout.end());
+
+    if (fTestOnly)
+        return true;
+
+    uint256 preimage;
+    if (GetTxnPreImage(wtxNew, preimage) != 0)
+    {
+        sError = "GetPreImage() failed.\n";
+        return false;
+    };
+
+    // TODO: Does it lower security to use the same preimage for each input?
+    //  cryptonote seems to do so too
+
+    for (uint32_t i = 0; i < wtxNew.vin.size(); ++i)
+    {
+        CTxIn& txin = wtxNew.vin[i];
+
+        // Test
+        std::vector<uint8_t> vchImageTest;
+        txin.ExtractKeyImage(vchImageTest);
+
+        int nTestRingSize = txin.ExtractRingSize();
+        if (nTestRingSize != nRingSize)
+        {
+            sError = "nRingSize embed error.";
+            return false;
+        };
+
+        if (txin.scriptSig.size() < nSigSize)
+        {
+            sError = "Error: scriptSig too small.";
+            return false;
+        };
+
+        int nSecretOffset = vCoinOffsets[i];
+
+        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
+
+        // -- get secret
+        CPubKey pkCoin = CPubKey(pPubkeyStart + EC_COMPRESSED_SIZE * nSecretOffset, EC_COMPRESSED_SIZE);
+        CKeyID pkId = pkCoin.GetID();
+
+        CKey key;
+        if (!GetKey(pkId, key))
+        {
+            sError = "Error: don't have key for output.";
+            return false;
+        };
+
+        ec_secret ecSecret;
+        if (key.size() != EC_SECRET_SIZE)
+        {
+            sError = "Error: key.size() != EC_SECRET_SIZE.";
+            return false;
+        };
+
+        memcpy(&ecSecret.e[0], key.begin(), key.size());
+
+        switch(rsType)
+        {
+            case RING_SIG_1:
+                {
+                uint8_t *pPubkeys = &txin.scriptSig[2];
+                uint8_t *pSigc    = &txin.scriptSig[2 + EC_COMPRESSED_SIZE * nRingSize];
+                uint8_t *pSigr    = &txin.scriptSig[2 + (EC_COMPRESSED_SIZE + EC_SECRET_SIZE) * nRingSize];
+                if (generateRingSignature(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigc, pSigr) != 0)
+                {
+                    sError = "Error: generateRingSignature() failed.";
+                    return false;
+                };
+                // -- test verify
+                if (verifyRingSignature(vchImageTest, preimage, nRingSize, pPubkeys, pSigc, pSigr) != 0)
+                {
+                    sError = "Error: verifyRingSignature() failed.";
+                    return false;
+                };
+                }
+                break;
+            case RING_SIG_2:
+                {
+                ec_point pSigC;
+                uint8_t *pSigS    = &txin.scriptSig[2 + EC_SECRET_SIZE];
+                uint8_t *pPubkeys = &txin.scriptSig[2 + EC_SECRET_SIZE + EC_SECRET_SIZE * nRingSize];
+                if (generateRingSignatureAB(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigC, pSigS) != 0)
+                {
+                    sError = "Error: generateRingSignatureAB() failed.";
+                    return false;
+                };
+                if (pSigC.size() == EC_SECRET_SIZE)
+                    memcpy(&txin.scriptSig[2], &pSigC[0], EC_SECRET_SIZE);
+                else
+                    printf("pSigC.size() : %d Invalid!!\n", pSigC.size());
+
+                // -- test verify
+                if (verifyRingSignatureAB(vchImageTest, preimage, nRingSize, pPubkeys, pSigC, pSigS) != 0)
+                {
+                    sError = "Error: verifyRingSignatureAB() failed.";
+                    return false;
+                };
+                }
+                break;
+            default:
+                sError = "Unknown ring signature type.";
+                return false;
+        };
+
+        memset(&ecSecret.e[0], 0, EC_SECRET_SIZE); // optimised away?
+    };
+
+    // -- check if new coins already exist (in case random is broken ?)
+    if (!AreOutputsUnique(wtxNew))
+    {
+        sError = "Error: Anon outputs are not unique - is random working!.";
         return false;
     };
 
@@ -6554,7 +6848,7 @@ bool CWallet::EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr,
 
     if (nValue + nTransactionFee > GetAnonBalance())
     {
-        sError = "Insufficient shadow funds";
+        sError = "Insufficient Anonymous D funds";
         return false;
     };
 
@@ -6568,17 +6862,263 @@ bool CWallet::EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr,
         return false;
     };
 
-    int64_t nFeeRequired;
-    /*
-    if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, true, sError))
+    int64_t nFeeRequired;	
+	if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, true, sError))
     {
         printf("EstimateAnonFee() AddAnonInputs failed %s.\n", sError.c_str());
         sError = "AddAnonInputs() failed.";
         return false;
     };
-    */
 
     nFeeRet = nFeeRequired;
+
+    return true;
+};
+
+bool CWallet::ExpandLockedAnonOutput(CWalletDB *pwdb, CKeyID &ckeyId, CLockedAnonOutput &lao, std::set<uint256> &setUpdated)
+{
+    if (fDebugRingSig)
+    {
+        CBitcoinAddress addrTo(ckeyId);
+        printf("%s %s\n", __func__, addrTo.ToString().c_str());
+        AssertLockHeld(cs_main);
+        AssertLockHeld(cs_wallet);
+    };
+
+    CStealthAddress sxFind;
+    //sxFind.SetScanPubKey(lao.pkScan);
+
+    bool fFound = false;
+    ec_secret sSpendR;
+    ec_secret sSpend;
+    ec_secret sScan;
+
+    ec_point pkEphem;
+
+
+    std::set<CStealthAddress>::iterator si = stealthAddresses.find(sxFind);
+    if (si != stealthAddresses.end())
+    {
+        fFound = true;
+
+        if (si->spend_secret.size() != EC_SECRET_SIZE
+         || si->scan_secret .size() != EC_SECRET_SIZE)
+            return error("%s: Stealth address has no secret.", __func__);
+
+        memcpy(&sScan.e[0], &si->scan_secret[0], EC_SECRET_SIZE);
+        memcpy(&sSpend.e[0], &si->spend_secret[0], EC_SECRET_SIZE);
+
+        pkEphem.resize(lao.pkEphem.size());
+        memcpy(&pkEphem[0], lao.pkEphem.begin(), lao.pkEphem.size());
+
+        if (StealthSecretSpend(sScan, pkEphem, sSpend, sSpendR) != 0)
+            return error("%s: StealthSecretSpend() failed.", __func__);
+
+    };
+	/*
+    // - check ext account stealth keys
+    ExtKeyAccountMap::const_iterator mi;
+    if (!fFound)
+    for (mi = mapExtAccounts.begin(); mi != mapExtAccounts.end(); ++mi)
+    {
+        fFound = true;
+
+        CExtKeyAccount *ea = mi->second;
+
+        CKeyID sxId = lao.pkScan.GetID();
+
+        AccStealthKeyMap::const_iterator miSk = ea->mapStealthKeys.find(sxId);
+        if (miSk == ea->mapStealthKeys.end())
+            continue;
+
+        const CEKAStealthKey &aks = miSk->second;
+        if (ea->IsLocked(aks))
+            return error("%s: Stealth is locked.", __func__);
+
+        ec_point pkExtracted;
+        ec_secret sShared;
+
+        pkEphem.resize(lao.pkEphem.size());
+        memcpy(&pkEphem[0], lao.pkEphem.begin(), lao.pkEphem.size());
+        memcpy(&sScan.e[0], aks.skScan.begin(), EC_SECRET_SIZE);
+
+        // - need sShared to extract key
+        if (StealthSecret(sScan, pkEphem, aks.pkSpend, sShared, pkExtracted) != 0)
+            return error("%s: StealthSecret() failed.", __func__);
+
+        CKey kChild;
+
+        if (0 != ea->ExpandStealthChildKey(&aks, sShared, kChild))
+            return error("%s: ExpandStealthChildKey() failed %s.", __func__, aks.ToStealthAddress().c_str());
+
+        memcpy(&sSpendR.e[0], kChild.begin(), EC_SECRET_SIZE);
+    };
+	*/
+
+
+    if (!fFound)
+        return error("%s: No stealth key found.", __func__);
+
+    ec_point pkTestSpendR;
+    if (SecretToPublicKey(sSpendR, pkTestSpendR) != 0)
+        return error("%s: SecretToPublicKey() failed.", __func__);
+
+
+    CKey key;
+    if (!key.IsValid())
+        return error("%s: Reconstructed key is invalid.", __func__);
+
+    CPubKey pkCoin = key.GetPubKey();
+    if (!pkCoin.IsValid())
+        return error("%s: pkCoin is invalid.", __func__);
+
+    CKeyID keyIDTest = pkCoin.GetID();
+    if (keyIDTest != ckeyId)
+    {
+        printf("%s: Error: Generated secret does not match.\n", __func__);
+        if (fDebugRingSig)
+        {
+            printf("test   %s\n", keyIDTest.ToString().c_str());
+            printf("gen    %s\n", ckeyId.ToString().c_str());
+        };
+        return false;
+    };
+
+    if (fDebugRingSig)
+    {
+        CBitcoinAddress coinAddress(keyIDTest);
+        printf("Adding secret to key %s.\n", coinAddress.ToString().c_str());
+    };
+
+    if (!AddKeyInDBTxn(pwdb, key))
+        return error("%s: AddKeyInDBTxn failed.", __func__);
+
+    // -- store keyimage
+    ec_point pkImage;
+    ec_point pkOldImage;
+    getOldKeyImage(pkCoin, pkOldImage);
+    if (generateKeyImage(pkTestSpendR, sSpendR, pkImage) != 0)
+        return error("%s: generateKeyImage failed.", __func__);
+
+    bool fSpentAOut = false;
+
+
+    setUpdated.insert(lao.outpoint.hash);
+
+    {
+        // -- check if this output is already spent
+        CTxDB txdb;
+
+        CKeyImageSpent kis;
+
+        bool fInMemPool;
+        CAnonOutput ao;
+        txdb.ReadAnonOutput(pkCoin, ao);
+        if ((GetKeyImage(&txdb, pkImage, kis, fInMemPool) && !fInMemPool)
+          ||(GetKeyImage(&txdb, pkOldImage, kis, fInMemPool) && !fInMemPool)) // shouldn't be possible for kis to be in mempool here
+        {
+            fSpentAOut = true;
+
+            WalletTxMap::iterator miw = mapWallet.find(lao.outpoint.hash);
+            if (miw != mapWallet.end())
+            {
+                CWalletTx& wtx = (*miw).second;
+                wtx.MarkSpent(lao.outpoint.n);
+
+                if (!pwdb->WriteTx(lao.outpoint.hash, wtx))
+                    return error("%s: WriteTx %s failed.", __func__, wtx.ToString().c_str());
+
+                wtx.MarkDirty();
+            };
+        };
+    } // txdb
+
+    COwnedAnonOutput oao(lao.outpoint, fSpentAOut);
+    if (!pwdb->WriteOwnedAnonOutput(pkImage, oao)
+      ||!pwdb->WriteOldOutputLink(pkOldImage, pkImage)
+      ||!pwdb->WriteOwnedAnonOutputLink(pkCoin, pkImage))
+    {
+        return error("%s: WriteOwnedAnonOutput() failed.", __func__);
+    };
+
+    if (fDebugRingSig)
+        printf("Adding anon output to wallet: %s.\n", HexStr(pkImage).c_str());
+
+    return true;
+};
+
+bool CWallet::ProcessLockedAnonOutputs()
+{
+    if (fDebugRingSig)
+    {
+        printf("%s\n", __func__);
+        AssertLockHeld(cs_main);
+        AssertLockHeld(cs_wallet);
+    };
+    // -- process owned anon outputs received when wallet was locked.
+
+
+    std::set<uint256> setUpdated;
+
+    CWalletDB walletdb(strWalletFile, "cr+");
+    walletdb.TxnBegin();
+    Dbc *pcursor = walletdb.GetTxnCursor();
+
+    if (!pcursor)
+        throw runtime_error(strprintf("%s : cannot create DB cursor.", __func__).c_str());
+    unsigned int fFlags = DB_SET_RANGE;
+    while (true)
+    {
+        // Read next record
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        if (fFlags == DB_SET_RANGE)
+            ssKey << std::string("lao");
+        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+        int ret = walletdb.ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        fFlags = DB_NEXT;
+        if (ret == DB_NOTFOUND)
+        {
+            break;
+        } else
+        if (ret != 0)
+        {
+            pcursor->close();
+            throw runtime_error(strprintf("%s : error scanning DB.", __func__).c_str());
+        };
+
+        // Unserialize
+        string strType;
+        ssKey >> strType;
+        if (strType != "lao")
+            break;
+        CLockedAnonOutput lockedAnonOutput;
+        CKeyID ckeyId;
+        ssKey >> ckeyId;
+        ssValue >> lockedAnonOutput;
+
+        if (ExpandLockedAnonOutput(&walletdb, ckeyId, lockedAnonOutput, setUpdated))
+        {
+            if ((ret = pcursor->del(0)) != 0)
+               printf("%s : Delete failed %d, %s\n", __func__, ret, db_strerror(ret));
+        };
+    };
+
+    pcursor->close();
+
+    walletdb.TxnCommit();
+
+    std::set<uint256>::iterator it;
+    for (it = setUpdated.begin(); it != setUpdated.end(); ++it)
+    {
+        WalletTxMap::iterator miw = mapWallet.find(*it);
+        if (miw == mapWallet.end())
+            continue;
+        CWalletTx& wtx = (*miw).second;
+        wtx.MarkDirty();
+        wtx.fDebitCached = 2; // force update
+
+        NotifyTransactionChanged(this, *it, CT_UPDATED);
+    };
 
     return true;
 };

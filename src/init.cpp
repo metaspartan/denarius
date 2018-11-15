@@ -690,7 +690,7 @@ bool AppInit2()
     if (!bitdb.Open(GetDataDir()))
     {
         string msg = strprintf(_("Error initializing database environment %s!"
-                                 " To recover, BACKUP THAT DIRECDNRY, then remove"
+                                 " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
@@ -920,7 +920,7 @@ bool AppInit2()
     if (!bitdb.Open(GetDataDir()))
     {
         string msg = strprintf(_("Error initializing database environment %s!"
-                                 " To recover, BACKUP THAT DIRECDNRY, then remove"
+                                 " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     };
@@ -1241,6 +1241,11 @@ bool AppInit2()
         printf("Native Tor Onion Relay Node Enabled");
     else
         printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+	
+    if (fDebug)
+        printf("Debugging is Enabled.");
+	else
+        printf("Debugging is not enabled.");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));

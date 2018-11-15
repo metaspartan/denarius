@@ -139,7 +139,7 @@ QT_TRANSLATE_NOOP("bitcoin-core", ""
 QT_TRANSLATE_NOOP("bitcoin-core", "Verifying database integrity..."),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "Error initializing database environment %s! To recover, BACKUP THAT "
-"DIRECDNRY, then remove everything from it except for wallet.dat."),
+"DIRECTORY, then remove everything from it except for wallet.dat."),
 QT_TRANSLATE_NOOP("bitcoin-core", ""
 "Warning: wallet.dat corrupt, data salvaged! Original wallet.dat saved as "
 "wallet.{timestamp}.bak in %s; if your balance or transactions are incorrect "

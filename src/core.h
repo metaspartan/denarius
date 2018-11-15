@@ -2,8 +2,8 @@
 // Copyright (c) 2018 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef DNR_CORE_H
-#define DNR_CORE_H
+#ifndef D_CORE_H
+#define D_CORE_H
 
 #include "uint256.h"
 #include "serialize.h"
@@ -242,6 +242,10 @@ public:
     friend bool operator!=(const CTxOut& a, const CTxOut& b)
     {
         return !(a == b);
+    }
+    friend bool operator<(const CTxOut& a, const CTxOut& b)
+    {
+        return (a.nValue < b.nValue);
     }
 
     std::string ToString() const

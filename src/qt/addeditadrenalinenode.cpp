@@ -54,7 +54,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->txhashLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter the transaction hash for the transaction that has 5000 DNR");
+        msg.setText("Please enter the transaction hash for the transaction that has 5000 D");
         msg.exec();
         return;
     }

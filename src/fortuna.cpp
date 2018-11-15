@@ -666,10 +666,10 @@ bool CForTunaPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txCollat
 void CForTunaPool::GetDenominationsToString(int nDenom, std::string& strDenom){
     // Function returns as follows:
     //
-    // bit 0 - 100DNR+1 ( bit on if present )
-    // bit 1 - 10DNR+1
-    // bit 2 - 1DNR+1
-    // bit 3 - .1DNR+1
+    // bit 0 - 100D+1 ( bit on if present )
+    // bit 1 - 10D+1
+    // bit 2 - 1D+1
+    // bit 3 - .1D+1
     // bit 3 - non-denom
 
 
@@ -725,10 +725,10 @@ int CForTunaPool::GetDenominations(const std::vector<CTxOut>& vout){
 
     // Function returns as follows:
     //
-    // bit 0 - 100DNR+1 ( bit on if present )
-    // bit 1 - 10DNR+1
-    // bit 2 - 1DNR+1
-    // bit 3 - .1DNR+1
+    // bit 0 - 100D+1 ( bit on if present )
+    // bit 1 - 10D+1
+    // bit 2 - 1D+1
+    // bit 3 - .1D+1
 
     return denom;
 }

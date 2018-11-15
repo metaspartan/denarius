@@ -19,7 +19,7 @@
 // TODO: receive errors and debug messages through ClientModel
 
 const int CONSOLE_SCROLLBACK = 50;
-const int CONSOLE_HISDNRY = 50;
+const int CONSOLE_HISTORY = 50;
 
 const QSize ICON_SIZE(24, 24);
 
@@ -374,7 +374,7 @@ void RPCConsole::on_lineEdit_returnPressed()
         // Append command to history
         history.append(cmd);
         // Enforce maximum history size
-        while(history.size() > CONSOLE_HISDNRY)
+        while(history.size() > CONSOLE_HISTORY)
             history.removeFirst();
         // Set pointer to end of history
         historyPtr = history.size();

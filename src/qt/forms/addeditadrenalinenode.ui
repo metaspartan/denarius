@@ -26,7 +26,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter an Alias (friendly name) for your &lt;span style=&quot; font-weight:600;&quot;&gt;Denarius Masternode&lt;/span&gt; and its address (either a clearnet IP and port or Tor onion address and port).&lt;/p&gt;&lt;p&gt;The address should be in the format &lt;span style=&quot; font-style:italic;&quot;&gt;155.456.789.123:19999&lt;/span&gt; or &lt;span style=&quot; font-style:italic;&quot;&gt;akjdsafxjkhasdf.onion:19999&lt;/span&gt;. &lt;/p&gt;&lt;p&gt;You must send exactly &lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;5000 DNR&lt;/span&gt; to the collateral address.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter an Alias (friendly name) for your &lt;span style=&quot; font-weight:600;&quot;&gt;Denarius Masternode&lt;/span&gt; and its address (either a clearnet IP and port or Tor onion address and port).&lt;/p&gt;&lt;p&gt;The address should be in the format &lt;span style=&quot; font-style:italic;&quot;&gt;155.456.789.123:19999&lt;/span&gt; or &lt;span style=&quot; font-style:italic;&quot;&gt;akjdsafxjkhasdf.onion:19999&lt;/span&gt;. &lt;/p&gt;&lt;p&gt;You must send exactly &lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;5000 D&lt;/span&gt; to the collateral address.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

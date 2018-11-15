@@ -343,14 +343,13 @@ static const CRPCCommand vRPCCommands[] =
     { "getnewstealthaddress",   &getnewstealthaddress,   false,  false},
     { "liststealthaddresses",   &liststealthaddresses,   false,  false},
     { "importstealthaddress",   &importstealthaddress,   false,  false},
-    { "sendtostealthaddress",   &sendtostealthaddress,   false,  false},
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
 
-    // Ring Signatures - D e n a r i u s v3.0.0
-    { "senddnrtoanon",          &senddnrtoanon,          false,  false},
+    // Ring Signatures - D e n a r i u s - v3.1.0
+    { "senddtoanon",          	&senddtoanon,          	 false,  false},
     { "sendanontoanon",         &sendanontoanon,         false,  false},
-    { "sendanontodnr",          &sendanontodnr,          false,  false},
+    { "sendanontod",          	&sendanontod,         	 false,  false},
     { "estimateanonfee",        &estimateanonfee,        false,  false},
     { "txnreport",              &txnreport,              false,  false},
     { "anonoutputs",            &anonoutputs,            false,  false},
@@ -1359,11 +1358,13 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
 
-    if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
-
-    if (strMethod == "senddnrtoanon"          && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "senddtoanon"         	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontoanon"         && n > 1) ConvertTo<double>(params[1]);
-    if (strMethod == "sendanontodnr"          && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
+    if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
+	if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
