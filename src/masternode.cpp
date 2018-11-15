@@ -199,7 +199,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             int value;
             int payments = mn.UpdateLastPaidAmounts(pindex, 1000, value); // do a search back 1000 blocks when receiving a new masternode to find their last payment, payments = number of payments received, value = amount
             if (payments > 0) {
-                printf("Registered new masternode %s(%i/%i) - paid %d times for %f D\n", addr, count, current, payments, value);
+                printf("Registered new masternode %s(%i/%i) - paid %d times for %f D\n", addr.ToString().c_str(), count, current, payments, value);
             }
             vecMasternodes.push_back(mn);
 
