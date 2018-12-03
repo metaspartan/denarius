@@ -4281,7 +4281,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         }
 
         // Ask every node for the masternode list
-        pnode->PushMessage("dseg", CTxIn());
+        pfrom->PushMessage("dseg", CTxIn());
 
         // Relay alerts
         {
