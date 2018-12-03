@@ -300,13 +300,13 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
                         //Misbehaving(pfrom->GetId(), 34);
                         //printf("dseg - peer already asked me for the list\n");
                         //return;
-                        Misbehaving(pfrom->GetId(), 34);
+                        //Misbehaving(pfrom->GetId(), 34);
                         printf("dseg - peer already asked me for the list\n");
                         return;
                     }
                 }
 
-                int64_t askAgain = GetTime()+(60*60*1); // only allow nodes to do a dseg all once per hour
+                int64_t askAgain = GetTime()+(60*1); // only allow nodes to do a dseg all once per minute
                 askedForMasternodeList[pfrom->addr] = askAgain;
             //}
               }
