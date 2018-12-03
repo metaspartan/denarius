@@ -2478,8 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-
-    if(!fIsInitialDownload && MasternodePayments == true)
+    if(!fIsInitialDownload && MasternodePayments == true && mnCount != 0 && vNodes.size() > 10 && vecMasternodes.size() >= mnCount)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -4188,7 +4187,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             oldVersion = true;
 
         // Disconnect nodes that are over block height 1.45m and have an old peer version
-        if (nBestHeight >= 1450000 && pfrom->nVersion < PROTOCOL_VERSION)
+        if (nBestHeight >= 1455000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
