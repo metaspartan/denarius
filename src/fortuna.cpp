@@ -986,8 +986,8 @@ void ThreadCheckForTunaPool(void* parg)
                 {
                     if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
 
-                        //keep track of who we've asked for the list
-                        if(pnode->HasFulfilledRequest("mnsync"))
+                        // re-request every 300 seconds
+                        if(GetTime() - pnode->nLastDseg < 300)
                         {
                             continue;
                         } else {

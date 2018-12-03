@@ -4280,6 +4280,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 			//PushGetBlocks(pfrom, pindexBest, uint256(0));
         }
 
+        // Ask every node for the masternode list
+        pnode->PushMessage("dseg", CTxIn());
+
         // Relay alerts
         {
             LOCK(cs_mapAlerts);
