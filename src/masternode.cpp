@@ -62,7 +62,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
     if (strCommand == "dsee") { //ForTuna Election Entry
 
         bool fIsInitialDownload = IsInitialBlockDownload();
-        if(fIsInitialDownload) return;
+        //if(fIsInitialDownload) return;
 
         CTxIn vin;
         CService addr;
@@ -210,7 +210,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
     else if (strCommand == "dseep") { //ForTuna Election Entry Ping
         bool fIsInitialDownload = IsInitialBlockDownload();
-        if(fIsInitialDownload) return;
+        //if(fIsInitialDownload) return;
 
         CTxIn vin;
         vector<unsigned char> vchSig;

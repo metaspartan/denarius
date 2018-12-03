@@ -977,10 +977,10 @@ void ThreadCheckForTunaPool(void* parg)
 
         int mnRefresh = 30;
 
-        //try to sync the masternode list and payment list every 30 seconds from at least 3 nodes until we have them all
-        if(vNodes.size() > 2 && c % mnRefresh == 0 && (mnCount == 0 || vecMasternodes.size() < mnCount)) {
-            bool fIsInitialDownload = IsInitialBlockDownload();
-            if(!fIsInitialDownload) {
+        //try to sync the masternode list and payment list every 30 seconds from at least 2 nodes until we have them all
+        if(vNodes.size() > 1 && c % mnRefresh == 0 && (mnCount == 0 || vecMasternodes.size() < mnCount)) {
+            //bool fIsInitialDownload = IsInitialBlockDownload();
+            //if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
@@ -1002,7 +1002,7 @@ void ThreadCheckForTunaPool(void* parg)
                         }
                     }
                 }
-            }
+            //}
         }
 
         if(c % MASTERNODE_PING_SECONDS == 0){
