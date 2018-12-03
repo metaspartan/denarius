@@ -224,7 +224,7 @@ class CFortunaSession
 class CForTunaPool
 {
 public:
-    static const int PROTOCOL_VERSION = 31001; //Latest is 31001
+    static const int PROTOCOL_VERSION = 31002; //Latest is 31002
 
     // clients entries
     std::vector<CForTunaEntry> myEntries;
