@@ -1676,13 +1676,21 @@ bool IsInitialBlockDownload()
         return true;
     static int64_t nLastUpdate;
     static CBlockIndex* pindexLastBest;
+    static bool lockIBDState = false;
+        if (lockIBDState)
+            return false;
     if (pindexBest != pindexLastBest)
     {
         pindexLastBest = pindexBest;
         nLastUpdate = GetTime();
     }
-    return (GetTime() - nLastUpdate < 15 &&
-            pindexBest->GetBlockTime() < GetTime() - 15 * 60); // last block is more than 15 minutes old
+
+    bool state = (GetTime() - nLastUpdate < 5 &&
+            pindexBest->GetBlockTime() < (GetTime() - 300)); // last block is more than 5 minutes old
+
+    if (state)
+        lockIBDState = true;
+    return state;
 }
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
@@ -2470,8 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-
-    if(!fIsInitialDownload && MasternodePayments == true)
+    if(!fIsInitialDownload && MasternodePayments == true && mnCount != 0 && vNodes.size() > 10 && vecMasternodes.size() >= mnCount)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2675,7 +2682,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                            return error("CheckBlock-POW() : Did not find this payee in the masternode list, rejecting block.");
+                                return error("CheckBlock-POW() : Did not find this payee in the masternode list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in  the masternode list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                             foundPayee = true;
@@ -4177,10 +4184,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         bool oldVersion = false;
 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
-            oldVersion = true;
-
-        // Disconnect nodes that are over block height 1.45m and have an old peer version
-        if (nBestHeight >= 1450000 && pfrom->nVersion < PROTOCOL_VERSION)
             oldVersion = true;
 
         if (oldVersion == true)
