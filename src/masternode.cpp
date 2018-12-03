@@ -761,7 +761,7 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
         payValue = rewardValue;
 
         // set the node's current 'reward rate'
-        payRate = ((double)rewardCount / (scanBack / mnCount))*100;
+        payRate = ((double)rewardCount / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
 
         if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
 
