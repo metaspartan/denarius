@@ -987,15 +987,14 @@ void ThreadCheckForTunaPool(void* parg)
                 {
                     if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
 
-                        // re-request every 300 seconds
-                        if(GetTime() - pnode->nLastDseg < 300)
+                        // re-request from each node every 120 seconds
+                        if(GetTime() - pnode->nLastDseg < 120)
                         {
                             continue;
                         } else {
-                            pnode->FulfilledRequest("mnsync");
                             printf("Asking for Masternode list from %s\n",pnode->addr.ToStringIPPort().c_str());
-
                             pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                            pnode->nLastDseg = GetTime();
                             pnode->PushMessage("getsporks"); //get current network sporks
                             RequestedMasterNodeList++;
                             break;
