@@ -4267,6 +4267,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             }
         }
 
+        // Ask every node for the masternode list straight away
+        pfrom->PushMessage("dseg", CTxIn());
+
         // Ask the first connected node for block updates
         static int nAskedForBlocks = 0;
         if (!pfrom->fClient && !pfrom->fOneShot &&
@@ -4279,9 +4282,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             pfrom->PushGetBlocks(pindexBest, uint256(0));
 			//PushGetBlocks(pfrom, pindexBest, uint256(0));
         }
-
-        // Ask every node for the masternode list
-        pfrom->PushMessage("dseg", CTxIn());
 
         // Relay alerts
         {
