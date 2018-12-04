@@ -60,7 +60,7 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     if(!GetBoolArg("-reindexaddr", false))
         timer->start(30000);
 
-    updateNodeList();
+    QTimer::singleShot(1500, this, SLOT(updateNodeList()));
 }
 
 FortunastakeManager::~FortunastakeManager()
@@ -181,10 +181,10 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
             rank = GetFortunastakeRank(mn, pindexBest->nHeight);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
-            int64_t value;
-            double rate;
-            mn.GetPaymentInfo(pindexBest, value, rate);
-            payrate = QString::fromStdString(strprintf("%sD/%dblocks", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
+            //int64_t value;
+            //double rate;
+            //mn.GetPaymentInfo(pindexBest, value, rate);
+            payrate = QString::fromStdString(strprintf("%.2f D/100", mn.payRate, max(200, (int)(3*mnCount))));
         }
     }
 
