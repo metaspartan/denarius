@@ -249,8 +249,8 @@ bool CActiveMasternode::Register(std::string strService, std::string strKeyMaste
         return false;
     }
 
-    if(!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, txHash, strOutputIndex)) {
-        errorMessage = "could not allocate vin";
+    if(!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, txHash, strOutputIndex, errorMessage)) {
+        //errorMessage = "could not allocate vin";
         printf("Register::Register() - Error: %s\n", errorMessage.c_str());
         return false;
     }
@@ -304,7 +304,6 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
 
 bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex) {
     CScript pubScript;
-
     // Find possible candidates
     vector<COutput> possibleCoins = SelectCoinsMasternode();
     COutput *selectedOutput;
