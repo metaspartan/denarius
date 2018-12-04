@@ -2450,7 +2450,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // So much so, People wanted to bring D to the moon. Even Mars, Sooner than the roadster...
     // The Discord was active, People discussed how they would reach that goal.
     // There was one person, named Thi3rryzz watching all this from a save distance.
-    // Then, the word MASTERNODES came to the table.
+    // Then, the word FORTUNASTAKES came to the table.
     // People wanted fortunastakes... Really Bad. But King Carsen was already busy with the rest of D
     // So Thi3rryzz decided to jump in..
     // After a lot of: "How much for MN" and "When MN?"
@@ -2461,7 +2461,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     bool fIsInitialDownload = IsInitialBlockDownload();
 
     if (fTestNet){
-        if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){ // Block 75k Testnet
+        if (pindex->nHeight > BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET){ // Block 75k Testnet
             FortunastakePayments = true;
             if(fDebug) { printf("CheckBlock() : Fortunastake payments enabled\n"); }
         }else{
@@ -2469,7 +2469,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(fDebug) { printf("CheckBlock() : Fortunastake payments disabled\n"); }
         }
     }else{
-        if (pindex->nHeight > BLOCK_START_MASTERNODE_PAYMENTS){ //Block 645k Mainnet
+        if (pindex->nHeight > BLOCK_START_FORTUNASTAKE_PAYMENTS){ //Block 645k Mainnet
             FortunastakePayments = true;
             if(fDebug) { printf("CheckBlock() : Fortunastake payments enabled\n"); }
         }else{
@@ -2546,12 +2546,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                                         int vinAge = GetInputAge(mn.vin);
                                         if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
-                                        if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
+                                        if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                                return error("CheckBlock-POS() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY);
+                                                return error("CheckBlock-POS() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
                                             } else {
-                                                if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                                if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                             }
                                             break;
                                         }
@@ -2660,12 +2660,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (mnCount < 20) maxrank = 10; // under 20 mn's just pay anyone up to rank10
                                     if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d, rank %d (max %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge, rank, maxrank);
 
-                                    if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
+                                    if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
                                     {
                                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                            return error("CheckBlock-POW() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, MASTERNODE_MIN_CONFIRMATIONS_NOPAY);
+                                            return error("CheckBlock-POW() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
                                         } else {
-                                            if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge ,MASTERNODE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                            if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge ,FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                         }
                                         break;
                                     }
@@ -3461,7 +3461,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         if (!fImporting && !fReindex && pindexBest->nHeight > Checkpoints::GetTotalBlocksEstimate()){
             if(fortunastakePayments.GetBlockPayee(pindexBest->nHeight, payee)){
                 // MAYBE NEEDS TO BE REWORKED
-                //UPDATE MASTERNODE LAST PAID TIME
+                //UPDATE FORTUNASTAKE LAST PAID TIME
                 // CFortunastake* pmn = mnodeman.Find(vin);
                 // if(pmn != NULL) {
                 //     pmn->nLastPaid = GetAdjustedTime();
@@ -4024,7 +4024,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
                mapOrphanBlocks.count(inv.hash);
     case MSG_SPORK:
         return mapSporks.count(inv.hash);
-    case MSG_MASTERNODE_WINNER:
+    case MSG_FORTUNASTAKE_WINNER:
         return mapSeenFortunastakeVotes.count(inv.hash);
     }
     // Don't know what it is, just say we already got one
@@ -4122,7 +4122,7 @@ void static ProcessGetData(CNode* pfrom)
                         pushed = true;
                     }
                 }
-                if (!pushed && inv.type == MSG_MASTERNODE_WINNER) {
+                if (!pushed && inv.type == MSG_FORTUNASTAKE_WINNER) {
                     if(mapSeenFortunastakeVotes.count(inv.hash)){
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         int a = 0;

@@ -134,7 +134,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
                 //   e.g. We don't want the entry relayed/time updated when we're syncing the list
                 // mn.pubkey = pubkey, IsVinAssociatedWithPubkey is validated once below,
                 //   after that they just need to match
-                if(count == -1 && mn.pubkey == pubkey && !mn.UpdatedWithin(MASTERNODE_MIN_DSEE_SECONDS)){
+                if(count == -1 && mn.pubkey == pubkey && !mn.UpdatedWithin(FORTUNASTAKE_MIN_DSEE_SECONDS)){
                     mn.UpdateLastSeen();
 
                     if(mn.now < sigTime){ //take the newest entry
@@ -174,8 +174,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         if(CheckFortunastakeVin(vin,vinError)){
             if (fDebugNet) printf("dsee - Accepted input for fortunastake entry %i %i\n", count, current);
 
-            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)){
-                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS));
+            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
@@ -248,7 +248,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
                     mn.lastDseep = sigTime;
 
-                    if(!mn.UpdatedWithin(MASTERNODE_MIN_DSEEP_SECONDS)){
+                    if(!mn.UpdatedWithin(FORTUNASTAKE_MIN_DSEEP_SECONDS)){
                         mn.UpdateLastSeen();
                         if(stop) {
                             mn.Disable();
@@ -521,7 +521,7 @@ bool GetFortunastakeRanks()
 
         int value = -1;
         CBlockIndex* pindex = pindexBest;
-        int payments = mn.UpdateLastPaidAmounts(pindex, max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
+        int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
 
         vecFortunastakeScores.push_back(make_pair(value, &mn));
     }
@@ -600,7 +600,7 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
 
 bool CFortunaStake::GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValue, double &actualRate)
 {
-    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
     double requiredRate = scanBack / (int)mnCount;
     int actualPayments = GetPaymentAmount(pindex, scanBack, totalValue);
     actualRate = actualPayments / requiredRate;
@@ -610,7 +610,7 @@ bool CFortunaStake::GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValu
 
 float CFortunaStake::GetPaymentRate(const CBlockIndex *pindex)
 {
-    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
     double requiredRate = scanBack / (int)mnCount;
     int64_t totalValue;
     int actualPayments = GetPaymentAmount(pindex, scanBack, totalValue);
@@ -620,7 +620,7 @@ float CFortunaStake::GetPaymentRate(const CBlockIndex *pindex)
 
 int CFortunaStake::SetPayRate(int nHeight)
 {
-     int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+     int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
      if (nHeight > pindexBest->nHeight) {
          scanBack += nHeight - pindexBest->nHeight;
      } // if going past current height, add to scan back height to account for how far it is - e.g. 200 in front will get 200 more blocks to smooth it out
@@ -711,7 +711,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
     if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;
-    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
 
     CScript mnpayee = GetScriptForDestination(pubkey.GetID());
     CTxDestination address1;
@@ -871,19 +871,19 @@ uint256 CFortunaStake::CalculateScore(int mod, int64_t nBlockHeight)
 
 void CFortunaStake::Check(bool forceCheck)
 {
-    if(!forceCheck && (GetTime() - lastTimeChecked < MASTERNODE_CHECK_SECONDS)) return;
+    if(!forceCheck && (GetTime() - lastTimeChecked < FORTUNASTAKE_CHECK_SECONDS)) return;
     lastTimeChecked = GetTime();
 
     //once spent, stop doing the checks
     if(enabled==3) return;
 
 
-    if(!UpdatedWithin(MASTERNODE_REMOVAL_SECONDS)){
+    if(!UpdatedWithin(FORTUNASTAKE_REMOVAL_SECONDS)){
         enabled = 4;
         return;
     }
 
-    if(!UpdatedWithin(MASTERNODE_EXPIRATION_SECONDS)){
+    if(!UpdatedWithin(FORTUNASTAKE_EXPIRATION_SECONDS)){
         enabled = 2;
         return;
     }
@@ -1142,7 +1142,7 @@ bool CFortunastakePayments::ProcessBlock(int nBlockHeight)
 
 void CFortunastakePayments::Relay(CFortunastakePaymentWinner& winner)
 {
-    CInv inv(MSG_MASTERNODE_WINNER, winner.GetHash());
+    CInv inv(MSG_FORTUNASTAKE_WINNER, winner.GetHash());
 
     vector<CInv> vInv;
     vInv.push_back(inv);

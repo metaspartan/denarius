@@ -2,8 +2,8 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef SRC_MASTERNODECONFIG_H_
-#define SRC_MASTERNODECONFIG_H_
+#ifndef SRC_FORTUNASTAKECONFIG_H_
+#define SRC_FORTUNASTAKECONFIG_H_
 
 #include <string>
 #include <vector>
@@ -98,5 +98,5 @@ private:
 };
 
 
-#endif /* SRC_MASTERNODECONFIG_H_ */
+#endif /* SRC_FORTUNASTAKECONFIG_H_ */
 

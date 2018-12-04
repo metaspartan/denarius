@@ -22,20 +22,20 @@ void CActiveFortunastake::ManageStatus()
     //need correct adjusted time to send ping
     bool fIsInitialDownload = IsInitialBlockDownload();
     if(fIsInitialDownload) {
-        status = MASTERNODE_SYNC_IN_PROCESS;
+        status = FORTUNASTAKE_SYNC_IN_PROCESS;
         printf("CActiveFortunastake::ManageStatus() - Sync in progress. Must wait until sync is complete to start fortunastake.\n");
         return;
     }
 
-    if(status == MASTERNODE_INPUT_TOO_NEW || status == MASTERNODE_NOT_CAPABLE || status == MASTERNODE_SYNC_IN_PROCESS){
-        status = MASTERNODE_NOT_PROCESSED;
+    if(status == FORTUNASTAKE_INPUT_TOO_NEW || status == FORTUNASTAKE_NOT_CAPABLE || status == FORTUNASTAKE_SYNC_IN_PROCESS){
+        status = FORTUNASTAKE_NOT_PROCESSED;
     }
 
-    if(status == MASTERNODE_NOT_PROCESSED) {
+    if(status == FORTUNASTAKE_NOT_PROCESSED) {
         if(strFortunaStakeAddr.empty()) {
             if(!GetLocal(service)) {
                 notCapableReason = "Can't detect external address. Please use the fortunastakeaddr configuration option.";
-                status = MASTERNODE_NOT_CAPABLE;
+                status = FORTUNASTAKE_NOT_CAPABLE;
                 printf("CActiveFortunastake::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
                 return;
             }
@@ -47,20 +47,20 @@ void CActiveFortunastake::ManageStatus()
 
             if(!ConnectNode((CAddress)service, service.ToString().c_str())){
                 notCapableReason = "Could not connect to " + service.ToString();
-                status = MASTERNODE_NOT_CAPABLE;
+                status = FORTUNASTAKE_NOT_CAPABLE;
                 printf("CActiveFortunastake::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
                 return;
             }
 
         if(pwalletMain->IsLocked()){
             notCapableReason = "Wallet is locked.";
-            status = MASTERNODE_NOT_CAPABLE;
+            status = FORTUNASTAKE_NOT_CAPABLE;
             printf("CActiveFortunastake::ManageStatus() - not capable: %s\n", notCapableReason.c_str());
             return;
         }
 
         // Set defaults
-        status = MASTERNODE_NOT_CAPABLE;
+        status = FORTUNASTAKE_NOT_CAPABLE;
         notCapableReason = "Unknown. Check debug.log for more information.\n";
 
         // Choose coins to use
@@ -69,15 +69,15 @@ void CActiveFortunastake::ManageStatus()
 
         if(GetFortunaStakeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
 
-            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)){
-                printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS), GetInputAge(vin));
-                status = MASTERNODE_INPUT_TOO_NEW;
+            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+                printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS), GetInputAge(vin));
+                status = FORTUNASTAKE_INPUT_TOO_NEW;
                 return;
             }
 
             printf("CActiveFortunastake::ManageStatus() - Is capable master node!\n");
 
-            status = MASTERNODE_IS_CAPABLE;
+            status = FORTUNASTAKE_IS_CAPABLE;
             notCapableReason = "";
 
             pwalletMain->LockCoin(vin.prevout);
@@ -124,13 +124,13 @@ bool CActiveFortunastake::StopFortunaStake(std::string strService, std::string s
 
 // Send stop dseep to network for main fortunastake
 bool CActiveFortunastake::StopFortunaStake(std::string& errorMessage) {
-    if(status != MASTERNODE_IS_CAPABLE && status != MASTERNODE_REMOTELY_ENABLED) {
+    if(status != FORTUNASTAKE_IS_CAPABLE && status != FORTUNASTAKE_REMOTELY_ENABLED) {
         errorMessage = "fortunastake is not in a running status";
         printf("CActiveFortunastake::StopFortunaStake() - Error: %s\n", errorMessage.c_str());
         return false;
     }
 
-    status = MASTERNODE_STOPPED;
+    status = FORTUNASTAKE_STOPPED;
 
     CPubKey pubKeyFortunastake;
     CKey keyFortunastake;
@@ -151,7 +151,7 @@ bool CActiveFortunastake::StopFortunaStake(CTxIn vin, CService service, CKey key
 }
 
 bool CActiveFortunastake::Dseep(std::string& errorMessage) {
-    if(status != MASTERNODE_IS_CAPABLE && status != MASTERNODE_REMOTELY_ENABLED) {
+    if(status != FORTUNASTAKE_IS_CAPABLE && status != FORTUNASTAKE_REMOTELY_ENABLED) {
         errorMessage = "fortunastake is not in a running status";
         printf("CActiveFortunastake::Dseep() - Error: %s\n", errorMessage.c_str());
         return false;
@@ -203,7 +203,7 @@ bool CActiveFortunastake::Dseep(CTxIn vin, CService service, CKey keyFortunastak
         // Seems like we are trying to send a ping while the fortunastake is not registered in the network
         retErrorMessage = "Fortuna Fortunastake List doesn't include our fortunastake, Shutting down fortunastake pinging service! " + vin.ToString();
         printf("CActiveFortunastake::Dseep() - Error: %s\n", retErrorMessage.c_str());
-        status = MASTERNODE_NOT_CAPABLE;
+        status = FORTUNASTAKE_NOT_CAPABLE;
         notCapableReason = retErrorMessage;
         return false;
     }
@@ -326,13 +326,13 @@ bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& 
             printf("CActiveFortunastake::GetFortunaStakeVin - Could not locate valid vin\n");
             return false;
         }
-        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
+        if (selectedOutput->nDepth < FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY) {
             CScript mn;
             mn = GetScriptForDestination(pubkey.GetID());
             CTxDestination address1;
             ExtractDestination(mn, address1);
             CBitcoinAddress address2(address1);
-            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+            int remain = FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
             printf("CActiveFortunastake::GetFortunaStakeVin - Transaction for MN %s is too young (%d more confirms required)", address2.ToString().c_str(), remain);
             return false;
         }
@@ -380,8 +380,8 @@ bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& 
             errorMessage = "Could not locate valid vin";
             return false;
         }
-        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
-            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+        if (selectedOutput->nDepth < FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY) {
+            int remain = FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
             errorMessage = strprintf("%d more confirms required", remain);
             return false;
         }
@@ -540,7 +540,7 @@ bool CActiveFortunastake::EnableHotColdFortunaStake(CTxIn& newVin, CService& new
 {
     if(!fFortunaStake) return false;
 
-    status = MASTERNODE_REMOTELY_ENABLED;
+    status = FORTUNASTAKE_REMOTELY_ENABLED;
 
     //The values below are needed for signing dseep messages going forward
     this->vin = newVin;

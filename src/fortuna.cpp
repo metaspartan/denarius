@@ -214,7 +214,7 @@ void CForTunaPool::CheckTimeout(){
                     UnlockCoins();
                 }
                 if(fFortunaStake){
-                    RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
+                    RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), FORTUNASTAKE_RESET);
                 }
                 break;
             }
@@ -1004,7 +1004,7 @@ void ThreadCheckForTunaPool(void* parg)
             //}
         }
 
-        if(c % MASTERNODE_PING_SECONDS == 0){
+        if(c % FORTUNASTAKE_PING_SECONDS == 0){
             activeFortunastake.ManageStatus();
         }
 

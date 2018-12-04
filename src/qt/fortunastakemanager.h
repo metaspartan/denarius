@@ -1,5 +1,5 @@
-#ifndef MASTERNODEMANAGER_H
-#define MASTERNODEMANAGER_H
+#ifndef FORTUNASTAKEMANAGER_H
+#define FORTUNASTAKEMANAGER_H
 
 #include "util.h"
 #include "sync.h"
@@ -58,4 +58,4 @@ private slots:
     void on_tableWidget_2_itemSelectionChanged();
 };
 
-#endif // MASTERNODEMANAGER_H
+#endif // FORTUNASTAKEMANAGER_H

@@ -527,9 +527,9 @@ Value getblocktemplate(const Array& params, bool fHelp)
     bool bFortunastakePayments = false;
 
     if(fTestNet){
-        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET) bFortunastakePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET) bFortunastakePayments = true;
     } else {
-        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS) bFortunastakePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_FORTUNASTAKE_PAYMENTS) bFortunastakePayments = true;
     }
 	if(fDebug) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
 	

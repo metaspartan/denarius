@@ -95,8 +95,8 @@ Value masternode(const Array& params, bool fHelp)
         }
         pwalletMain->Lock();
 
-        if(activeFortunastake.status == MASTERNODE_STOPPED) return "Successfully Stopped Fortunastake";
-        if(activeFortunastake.status == MASTERNODE_NOT_CAPABLE) return "Not a capable Fortunastake";
+        if(activeFortunastake.status == FORTUNASTAKE_STOPPED) return "Successfully Stopped Fortunastake";
+        if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) return "Not a capable Fortunastake";
 
         return "unknown";
     }
@@ -296,19 +296,19 @@ Value masternode(const Array& params, bool fHelp)
             }
         }
 
-        if(activeFortunastake.status != MASTERNODE_REMOTELY_ENABLED && activeFortunastake.status != MASTERNODE_IS_CAPABLE){
-            activeFortunastake.status = MASTERNODE_NOT_PROCESSED; // TODO: consider better way
+        if(activeFortunastake.status != FORTUNASTAKE_REMOTELY_ENABLED && activeFortunastake.status != FORTUNASTAKE_IS_CAPABLE){
+            activeFortunastake.status = FORTUNASTAKE_NOT_PROCESSED; // TODO: consider better way
             std::string errorMessage;
             activeFortunastake.ManageStatus();
             pwalletMain->Lock();
         }
 
-        if(activeFortunastake.status == MASTERNODE_REMOTELY_ENABLED) return "fortunastake started remotely";
-        if(activeFortunastake.status == MASTERNODE_INPUT_TOO_NEW) return "fortunastake input must have at least 15 confirmations";
-        if(activeFortunastake.status == MASTERNODE_STOPPED) return "fortunastake is stopped";
-        if(activeFortunastake.status == MASTERNODE_IS_CAPABLE) return "successfully started fortunastake";
-        if(activeFortunastake.status == MASTERNODE_NOT_CAPABLE) return "not capable fortunastake: " + activeFortunastake.notCapableReason;
-        if(activeFortunastake.status == MASTERNODE_SYNC_IN_PROCESS) return "sync in process. Must wait until client is synced to start.";
+        if(activeFortunastake.status == FORTUNASTAKE_REMOTELY_ENABLED) return "fortunastake started remotely";
+        if(activeFortunastake.status == FORTUNASTAKE_INPUT_TOO_NEW) return "fortunastake input must have at least 15 confirmations";
+        if(activeFortunastake.status == FORTUNASTAKE_STOPPED) return "fortunastake is stopped";
+        if(activeFortunastake.status == FORTUNASTAKE_IS_CAPABLE) return "successfully started fortunastake";
+        if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) return "not capable fortunastake: " + activeFortunastake.notCapableReason;
+        if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) return "sync in process. Must wait until client is synced to start.";
 
         return "unknown";
     }
@@ -425,12 +425,12 @@ Value masternode(const Array& params, bool fHelp)
 
     if (strCommand == "debug")
     {
-        if(activeFortunastake.status == MASTERNODE_REMOTELY_ENABLED) return "fortunastake started remotely";
-        if(activeFortunastake.status == MASTERNODE_INPUT_TOO_NEW) return "fortunastake input must have at least 15 confirmations";
-        if(activeFortunastake.status == MASTERNODE_IS_CAPABLE) return "successfully started fortunastake";
-        if(activeFortunastake.status == MASTERNODE_STOPPED) return "fortunastake is stopped";
-        if(activeFortunastake.status == MASTERNODE_NOT_CAPABLE) return "not capable fortunastake: " + activeFortunastake.notCapableReason;
-        if(activeFortunastake.status == MASTERNODE_SYNC_IN_PROCESS) return "sync in process. Must wait until client is synced to start.";
+        if(activeFortunastake.status == FORTUNASTAKE_REMOTELY_ENABLED) return "fortunastake started remotely";
+        if(activeFortunastake.status == FORTUNASTAKE_INPUT_TOO_NEW) return "fortunastake input must have at least 15 confirmations";
+        if(activeFortunastake.status == FORTUNASTAKE_IS_CAPABLE) return "successfully started fortunastake";
+        if(activeFortunastake.status == FORTUNASTAKE_STOPPED) return "fortunastake is stopped";
+        if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) return "not capable fortunastake: " + activeFortunastake.notCapableReason;
+        if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) return "sync in process. Must wait until client is synced to start.";
 
         CTxIn vin = CTxIn();
         CPubKey pubkey = CScript();

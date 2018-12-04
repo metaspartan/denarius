@@ -18,12 +18,12 @@
 
 class CValidationState;
 
-#define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Fortunastake payments enabled block 81k5
-#define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Fortunastake payments not enabled until block 645k
-#define BLOCK_START_MASTERNODE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
+#define BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET 81500 // Testnet Fortunastake payments enabled block 81k5
+#define BLOCK_START_FORTUNASTAKE_PAYMENTS 645000 //Mainnet Fortunastake payments not enabled until block 645k
+#define BLOCK_START_FORTUNASTAKE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
 
-//#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
-//#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
+//#define START_FORTUNASTAKE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
+//#define START_FORTUNASTAKE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
 
 static const int64_t FORTUNA_COLLATERAL = (5000*COIN); // 5,000 D
 static const int64_t FORTUNA_FEE = (0.010000*COIN); //0.01 D
@@ -33,15 +33,15 @@ static const int64_t FORTUNA_POOL_MAX = (11000*COIN); //11,000 D
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
 
-#define MASTERNODE_NOT_PROCESSED               0 // initial state
-#define MASTERNODE_IS_CAPABLE                  1
-#define MASTERNODE_NOT_CAPABLE                 2
-#define MASTERNODE_STOPPED                     3
-#define MASTERNODE_INPUT_TOO_NEW               4
-#define MASTERNODE_PORT_NOT_OPEN               6
-#define MASTERNODE_PORT_OPEN                   7
-#define MASTERNODE_SYNC_IN_PROCESS             8
-#define MASTERNODE_REMOTELY_ENABLED            9
+#define FORTUNASTAKE_NOT_PROCESSED               0 // initial state
+#define FORTUNASTAKE_IS_CAPABLE                  1
+#define FORTUNASTAKE_NOT_CAPABLE                 2
+#define FORTUNASTAKE_STOPPED                     3
+#define FORTUNASTAKE_INPUT_TOO_NEW               4
+#define FORTUNASTAKE_PORT_NOT_OPEN               6
+#define FORTUNASTAKE_PORT_OPEN                   7
+#define FORTUNASTAKE_SYNC_IN_PROCESS             8
+#define FORTUNASTAKE_REMOTELY_ENABLED            9
 
 class CWallet;
 class CWalletTx;

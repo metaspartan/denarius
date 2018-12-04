@@ -83,7 +83,7 @@ bool IsSporkActive(int nSporkID)
     if(mapSporksActive.count(nSporkID)){
         r = mapSporksActive[nSporkID].nValue;
     } else {
-        if(nSporkID == SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT) r = SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT;
+        if(nSporkID == SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT) r = SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT_DEFAULT;
         if(nSporkID == SPORK_2_MAX_VALUE) r = SPORK_2_MAX_VALUE_DEFAULT;
         if(nSporkID == SPORK_3_REPLAY_BLOCKS) r = SPORK_3_REPLAY_BLOCKS_DEFAULT;
 
@@ -102,7 +102,7 @@ int GetSporkValue(int nSporkID)
     if(mapSporksActive.count(nSporkID)){
         r = mapSporksActive[nSporkID].nValue;
     } else {
-        if(nSporkID == SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT) r = SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT;
+        if(nSporkID == SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT) r = SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT_DEFAULT;
         if(nSporkID == SPORK_2_MAX_VALUE) r = SPORK_2_MAX_VALUE_DEFAULT;
         if(nSporkID == SPORK_3_REPLAY_BLOCKS) r = SPORK_3_REPLAY_BLOCKS_DEFAULT;
 
@@ -212,7 +212,7 @@ bool CSporkManager::SetPrivKey(std::string strPrivKey)
 
 int CSporkManager::GetSporkIDByName(std::string strName)
 {
-    if(strName == "SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT") return SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT;
+    if(strName == "SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT") return SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT;
     if(strName == "SPORK_2_MAX_VALUE") return SPORK_2_MAX_VALUE;
     if(strName == "SPORK_3_REPLAY_BLOCKS") return SPORK_3_REPLAY_BLOCKS;
 
@@ -221,7 +221,7 @@ int CSporkManager::GetSporkIDByName(std::string strName)
 
 std::string CSporkManager::GetSporkNameByID(int id)
 {
-    if(id == SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT) return "SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT";
+    if(id == SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT) return "SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT";
     if(id == SPORK_2_MAX_VALUE) return "SPORK_2_MAX_VALUE";
     if(id == SPORK_3_REPLAY_BLOCKS) return "SPORK_3_REPLAY_BLOCKS";
 

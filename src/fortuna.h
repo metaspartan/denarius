@@ -30,9 +30,9 @@ class CActiveFortunastake;
 #define POOL_STATUS_SUCCESS                    8 // success
 
 // status update message constants
-#define MASTERNODE_ACCEPTED                    1
-#define MASTERNODE_REJECTED                    0
-#define MASTERNODE_RESET                       -1
+#define FORTUNASTAKE_ACCEPTED                    1
+#define FORTUNASTAKE_REJECTED                    0
+#define FORTUNASTAKE_RESET                       -1
 
 #define FORTUNA_QUEUE_TIMEOUT                 120
 #define FORTUNA_SIGNING_TIMEOUT               30
@@ -350,7 +350,7 @@ public:
         if(state != newState){
             lastTimeChanged = GetTimeMillis();
             if(fFortunaStake) {
-                RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
+                RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), FORTUNASTAKE_RESET);
             }
         }
         state = newState;
