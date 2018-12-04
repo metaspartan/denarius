@@ -700,7 +700,7 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
     if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;
-    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    int scanBack = (int)mnCount * MASTERNODE_FAIR_PAYMENT_ROUNDS;
 
     CScript mnpayee = GetScriptForDestination(pubkey.GetID());
     CTxDestination address1;
