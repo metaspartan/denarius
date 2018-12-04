@@ -7,7 +7,7 @@
 #include "txdb.h"
 #include "miner.h"
 #include "kernel.h"
-#include "masternode.h"
+#include "fortunastake.h"
 
 using namespace std;
 
@@ -172,22 +172,22 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     unsigned int nBlockMinSize = GetArg("-blockminsize", 0);
     nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
 
-    // start masternode payments
-    bool bMasterNodePayment = false;
+    // start fortunastake payments
+    bool bFortunaStakePayment = false;
 
 	//Only if it isn't Proof of Stake?
 	if (!fProofOfStake)
     {
 		if (fTestNet){
 			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET){
-				bMasterNodePayment = true;
+				bFortunaStakePayment = true;
 			}
 		}else{
 			if (nHeight >= BLOCK_START_MASTERNODE_PAYMENTS){
-				bMasterNodePayment = true;
+				bFortunaStakePayment = true;
 			}
 		}
-        if(fDebug) { printf("CreateNewBlock(): Masternode Payments : %i\n", bMasterNodePayment); }
+        if(fDebug) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
 	}
 
     // Fee-per-kilobyte amount considered the same as "free"
@@ -207,15 +207,15 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         LOCK2(cs_main, mempool.cs);
         CTxDB txdb("r");
 
-        if(bMasterNodePayment) {
+        if(bFortunaStakePayment) {
             bool hasPayment = true;
             //spork
             CScript payee;
-            if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
-                //no masternode detected
-                int winningNode = GetMasternodeByRank(1);
+            if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+                //no fortunastake detected
+                int winningNode = GetFortunastakeByRank(1);
                 if(winningNode >= 0){
-                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                     {
                         if (s.first == winningNode)
                         {
@@ -224,9 +224,9 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                         }
                     }
                 } else {
-                    printf("CreateNewBlock: Failed to detect masternode to pay\n");
+                    printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
                     // pay the burn address if it can't detect
-                    if (fDebug) printf("CreateNewBlock(): Failed to detect masternode to pay, burning coins..\n");
+                    if (fDebug) printf("CreateNewBlock(): Failed to detect fortunastake to pay, burning coins..\n");
                     std::string burnAddress;
                     if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
                     else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
@@ -248,7 +248,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 ExtractDestination(payee, address1);
                 CBitcoinAddress address2(address1);
 
-                printf("CreateNewBlock(): Masternode payment to %s\n", address2.ToString().c_str());
+                printf("CreateNewBlock(): Fortunastake payment to %s\n", address2.ToString().c_str());
             }
         }
 
@@ -480,12 +480,12 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         nLastBlockSize = nBlockSize;
 
         int64_t blockValue = GetProofOfWorkReward(nHeight, nFees);
-        int64_t masternodePayment = GetMasternodePayment(pindexPrev->nHeight+1, blockValue);
+        int64_t fortunastakePayment = GetFortunastakePayment(pindexPrev->nHeight+1, blockValue);
 
-        //create masternode payment
+        //create fortunastake payment
         if(payments > 1){
-            pblock->vtx[0].vout[payments-1].nValue = masternodePayment;
-            blockValue -= masternodePayment;
+            pblock->vtx[0].vout[payments-1].nValue = fortunastakePayment;
+            blockValue -= fortunastakePayment;
         }
 
         if (fDebug && GetBoolArg("-printpriority"))
@@ -716,7 +716,7 @@ void StakeMiner(CWallet *pwallet)
             continue;
         };
 
-        if (vecMasternodes.size() == 0 || (mnCount > 0 && vecMasternodes.size() < mnCount))
+        if (vecFortunastakes.size() == 0 || (mnCount > 0 && vecFortunastakes.size() < mnCount))
         {
             vnThreadsRunning[THREAD_STAKE_MINER]--;
             MilliSleep(10000);

@@ -57,16 +57,16 @@ namespace boost {
 
 using namespace std;
 
-//Masternode  features
-bool fMasterNode = false;
-string strMasterNodePrivKey = "";
-string strMasterNodeAddr = "";
+//Fortunastake  features
+bool fFortunaStake = false;
+string strFortunaStakePrivKey = "";
+string strFortunaStakeAddr = "";
 int nFortunaRounds = 2;
 
 int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
 
 /** Spork enforcement enabled time */
-int64_t enforceMasternodePaymentsTime = 4085657524;
+int64_t enforceFortunastakePaymentsTime = 4085657524;
 bool fSuccessfullyLoaded = false;
 
 /** All denominations used by fortuna */
@@ -1081,9 +1081,9 @@ boost::filesystem::path GetConfigFile()
     return pathConfigFile;
 }
 
-boost::filesystem::path GetMasternodeConfigFile()
+boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "masternode.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }

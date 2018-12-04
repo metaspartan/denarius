@@ -11,14 +11,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-class CMasternodeConfig;
-extern CMasternodeConfig masternodeConfig;
+class CFortunastakeConfig;
+extern CFortunastakeConfig fortunastakeConfig;
 
-class CMasternodeConfig
+class CFortunastakeConfig
 {
 
 public:
-	class CMasternodeEntry {
+	class CFortunastakeEntry {
 
 	private:
 		std::string alias;
@@ -29,7 +29,7 @@ public:
 
 	public:
 
-		CMasternodeEntry(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
+		CFortunastakeEntry(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
 			this->alias = alias;
 			this->ip = ip;
 			this->privKey = privKey;
@@ -78,21 +78,21 @@ public:
 		}
 	};
 
-	CMasternodeConfig() {
-		entries = std::vector<CMasternodeEntry>();
+	CFortunastakeConfig() {
+		entries = std::vector<CFortunastakeEntry>();
 	}
 
 	void clear();
     bool read(std::string& strErr);
 	void add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex);
-    void purge(CMasternodeEntry cme);
+    void purge(CFortunastakeEntry cme);
 
-	std::vector<CMasternodeEntry>& getEntries() {
+	std::vector<CFortunastakeEntry>& getEntries() {
 		return entries;
 	}
 
 private:
-	std::vector<CMasternodeEntry> entries;
+	std::vector<CFortunastakeEntry> entries;
 
 
 };

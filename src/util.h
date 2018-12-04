@@ -92,7 +92,7 @@ T* alignup(T* p)
     return u.ptr;
 }
 
-boost::filesystem::path GetMasternodeConfigFile();
+boost::filesystem::path GetFortunastakeConfigFile();
 
 #ifdef WIN32
 #define MSG_NOSIGNAL        0
@@ -127,15 +127,15 @@ inline void MilliSleep(int64_t n)
 
 
 
-//Masternode features
+//Fortunastake features
 
-extern bool fMasterNode;
+extern bool fFortunaStake;
 extern int nFortunaRounds;
 
 extern int nMinStakeInterval;
 
-extern int64_t enforceMasternodePaymentsTime;
-extern std::string strMasterNodeAddr;
+extern int64_t enforceFortunastakePaymentsTime;
+extern std::string strFortunaStakeAddr;
 extern int keysLoaded;
 extern bool fSuccessfullyLoaded;
 extern std::vector<int64_t> forTunaDenominations;

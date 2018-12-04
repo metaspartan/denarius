@@ -87,7 +87,7 @@ namespace GUIUtil
 	// Open denarius.conf
     void openConfigfile();
 
-    // Open masternode.conf
+    // Open fortunastake.conf
     void openMNConfigfile();
 
     /** Qt event filter that intercepts ToolTipChange events, and replaces the tooltip with a rich text

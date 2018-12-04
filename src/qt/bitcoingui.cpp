@@ -24,7 +24,7 @@
 #include "statisticspage.h"
 #include "blockbrowser.h"
 #include "marketbrowser.h"
-#include "masternodemanager.h"
+#include "fortunastakemanager.h"
 #include "fortuna.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
@@ -205,7 +205,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     sendCoinsPage = new SendCoinsDialog(this);
     messagePage = new MessagePage(this);
 
-    masternodeManagerPage = new MasternodeManager(this);
+    fortunastakeManagerPage = new FortunastakeManager(this);
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
@@ -219,7 +219,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(messagePage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
-    centralWidget->addWidget(masternodeManagerPage);
+    centralWidget->addWidget(fortunastakeManagerPage);
 	centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
 	//centralWidget->addWidget(chatWindow);
@@ -378,10 +378,10 @@ void BitcoinGUI::createActions()
     mintingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(mintingAction);
 
-    masternodeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Masternodes"), this);
-    masternodeManagerAction->setToolTip(tr("Show Denarius Masternodes status and configure your nodes."));
-    masternodeManagerAction->setCheckable(true);
-    tabGroup->addAction(masternodeManagerAction);
+    fortunastakeManagerAction = new QAction(QIcon(":/icons/mn"), tr("&Fortuna Stakes"), this);
+    fortunastakeManagerAction->setToolTip(tr("Show Denarius Fortuna Stakes status and configure your nodes."));
+    fortunastakeManagerAction->setCheckable(true);
+    tabGroup->addAction(fortunastakeManagerAction);
 
     proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
     proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));
@@ -403,8 +403,8 @@ void BitcoinGUI::createActions()
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
 	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
-    connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
-    connect(masternodeManagerAction, SIGNAL(triggered()), this, SLOT(gotoMasternodeManagerPage()));
+    connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(gotoFortunastakeManagerPage()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -455,8 +455,8 @@ void BitcoinGUI::createActions()
     openGraphAction->setStatusTip(tr("Show network monitor"));
     openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
     openConfEditorAction->setStatusTip(tr("Open configuration file"));
-    openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
-    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
+    openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Fortunastake Configuration File"), this);
+    openMNConfEditorAction->setStatusTip(tr("Open Fortunastake configuration file"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -543,7 +543,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(blockAction);
-    mainToolbar->addAction(masternodeManagerAction);
+    mainToolbar->addAction(fortunastakeManagerAction);
     mainToolbar->addAction(marketAction);
     mainToolbar->addAction(proofOfImageAction);
 
@@ -650,7 +650,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		statisticsPage->setModel(clientModel);
 		blockBrowser->setModel(clientModel);
 		marketBrowser->setModel(clientModel);
-        masternodeManagerPage->setWalletModel(walletModel);
+        fortunastakeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
@@ -1069,14 +1069,14 @@ void BitcoinGUI::showConfEditor()
 
 void BitcoinGUI::showMNConfEditor()
 {
-    boost::filesystem::path pathMNConfig = GetMasternodeConfigFile();
+    boost::filesystem::path pathMNConfig = GetFortunastakeConfigFile();
 
-    /* Open masternode.conf with the associated application */
+    /* Open fortunastake.conf with the associated application */
     if (boost::filesystem::exists(pathMNConfig)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathMNConfig.string())));
 	} else {
-		QMessageBox::warning(this, tr("No masternode.conf"),
-        tr("Your masternode.conf does not exist! Please create one in your Denarius data directory."),
+		QMessageBox::warning(this, tr("No fortunastake.conf"),
+        tr("Your fortunastake.conf does not exist! Please create one in your Denarius data directory."),
         QMessageBox::Ok, QMessageBox::Ok);
 	}
     //GUIUtil::openMNConfigfile();
@@ -1110,10 +1110,10 @@ void BitcoinGUI::gotoProofOfImagePage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
-void BitcoinGUI::gotoMasternodeManagerPage()
+void BitcoinGUI::gotoFortunastakeManagerPage()
 {
-    masternodeManagerAction->setChecked(true);
-    centralWidget->setCurrentWidget(masternodeManagerPage);
+    fortunastakeManagerAction->setChecked(true);
+    centralWidget->setCurrentWidget(fortunastakeManagerPage);
 
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);

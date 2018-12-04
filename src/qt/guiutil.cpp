@@ -290,9 +290,9 @@ void openConfigfile()
 
 void openMNConfigfile()
 {
-    boost::filesystem::path pathMNConfig = GetMasternodeConfigFile();
+    boost::filesystem::path pathMNConfig = GetFortunastakeConfigFile();
 
-    /* Open masternode.conf with the associated application */
+    /* Open fortunastake.conf with the associated application */
     if (boost::filesystem::exists(pathMNConfig))
         QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathMNConfig)));
 }

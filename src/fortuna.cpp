@@ -6,7 +6,7 @@
 #include "main.h"
 #include "init.h"
 #include "util.h"
-#include "masternode.h"
+#include "fortunastake.h"
 #include "ui_interface.h"
 
 #include <openssl/rand.h>
@@ -26,19 +26,19 @@ CCriticalSection cs_fortuna;
 
 /** The main object for accessing fortuna */
 CForTunaPool forTunaPool;
-/** A helper object for signing messages from masternodes */
+/** A helper object for signing messages from fortunastakes */
 CForTunaSigner forTunaSigner;
 /** The current fortunas in progress on the network */
 std::vector<CFortunaQueue> vecFortunaQueue;
-/** Keep track of the used masternodes */
-std::vector<CTxIn> vecMasternodesUsed;
+/** Keep track of the used fortunastakes */
+std::vector<CTxIn> vecFortunastakesUsed;
 // keep track of the scanning errors I've seen
 map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
 //
-CActiveMasternode activeMasternode;
+CActiveFortunastake activeFortunastake;
 
 // count peers we've requested the list from
-int RequestedMasterNodeList = 0;
+int RequestedFortunaStakeList = 0;
 
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
@@ -91,7 +91,7 @@ int GetInputFortunaRounds(CTxIn in, int rounds)
 
 void CForTunaPool::Reset(){
     cachedLastSuccess = 0;
-    vecMasternodesUsed.clear();
+    vecFortunastakesUsed.clear();
     UnlockCoins();
     SetNull();
 }
@@ -113,14 +113,14 @@ void CForTunaPool::SetNull(bool clearEverything){
 
     sessionUsers = 0;
     sessionDenom = 0;
-    sessionFoundMasternode = false;
+    sessionFoundFortunastake = false;
     vecSessionCollateral.clear();
     txCollateral = CTransaction();
 
     if(clearEverything){
         myEntries.clear();
 
-        if(fMasterNode){
+        if(fFortunaStake){
             sessionID = 1 + (rand() % 999999);
         } else {
             sessionID = 0;
@@ -158,10 +158,10 @@ void CForTunaPool::UnlockCoins(){
 // Check for various timeouts (queue objects, fortuna, etc)
 //
 void CForTunaPool::CheckTimeout(){
-    if(!fMasterNode) return;
+    if(!fFortunaStake) return;
 
     // catching hanging sessions
-    if(!fMasterNode) {
+    if(!fFortunaStake) {
         if(state == POOL_STATUS_TRANSMISSION) {
             if(fDebug) printf("CForTunaPool::CheckTimeout() -- Session complete -- Running Check()\n");
             // Check();
@@ -184,7 +184,7 @@ void CForTunaPool::CheckTimeout(){
     if(state == POOL_STATUS_QUEUE && sessionUsers == GetMaxPoolTransactions()) {
         CFortunaQueue dsq;
         dsq.nDenom = sessionDenom;
-        dsq.vin = activeMasternode.vin;
+        dsq.vin = activeFortunastake.vin;
         dsq.time = GetTime();
         dsq.ready = true;
         dsq.Sign();
@@ -194,14 +194,14 @@ void CForTunaPool::CheckTimeout(){
     }
 
     int addLagTime = 0;
-    if(!fMasterNode) addLagTime = 10000; //if we're the client, give the server a few extra seconds before resetting.
+    if(!fFortunaStake) addLagTime = 10000; //if we're the client, give the server a few extra seconds before resetting.
 
     if(state == POOL_STATUS_ACCEPTING_ENTRIES || state == POOL_STATUS_QUEUE){
         c = 0;
 
-        // if it's a masternode, the entries are stored in "entries", otherwise they're stored in myEntries
+        // if it's a fortunastake, the entries are stored in "entries", otherwise they're stored in myEntries
         std::vector<CForTunaEntry> *vec = &myEntries;
-        if(fMasterNode) vec = &entries;
+        if(fFortunaStake) vec = &entries;
 
         // check for a timeout and reset if needed
         vector<CForTunaEntry>::iterator it2;
@@ -213,7 +213,7 @@ void CForTunaPool::CheckTimeout(){
                     SetNull(true);
                     UnlockCoins();
                 }
-                if(fMasterNode){
+                if(fFortunaStake){
                     RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
                 }
                 break;
@@ -224,10 +224,10 @@ void CForTunaPool::CheckTimeout(){
         if(GetTimeMillis()-lastTimeChanged >= (FORTUNA_QUEUE_TIMEOUT*1000)+addLagTime){
             lastTimeChanged = GetTimeMillis();
 
-            // reset session information for the queue query stage (before entering a masternode, clients will send a queue request to make sure they're compatible denomination wise)
+            // reset session information for the queue query stage (before entering a fortunastake, clients will send a queue request to make sure they're compatible denomination wise)
             sessionUsers = 0;
             sessionDenom = 0;
-            sessionFoundMasternode = false;
+            sessionFoundFortunastake = false;
             vecSessionCollateral.clear();
 
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
@@ -351,7 +351,7 @@ bool CForTunaPool::IsCollateralValid(const CTransaction& txCollateral){
 // Add a clients transaction to the pool
 //
 bool CForTunaPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& newOutput, std::string& error){
-    if (!fMasterNode) return false;
+    if (!fFortunaStake) return false;
 
     BOOST_FOREACH(CTxIn in, newInput) {
         if (in.prevout.IsNull() || nAmount < 0) {
@@ -456,19 +456,19 @@ bool CForTunaPool::SignaturesComplete(){
     return true;
 }
 
-// Incoming message from masternode updating the progress of fortuna
+// Incoming message from fortunastake updating the progress of fortuna
 //    newAccepted:  -1 mean's it'n not a "transaction accepted/not accepted" message, just a standard update
 //                  0 means transaction was not accepted
 //                  1 means transaction was accepted
 
 bool CForTunaPool::StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID){
-    if(fMasterNode) return false;
+    if(fFortunaStake) return false;
     if(state == POOL_STATUS_ERROR || state == POOL_STATUS_SUCCESS) return false;
 
     UpdateState(newState);
     entriesCount = newEntriesCount;
 
-    if(error.size() > 0) strAutoDenomResult = _("Masternode:") + " " + error;
+    if(error.size() > 0) strAutoDenomResult = _("Fortunastake:") + " " + error;
 
     if(newAccepted != -1) {
         lastEntryAccepted = newAccepted;
@@ -481,29 +481,29 @@ bool CForTunaPool::StatusUpdate(int newState, int newEntriesCount, int newAccept
         if(newAccepted == 1) {
             sessionID = newSessionID;
             printf("CForTunaPool::StatusUpdate - set sessionID to %d\n", sessionID);
-            sessionFoundMasternode = true;
+            sessionFoundFortunastake = true;
         }
     }
 
     if(newState == POOL_STATUS_ACCEPTING_ENTRIES){
         if(newAccepted == 1){
             printf("CForTunaPool::StatusUpdate - entry accepted! \n");
-            sessionFoundMasternode = true;
-            //wait for other users. Masternode will report when ready
+            sessionFoundFortunastake = true;
+            //wait for other users. Fortunastake will report when ready
             UpdateState(POOL_STATUS_QUEUE);
-        } else if (newAccepted == 0 && sessionID == 0 && !sessionFoundMasternode) {
-            printf("CForTunaPool::StatusUpdate - entry not accepted by masternode \n");
+        } else if (newAccepted == 0 && sessionID == 0 && !sessionFoundFortunastake) {
+            printf("CForTunaPool::StatusUpdate - entry not accepted by fortunastake \n");
             UnlockCoins();
             UpdateState(POOL_STATUS_ACCEPTING_ENTRIES);
         }
-        if(sessionFoundMasternode) return true;
+        if(sessionFoundFortunastake) return true;
     }
 
     return true;
 }
 
 //
-// After we receive the finalized transaction from the masternode, we must
+// After we receive the finalized transaction from the fortunastake, we must
 // check it to make sure it's what we want, then sign it if we agree.
 // If we refuse to sign, it's possible we'll be charged collateral
 //
@@ -576,7 +576,7 @@ bool CForTunaPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode
         if(fDebug) printf("CForTunaPool::Sign - txNew:\n%s", finalTransaction.ToString().c_str());
     }
 
-    // push all of our signatures to the masternode
+    // push all of our signatures to the fortunastake
     if(sigs.size() > 0 && node != NULL)
         node->PushMessage("dss", sigs);
 
@@ -593,13 +593,13 @@ void CForTunaPool::NewBlock()
 
     forTunaPool.CheckTimeout();
 
-    if(!fMasterNode){
+    if(!fFortunaStake){
         //denominate all non-denominated inputs every 50 blocks (25 minutes)
         if(pindexBest->nHeight % 50 == 0)
             UnlockCoins();
-        // free up masternode connections every 30 blocks unless we are syncing
+        // free up fortunastake connections every 30 blocks unless we are syncing
         if(pindexBest->nHeight % 60 == 0 && !IsInitialBlockDownload())
-            ProcessMasternodeConnections();
+            ProcessFortunastakeConnections();
     }
 }
 
@@ -630,7 +630,7 @@ bool CForTunaPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txCollat
             //broadcast that I'm accepting entries, only if it's the first entry though
             CFortunaQueue dsq;
             dsq.nDenom = nDenom;
-            dsq.vin = activeMasternode.vin;
+            dsq.vin = activeFortunastake.vin;
             dsq.time = GetTime();
             dsq.Sign();
             dsq.Relay();
@@ -643,7 +643,7 @@ bool CForTunaPool::IsCompatibleWithSession(int64_t nDenom, CTransaction txCollat
 
     if((state != POOL_STATUS_ACCEPTING_ENTRIES && state != POOL_STATUS_QUEUE) || sessionUsers >= GetMaxPoolTransactions()){
         if((state != POOL_STATUS_ACCEPTING_ENTRIES && state != POOL_STATUS_QUEUE)) strReason = _("Incompatible mode.");
-        if(sessionUsers >= GetMaxPoolTransactions()) strReason = _("Masternode queue is full.");
+        if(sessionUsers >= GetMaxPoolTransactions()) strReason = _("Fortunastake queue is full.");
         printf("CForTunaPool::IsCompatibleWithSession - incompatible mode, return false %d %d\n", state != POOL_STATUS_ACCEPTING_ENTRIES, sessionUsers >= GetMaxPoolTransactions());
         return false;
     }
@@ -865,7 +865,7 @@ bool CForTunaSigner::VerifyMessage(CPubKey pubkey, vector<unsigned char>& vchSig
 
 bool CFortunaQueue::Sign()
 {
-    if(!fMasterNode) return false;
+    if(!fFortunaStake) return false;
 
     std::string strMessage = vin.ToString() + boost::lexical_cast<std::string>(nDenom) + boost::lexical_cast<std::string>(time) + boost::lexical_cast<std::string>(ready);
 
@@ -873,9 +873,9 @@ bool CFortunaQueue::Sign()
     CPubKey pubkey2;
     std::string errorMessage = "";
 
-    if(!forTunaSigner.SetKey(strMasterNodePrivKey, errorMessage, key2, pubkey2))
+    if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key2, pubkey2))
     {
-        printf("CFortunaQueue():Relay - ERROR: Invalid masternodeprivkey: '%s'\n", errorMessage.c_str());
+        printf("CFortunaQueue():Relay - ERROR: Invalid fortunastakeprivkey: '%s'\n", errorMessage.c_str());
         return false;
     }
 
@@ -906,14 +906,14 @@ bool CFortunaQueue::Relay()
 
 bool CFortunaQueue::CheckSignature()
 {
-    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
 
         if(mn.vin == vin) {
             std::string strMessage = vin.ToString() + boost::lexical_cast<std::string>(nDenom) + boost::lexical_cast<std::string>(time) + boost::lexical_cast<std::string>(ready);
 
             std::string errorMessage = "";
             if(!forTunaSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
-                return error("CFortunaQueue::CheckSignature() - Got bad masternode address signature %s \n", vin.ToString().c_str());
+                return error("CFortunaQueue::CheckSignature() - Got bad fortunastake address signature %s \n", vin.ToString().c_str());
             }
 
             return true;
@@ -946,26 +946,26 @@ void ThreadCheckForTunaPool(void* parg)
         if(c % mnTimeout == 0){
             LOCK(cs_main);
             /*
-                cs_main is required for doing masternode.Check because something
+                cs_main is required for doing fortunastake.Check because something
                 is modifying the coins view without a mempool lock. It causes
                 segfaults from this code without the cs_main lock.
             */
         {
 
-        LOCK(cs_masternodes);
-            vector<CMasterNode>::iterator it = vecMasternodes.begin();
+        LOCK(cs_fortunastakes);
+            vector<CFortunaStake>::iterator it = vecFortunastakes.begin();
             //check them separately
-            while(it != vecMasternodes.end()){
+            while(it != vecFortunastakes.end()){
                 (*it).Check();
                 ++it;
             }
 
             //remove inactive
-            it = vecMasternodes.begin();
-            while(it != vecMasternodes.end()){
+            it = vecFortunastakes.begin();
+            while(it != vecFortunastakes.end()){
                 if((*it).enabled == 4 || (*it).enabled == 3){
-                    printf("Removing inactive masternode %s\n", (*it).addr.ToString().c_str());
-                    it = vecMasternodes.erase(it);
+                    printf("Removing inactive fortunastake %s\n", (*it).addr.ToString().c_str());
+                    it = vecFortunastakes.erase(it);
                     mnCount = mnCount-1;
                 } else {
                     ++it;
@@ -973,13 +973,13 @@ void ThreadCheckForTunaPool(void* parg)
             }
 
         }
-            masternodePayments.CleanPaymentList();
+            fortunastakePayments.CleanPaymentList();
         }
 
         int mnRefresh = 30;
 
-        //try to sync the masternode list and payment list every 30 seconds from at least 2 nodes until we have them all
-        if(vNodes.size() > 1 && c % mnRefresh == 0 && (mnCount == 0 || vecMasternodes.size() < mnCount)) {
+        //try to sync the fortunastake list and payment list every 30 seconds from at least 2 nodes until we have them all
+        if(vNodes.size() > 1 && c % mnRefresh == 0 && (mnCount == 0 || vecFortunastakes.size() < mnCount)) {
             //bool fIsInitialDownload = IsInitialBlockDownload();
             //if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
@@ -992,11 +992,11 @@ void ThreadCheckForTunaPool(void* parg)
                         {
                             continue;
                         } else {
-                            printf("Asking for Masternode list from %s\n",pnode->addr.ToStringIPPort().c_str());
+                            printf("Asking for Fortunastake list from %s\n",pnode->addr.ToStringIPPort().c_str());
                             pnode->PushMessage("dseg", CTxIn()); //request full mn list
                             pnode->nLastDseg = GetTime();
                             pnode->PushMessage("getsporks"); //get current network sporks
-                            RequestedMasterNodeList++;
+                            RequestedFortunaStakeList++;
                             break;
                         }
                     }
@@ -1005,14 +1005,14 @@ void ThreadCheckForTunaPool(void* parg)
         }
 
         if(c % MASTERNODE_PING_SECONDS == 0){
-            activeMasternode.ManageStatus();
+            activeFortunastake.ManageStatus();
         }
 
         //if(c % (60*5) == 0){
         if(c % 60 == 0){
-            //if we've used 1/5 of the masternode list, then clear the list.
-            if((int)vecMasternodesUsed.size() > (int)vecMasternodes.size() / 5)
-                vecMasternodesUsed.clear();
+            //if we've used 1/5 of the fortunastake list, then clear the list.
+            if((int)vecFortunastakesUsed.size() > (int)vecFortunastakes.size() / 5)
+                vecFortunastakesUsed.clear();
         }
     }
 }

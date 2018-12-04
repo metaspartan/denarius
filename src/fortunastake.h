@@ -16,8 +16,8 @@
 #include "main.h"
 #include "script.h"
 
-class CMasterNode;
-class CMasternodePayments;
+class CFortunaStake;
+class CFortunastakePayments;
 class uint256;
 
 #define MASTERNODE_NOT_PROCESSED               0 // initial state
@@ -44,33 +44,33 @@ class uint256;
 
 using namespace std;
 
-class CMasternodePaymentWinner;
+class CFortunastakePaymentWinner;
 
-extern CCriticalSection cs_masternodes;
-extern std::vector<CMasterNode> vecMasternodes;
-extern std::vector<pair<int, CMasterNode*> > vecMasternodeScores;
-extern std::vector<pair<int, CMasterNode> > vecMasternodeRanks;
-extern CMasternodePayments masternodePayments;
-extern std::vector<CTxIn> vecMasternodeAskedFor;
-extern map<uint256, CMasternodePaymentWinner> mapSeenMasternodeVotes;
+extern CCriticalSection cs_fortunastakes;
+extern std::vector<CFortunaStake> vecFortunastakes;
+extern std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
+extern std::vector<pair<int, CFortunaStake> > vecFortunastakeRanks;
+extern CFortunastakePayments fortunastakePayments;
+extern std::vector<CTxIn> vecFortunastakeAskedFor;
+extern map<uint256, CFortunastakePaymentWinner> mapSeenFortunastakeVotes;
 extern map<int64_t, uint256> mapCacheBlockHashes;
 extern unsigned int mnCount;
 
 
 
-// manage the masternode connections
-void ProcessMasternodeConnections();
-int CountMasternodesAboveProtocol(int protocolVersion);
+// manage the fortunastake connections
+void ProcessFortunastakeConnections();
+int CountFortunastakesAboveProtocol(int protocolVersion);
 
 
-void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
-bool CheckMasternodeVin(CTxIn& vin, std::string& errorMessage);
+void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage);
 
 //
-// The Masternode Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
+// The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
 //
-class CMasterNode
+class CFortunaStake
 {
 public:
 	static int minProtoVersion;
@@ -101,7 +101,7 @@ public:
 
     //the dsq count from the last dsq broadcast of this node
     int64_t nLastDsq;
-    CMasterNode(CService newAddr, CTxIn newVin, CPubKey newPubkey, std::vector<unsigned char> newSig, int64_t newNow, CPubKey newPubkey2, int protocolVersionIn)
+    CFortunaStake(CService newAddr, CTxIn newVin, CPubKey newPubkey, std::vector<unsigned char> newSig, int64_t newNow, CPubKey newPubkey2, int protocolVersionIn)
     {
         addr = newAddr;
         vin = newVin;
@@ -168,7 +168,7 @@ public:
         return enabled == 1;
     }
 
-    int GetMasternodeInputAge()
+    int GetFortunastakeInputAge()
     {
         if(pindexBest == NULL) return 0;
 
@@ -184,15 +184,15 @@ public:
 
 
 // Get the current winner for this block
-int GetCurrentMasterNode(int mod=1, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
+int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 
-int GetMasternodeByVin(CTxIn& vin);
-int GetMasternodeRank(CMasterNode& tmn, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
-int GetMasternodeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CMasterNode::minProtoVersion);
-bool GetMasternodeRanks();
+int GetFortunastakeByVin(CTxIn& vin);
+int GetFortunastakeRank(CFortunaStake& tmn, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
+int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
+bool GetFortunastakeRanks();
 
 // for storing the winning payments
-class CMasternodePaymentWinner
+class CFortunastakePaymentWinner
 {
 public:
     int nBlockHeight;
@@ -201,7 +201,7 @@ public:
     std::vector<unsigned char> vchSig;
     uint64_t score;
 
-    CMasternodePaymentWinner() {
+    CFortunastakePaymentWinner() {
         nBlockHeight = 0;
         score = 0;
         vin = CTxIn();
@@ -228,32 +228,32 @@ public:
      }
 };
 
-inline bool operator==(const CMasterNode& a, const CMasterNode& b)
+inline bool operator==(const CFortunaStake& a, const CFortunaStake& b)
 {
     return a.vin == b.vin;
 }
-inline bool operator!=(const CMasterNode& a, const CMasterNode& b)
+inline bool operator!=(const CFortunaStake& a, const CFortunaStake& b)
 {
     return !(a.vin == b.vin);
 }
-inline bool operator<(const CMasterNode& a, const CMasterNode& b)
+inline bool operator<(const CFortunaStake& a, const CFortunaStake& b)
 {
     return (a.nBlockLastPaid < b.nBlockLastPaid);
 }
-inline bool operator>(const CMasterNode& a, const CMasterNode& b)
+inline bool operator>(const CFortunaStake& a, const CFortunaStake& b)
 {
     return (a.nBlockLastPaid > b.nBlockLastPaid);
 }
 
 //
-// Masternode Payments Class
+// Fortunastake Payments Class
 // Keeps track of who should get paid for which blocks
 //
 
-class CMasternodePayments
+class CFortunastakePayments
 {
 private:
-    std::vector<CMasternodePaymentWinner> vWinning;
+    std::vector<CFortunastakePaymentWinner> vWinning;
     int nSyncedFromPeer;
     std::string strMasterPrivKey;
     std::string strTestPubKey;
@@ -262,30 +262,30 @@ private:
 
 public:
 
-    CMasternodePayments() {
+    CFortunastakePayments() {
         strMainPubKey = "04af2b6c63d5e5937266a4ce630ab6ced73a0f6a5ff5611ef9b5cfc4f9e264e4a8a4840ab4da4d3ded243ef9f80f114d335dad9a87a50431004b35c01b2c68ea49";
         strTestPubKey = "0406d6c9580d20c4daaacbade0f5bbe4448c511c5860f6dc27a1bf2a8c043b2ad27f3831f8e24750488f0c715100cc5a5811ffd578029f3af62633d9e1c51be384";
         enabled = false;
     }
 
     bool SetPrivKey(std::string strPrivKey);
-    bool CheckSignature(CMasternodePaymentWinner& winner);
-    bool Sign(CMasternodePaymentWinner& winner);
+    bool CheckSignature(CFortunastakePaymentWinner& winner);
+    bool Sign(CFortunastakePaymentWinner& winner);
 
-    // Deterministically calculate a given "score" for a masternode depending on how close it's hash is
+    // Deterministically calculate a given "score" for a fortunastake depending on how close it's hash is
     // to the blockHeight. The further away they are the better, the furthest will win the election
     // and get paid this block
     //
 
-    int vecMasternodeRanksLastUpdated;
+    int vecFortunastakeRanksLastUpdated;
     uint64_t CalculateScore(uint256 blockHash, CTxIn& vin);
-    bool GetWinningMasternode(int nBlockHeight, CTxIn& vinOut);
-    bool AddWinningMasternode(CMasternodePaymentWinner& winner);
+    bool GetWinningFortunastake(int nBlockHeight, CTxIn& vinOut);
+    bool AddWinningFortunastake(CFortunastakePaymentWinner& winner);
     bool ProcessBlock(int nBlockHeight);
-    void Relay(CMasternodePaymentWinner& winner);
+    void Relay(CFortunastakePaymentWinner& winner);
     void Sync(CNode* node);
     void CleanPaymentList();
-    int LastPayment(CMasterNode& mn);
+    int LastPayment(CFortunaStake& mn);
 
     //slow
     bool GetBlockPayee(int nBlockHeight, CScript& payee);

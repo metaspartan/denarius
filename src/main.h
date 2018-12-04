@@ -18,8 +18,8 @@
 
 class CValidationState;
 
-#define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Masternode payments enabled block 81k5
-#define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Masternode payments not enabled until block 645k
+#define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Fortunastake payments enabled block 81k5
+#define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Fortunastake payments not enabled until block 645k
 #define BLOCK_START_MASTERNODE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
 
 //#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
@@ -76,7 +76,7 @@ static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 D Denarius Max
 static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
-static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1450000; // Enforce masternode payments after this height - BLOCK 1.45 Million
+static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1450000; // Enforce fortunastake payments after this height - BLOCK 1.45 Million
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
@@ -200,7 +200,7 @@ int GetIXConfirmations(uint256 nTXHash);
 bool AbortNode(const std::string &msg, const std::string &userMessage="");
 /** Increase a node's misbehavior score. */
 void Misbehaving(NodeId nodeid, int howmuch);
-int64_t GetMasternodePayment(int nHeight, int64_t blockValue);
+int64_t GetFortunastakePayment(int nHeight, int64_t blockValue);
 
 
 bool IsStandardTx(const CTransaction& tx, std::string& reason);

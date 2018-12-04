@@ -8,7 +8,7 @@ AdrenalineNodeConfigDialog::AdrenalineNodeConfigDialog(QWidget *parent, QString 
     ui(new Ui::AdrenalineNodeConfigDialog)
 {
     ui->setupUi(this);
-    QString desc = "rpcallowip=127.0.0.1<br>rpcuser=REPLACEME<br>rpcpassword=REPLACEME<br>server=1<br>listen=1<br>port=REPLACEMEWITHYOURPORT<br>masternode=1<br>masternodeaddr=" + nodeAddress + "<br>masternodeprivkey=" + privkey + "<br>";
+    QString desc = "rpcallowip=127.0.0.1<br>rpcuser=REPLACEME<br>rpcpassword=REPLACEME<br>server=1<br>listen=1<br>port=REPLACEMEWITHYOURPORT<br>fortunastake=1<br>fortunastakeaddr=" + nodeAddress + "<br>fortunastakeprivkey=" + privkey + "<br>";
     ui->detailText->setHtml(desc);
 }
 

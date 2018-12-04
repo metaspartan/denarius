@@ -8,7 +8,7 @@
 #include <QTimer>
 
 namespace Ui {
-    class MasternodeManager;
+    class FortunastakeManager;
 }
 class ClientModel;
 class WalletModel;
@@ -17,14 +17,14 @@ QT_BEGIN_NAMESPACE
 class QModelIndex;
 QT_END_NAMESPACE
 
-/** Masternode Manager page widget */
-class MasternodeManager : public QWidget
+/** Fortunastake Manager page widget */
+class FortunastakeManager : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit MasternodeManager(QWidget *parent = 0);
-    ~MasternodeManager();
+    explicit FortunastakeManager(QWidget *parent = 0);
+    ~FortunastakeManager();
 
     void setClientModel(ClientModel *clientModel);
     void setWalletModel(WalletModel *walletModel);
@@ -38,7 +38,7 @@ signals:
 
 private:
     QTimer *timer;
-    Ui::MasternodeManager *ui;
+    Ui::FortunastakeManager *ui;
     ClientModel *clientModel;
     WalletModel *walletModel;
     CCriticalSection cs_adrenaline;

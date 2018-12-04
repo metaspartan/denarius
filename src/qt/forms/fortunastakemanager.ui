@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MasternodeManager</class>
- <widget class="QWidget" name="MasternodeManager">
+ <class>FortunastakeManager</class>
+ <widget class="QWidget" name="FortunastakeManager">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -98,7 +98,7 @@
            <item>
             <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>Denarius Masternode Count:</string>
+              <string>Denarius Fortuna Stake Count:</string>
              </property>
             </widget>
            </item>
@@ -128,7 +128,7 @@
        </widget>
        <widget class="QWidget" name="tab_2">
         <attribute name="title">
-         <string>My Denarius Masternodes</string>
+         <string>My Denarius Fortuna Stakes</string>
         </attribute>
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">

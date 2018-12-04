@@ -6,17 +6,17 @@
 #define FORTUNA_H
 
 #include "main.h"
-#include "masternode.h"
-#include "activemasternode.h"
+#include "fortunastake.h"
+#include "activefortunastake.h"
 
 class CTxIn;
 class CForTunaPool;
 class CForTunaSigner;
-class CMasterNodeVote;
+class CFortunaStakeVote;
 class CBitcoinAddress;
 class CFortunaQueue;
 class CFortunaBroadcastTx;
-class CActiveMasternode;
+class CActiveFortunastake;
 
 #define POOL_MAX_TRANSACTIONS                  3 // wait for X transactions to merge and publish
 #define POOL_STATUS_UNKNOWN                    0 // waiting for update
@@ -40,9 +40,9 @@ class CActiveMasternode;
 extern CForTunaPool forTunaPool;
 extern CForTunaSigner forTunaSigner;
 extern std::vector<CFortunaQueue> vecFortunaQueue;
-extern std::string strMasterNodePrivKey;
+extern std::string strFortunaStakePrivKey;
 extern map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
-extern CActiveMasternode activeMasternode;
+extern CActiveFortunastake activeFortunastake;
 
 //specific messages for the Fortuna protocol
 void ProcessMessageFortuna(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
@@ -159,7 +159,7 @@ public:
 
     bool GetAddress(CService &addr)
     {
-        BOOST_FOREACH(CMasterNode mn, vecMasternodes) {
+        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
             if(mn.vin == vin){
                 addr = mn.addr;
                 return true;
@@ -170,7 +170,7 @@ public:
 
     bool GetProtocolVersion(int &protocolVersion)
     {
-        BOOST_FOREACH(CMasterNode mn, vecMasternodes) {
+        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
             if(mn.vin == vin){
                 protocolVersion = mn.protocolVersion;
                 return true;
@@ -228,7 +228,7 @@ public:
 
     // clients entries
     std::vector<CForTunaEntry> myEntries;
-    // masternode entries
+    // fortunastake entries
     std::vector<CForTunaEntry> entries;
     // the finalized transaction ready for signing
     CTransaction finalTransaction;
@@ -251,12 +251,12 @@ public:
     std::string lastMessage;
     bool completedTransaction;
     bool unitTest;
-    CService submittedToMasternode;
+    CService submittedToFortunastake;
 
     int sessionID;
     int sessionDenom; //Users must submit an denom matching this
     int sessionUsers; //N Users have said they'll join
-    bool sessionFoundMasternode; //If we've found a compatible masternode
+    bool sessionFoundFortunastake; //If we've found a compatible fortunastake
     int64_t sessionTotalValue; //used for autoDenom
     std::vector<CTransaction> vecSessionCollateral;
 
@@ -317,7 +317,7 @@ public:
 
     int GetEntriesCount() const
     {
-        if(fMasterNode){
+        if(fFortunaStake){
             return entries.size();
         } else {
             return entriesCount;
@@ -341,15 +341,15 @@ public:
 
     void UpdateState(unsigned int newState)
     {
-        if (fMasterNode && (newState == POOL_STATUS_ERROR || newState == POOL_STATUS_SUCCESS)){
-            printf("CForTunaPool::UpdateState() - Can't set state to ERROR or SUCCESS as a masternode. \n");
+        if (fFortunaStake && (newState == POOL_STATUS_ERROR || newState == POOL_STATUS_SUCCESS)){
+            printf("CForTunaPool::UpdateState() - Can't set state to ERROR or SUCCESS as a fortunastake. \n");
             return;
         }
 
         printf("CForTunaPool::UpdateState() == %d | %d \n", state, newState);
         if(state != newState){
             lastTimeChanged = GetTimeMillis();
-            if(fMasterNode) {
+            if(fFortunaStake) {
                 RelayForTunaStatus(forTunaPool.sessionID, forTunaPool.GetState(), forTunaPool.GetEntriesCount(), MASTERNODE_RESET);
             }
         }
@@ -395,9 +395,9 @@ public:
     bool AddScriptSig(const CTxIn newVin);
     // are all inputs signed?
     bool SignaturesComplete();
-    // as a client, send a transaction to a masternode to start the denomination process
+    // as a client, send a transaction to a fortunastake to start the denomination process
     void SendFortunaDenominate(std::vector<CTxIn>& vin, std::vector<CTxOut>& vout, int64_t amount);
-    // get masternode updates about the progress of fortuna
+    // get fortunastake updates about the progress of fortuna
     bool StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID=0);
 
     // as a client, check and sign the final transaction
@@ -426,7 +426,7 @@ public:
 };
 
 
-void ConnectToForTunaMasterNodeWinner();
+void ConnectToForTunaFortunaStakeWinner();
 
 void ThreadCheckForTunaPool(void* parg);
 

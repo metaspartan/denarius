@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.1.1.0
+VERSION = 3.2.0.0
 INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -261,9 +261,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/script.h \
     src/stealth.h \
 	  src/fortuna.h \
-	  src/activemasternode.h \
-	  src/masternode.h \
-	  src/masternodeconfig.h \
+	  src/activefortunastake.h \
+	  src/fortunastake.h \
+	  src/fortunastakeconfig.h \
 	  src/spork.h \
     src/init.h \
     src/mruset.h \
@@ -310,7 +310,7 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
-	src/qt/masternodemanager.h \
+	src/qt/fortunastakemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
     src/qt/termsofuse.h \
@@ -421,7 +421,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/masternodemanager.cpp \
+	src/qt/fortunastakemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
@@ -433,9 +433,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
 	src/fortuna.cpp \
-	src/activemasternode.cpp \
-	src/masternode.cpp \
-	src/masternodeconfig.cpp \
+	src/activefortunastake.cpp \
+	src/fortunastake.cpp \
+	src/fortunastakeconfig.cpp \
 	src/spork.cpp
 
 #### D e n a r i u s sources
@@ -627,7 +627,7 @@ FORMS += \
 	  src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
-    src/qt/forms/masternodemanager.ui \
+    src/qt/forms/fortunastakemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \
 	  src/qt/forms/multisigaddressentry.ui \

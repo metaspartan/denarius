@@ -8,7 +8,7 @@
 #include "txdb.h"
 #include "init.h"
 #include "miner.h"
-#include "masternode.h"
+#include "fortunastake.h"
 #include "bitcoinrpc.h"
 
 
@@ -380,8 +380,8 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "  \"height\" : height of the next block\n"
             "  \"payee\" : required payee\n"
             "  \"payee_amount\" : required amount to pay\n"
-			"  \"masternode_payments\" : true|false,         (boolean) true, if masternode payments are enabled"
-            "  \"enforce_masternode_payments\" : true|false  (boolean) true, if masternode payments are enforced"
+			"  \"fortunastake_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
+            "  \"enforce_fortunastake_payments\" : true|false  (boolean) true, if fortunastake payments are enforced"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
@@ -522,22 +522,22 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
 
 
-    // ---- Masternode info ---
+    // ---- Fortunastake info ---
 
-    bool bMasternodePayments = false;
+    bool bFortunastakePayments = false;
 
     if(fTestNet){
-        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET) bMasternodePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS_TESTNET) bFortunastakePayments = true;
     } else {
-        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS) bMasternodePayments = true;
+        if(pindexPrev->nHeight+1 >= BLOCK_START_MASTERNODE_PAYMENTS) bFortunastakePayments = true;
     }
-	if(fDebug) { printf("GetBlockTemplate(): Masternode Payments : %i\n", bMasternodePayments); }
+	if(fDebug) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
 	
-    if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
-        //no masternode detected
-        int winningNode = GetMasternodeByRank(1);
+    if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+        //no fortunastake detected
+        int winningNode = GetFortunastakeByRank(1);
         if(winningNode >= 0){
-            BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+            BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
             {
                 if (s.first == winningNode)
                 {
@@ -546,8 +546,8 @@ Value getblocktemplate(const Array& params, bool fHelp)
                 }
             }
         } else {
-            printf("getblocktemplate() RPC: Failed to detect masternode to pay, burning coins\n");
-            // masternodes are in-eligible for payment, burn the coins in-stead
+            printf("getblocktemplate() RPC: Failed to detect fortunastake to pay, burning coins\n");
+            // fortunastakes are in-eligible for payment, burn the coins in-stead
             std::string burnAddress;
             if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
             else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
@@ -556,21 +556,21 @@ Value getblocktemplate(const Array& params, bool fHelp)
             payee = GetScriptForDestination(burnDestination.Get());
         }
     }
-    printf("getblock : payee = %i, bMasternode = %i\n",payee != CScript(),bMasternodePayments);
-    if(payee != CScript() && bMasternodePayments){   
+    printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
+    if(payee != CScript() && bFortunastakePayments){   
 		CTxDestination address1;
 		ExtractDestination(payee, address1);
 		CBitcoinAddress address2(address1);
 		result.push_back(Pair("payee", address2.ToString().c_str()));
-		result.push_back(Pair("payee_amount", (int64_t)GetMasternodePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
+		result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
 	} 
     else {
         result.push_back(Pair("payee", ""));
         result.push_back(Pair("payee_amount", ""));
     }
 	
-	result.push_back(Pair("masternode_payments", bMasternodePayments));
-    result.push_back(Pair("enforce_masternode_payments", bMasternodePayments));
+	result.push_back(Pair("fortunastake_payments", bFortunastakePayments));
+    result.push_back(Pair("enforce_fortunastake_payments", bFortunastakePayments));
 	
     return result;
 }

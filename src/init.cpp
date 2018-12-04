@@ -14,8 +14,8 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
-#include "activemasternode.h"
-#include "masternodeconfig.h"
+#include "activefortunastake.h"
+#include "fortunastakeconfig.h"
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
@@ -376,13 +376,13 @@ std::string HelpMessage()
         "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n" +
         "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)") + "\n" +
 
-        "\n" + _("Masternode options:") + "\n" +
-        "  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
-        "  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
-        "  -mnconflock=<n>            " + _("Lock masternodes from masternode configuration file (default: 1)") +
-        "  -masternodeprivkey=<n>     " + _("Set the masternode private key") + "\n" +
-        "  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
-        "  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
+        "\n" + _("Fortunastake options:") + "\n" +
+        "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
+        "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
+        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
+        "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
+        "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
+        "  -fortunastakeminprotocol=<n> " + _("Ignore fortunastakes less than version (example: 70007; default : 0)") + "\n" +
 
         "\n" + _("Secure messaging options:") + "\n" +
         "  -nosmsg                                  " + _("Disable secure messaging.") + "\n" +
@@ -551,11 +551,11 @@ bool AppInit2()
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
-    // Process Masternode config
+    // Process Fortunastake config
     std::string err;
-    masternodeConfig.read(err);
+    fortunastakeConfig.read(err);
     if (!err.empty())
-        InitError("error while parsing masternode.conf Error: " + err);
+        InitError("error while parsing fortunastake.conf Error: " + err);
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
@@ -662,16 +662,16 @@ bool AppInit2()
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
 
-    if (mapArgs.count("-masternodepaymentskey")) // masternode payments priv key
+    if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
-        if (!masternodePayments.SetPrivKey(GetArg("-masternodepaymentskey", "")))
-            return InitError(_("Unable to sign masternode payment winner, wrong key?"));
-        if (!sporkManager.SetPrivKey(GetArg("-masternodepaymentskey", "")))
+        if (!fortunastakePayments.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
+            return InitError(_("Unable to sign fortunastake payment winner, wrong key?"));
+        if (!sporkManager.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
             return InitError(_("Unable to sign spork message, wrong key?"));
     }
 
-    //ignore masternodes below protocol version
-    CMasterNode::minProtoVersion = GetArg("-masternodeminprotocol", MIN_MN_PROTO_VERSION);
+    //ignore fortunastakes below protocol version
+    CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
 
     if (fDaemon)
         fprintf(stdout, "Denarius server starting\n");
@@ -1132,45 +1132,45 @@ bool AppInit2()
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
 
-    fMasterNode = GetBoolArg("-masternode", false);
-    if(fMasterNode) {
-        printf("Masternode Enabled\n");
-        strMasterNodeAddr = GetArg("-masternodeaddr", "");
+    fFortunaStake = GetBoolArg("-fortunastake", false);
+    if(fFortunaStake) {
+        printf("Fortunastake Enabled\n");
+        strFortunaStakeAddr = GetArg("-fortunastakeaddr", "");
 
-        printf("Masternode address: %s\n", strMasterNodeAddr.c_str());
+        printf("Fortunastake address: %s\n", strFortunaStakeAddr.c_str());
 
-        if(!strMasterNodeAddr.empty()){
-            CService addrTest = CService(strMasterNodeAddr);
+        if(!strFortunaStakeAddr.empty()){
+            CService addrTest = CService(strFortunaStakeAddr);
             if (!addrTest.IsValid()) {
-                return InitError("Invalid -masternodeaddr address: " + strMasterNodeAddr);
+                return InitError("Invalid -fortunastakeaddr address: " + strFortunaStakeAddr);
             }
         }
 
-        strMasterNodePrivKey = GetArg("-masternodeprivkey", "");
-        if(!strMasterNodePrivKey.empty()){
+        strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
+        if(!strFortunaStakePrivKey.empty()){
             std::string errorMessage;
 
             CKey key;
             CPubKey pubkey;
 
-            if(!forTunaSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
+            if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
             {
-                return InitError(_("Invalid masternodeprivkey. Please see documenation."));
+                return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
             }
 
-            activeMasternode.pubKeyMasternode = pubkey;
+            activeFortunastake.pubKeyFortunastake = pubkey;
 
         } else {
-            return InitError(_("You must specify a masternodeprivkey in the configuration. Please see documentation for help."));
+            return InitError(_("You must specify a fortunastakeprivkey in the configuration. Please see documentation for help."));
         }
     }
 
     if(GetBoolArg("-mnconflock", true) && pwalletMain) {
         LOCK(pwalletMain->cs_wallet);
-        printf("Locking Masternodes:\n");
+        printf("Locking Fortunastakes:\n");
         uint256 mnTxHash;
         int outputIndex;
-        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());
             outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
             COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
@@ -1185,8 +1185,8 @@ bool AppInit2()
     }
 
 
-    // Add any masternode.conf masternodes to the adrenaline nodes
-    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+    // Add any fortunastake.conf fortunastakes to the adrenaline nodes
+    BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries())
     {
         CAdrenalineNodeConfig c(mne.getAlias(), mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex());
         CWalletDB walletdb(strWalletFileName);
@@ -1195,7 +1195,7 @@ bool AppInit2()
         if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
         {
             if (!walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
-                printf("Could not add masternode config %s to adrenaline nodes.", c.sAddress.c_str());
+                printf("Could not add fortunastake config %s to adrenaline nodes.", c.sAddress.c_str());
         }
         // add it to adrenaline nodes if it doesn't exist already
         if (!pwalletMain->mapMyAdrenalineNodes.count(c.sAddress))
