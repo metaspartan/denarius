@@ -360,6 +360,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
     { "masternode",           	&masternode,             true,   false},
+    { "fortunastake",           &fortunastake,           true,   false},
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -1363,8 +1364,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
-	if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
-	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
+	  if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	  if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
