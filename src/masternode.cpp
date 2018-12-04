@@ -153,6 +153,11 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             }
         }
 
+        if (count > 0) {
+            mnMedianCount.input(count);
+            mnCount = mnMedianCount.median();
+        }
+
         // make sure the vout that was signed is related to the transaction that spawned the masternode
         //  - this is expensive, so it's only done once per masternode
         if(!forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
@@ -190,10 +195,6 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
             if(count == -1 && !isLocal)
                 RelayForTunaElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
-            if (count > 0) {
-                mnMedianCount.input(count);
-                mnCount = mnMedianCount.median();
-            }
 
             // mn.UpdateLastPaidBlock(pindex, 1000); // do a search back 1000 blocks when receiving a new masternode to find their last payment
             int value;

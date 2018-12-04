@@ -966,6 +966,7 @@ void ThreadCheckForTunaPool(void* parg)
                 if((*it).enabled == 4 || (*it).enabled == 3){
                     printf("Removing inactive masternode %s\n", (*it).addr.ToString().c_str());
                     it = vecMasternodes.erase(it);
+                    mnCount = mnCount-1;
                 } else {
                     ++it;
                 }
