@@ -2541,7 +2541,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         int lastPaid = mn.nBlockLastPaid;
                                         int paidAge = pindex->nHeight+1 - lastPaid;
                                         int rank = (GetMasternodeRank(mn, pindexBest->nHeight+1));
-                                        int maxrank = mnCount * 0.2; // e.g. 200 * 0.2 = top 40/200 allowed to be paid, top 2/10 etc
+                                        int maxrank = mnCount * 0.75; // = bottom quarter of list (the best paid) will be refused completely
                                         if (mnCount < 20) maxrank = 10; // under 20 mn's just pay anyone up to rank10
 
                                         int vinAge = GetInputAge(mn.vin);
@@ -2656,7 +2656,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     int paidAge = pindex->nHeight+1 - lastPaid;
                                     int vinAge = GetInputAge(mn.vin);
                                     int rank = (GetMasternodeRank(mn, pindexBest->nHeight+1));
-                                    int maxrank = mnCount * 0.2; // e.g. 200 * 0.2 = top 40/200 allowed to be paid, top 2/10 etc
+                                    int maxrank = mnCount * 0.75; // = bottom quarter of list (the best paid) will be refused completely
                                     if (mnCount < 20) maxrank = 10; // under 20 mn's just pay anyone up to rank10
                                     if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d, rank %d (max %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge, rank, maxrank);
 
