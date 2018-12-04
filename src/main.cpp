@@ -2540,6 +2540,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         int64_t value = vtx[1].vout[i].nValue;
                                         int lastPaid = mn.nBlockLastPaid;
                                         int paidAge = pindex->nHeight+1 - lastPaid;
+                                        int rank = (GetMasternodeRank(mn, pindexBest->nHeight+1));
+                                        int maxrank = mnCount * 0.2; // e.g. 200 * 0.2 = top 40/200 allowed to be paid, top 2/10 etc
+                                        if (mnCount < 20) maxrank = 10; // under 20 mn's just pay anyone up to rank10
+
                                         int vinAge = GetInputAge(mn.vin);
                                         if (fDebug) printf("CheckBlock-POS() : Masternode PoS payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
                                         if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
@@ -2551,7 +2555,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             }
                                             break;
                                         }
-                                        if (mn.payRate > 110) // MN is being paid over 10% more regularly than it should
+
+                                        if (rank > maxrank) // MN higher than max rank (e.g. rank 60 mn being paid)
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
                                                 return error("CheckBlock-POS() : Out-of-cycle masternode payment detected, rejecting block.");
@@ -2650,7 +2655,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     int lastPaid = mn.nBlockLastPaid;
                                     int paidAge = pindex->nHeight+1 - lastPaid;
                                     int vinAge = GetInputAge(mn.vin);
-                                    if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge);
+                                    int rank = (GetMasternodeRank(mn, pindexBest->nHeight+1));
+                                    int maxrank = mnCount * 0.2; // e.g. 200 * 0.2 = top 40/200 allowed to be paid, top 2/10 etc
+                                    if (mnCount < 20) maxrank = 10; // under 20 mn's just pay anyone up to rank10
+                                    if (fDebug) printf("CheckBlock-POW() : Masternode PoW payee found at block %d: %s who got paid %s D (last payment was %d blocks ago at %d) - input age: %d, rank %d (max %d)\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), paidAge, mn.nBlockLastPaid, vinAge, rank, maxrank);
+
                                     if(vinAge < (nBestHeight > BLOCK_START_MASTERNODE_DELAYPAY ? MASTERNODE_MIN_CONFIRMATIONS_NOPAY : MASTERNODE_MIN_CONFIRMATIONS)) // if MN is too new
                                     {
                                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
@@ -2660,10 +2669,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         }
                                         break;
                                     }
-                                    if (mn.payRate > 110) // if MN is being paid over 10% more regularly than it should
+                                    if (rank > maxrank) // if MN is being paid over 10% more regularly than it should
                                     {
                                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                            return error("CheckBlock-POW() : Masternode overpayment detected, rejecting block.");
+                                            return error("CheckBlock-POW() : Masternode overpayment detected, rejecting block: mn rank is %d<%d max",rank,maxrank);
                                         } else {
                                             if (fDebug) printf("WARNING: This masternode payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                         }
