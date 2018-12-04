@@ -995,7 +995,6 @@ void ThreadCheckForTunaPool(void* parg)
                             printf("Asking for Masternode list from %s\n",pnode->addr.ToStringIPPort().c_str());
 
                             pnode->PushMessage("dseg", CTxIn()); //request full mn list
-                            pnode->PushMessage("mnget"); //sync payees
                             pnode->PushMessage("getsporks"); //get current network sporks
                             RequestedMasterNodeList++;
                             break;

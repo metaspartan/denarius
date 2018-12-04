@@ -275,12 +275,12 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         if (fDebugNet) printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
         pfrom->PushMessage("dseg", vin);
-        int64_t askAgain = GetTime()+(60*60*1); // only ask for each dsee once per hour
+        int64_t askAgain = GetTime()+(60*1); // only ask for each dsee once per minute
         askedForMasternodeListEntry[vin.prevout] = askAgain;
 
     } else if (strCommand == "dseg") { //Get masternode list or specific entry
         bool fIsInitialDownload = IsInitialBlockDownload();
-        if(fIsInitialDownload) return;
+        //if(fIsInitialDownload) return;
 
         CTxIn vin;
         vRecv >> vin;
@@ -509,12 +509,11 @@ bool GetMasternodeRanks()
         mn.Check();
         if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
 
-        if (!mn.nBlockLastPaid || mn.nBlockLastPaid == 0)
-        {
-            CBlockIndex* pindex = pindexBest;
-            mn.UpdateLastPaidBlock(pindex, max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS); // search back to the payment round end
-        }
-        vecMasternodeScores.push_back(make_pair(mn.nBlockLastPaid, &mn));
+        int value = -1;
+        CBlockIndex* pindex = pindexBest;
+        int payments = mn.UpdateLastPaidAmounts(pindex, max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new masternode to find their last payment, payments = number of payments received, value = amount
+
+        vecMasternodeScores.push_back(make_pair(value, &mn));
     }
 
     sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPayRate());
@@ -631,7 +630,8 @@ int CMasterNode::SetPayRate(int nHeight)
          if (matches > 0) {
              payCount = matches;
              payValue = amount;
-             payRate = ((double)payValue / (scanBack / mnCount))*100;
+             // set the node's current 'reward rate' - pay value divided by rounds (3)
+             payRate = ((double)(payValue / COIN) / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
              // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
@@ -700,7 +700,7 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
     if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;
-    int scanBack = (int)mnCount * MASTERNODE_FAIR_PAYMENT_ROUNDS;
+    int scanBack = max(MASTERNODE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * MASTERNODE_FAIR_PAYMENT_ROUNDS;
 
     CScript mnpayee = GetScriptForDestination(pubkey.GetID());
     CTxDestination address1;
@@ -747,7 +747,6 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
                 }
             }
 
-
         if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
 
         BlockReading = BlockReading->pprev;
@@ -760,8 +759,8 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
         payCount = rewardCount;
         payValue = rewardValue;
 
-        // set the node's current 'reward rate'
-        payRate = ((double)rewardCount / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
+        // set the node's current 'reward rate' - pay value divided by rounds (3)
+        payRate = ((double)(payValue / COIN) / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
 
         if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
 
