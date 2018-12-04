@@ -3535,6 +3535,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
     if (fDebug) printf("ProcessBlock: ACCEPTED\n");
 
+    GetMasternodeRanks(); // calculate ranks for the next payment before any new data comes in
+
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
         Checkpoints::SendSyncCheckpoint(Checkpoints::AutoSelectSyncCheckpoint()->GetBlockHash());
