@@ -423,6 +423,15 @@ struct CompareLastPayRate
     }
 };
 
+struct CompareLastPay
+{
+    bool operator()(const pair<int, CMasterNode*>& t1,
+                    const pair<int, CMasterNode*>& t2) const
+    {
+        return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindexBest->nHeight) > t2.second->CalculateScore(1, pindexBest->nHeight) : t1.second->payValue > t2.second->payValue);
+    }
+};
+
 struct CompareLastPayValue
 {
     bool operator()(const pair<int, CMasterNode*>& t1,
@@ -517,7 +526,7 @@ bool GetMasternodeRanks()
         vecMasternodeScores.push_back(make_pair(value, &mn));
     }
 
-    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPayRate());
+    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareLastPay());
 
     masternodePayments.vecMasternodeRanksLastUpdated = pindexBest->nHeight;
     return true;
@@ -632,7 +641,8 @@ int CMasterNode::SetPayRate(int nHeight)
              payCount = matches;
              payValue = amount;
              // set the node's current 'reward rate' - pay value divided by rounds (3)
-             payRate = ((double)(payValue / COIN) / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
+             // this rate is representative of "D per 100 blocks"
+             payRate = ((double)(payValue / COIN) / scanBack) * 100;
              // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
@@ -714,62 +724,59 @@ int CMasterNode::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocks
 
     // reset counts
     payCount = 0;
-    payValue = 0;
-    payData.clear();
+    payValue = 0; // vector of payValues w/ payHeight as index means we dont have to clear it, we can just remove any indexes which are < pindexBest->nHeight and rely on new payment data once we have done the initial search
+    // payData.clear();
+
+    // edit associated code in ConnectBlock() code to add <int,int> to the payData
 
     LOCK(cs_masternodes);
-    for (int i = 0; i < scanBack; i++) {
-            val = 0;
-            CBlock block;
-            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
-                continue;
+    if (!payData.size()) { // if we don't have payData, let's look it up!
+        for (int i = 0; i < scanBack; i++) {
+                val = 0;
+                CBlock block;
+                if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                    continue;
 
-            // if it's a legit block, then count it against this node and record it in a vector
-            if (block.IsProofOfWork() || block.IsProofOfStake())
-            {
-                BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                // if it's a legit block, then count it against this node and record it in a vector
+                if (block.IsProofOfWork() || block.IsProofOfStake())
                 {
-                    if(mnpayee == txout.scriptPubKey) {
-                        int height = BlockReading->nHeight;
-                        if (rewardCount == 0) {
-                            nBlockLastPaid = height;
-                            nTimeLastPaid = BlockReading->nTime;
+                    BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                    {
+                        if(mnpayee == txout.scriptPubKey) {
+                            int height = BlockReading->nHeight;
+                            if (rewardCount == 0) {
+                                nBlockLastPaid = height;
+                                nTimeLastPaid = BlockReading->nTime;
+                            }
+                            // values
+                            val = txout.nValue;
+
+                            // add this profit & the reward itself
+                            rewardValue += val;
+                            rewardCount++;
+
+                            // make a note in the node for later lookup
+                            payData.push_back(make_pair(height, val));
                         }
-                        // values
-                        val = txout.nValue;
-
-                        // add this profit & the reward itself
-                        rewardValue += val;
-                        rewardCount++;
-
-                        // make a note in the node for later lookup
-                        payData.push_back(make_pair(height, val));
                     }
                 }
-            }
 
-        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+            if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
 
-        BlockReading = BlockReading->pprev;
+            BlockReading = BlockReading->pprev;
+        }
     }
+
+    // filter unneeded info from before scanBack height from payData,
+    // so we don't throw out data which might be needed if scanBack range gets bigger (e.g. huge new influx of stakes)
+    rewardCount = SetPayRate(pindexBest->nHeight);
 
     if (rewardCount > 0)
     {
-        // return the count and value
-        value = rewardValue / COIN;
-        payCount = rewardCount;
-        payValue = rewardValue;
-
-        // set the node's current 'reward rate' - pay value divided by rounds (3)
-        payRate = ((double)(payValue / COIN) / MASTERNODE_FAIR_PAYMENT_ROUNDS)*100;
-
-        if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
-
+        value = payValue / COIN;
+        if (fDebug) printf("CMasternode::UpdateLastPaidAmounts -- Processed stake %s (%d range) @ rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, payRate, payCount, FormatMoney(payValue).c_str());
         return rewardCount;
     } else {
-        payCount = rewardCount;
-        payValue = rewardValue;
-        payRate = 0;
         value = 0;
         return 0;
     }
