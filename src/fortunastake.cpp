@@ -425,8 +425,8 @@ struct CompareLastPayRate
 
 struct CompareLastPay
 {
-    bool operator()(const pair<int, CMasterNode*>& t1,
-                    const pair<int, CMasterNode*>& t2) const
+    bool operator()(const pair<int, CFortunaStake*>& t1,
+                    const pair<int, CFortunaStake*>& t2) const
     {
         return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindexBest->nHeight) > t2.second->CalculateScore(1, pindexBest->nHeight) : t1.second->payValue > t2.second->payValue);
     }
@@ -729,7 +729,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
 
     // edit associated code in ConnectBlock() code to add <int,int> to the payData
 
-    LOCK(cs_masternodes);
+    LOCK(cs_fortunastakes);
     if (!payData.size()) { // if we don't have payData, let's look it up!
         for (int i = 0; i < scanBack; i++) {
                 val = 0;
