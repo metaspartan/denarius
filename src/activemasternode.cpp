@@ -249,8 +249,8 @@ bool CActiveMasternode::Register(std::string strService, std::string strKeyMaste
         return false;
     }
 
-    if(!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, txHash, strOutputIndex)) {
-        errorMessage = "could not allocate vin";
+    if(!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, txHash, strOutputIndex, errorMessage)) {
+        //errorMessage = "could not allocate vin";
         printf("Register::Register() - Error: %s\n", errorMessage.c_str());
         return false;
     }
@@ -304,7 +304,6 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
 
 bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex) {
     CScript pubScript;
-
     // Find possible candidates
     vector<COutput> possibleCoins = SelectCoinsMasternode();
     COutput *selectedOutput;
@@ -325,6 +324,16 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
         }
         if(!found) {
             printf("CActiveMasternode::GetMasterNodeVin - Could not locate valid vin\n");
+            return false;
+        }
+        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
+            CScript mn;
+            mn = GetScriptForDestination(pubkey.GetID());
+            CTxDestination address1;
+            ExtractDestination(mn, address1);
+            CBitcoinAddress address2(address1);
+            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+            printf("CActiveMasternode::GetMasterNodeVin - Transaction for MN %s is too young (%d more confirms required)", address2.ToString().c_str(), remain);
             return false;
         }
     } else {
@@ -369,6 +378,11 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
         }
         if(!found) {
             errorMessage = "Could not locate valid vin";
+            return false;
+        }
+        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
+            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+            errorMessage = strprintf("%d more confirms required", remain);
             return false;
         }
     } else {
