@@ -327,6 +327,16 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
             printf("CActiveMasternode::GetMasterNodeVin - Could not locate valid vin\n");
             return false;
         }
+        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
+            CScript mn;
+            mn = GetScriptForDestination(pubkey.GetID());
+            CTxDestination address1;
+            ExtractDestination(mn, address1);
+            CBitcoinAddress address2(address1);
+            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+            printf("CActiveMasternode::GetMasterNodeVin - Transaction for MN %s is too young (%d more confirms required)", address2.ToString().c_str(), remain);
+            return false;
+        }
     } else {
         // No output specified,  Select the first one
         if(possibleCoins.size() > 0) {
@@ -369,6 +379,11 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
         }
         if(!found) {
             errorMessage = "Could not locate valid vin";
+            return false;
+        }
+        if (selectedOutput->nDepth < MASTERNODE_MIN_CONFIRMATIONS_NOPAY) {
+            int remain = MASTERNODE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
+            errorMessage = strprintf("%d more confirms required", remain);
             return false;
         }
     } else {
