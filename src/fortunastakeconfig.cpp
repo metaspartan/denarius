@@ -3,21 +3,21 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #include "net.h"
-#include "masternodeconfig.h"
+#include "fortunastakeconfig.h"
 #include "util.h"
 
-CMasternodeConfig masternodeConfig;
+CFortunastakeConfig fortunastakeConfig;
 
-void CMasternodeConfig::add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
-    CMasternodeEntry cme(alias, ip, privKey, txHash, outputIndex);
+void CFortunastakeConfig::add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
+    CFortunastakeEntry cme(alias, ip, privKey, txHash, outputIndex);
     entries.push_back(cme);
 }
 
-void CMasternodeConfig::purge(CMasternodeEntry cme) {
+void CFortunastakeConfig::purge(CFortunastakeEntry cme) {
     std::string line;
     std::string errMsg;
-    boost::filesystem::path confPath(GetMasternodeConfigFile());
-    boost::filesystem::path tempPath(GetMasternodeConfigFile().replace_extension(".temp"));
+    boost::filesystem::path confPath(GetFortunastakeConfigFile());
+    boost::filesystem::path tempPath(GetFortunastakeConfigFile().replace_extension(".temp"));
     boost::filesystem::ifstream fin(confPath);
     boost::filesystem::ofstream temp(tempPath);
 
@@ -44,10 +44,10 @@ void CMasternodeConfig::purge(CMasternodeEntry cme) {
     read(errMsg);
 }
 
-bool CMasternodeConfig::read(std::string& strErr) {
-    boost::filesystem::ifstream streamConfig(GetMasternodeConfigFile());
+bool CFortunastakeConfig::read(std::string& strErr) {
+    boost::filesystem::ifstream streamConfig(GetFortunastakeConfigFile());
     if (!streamConfig.good()) {
-        return true; // No masternode.conf file is OK
+        return true; // No fortunastake.conf file is OK
     }
 
     for(std::string line; std::getline(streamConfig, line); )
@@ -60,14 +60,14 @@ bool CMasternodeConfig::read(std::string& strErr) {
         iss.str(line);
         iss.clear();
         if (!(iss >> alias >> ip >> privKey >> txHash >> outputIndex)) {
-            //strErr = "Could not parse masternode.conf line: " + line;
-            printf("Could not parse masternode.conf line: %s\n", line.c_str());
+            //strErr = "Could not parse fortunastake.conf line: " + line;
+            printf("Could not parse fortunastake.conf line: %s\n", line.c_str());
             streamConfig.close();
             return false;
         }
 
         if(CService(ip).GetPort() != 19999 && CService(ip).GetPort() != 9999)  {
-            strErr = "Invalid port (must be 9999 for mainnet or 19999 for testnet) detected in masternode.conf: " + line;
+            strErr = "Invalid port (must be 9999 for mainnet or 19999 for testnet) detected in fortunastake.conf: " + line;
             streamConfig.close();
             return false;
         }

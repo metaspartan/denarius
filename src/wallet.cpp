@@ -13,7 +13,7 @@
 #include "coincontrol.h"
 #include "spork.h"
 #include "fortuna.h"
-#include "masternode.h"
+#include "fortunastake.h"
 #include "bloom.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm.hpp>
@@ -3561,30 +3561,30 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         nCredit += nReward;
     }
 
-	// Masternode Payments
+	// Fortunastake Payments
     int payments = 1;
-    // start masternode payments
-    bool bMasterNodePayment = false;
+    // start fortunastake payments
+    bool bFortunaStakePayment = false;
 
     if (fTestNet){
-        if (pindexPrev->nHeight+1 > BLOCK_START_MASTERNODE_PAYMENTS_TESTNET ){
-            bMasterNodePayment = true;
+        if (pindexPrev->nHeight+1 > BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET ){
+            bFortunaStakePayment = true;
         }
     }else{
-        if (pindexPrev->nHeight+1 > BLOCK_START_MASTERNODE_PAYMENTS){
-            bMasterNodePayment = true;
+        if (pindexPrev->nHeight+1 > BLOCK_START_FORTUNASTAKE_PAYMENTS){
+            bFortunaStakePayment = true;
         }
     }
-    if(fDebug) { printf("CreateCoinStake() : Masternode Payments = %i!\n", bMasterNodePayment); }
+    if(fDebug) { printf("CreateCoinStake() : Fortunastake Payments = %i!\n", bFortunaStakePayment); }
 
     CScript payee;
     bool hasPayment = true;
-    if(bMasterNodePayment) {
+    if(bFortunaStakePayment) {
         //spork
-        if(!masternodePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
-            int winningNode = GetCurrentMasterNode(1);
+        if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
+            int winningNode = GetCurrentFortunaStake(1);
                 if(winningNode >= 0){
-                    BOOST_FOREACH(PAIRTYPE(int, CMasterNode*)& s, vecMasternodeScores)
+                    BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                     {
                         if (s.first == winningNode)
                         {
@@ -3593,8 +3593,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                         }
                     }
                 } else {
-                    if(fDebug) { printf("CreateCoinStake() : Failed to detect masternode to pay\n"); }
-                    // masternodes are in-eligible for payment, burn the coins in-stead
+                    if(fDebug) { printf("CreateCoinStake() : Failed to detect fortunastake to pay\n"); }
+                    // fortunastakes are in-eligible for payment, burn the coins in-stead
                     std::string burnAddress;
                     if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
                     else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
@@ -3616,38 +3616,38 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         ExtractDestination(payee, address1);
         CBitcoinAddress address2(address1);
 
-        if(fDebug) { printf("CreateCoinStake() : Masternode payment to %s\n", address2.ToString().c_str()); }
+        if(fDebug) { printf("CreateCoinStake() : Fortunastake payment to %s\n", address2.ToString().c_str()); }
     }
 
     int64_t blockValue = nCredit;
-    int64_t masternodePayment = GetMasternodePayment(pindexPrev->nHeight+1, nReward);
+    int64_t fortunastakePayment = GetFortunastakePayment(pindexPrev->nHeight+1, nReward);
 
 
     // Set output amount
-    if (!hasPayment && txNew.vout.size() == 3) // 2 stake outputs, stake was split, no masternode payment
+    if (!hasPayment && txNew.vout.size() == 3) // 2 stake outputs, stake was split, no fortunastake payment
     {
         if(fDebug) { printf("CreateCoinStake() : 2 stake outputs, No MN payment!\n"); }
         txNew.vout[1].nValue = (blockValue / 2 / CENT) * CENT;
         txNew.vout[2].nValue = blockValue - txNew.vout[1].nValue;
     }
-    else if(hasPayment && txNew.vout.size() == 4) // 2 stake outputs, stake was split, plus a masternode payment
+    else if(hasPayment && txNew.vout.size() == 4) // 2 stake outputs, stake was split, plus a fortunastake payment
     {
         if(fDebug) { printf("CreateCoinStake() : 2 stake outputs, Split stake, with MN payment\n"); }
-        txNew.vout[payments-1].nValue = masternodePayment;
-        blockValue -= masternodePayment;
+        txNew.vout[payments-1].nValue = fortunastakePayment;
+        blockValue -= fortunastakePayment;
         txNew.vout[1].nValue = (blockValue / 2 / CENT) * CENT;
         txNew.vout[2].nValue = blockValue - txNew.vout[1].nValue;
     }
-    else if(!hasPayment && txNew.vout.size() == 2) // only 1 stake output, was not split, no masternode payment
+    else if(!hasPayment && txNew.vout.size() == 2) // only 1 stake output, was not split, no fortunastake payment
     {
         if(fDebug) { printf("CreateCoinStake() : 1 Stake output, No MN payment!\n"); }
         txNew.vout[1].nValue = blockValue;
     }
-    else if(hasPayment && txNew.vout.size() == 3) // only 1 stake output, was not split, plus a masternode payment
+    else if(hasPayment && txNew.vout.size() == 3) // only 1 stake output, was not split, plus a fortunastake payment
     {
         if(fDebug) { printf("CreateCoinStake() : 1 stake output, With MN payment!\n"); }
-        txNew.vout[payments-1].nValue = masternodePayment;
-        blockValue -= masternodePayment;
+        txNew.vout[payments-1].nValue = fortunastakePayment;
+        blockValue -= fortunastakePayment;
         txNew.vout[1].nValue = blockValue;
     }
 

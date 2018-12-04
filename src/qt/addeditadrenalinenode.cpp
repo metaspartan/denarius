@@ -1,8 +1,8 @@
 #include "addeditadrenalinenode.h"
 #include "ui_addeditadrenalinenode.h"
-#include "masternodeconfig.h"
-#include "masternodemanager.h"
-#include "ui_masternodemanager.h"
+#include "fortunastakeconfig.h"
+#include "fortunastakemanager.h"
+#include "ui_fortunastakemanager.h"
 
 #include "walletdb.h"
 #include "wallet.h"
@@ -47,7 +47,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->privkeyLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter a masternode private key. This can be found using the \"masternode genkey\" command in the console.");
+        msg.setText("Please enter a fortunastake private key. This can be found using the \"fortunastake genkey\" command in the console.");
         msg.exec();
         return;
     }
@@ -61,7 +61,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->outputindexLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter a transaction output index. This can be found using the \"masternode outputs\" command in the console.");
+        msg.setText("Please enter a transaction output index. This can be found using the \"fortunastake outputs\" command in the console.");
         msg.exec();
         return;
     }
@@ -72,20 +72,20 @@ void AddEditAdrenalineNode::on_okButton_clicked()
 
         c.sAlias = ui->aliasLineEdit->text().toStdString();
         c.sAddress = ui->addressLineEdit->text().toStdString();
-        c.sMasternodePrivKey = ui->privkeyLineEdit->text().toStdString();
+        c.sFortunastakePrivKey = ui->privkeyLineEdit->text().toStdString();
         c.sTxHash = ui->txhashLineEdit->text().toStdString();
         c.sOutputIndex = ui->outputindexLineEdit->text().toStdString();
 
         CWalletDB walletdb(pwalletMain->strWalletFile);
 
-        boost::filesystem::path pathConfigFile = GetMasternodeConfigFile();
+        boost::filesystem::path pathConfigFile = GetFortunastakeConfigFile();
         boost::filesystem::ofstream stream(pathConfigFile.string(), std::ios::out | std::ios::app);
         if (stream.is_open())
         {
-            stream << c.sAlias << " " << c.sAddress << " " << c.sMasternodePrivKey << " " << c.sTxHash << " " << c.sOutputIndex << std::endl;
+            stream << c.sAlias << " " << c.sAddress << " " << c.sFortunastakePrivKey << " " << c.sTxHash << " " << c.sOutputIndex << std::endl;
             stream.close();
         }
-        masternodeConfig.add(c.sAlias, c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex);
+        fortunastakeConfig.add(c.sAlias, c.sAddress, c.sFortunastakePrivKey, c.sTxHash, c.sOutputIndex);
 
         pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
         walletdb.WriteAdrenalineNodeConfig(c.sAddress, c);

@@ -12,7 +12,7 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
-class MasternodeManager;
+class FortunastakeManager;
 class MultisigDialog;
 class OverviewPage;
 class AddressBookPage;
@@ -100,7 +100,7 @@ private:
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
 	ProofOfImage *proofOfImagePage;
-	MasternodeManager *masternodeManagerPage;
+	FortunastakeManager *fortunastakeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -127,7 +127,7 @@ private:
 	QAction *mintingAction;
 	QAction *multisigAction;
 	QAction *proofOfImageAction;
-	QAction *masternodeManagerAction;
+	QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -228,8 +228,8 @@ private slots:
     void gotoSendCoinsPage();
     /** Switch to message page */
     void gotoMessagePage();
-	/** Switch to masternode manager page */
-	void gotoMasternodeManagerPage();
+	/** Switch to fortunastake manager page */
+	void gotoFortunastakeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
 
@@ -250,7 +250,7 @@ private slots:
 
     /** Open external (default) editor with denarius.conf */
     void showConfEditor();
-    /** Open external (default) editor with masternode.conf */
+    /** Open external (default) editor with fortunastake.conf */
     void showMNConfEditor();
 
     /** Show configuration dialog */

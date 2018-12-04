@@ -2387,7 +2387,7 @@ void RelayForTunaIn(const std::vector<CTxIn>& in, const int64_t& nAmount, const 
 
     BOOST_FOREACH(CNode* pnode, vNodes)
     {
-        if((CNetAddr)forTunaPool.submittedToMasternode != (CNetAddr)pnode->addr) continue;
+        if((CNetAddr)forTunaPool.submittedToFortunastake != (CNetAddr)pnode->addr) continue;
         printf("RelayForTunaIn - found master, relaying message - %s \n", pnode->addr.ToString().c_str());
         pnode->PushMessage("dsi", in, nAmount, txCollateral, out);
     }

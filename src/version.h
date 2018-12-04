@@ -30,16 +30,16 @@ static const int DATABASE_VERSION = 21212;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 31000; //Protocol is now 31000 as of D v3.1.0.0 - Block Height of 1.45m
+static const int PROTOCOL_VERSION = 31003; //Protocol is now 31003 as of D v3.2.0.0
 
 // intial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 21212;
 
 // disconnect from peers older than this proto version
-static const int MIN_PEER_PROTO_VERSION = 30000;
+static const int MIN_PEER_PROTO_VERSION = 31003;
 
 // Don't forget to change proto in FORTUNA.h as well!!
-static const int MIN_MN_PROTO_VERSION = 30000;
+static const int MIN_MN_PROTO_VERSION = 31003;
 
 // nTime field added to CAddress, starting with this version;
 // if possible, avoid requesting addresses nodes older than this

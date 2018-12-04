@@ -356,10 +356,11 @@ static const CRPCCommand vRPCCommands[] =
     { "anoninfo",               &anoninfo,               false,  false},
     { "reloadanondata",         &reloadanondata,         false,  false},
 
-    /* Masternode features */
+    /* Fortunastake features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
-    { "masternode",             &masternode,             true,   false},
+    { "masternode",           	&masternode,             true,   false},
+    { "fortunastake",           &fortunastake,           true,   false},
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -1363,8 +1364,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
-	if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
-	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
+	  if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	  if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
@@ -1372,6 +1373,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);
     if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
+
+    if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
     return params;
 }

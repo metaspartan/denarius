@@ -27,12 +27,12 @@ Specifications
 * Confirmations: 10 blocks
 * Maturity: 30 blocks (15 minutes)
 * Min stake age: 8 hours
-* Cost of Hybrid Masternode: 5,000 D
-* Hybrid Masternode Reward: 33% of current block reward
+* Cost of Hybrid Fortuna Stakes: 5,000 D
+* Hybrid Fortuna Stake Reward: 33% of the current block reward
 
 Technology
 ==========================
-* Hybrid PoW/PoS Masternodes
+* Hybrid PoW/PoS Fortuna Stakes
 * Stealth addresses
 * Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)

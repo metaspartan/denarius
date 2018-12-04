@@ -1,14 +1,14 @@
-#include "masternodemanager.h"
-#include "ui_masternodemanager.h"
+#include "fortunastakemanager.h"
+#include "ui_fortunastakemanager.h"
 #include "addeditadrenalinenode.h"
 #include "adrenalinenodeconfigdialog.h"
 
 #include "sync.h"
 #include "clientmodel.h"
 #include "walletmodel.h"
-#include "activemasternode.h"
-#include "masternodeconfig.h"
-#include "masternode.h"
+#include "activefortunastake.h"
+#include "fortunastakeconfig.h"
+#include "fortunastake.h"
 #include "walletdb.h"
 #include "walletmodel.h"
 #include "wallet.h"
@@ -32,9 +32,9 @@ using namespace std;
 #include <QClipboard>
 #include <QMessageBox>
 
-MasternodeManager::MasternodeManager(QWidget *parent) :
+FortunastakeManager::FortunastakeManager(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MasternodeManager),
+    ui(new Ui::FortunastakeManager),
     clientModel(0),
     walletModel(0)
 {
@@ -60,10 +60,10 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     if(!GetBoolArg("-reindexaddr", false))
         timer->start(30000);
 
-    updateNodeList();
+    QTimer::singleShot(1500, this, SLOT(updateNodeList()));
 }
 
-MasternodeManager::~MasternodeManager()
+FortunastakeManager::~FortunastakeManager()
 {
     delete ui;
 }
@@ -77,12 +77,12 @@ public:
     }
 };
 
-static void NotifyAdrenalineNodeUpdated(MasternodeManager *page, CAdrenalineNodeConfig nodeConfig)
+static void NotifyAdrenalineNodeUpdated(FortunastakeManager *page, CAdrenalineNodeConfig nodeConfig)
 {
     // alias, address, privkey, collateral address
     QString alias = QString::fromStdString(nodeConfig.sAlias);
     QString addr = QString::fromStdString(nodeConfig.sAddress);
-    QString privkey = QString::fromStdString(nodeConfig.sMasternodePrivKey);
+    QString privkey = QString::fromStdString(nodeConfig.sFortunastakePrivKey);
     
     QMetaObject::invokeMethod(page, "updateAdrenalineNode", Qt::QueuedConnection,
                               Q_ARG(QString, alias),
@@ -91,19 +91,19 @@ static void NotifyAdrenalineNodeUpdated(MasternodeManager *page, CAdrenalineNode
                               );
 }
 
-void MasternodeManager::subscribeToCoreSignals()
+void FortunastakeManager::subscribeToCoreSignals()
 {
     // Connect signals to core
     uiInterface.NotifyAdrenalineNodeChanged.connect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
 }
 
-void MasternodeManager::unsubscribeFromCoreSignals()
+void FortunastakeManager::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from core
     uiInterface.NotifyAdrenalineNodeChanged.disconnect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
 }
 
-void MasternodeManager::on_tableWidget_2_itemSelectionChanged()
+void FortunastakeManager::on_tableWidget_2_itemSelectionChanged()
 {
     if(ui->tableWidget_2->selectedItems().count() > 0)
     {
@@ -115,7 +115,7 @@ void MasternodeManager::on_tableWidget_2_itemSelectionChanged()
     }
 }
 
-void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QString privkey)
+void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QString privkey)
 {
     LOCK(cs_adrenaline);
 
@@ -135,14 +135,14 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
     if (!pwalletLock)
         return;
 
-    BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+    BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
         if (mne.getAlias() == alias.toStdString())
         {
             mnTxHash.SetHex(mne.getTxHash());
             outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
             COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
             if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
-                if (fDebug) printf("MasternodeManager:: %s %s - IS NOT SPENDABLE, status is bad!\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+                if (fDebug) printf("FortunastakeManager:: %s %s - IS NOT SPENDABLE, status is bad!\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
                 errorMessage = "Output is not spendable. ";
                 break;
             }
@@ -158,7 +158,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
                 if (vout.nValue != GetMNCollateral()*COIN)
                     errorMessage += "TX is not equal to 5000 D. ";
             }
-            if (fDebug) printf("MasternodeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
+            if (fDebug) printf("FortunastakeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
             break;
         }
     }
@@ -167,7 +167,7 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         errorMessage += "Could not find collateral address. ";
     }
 
-    if (errorMessage == "" || mnCount > vecMasternodes.size()) {
+    if (errorMessage == "" || mnCount > vecFortunastakes.size()) {
         status = QString::fromStdString("Loading");
         collateral = QString::fromStdString(address2.ToString().c_str());
     }
@@ -176,19 +176,19 @@ void MasternodeManager::updateAdrenalineNode(QString alias, QString addr, QStrin
         collateral = QString::fromStdString(errorMessage);
     }
 
-    BOOST_FOREACH(CMasterNode& mn, vecMasternodes) {
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
         if (mn.addr.ToString().c_str() == addr){
-            rank = GetMasternodeRank(mn, pindexBest->nHeight);
+            rank = GetFortunastakeRank(mn, pindexBest->nHeight);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
-            int64_t value;
-            double rate;
-            mn.GetPaymentInfo(pindexBest, value, rate);
-            payrate = QString::fromStdString(strprintf("%sD/%dblocks", FormatMoney(value).c_str(), max(200, (int)(3*mnCount))));
+            //int64_t value;
+            //double rate;
+            //mn.GetPaymentInfo(pindexBest, value, rate);
+            payrate = QString::fromStdString(strprintf("%.2f D/100", mn.payRate, max(200, (int)(3*mnCount))));
         }
     }
 
-    if (vecMasternodes.size() >= mnCount && rank == 0)
+    if (vecFortunastakes.size() >= mnCount && rank == 0)
     {
         status = QString::fromStdString("Offline");
     }
@@ -245,10 +245,10 @@ static QString seconds_to_DHMS(quint32 duration)
   return res.sprintf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
 }
 
-void MasternodeManager::updateNodeList()
+void FortunastakeManager::updateNodeList()
 {
-    TRY_LOCK(cs_masternodes, lockMasternodes);
-    if(!lockMasternodes)
+    TRY_LOCK(cs_fortunastakes, lockFortunastakes);
+    if(!lockFortunastakes)
         return;
 
     ui->countLabel->setText("Updating...");
@@ -258,11 +258,11 @@ void MasternodeManager::updateNodeList()
     ui->tableWidget->setRowCount(0);
     ui->tableWidget->setSortingEnabled(false);
 
-    BOOST_FOREACH(CMasterNode mn, vecMasternodes) 
+    BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) 
     {
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
-        int mnRank = GetMasternodeRank(mn, pindexBest->nHeight);
+        int mnRank = GetFortunastakeRank(mn, pindexBest->nHeight);
         int64_t value;
         double rate;
         mn.GetPaymentInfo(pindexBest, value, rate);
@@ -299,12 +299,12 @@ void MasternodeManager::updateNodeList()
     }
 
     if (mnCount > 0)
-        ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecMasternodes.size()).arg(mnCount));
+        ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecFortunastakes.size()).arg(mnCount));
     else
         ui->countLabel->setText("Loading...");
 
-    if (mnCount < vecMasternodes.size())
-        ui->countLabel->setText(QString("%1 active").arg(vecMasternodes.size()));
+    if (mnCount < vecFortunastakes.size())
+        ui->countLabel->setText(QString("%1 active").arg(vecFortunastakes.size()));
 
     ui->tableWidget->setSortingEnabled(true);
 
@@ -313,14 +313,14 @@ void MasternodeManager::updateNodeList()
         LOCK(cs_adrenaline);
         BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
         {
-            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sMasternodePrivKey));
+            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sFortunastakePrivKey));
         }
     }
     
 }
 
 
-void MasternodeManager::setClientModel(ClientModel *model)
+void FortunastakeManager::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if(model)
@@ -328,19 +328,19 @@ void MasternodeManager::setClientModel(ClientModel *model)
     }
 }
 
-void MasternodeManager::setWalletModel(WalletModel *model)
+void FortunastakeManager::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
 
 }
 
-void MasternodeManager::on_createButton_clicked()
+void FortunastakeManager::on_createButton_clicked()
 {
     AddEditAdrenalineNode* aenode = new AddEditAdrenalineNode();
     aenode->exec();
 }
 
-void MasternodeManager::on_copyAddressButton_clicked()
+void FortunastakeManager::on_copyAddressButton_clicked()
 {
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
@@ -354,7 +354,7 @@ void MasternodeManager::on_copyAddressButton_clicked()
     QApplication::clipboard()->setText(QString::fromStdString(sCollateralAddress));
 }
 
-void MasternodeManager::on_editButton_clicked()
+void FortunastakeManager::on_editButton_clicked()
 {
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
@@ -369,7 +369,7 @@ void MasternodeManager::on_editButton_clicked()
 
 }
 
-void MasternodeManager::on_getConfigButton_clicked()
+void FortunastakeManager::on_getConfigButton_clicked()
 {
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
@@ -380,12 +380,12 @@ void MasternodeManager::on_getConfigButton_clicked()
     int r = index.row();
     std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
     CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
-    std::string sPrivKey = c.sMasternodePrivKey;
+    std::string sPrivKey = c.sFortunastakePrivKey;
     AdrenalineNodeConfigDialog* d = new AdrenalineNodeConfigDialog(this, QString::fromStdString(sAddress), QString::fromStdString(sPrivKey));
     d->exec();
 }
 
-void MasternodeManager::on_startButton_clicked()
+void FortunastakeManager::on_startButton_clicked()
 {
     // start the node
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
@@ -399,19 +399,19 @@ void MasternodeManager::on_startButton_clicked()
     CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
 
     std::string errorMessage;
-    bool result = activeMasternode.Register(c.sAddress, c.sMasternodePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
+    bool result = activeFortunastake.Register(c.sAddress, c.sFortunastakePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
 
     QMessageBox msg;
     msg.setWindowTitle("Denarius Message");
     if(result)
-        msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " started.");
+        msg.setText("Hybrid Fortunastake at " + QString::fromStdString(c.sAddress) + " started.");
     else
         msg.setText("Error: " + QString::fromStdString(errorMessage));
 
     msg.exec();
 }
 
-void MasternodeManager::on_startAllButton_clicked()
+void FortunastakeManager::on_startAllButton_clicked()
 {
     QString results;
     WalletModel::UnlockContext ctx(walletModel->requestUnlock());
@@ -420,18 +420,18 @@ void MasternodeManager::on_startAllButton_clicked()
     {
         results = "Wallet failed to unlock.\n";
     } else {
-        std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
-        mnEntries = masternodeConfig.getEntries();
+        std::vector<CFortunastakeConfig::CFortunastakeEntry> mnEntries;
+        mnEntries = fortunastakeConfig.getEntries();
 
         int total = 0;
         int successful = 0;
         int fail = 0;
 
-        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
             total++;
 
             std::string errorMessage;
-            bool result = activeMasternode.Register(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage);
+            bool result = activeFortunastake.Register(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage);
 
             if(result)
             {
@@ -446,7 +446,7 @@ void MasternodeManager::on_startAllButton_clicked()
             }
         }
 
-        results += QString::fromStdString("Successfully started " + boost::lexical_cast<std::string>(successful) + " masternodes, failed to start " +
+        results += QString::fromStdString("Successfully started " + boost::lexical_cast<std::string>(successful) + " fortunastakes, failed to start " +
                 boost::lexical_cast<std::string>(fail) + ", total " + boost::lexical_cast<std::string>(total));
     }
 
@@ -462,7 +462,7 @@ void MasternodeManager::on_startAllButton_clicked()
 
 }
 
-void MasternodeManager::on_removeButton_clicked()
+void FortunastakeManager::on_removeButton_clicked()
 {
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
@@ -470,7 +470,7 @@ void MasternodeManager::on_removeButton_clicked()
         return;
 
     QMessageBox::StandardButton confirm;
-    confirm = QMessageBox::question(this, "Delete masternode.conf?", "Are you sure you want to delete this hybrid masternode configuration?", QMessageBox::Yes|QMessageBox::No);
+    confirm = QMessageBox::question(this, "Delete fortunastake.conf?", "Are you sure you want to delete this hybrid fortunastake configuration?", QMessageBox::Yes|QMessageBox::No);
 
     if(confirm == QMessageBox::Yes)
     {
@@ -481,11 +481,11 @@ void MasternodeManager::on_removeButton_clicked()
         CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
         CWalletDB walletdb(pwalletMain->strWalletFile);
 
-        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries())
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries())
         {
             if (mne.getIp() == sAddress)
             {
-                masternodeConfig.purge(mne);
+                fortunastakeConfig.purge(mne);
                 std::map<std::string, CAdrenalineNodeConfig>::iterator iter = pwalletMain->mapMyAdrenalineNodes.find(sAddress);
                 if (iter != pwalletMain->mapMyAdrenalineNodes.end())
                     pwalletMain->mapMyAdrenalineNodes.erase(iter);
@@ -498,7 +498,7 @@ void MasternodeManager::on_removeButton_clicked()
     }
 }
 
-void MasternodeManager::on_stopButton_clicked()
+void FortunastakeManager::on_stopButton_clicked()
 {
     // start the node
     QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
@@ -512,12 +512,12 @@ void MasternodeManager::on_stopButton_clicked()
     CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
 
     std::string errorMessage;
-    bool result = activeMasternode.StopMasterNode(c.sAddress, c.sMasternodePrivKey, errorMessage);
+    bool result = activeFortunastake.StopFortunaStake(c.sAddress, c.sFortunastakePrivKey, errorMessage);
     QMessageBox msg;
     msg.setWindowTitle("Denarius Message");
     if(result)
     {
-        msg.setText("Hybrid Masternode at " + QString::fromStdString(c.sAddress) + " stopped.");
+        msg.setText("Hybrid Fortunastake at " + QString::fromStdString(c.sAddress) + " stopped.");
     }
     else
     {
@@ -526,14 +526,14 @@ void MasternodeManager::on_stopButton_clicked()
     msg.exec();
 }
 
-void MasternodeManager::on_stopAllButton_clicked()
+void FortunastakeManager::on_stopAllButton_clicked()
 {
     std::string results;
     BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
     {
         CAdrenalineNodeConfig c = adrenaline.second;
 	std::string errorMessage;
-        bool result = activeMasternode.StopMasterNode(c.sAddress, c.sMasternodePrivKey, errorMessage);
+        bool result = activeFortunastake.StopFortunaStake(c.sAddress, c.sFortunastakePrivKey, errorMessage);
 	if(result)
 	{
    	    results += c.sAddress + ": STOPPED\n";
