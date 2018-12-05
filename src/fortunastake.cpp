@@ -522,7 +522,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
         if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
 
         int value = -1;
-        CBlockIndex* pindex = pindexBest;
+        // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
         int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
 
         vecFortunastakeScores.push_back(make_pair(value, &mn));
