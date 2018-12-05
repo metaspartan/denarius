@@ -2749,8 +2749,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if (FortunaReorgBlock) FortunaReorgBlock = false;
-
     // ppcoin: track money supply and mint amount info
     pindex->nMint = nValueOut - nValueIn + nFees;
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
@@ -2835,6 +2833,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
+
+    FortunaReorgBlock = true;
 
     // Find the fork
     CBlockIndex* pfork = pindexBest;
@@ -2930,6 +2930,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
+    FortunaReorgBlock = false;
     printf("REORGANIZE: done\n");
 
     return true;
@@ -2999,11 +3000,6 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         if (!vpindexSecondary.empty())
             printf("Postponing %"PRIszu" reconnects\n", vpindexSecondary.size());
 
-
-        if (vpindexSecondary.size() > nCoinbaseMaturity) {
-            // printf("Disabling Fortuna stake checks to allow reorganization of matured blocks without block-current MN list.");
-            FortunaReorgBlock = true;
-        }
         // Switch to new best branch
         if (!Reorganize(txdb, pindexIntermediate))
         {
@@ -3029,6 +3025,8 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
             if (!block.SetBestChainInner(txdb, pindex))
                 break;
         }
+
+
     }
 
     // Update best block in wallet (so we can detect restored wallets)
