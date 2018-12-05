@@ -508,7 +508,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
-    if (!pindex) return true;
+    if (!pindex || IsInitialBlockDownload()) return true;
     if (fortunastakePayments.vecFortunastakeRanksLastUpdated == pindex->GetBlockHash())
         return true;
 
@@ -538,6 +538,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
 
 int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtocol)
 {
+    if (IsInitialBlockDownload()) return 0;
     LOCK(cs_fortunastakes);
     GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
@@ -552,6 +553,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtoco
 
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
 {
+    if (IsInitialBlockDownload()) return 0;
     LOCK(cs_fortunastakes);
     GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
@@ -712,6 +714,7 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 
 int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
+    if (!pindex || IsInitialBlockDownload()) return 0;
     if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;

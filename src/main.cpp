@@ -90,6 +90,8 @@ extern enum Checkpoints::CPMode CheckpointsMode;
 
 std::set<uint256> setValidatedTx;
 
+bool FortunaReorgBlock = false;
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -2478,9 +2480,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-
-
-    if(FortunastakePayments == true)
+    if(!FortunaReorgBlock && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2740,8 +2740,16 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(fDebug) { printf("CheckBlock() : pindex is null, skipping fortunastake payment check\n"); }
         }
     } else {
-        if(fDebug) { printf("CheckBlock() : skipping fortunastake payment checks\n"); }
+        if(fDebug) {
+            if (FortunaReorgBlock) {
+                printf("CheckBlock() : Fortuna Payments block reorganization in progress..\n");
+            } else {
+                printf("CheckBlock() : skipping fortunastake payment checks\n");
+            }
+        }
     }
+
+    if (FortunaReorgBlock) FortunaReorgBlock = false;
 
     // ppcoin: track money supply and mint amount info
     pindex->nMint = nValueOut - nValueIn + nFees;
@@ -2991,6 +2999,11 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         if (!vpindexSecondary.empty())
             printf("Postponing %"PRIszu" reconnects\n", vpindexSecondary.size());
 
+
+        if (vpindexSecondary.size() > nCoinbaseMaturity) {
+            // printf("Disabling Fortuna stake checks to allow reorganization of matured blocks without block-current MN list.");
+            FortunaReorgBlock = true;
+        }
         // Switch to new best branch
         if (!Reorganize(txdb, pindexIntermediate))
         {
