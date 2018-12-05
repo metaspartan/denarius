@@ -997,7 +997,6 @@ void ThreadCheckForTunaPool(void* parg)
                             pnode->nLastDseg = GetTime();
                             pnode->PushMessage("getsporks"); //get current network sporks
                             RequestedFortunaStakeList++;
-                            break;
                         }
                     }
                 }
