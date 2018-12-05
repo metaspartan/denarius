@@ -22,6 +22,7 @@ CCriticalSection cs_fortunastakes;
 std::vector<CFortunaStake> vecFortunastakes;
 std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
 std::vector<CFortunaStake> vecFortunastakeScoresList;
+uint256 vecFortunastakeScoresListHash;
 std::vector<pair<int, CFortunaStake> > vecFortunastakeRanks;
 /** Object for who's going to get paid on which blocks */
 CFortunastakePayments fortunastakePayments;
@@ -515,19 +516,30 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     if (!pindex || IsInitialBlockDownload() || pindex->GetBlockTime() < GetTime() - 30*nCoinbaseMaturity) return true;
 
     vecFortunastakeScores.clear();
-    vecFortunastakeScoresList.clear();
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    int i;
+    if (vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
+        {
+            i++;
+            vecFortunastakeScores.push_back(make_pair(i, &mn));
+        }
+    } else {
+        vecFortunastakeScoresList.clear();
 
-        mn.Check();
-        if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
 
-        int value = -1;
-        // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
-        int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
+            mn.Check();
+            if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
 
-        vecFortunastakeScores.push_back(make_pair(value, &mn));
-        vecFortunastakeScoresList.push_back(mn);
+            int value = -1;
+            // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
+            int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
 
+            vecFortunastakeScores.push_back(make_pair(value, &mn));
+            vecFortunastakeScoresList.push_back(mn);
+
+        }
+        vecFortunastakeScoresListHash = pindex->GetBlockHash();
     }
 
     // NO MORE TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
