@@ -771,7 +771,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
         payValue = rewardValue;
 
         // set the node's current 'reward rate' - pay value divided by rounds (3)
-        payRate = ((double)(payValue / COIN) / FORTUNASTAKE_FAIR_PAYMENT_ROUNDS)*100;
+        payRate = ((double)(payValue / COIN) / scanBack)*100;
 
         if (fDebug) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
 
