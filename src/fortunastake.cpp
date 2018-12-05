@@ -35,6 +35,7 @@ std::map<COutPoint, int64_t> askedForFortunastakeListEntry;
 // cache block hashes as we calculate them
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
+double mnMedianRate;
 unsigned int mnCount = 0;
 
 // manage the fortunastake connections
@@ -505,9 +506,10 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
     return winner;
 }
-bool GetFortunastakeRanks()
+bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
-    if (fortunastakePayments.vecFortunastakeRanksLastUpdated == pindexBest->nHeight)
+    if (!pindex) return true;
+    if (fortunastakePayments.vecFortunastakeRanksLastUpdated == pindex->GetBlockHash())
         return true;
 
     // std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
@@ -528,14 +530,16 @@ bool GetFortunastakeRanks()
 
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay());
 
-    fortunastakePayments.vecFortunastakeRanksLastUpdated = pindexBest->nHeight;
+    // TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
+
+    fortunastakePayments.vecFortunastakeRanksLastUpdated = pindex->GetBlockHash();
     return true;
 }
 
 int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtocol)
 {
     LOCK(cs_fortunastakes);
-    GetFortunastakeRanks();
+    GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
 
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
@@ -549,7 +553,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtoco
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
 {
     LOCK(cs_fortunastakes);
-    GetFortunastakeRanks();
+    GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
 
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
@@ -642,7 +646,7 @@ int CFortunaStake::SetPayRate(int nHeight)
              payValue = amount;
              // set the node's current 'reward rate' - pay value divided by rounds (3)
              // this rate is representative of "D per 100 blocks"
-             payRate = ((double)(payValue / COIN) / scanBack) * 100;
+             payRate = (payValue / scanBack) * 100;
              // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
@@ -771,9 +775,9 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
         payValue = rewardValue;
 
         // set the node's current 'reward rate' - pay value divided by rounds (3)
-        payRate = ((double)(payValue / COIN) / scanBack)*100;
+        payRate = (payValue / scanBack)*100;
 
-        if (fDebug) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
+        if (fDebug) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%s count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), FormatMoney(payRate).c_str(), payCount, FormatMoney(payValue).c_str());
 
         return rewardCount;
     } else {

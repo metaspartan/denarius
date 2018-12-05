@@ -82,7 +82,7 @@ public:
     std::vector<unsigned char> sig;
     std::vector<pair<int, int64_t> > payData;
     pair<int, int64_t> payInfo;
-    double payRate;
+    int64_t payRate;
     int payCount;
     int64_t payValue;
     int64_t now; //dsee message times
@@ -189,7 +189,7 @@ int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CF
 int GetFortunastakeByVin(CTxIn& vin);
 int GetFortunastakeRank(CFortunaStake& tmn, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
-bool GetFortunastakeRanks();
+bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 
 // for storing the winning payments
 class CFortunastakePaymentWinner
@@ -277,7 +277,7 @@ public:
     // and get paid this block
     //
 
-    int vecFortunastakeRanksLastUpdated;
+    uint256 vecFortunastakeRanksLastUpdated;
     uint64_t CalculateScore(uint256 blockHash, CTxIn& vin);
     bool GetWinningFortunastake(int nBlockHeight, CTxIn& vinOut);
     bool AddWinningFortunastake(CFortunastakePaymentWinner& winner);
