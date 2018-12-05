@@ -2478,9 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-
-
-    if(FortunastakePayments == true)
+    if(pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2740,7 +2738,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(fDebug) { printf("CheckBlock() : pindex is null, skipping fortunastake payment check\n"); }
         }
     } else {
-        if(fDebug) { printf("CheckBlock() : skipping fortunastake payment checks\n"); }
+        if(fDebug) {
+                printf("CheckBlock() : skipping fortunastake payment checks\n");
+        }
     }
 
     // ppcoin: track money supply and mint amount info
@@ -3016,6 +3016,8 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
             if (!block.SetBestChainInner(txdb, pindex))
                 break;
         }
+
+
     }
 
     // Update best block in wallet (so we can detect restored wallets)

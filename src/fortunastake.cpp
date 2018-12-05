@@ -21,6 +21,8 @@ CCriticalSection cs_fortunastakes;
 /** The list of active fortunastakes */
 std::vector<CFortunaStake> vecFortunastakes;
 std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
+std::vector<CFortunaStake> vecFortunastakeScoresList;
+uint256 vecFortunastakeScoresListHash;
 std::vector<pair<int, CFortunaStake> > vecFortunastakeRanks;
 /** Object for who's going to get paid on which blocks */
 CFortunastakePayments fortunastakePayments;
@@ -36,6 +38,7 @@ std::map<COutPoint, int64_t> askedForFortunastakeListEntry;
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
 unsigned int mnCount = 0;
+bool FortunaReorgBlock = false;
 
 // manage the fortunastake connections
 void ProcessFortunastakeConnections(){
@@ -425,11 +428,13 @@ struct CompareLastPayRate
 
 struct CompareLastPay
 {
+    CompareLastPay(CBlockIndex* pindex) { this->pindex = pindex; }
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
-        return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindexBest->nHeight) > t2.second->CalculateScore(1, pindexBest->nHeight) : t1.second->payValue > t2.second->payValue);
+        return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
     }
+    CBlockIndex* pindex;
 };
 
 struct CompareLastPayValue
@@ -508,36 +513,47 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
-    if (!pindex) return true;
-    if (fortunastakePayments.vecFortunastakeRanksLastUpdated == pindex->GetBlockHash())
-        return true;
-
-    // std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
+    if (!pindex || IsInitialBlockDownload() || pindex->GetBlockTime() < GetTime() - 30*nCoinbaseMaturity) return true;
 
     vecFortunastakeScores.clear();
+    int i;
+    if (vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
+        {
+            i++;
+            vecFortunastakeScores.push_back(make_pair(i, &mn));
+        }
+    } else {
+        vecFortunastakeScoresList.clear();
 
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
 
-        mn.Check();
-        if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
+            mn.Check();
+            if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
 
-        int value = -1;
-        // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
-        int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
+            int value = -1;
+            // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
+            int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
 
-        vecFortunastakeScores.push_back(make_pair(value, &mn));
+            vecFortunastakeScores.push_back(make_pair(value, &mn));
+            vecFortunastakeScoresList.push_back(mn);
+
+        }
+        vecFortunastakeScoresListHash = pindex->GetBlockHash();
     }
 
-    sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay());
+    // NO MORE TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
+    //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
-    // TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
+    sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex as pindexBest is different between clients
 
-    fortunastakePayments.vecFortunastakeRanksLastUpdated = pindex->GetBlockHash();
+
     return true;
 }
 
 int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtocol)
 {
+    if (IsInitialBlockDownload()) return 0;
     LOCK(cs_fortunastakes);
     GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
@@ -552,6 +568,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtoco
 
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
 {
+    if (IsInitialBlockDownload()) return 0;
     LOCK(cs_fortunastakes);
     GetFortunastakeRanks(pindexBest);
     unsigned int i = 0;
@@ -712,6 +729,7 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 
 int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
+    if (!pindex || IsInitialBlockDownload()) return 0;
     if(!pindex) return 0;
 
     const CBlockIndex *BlockReading = pindex;

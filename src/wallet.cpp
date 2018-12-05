@@ -3582,7 +3582,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     if(bFortunaStakePayment) {
         //spork
         if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
-            int winningNode = GetCurrentFortunaStake(1);
+            int winningNode = GetFortunastakeByRank(1);
                 if(winningNode >= 0){
                     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                     {
