@@ -2883,7 +2883,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         if (!block.ReadFromDisk(pindex))
             return error("Reorganize() : ReadFromDisk for connect failed");
 
-        if (!IsInitialBlockDownload) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
+        if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
 
         if (!block.ConnectBlock(txdb, pindex))
         {
