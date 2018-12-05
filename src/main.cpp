@@ -2478,7 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(!fIsInitialDownload && FortunastakePayments == true && mnCount != 0 && vNodes.size() > 10 && vecFortunastakes.size() >= mnCount)
+    if(!fIsInitialDownload && FortunastakePayments == true && mnCount != 0 && vNodes.size() > 10 && vecFortunastakes.size() >= (int)mnCount)
     {
         LOCK2(cs_main, mempool.cs);
 
