@@ -31,13 +31,13 @@ Value getsubsidy(const Array& params, bool fHelp)
         throw runtime_error(
             "getsubsidy [nTarget]\n"
             "Returns proof-of-work subsidy value for the specified value of target.");
-    
+
     int nShowHeight;
     if (params.size() > 0)
         nShowHeight = atoi(params[0].get_str());
     else
         nShowHeight = nBestHeight+1; // block currently being solved
-    
+
     return (uint64_t)GetProofOfWorkReward(nShowHeight, 0);
 }
 
@@ -380,8 +380,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "  \"height\" : height of the next block\n"
             "  \"payee\" : required payee\n"
             "  \"payee_amount\" : required amount to pay\n"
-			"  \"fortunastake_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
+			      "  \"fortunastake_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
             "  \"enforce_fortunastake_payments\" : true|false  (boolean) true, if fortunastake payments are enforced"
+            "  \"masternode_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
+            "  \"enforce_masternode_payments\" : true|false  (boolean) true, if fortunastake payments are enforced"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
@@ -504,13 +506,13 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
 	CScript payee;
-	
+
     Object result;
     result.push_back(Pair("version", pblock->nVersion));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-	result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
+	  result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
     result.push_back(Pair("mutable", aMutable));
@@ -532,7 +534,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if(pindexPrev->nHeight+1 >= BLOCK_START_FORTUNASTAKE_PAYMENTS) bFortunastakePayments = true;
     }
 	if(fDebug) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
-	
+
     if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no fortunastake detected
         int winningNode = GetFortunastakeByRank(1);
@@ -557,21 +559,22 @@ Value getblocktemplate(const Array& params, bool fHelp)
         }
     }
     printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
-    if(payee != CScript() && bFortunastakePayments){   
+    if(payee != CScript() && bFortunastakePayments){
 		CTxDestination address1;
 		ExtractDestination(payee, address1);
 		CBitcoinAddress address2(address1);
 		result.push_back(Pair("payee", address2.ToString().c_str()));
 		result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
-	} 
-    else {
+	  } else {
         result.push_back(Pair("payee", ""));
         result.push_back(Pair("payee_amount", ""));
     }
-	
-	result.push_back(Pair("fortunastake_payments", bFortunastakePayments));
+
+	  result.push_back(Pair("fortunastake_payments", bFortunastakePayments));
     result.push_back(Pair("enforce_fortunastake_payments", bFortunastakePayments));
-	
+    result.push_back(Pair("masternode_payments", bFortunastakePayments));
+    result.push_back(Pair("enforce_masternode_payments", bFortunastakePayments));
+
     return result;
 }
 
@@ -600,4 +603,3 @@ Value submitblock(const Array& params, bool fHelp)
 
     return Value::null;
 }
-
