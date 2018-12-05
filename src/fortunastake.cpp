@@ -35,7 +35,6 @@ std::map<COutPoint, int64_t> askedForFortunastakeListEntry;
 // cache block hashes as we calculate them
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
-double mnMedianRate;
 unsigned int mnCount = 0;
 
 // manage the fortunastake connections
@@ -506,6 +505,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
     return winner;
 }
+
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
     if (!pindex) return true;

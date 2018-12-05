@@ -2543,17 +2543,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         int lastPaid = mn.nBlockLastPaid;
                                         int vinAge = GetInputAge(mn.vin);
                                         int rank = (GetFortunastakeRank(mn, pindexBest->nHeight+1));
-                                        // get median value
-                                        int64_t mnMedianRate;
-                                        int mnMedianRateCount;
-                                        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-                                        {
-                                            mnMedianRateCount++;
-                                            mnMedianRate = mnMedianRate + mn.payRate;
-                                        }
-                                        mnMedianRate = mnMedianRate / mnMedianRateCount;
-
-                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%d median:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mnMedianRate, vinAge, rank);
+                                        int maxrank = mnCount/2;
+                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, vinAge, rank);
 
                                         if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
                                         {
@@ -2566,7 +2557,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         }
 
                                         if (!fIsInitialDownload) {
-                                            if (lastPaid > 1 && mn.payRate > mnMedianRate*1.25) // if MN is being paid and it's over the max rate
+                                            if (lastPaid > 1 && rank > maxrank) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
                                                     return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
@@ -2670,17 +2661,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     int lastPaid = mn.nBlockLastPaid;
                                     int vinAge = GetInputAge(mn.vin);
                                     int rank = (GetFortunastakeRank(mn, pindexBest->nHeight+1));
-                                    // get median value
-                                    int64_t mnMedianRate;
-                                    int mnMedianRateCount;
-                                    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-                                    {
-                                        mnMedianRateCount++;
-                                        mnMedianRate = mnMedianRate + mn.payRate;
-                                    }
-                                    mnMedianRate = mnMedianRate / mnMedianRateCount;
+                                    int maxrank = mnCount/2;
 
-                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%d median:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), FormatMoney(mnMedianRate).c_str(), vinAge, rank);
+                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), vinAge, rank);
 
                                     if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
                                     {
@@ -2693,11 +2676,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     }
 
                                     if (!fIsInitialDownload) {
-                                        if (lastPaid > 1 && mn.payRate > (mnMedianRate + mnMedianRate/2)) // if MN is being paid and it's over the max rate
+                                        if (lastPaid > 1 && rank > maxrank) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
-                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%s medianRate:%s",rank,FormatMoney(mn.payRate).c_str(),FormatMoney(mnMedianRate).c_str());
+                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%d",rank,FormatMoney(mn.payRate).c_str());
                                             } else
                                             {
                                                 if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2900,7 +2883,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         if (!block.ReadFromDisk(pindex))
             return error("Reorganize() : ReadFromDisk for connect failed");
 
-        GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
+        if (!IsInitialBlockDownload) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
 
         if (!block.ConnectBlock(txdb, pindex))
         {
