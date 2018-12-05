@@ -724,6 +724,87 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
 
     // reset counts
     payCount = 0;
+    payValue = 0;
+    payData.clear();
+
+    LOCK(cs_masternodes);
+    for (int i = 0; i < scanBack; i++) {
+            val = 0;
+            CBlock block;
+            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                continue;
+
+            // if it's a legit block, then count it against this node and record it in a vector
+            if (block.IsProofOfWork() || block.IsProofOfStake())
+            {
+                BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                {
+                    if(mnpayee == txout.scriptPubKey) {
+                        int height = BlockReading->nHeight;
+                        if (rewardCount == 0) {
+                            nBlockLastPaid = height;
+                            nTimeLastPaid = BlockReading->nTime;
+                        }
+                        // values
+                        val = txout.nValue;
+
+                        // add this profit & the reward itself
+                        rewardValue += val;
+                        rewardCount++;
+
+                        // make a note in the node for later lookup
+                        payData.push_back(make_pair(height, val));
+                    }
+                }
+            }
+
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+
+        BlockReading = BlockReading->pprev;
+    }
+
+    if (rewardCount > 0)
+    {
+        // return the count and value
+        value = rewardValue / COIN;
+        payCount = rewardCount;
+        payValue = rewardValue;
+
+        // set the node's current 'reward rate' - pay value divided by rounds (3)
+        payRate = ((double)(payValue / COIN) / FORTUNASTAKE_FAIR_PAYMENT_ROUNDS)*100;
+
+        if (fDebug) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), payRate, payCount, FormatMoney(payValue).c_str());
+
+        return rewardCount;
+    } else {
+        payCount = rewardCount;
+        payValue = rewardValue;
+        payRate = 0;
+        value = 0;
+        return 0;
+    }
+
+}
+
+/*
+int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
+{
+    if(!pindex) return 0;
+
+    const CBlockIndex *BlockReading = pindex;
+    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
+
+    CScript mnpayee = GetScriptForDestination(pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(mnpayee, address1);
+    CBitcoinAddress address2(address1);
+    int rewardCount = 0;
+    int64_t rewardValue = 0;
+    int64_t val = 0;
+    value = 0;
+
+    // reset counts
+    payCount = 0;
     payValue = 0; // vector of payValues w/ payHeight as index means we dont have to clear it, we can just remove any indexes which are < pindexBest->nHeight and rely on new payment data once we have done the initial search
     // payData.clear();
 
@@ -782,7 +863,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
     }
 
 }
-
+*/
 void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack)
 {
     if(!pindex) return;
