@@ -2478,7 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(!fIsInitialDownload && FortunastakePayments == true && mnCount != 0 && vNodes.size() > 10 && vecFortunastakes.size() >= mnCount)
+    if(!fIsInitialDownload && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2580,7 +2580,16 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                            return error("CheckBlock-POS() : Did not find this payee in the fortunastake list, rejecting block.");
+                                    LOCK(cs_vNodes);
+                                    BOOST_FOREACH(CNode* pnode, vNodes)
+                                    {
+                                        if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
+                                                printf("Asking for Fortunastake list from %s\n",pnode->addr.ToStringIPPort().c_str());
+                                                pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                                                pnode->nLastDseg = GetTime();
+                                        }
+                                    }
+                            return error("CheckBlock-POS() : Did not find this payee in the fortunastake list. Requesting list update and rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                             foundPayee = true;
@@ -2691,6 +2700,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                LOCK(cs_vNodes);
+                                BOOST_FOREACH(CNode* pnode, vNodes)
+                                {
+                                    if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
+                                            printf("Asking for Fortunastake list from %s\n",pnode->addr.ToStringIPPort().c_str());
+                                            pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                                            pnode->nLastDseg = GetTime();
+                                    }
+                                }
                                 return error("CheckBlock-POW() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in  the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
