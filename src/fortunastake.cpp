@@ -727,7 +727,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
     payValue = 0;
     payData.clear();
 
-    LOCK(cs_masternodes);
+    LOCK(cs_fortunastakes);
     for (int i = 0; i < scanBack; i++) {
             val = 0;
             CBlock block;
