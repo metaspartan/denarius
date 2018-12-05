@@ -57,7 +57,6 @@ extern map<int64_t, uint256> mapCacheBlockHashes;
 extern unsigned int mnCount;
 
 
-
 // manage the fortunastake connections
 void ProcessFortunastakeConnections();
 int CountFortunastakesAboveProtocol(int protocolVersion);

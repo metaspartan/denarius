@@ -90,8 +90,6 @@ extern enum Checkpoints::CPMode CheckpointsMode;
 
 std::set<uint256> setValidatedTx;
 
-bool FortunaReorgBlock = false;
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -2480,7 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(!FortunaReorgBlock && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2741,11 +2739,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     } else {
         if(fDebug) {
-            if (FortunaReorgBlock) {
-                printf("CheckBlock() : Fortuna Payments block reorganization in progress..\n");
-            } else {
                 printf("CheckBlock() : skipping fortunastake payment checks\n");
-            }
         }
     }
 
@@ -2833,8 +2827,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
-
-    FortunaReorgBlock = true;
 
     // Find the fork
     CBlockIndex* pfork = pindexBest;
@@ -2930,7 +2922,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
-    FortunaReorgBlock = false;
     printf("REORGANIZE: done\n");
 
     return true;
