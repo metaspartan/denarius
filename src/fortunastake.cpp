@@ -518,6 +518,8 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     vecFortunastakeScores.clear();
     int i;
     if (vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
+        // if ScoresList was calculated for the current pindex hash, then just use that list
+        // TODO: make a vector of these somehow
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
         {
             i++;
@@ -685,8 +687,10 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
         int matches = 0;
         BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
         {
-            amount += item.second;
-            matches++;
+            if (item.first > pindex->nHeight - nMaxBlocksToScanBack) { // find payments in last scanrange
+               amount += item.second;
+               matches++;
+            }
         }
         //printf("done checking for matches: %d found with %s value\n", matches, FormatMoney(amount).c_str());
         if (matches > 0) {
