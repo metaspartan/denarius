@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Denarius developers
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -195,6 +196,18 @@ void static BIP32Hash(const unsigned char chainCode[32], unsigned int nChild, un
 /// CKey
 ///
 
+void CKey::SetCompressedPubKey()
+{
+    EC_KEY_set_conv_form(pkey, POINT_CONVERSION_COMPRESSED);
+    fCompressedPubKey = true;
+}
+
+void CKey::SetUnCompressedPubKey()
+{
+    EC_KEY_set_conv_form(pkey, POINT_CONVERSION_UNCOMPRESSED);
+    fCompressedPubKey = false;
+}
+
 bool CKey::Check(const unsigned char *vch) {
     // Do not convert to OpenSSL's data structures for range-checking keys,
     // it's easy enough to do directly.
@@ -250,6 +263,45 @@ bool CKey::IsValid() const
 bool CKey::IsCompressed() const
 {
     return fCompressed;
+}
+
+bool CKey::SetSecret(const CSecret& vchSecret, bool fCompressed)
+{
+    if (pkey != NULL)
+        EC_KEY_free(pkey);
+    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    if (pkey == NULL)
+        throw key_error("CKey::SetSecret() : EC_KEY_new_by_curve_name failed");
+    if (vchSecret.size() != 32)
+        throw key_error("CKey::SetSecret() : secret must be 32 bytes");
+    BIGNUM *bn = BN_bin2bn(&vchSecret[0],32,BN_new());
+    if (bn == NULL)
+        throw key_error("CKey::SetSecret() : BN_bin2bn failed");
+    if (!EC_KEY_regenerate_key(pkey,bn))
+    {
+        BN_clear_free(bn);
+        throw key_error("CKey::SetSecret() : EC_KEY_regenerate_key failed");
+    }
+    BN_clear_free(bn);
+    fSet = true;
+    if (fCompressed || fCompressedPubKey)
+        SetCompressedPubKey();
+    return true;
+}
+
+CSecret CKey::GetSecret(bool &fCompressed) const
+{
+    CSecret vchRet;
+    vchRet.resize(32);
+    const BIGNUM *bn = EC_KEY_get0_private_key(pkey);
+    int nBytes = BN_num_bytes(bn);
+    if (bn == NULL)
+        throw key_error("CKey::GetSecret() : EC_KEY_get0_private_key failed");
+    int n=BN_bn2bin(bn,&vchRet[32 - nBytes]);
+    if (n != nBytes)
+        throw key_error("CKey::GetSecret(): BN_bn2bin failed");
+    fCompressed = fCompressedPubKey;
+    return vchRet;
 }
 
 // Initialize from a CPrivKey (serialized OpenSSL private key data).

@@ -51,16 +51,32 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
     entry.push_back(Pair("version", tx.nVersion));
     entry.push_back(Pair("time", (int64_t)tx.nTime));
     entry.push_back(Pair("locktime", (int64_t)tx.nLockTime));
+
+    std::vector<uint8_t> vchImage;
+
     Array vin;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
         Object in;
         if (tx.IsCoinBase())
-            in.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
-        else
         {
-            in.push_back(Pair("txid", txin.prevout.hash.GetHex()));
-            in.push_back(Pair("vout", (int64_t)txin.prevout.n));
+            in.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
+        } else
+        {
+            if (tx.nVersion == ANON_TXN_VERSION
+                && txin.IsAnonInput())
+            {
+                txin.ExtractKeyImage(vchImage);
+
+                int nRingSize = txin.ExtractRingSize();
+
+                in.push_back(Pair("keyimage", HexStr(vchImage)));
+                in.push_back(Pair("ringsize", nRingSize));
+            } else
+            {
+                in.push_back(Pair("txid", txin.prevout.hash.GetHex()));
+                in.push_back(Pair("vout", (int64_t)txin.prevout.n));
+            };
             Object o;
             o.push_back(Pair("asm", txin.scriptSig.ToString()));
             o.push_back(Pair("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
@@ -68,7 +84,8 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
         }
         in.push_back(Pair("sequence", (int64_t)txin.nSequence));
         vin.push_back(in);
-    }
+    };
+    
     entry.push_back(Pair("vin", vin));
     Array vout;
     for (unsigned int i = 0; i < tx.vout.size(); i++)
@@ -151,7 +168,7 @@ Value listunspent(const Array& params, bool fHelp)
             "{txid, vout, scriptPubKey, amount, confirmations}");
 
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));
-    
+
     // Fix Spent Coins First
     int nMismatchSpent;
     int64_t nBalanceInQuestion;
@@ -569,8 +586,8 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     else
     {
         // push to local node
-        //CTxDB txdb("r");
-        if (!AcceptToMemoryPool(mempool, tx, true, NULL))
+        CTxDB txdb("r");
+        if (!tx.AcceptToMemoryPool(txdb))
             throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected");
 
         SyncWithWallets(tx, NULL, true);
@@ -717,7 +734,7 @@ Value searchrawtransactions(const Array &params, bool fHelp)
         } else {
             result.push_back(strHex);
         }
-      
+
         }
         it++;
     }

@@ -10,7 +10,6 @@
 #include "bignum.h"
 #include "sync.h"
 #include "net.h"
-#include "txmempool.h"
 #include "script.h"
 #include "scrypt.h"
 #include "hashblock.h"
@@ -19,46 +18,33 @@
 
 class CValidationState;
 
-#define BLOCK_START_MASTERNODE_PAYMENTS_TESTNET 81500 // Testnet Masternode payments enabled block 81k5
-#define BLOCK_START_MASTERNODE_PAYMENTS 645000 //Mainnet Masternode payments not enabled until block 645k
+#define BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET 81500 // Testnet Fortunastake payments enabled block 81k5
+#define BLOCK_START_FORTUNASTAKE_PAYMENTS 645000 //Mainnet Fortunastake payments not enabled until block 645k
+#define BLOCK_START_FORTUNASTAKE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
 
-//#define START_MASTERNODE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
-//#define START_MASTERNODE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
+//#define START_FORTUNASTAKE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
+//#define START_FORTUNASTAKE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
 
-static const int64_t DARKSEND_COLLATERAL = (5000*COIN); // 5,000 DNR
-static const int64_t DARKSEND_FEE = (0.010000*COIN); //0.01 DNR
-static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 DNR
-static const int64_t DARKSEND_POOL_MAX = (11000*COIN); //11,000 DNR
+static const int64_t FORTUNA_COLLATERAL = (5000*COIN); // 5,000 D
+static const int64_t FORTUNA_FEE = (0.010000*COIN); //0.01 D
+static const int64_t POOL_FEE_AMOUNT = (0.1*COIN); //0.1 D
+static const int64_t FORTUNA_POOL_MAX = (11000*COIN); //11,000 D
 
 #define MESSAGE_START_SIZE 4
 typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
 
-/*
-    At 15 signatures, 1/2 of the masternode network can be owned by
-    one party without comprimising the security of InstantX
-    (1000/2150.0)**15 = 1.031e-05
-*/
-#define INSTANTX_SIGNATURES_REQUIRED           20
-#define INSTANTX_SIGNATURES_TOTAL              30
-
-#define MASTERNODE_NOT_PROCESSED               0 // initial state
-#define MASTERNODE_IS_CAPABLE                  1
-#define MASTERNODE_NOT_CAPABLE                 2
-#define MASTERNODE_STOPPED                     3
-#define MASTERNODE_INPUT_TOO_NEW               4
-#define MASTERNODE_PORT_NOT_OPEN               6
-#define MASTERNODE_PORT_OPEN                   7
-#define MASTERNODE_SYNC_IN_PROCESS             8
-#define MASTERNODE_REMOTELY_ENABLED            9
-
-#define MASTERNODE_MIN_CONFIRMATIONS           15
-#define MASTERNODE_MIN_DSEEP_SECONDS           (30*60)
-#define MASTERNODE_MIN_DSEE_SECONDS            (5*60)
-#define MASTERNODE_PING_SECONDS                (1*60)
-#define MASTERNODE_EXPIRATION_SECONDS          (65*60)
-#define MASTERNODE_REMOVAL_SECONDS             (70*60)
+#define FORTUNASTAKE_NOT_PROCESSED               0 // initial state
+#define FORTUNASTAKE_IS_CAPABLE                  1
+#define FORTUNASTAKE_NOT_CAPABLE                 2
+#define FORTUNASTAKE_STOPPED                     3
+#define FORTUNASTAKE_INPUT_TOO_NEW               4
+#define FORTUNASTAKE_PORT_NOT_OPEN               6
+#define FORTUNASTAKE_PORT_OPEN                   7
+#define FORTUNASTAKE_SYNC_IN_PROCESS             8
+#define FORTUNASTAKE_REMOTELY_ENABLED            9
 
 class CWallet;
+class CWalletTx;
 class CBlock;
 class CBlockIndex;
 class CKeyItem;
@@ -84,11 +70,13 @@ static const unsigned int MAX_TX_SIGOPS = MAX_BLOCK_SIGOPS/5;
 static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;
 static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
+static const int64_t MIN_TX_FEE_ANON = 10000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
-static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 DNR Denarius Max
+static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 D Denarius Max
 static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
+static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1450000; // Enforce fortunastake payments after this height - BLOCK 1.45 Million
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
@@ -137,8 +125,12 @@ extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
 extern unsigned char pchMessageStart[4];
 extern std::map<uint256, CBlock*> mapOrphanBlocks;
+extern std::map<int64_t, CAnonOutputCount> mapAnonOutputStats;
 
-extern CTxMemPool mempool;
+extern CBigNum bnProofOfWorkLimit;
+extern CBigNum bnProofOfWorkLimitTestNet;
+
+//extern CTxMemPool mempool;
 
 // Settings
 extern int64_t nTransactionFee;
@@ -153,6 +145,8 @@ extern unsigned int nCoinCacheSize;
 extern bool fEnforceCanonical;
 
 extern bool fMinimizeCoinAge;
+
+extern int64_t nMinTxFee;
 
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64_t nMinDiskSpace = 52428800; //52 MB Minimum, Raise?
@@ -187,32 +181,26 @@ int GetNumBlocksOfPeers();
 bool IsInitialBlockDownload();
 std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s=false);
+bool GetKeyImage(CTxDB* ptxdb, ec_point& keyImage, CKeyImageSpent& keyImageSpent, bool& fInMempool);
+bool TxnHashInSystem(CTxDB* ptxdb, uint256& txnHash);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);
 void ResendWalletTransactions(bool fForce = false);
 
-
-
-/** (try to) add transaction to memory pool **/
-bool AcceptToMemoryPool(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
-                        bool* pfMissingInputs);
-
-bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
-                        bool* pfMissingInputs);
-
+bool Finalise();
 
 bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint256> &vtxhash);
 
 
-int GetInputAge(CTxIn& vin);
+int GetInputAge(CTxIn& vin, CBlockIndex* pindex);
 int GetInputAgeIX(uint256 nTXHash, CTxIn& vin);
 int GetIXConfirmations(uint256 nTXHash);
 /** Abort with a message */
 bool AbortNode(const std::string &msg, const std::string &userMessage="");
 /** Increase a node's misbehavior score. */
 void Misbehaving(NodeId nodeid, int howmuch);
-int64_t GetMasternodePayment(int nHeight, int64_t blockValue);
+int64_t GetFortunastakePayment(int nHeight, int64_t blockValue);
 
 
 bool IsStandardTx(const CTransaction& tx, std::string& reason);
@@ -271,14 +259,6 @@ public:
     {
         printf("%s", ToString().c_str());
     }
-};
-
-
-enum GetMinFee_mode
-{
-    GMF_BLOCK,
-    GMF_RELAY,
-    GMF_SEND,
 };
 
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
@@ -392,6 +372,8 @@ public:
         // ppcoin: the coin stake transaction is marked with the first output empty
         return (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
+
+    bool HasStealthOutput() const;
 
     /** Check for standard transaction types
         @param[in] mapInputs	Map of previous transactions that have outputs we're spending
@@ -531,6 +513,8 @@ public:
     bool FetchInputs(CTxDB& txdb, const std::map<uint256, CTxIndex>& mapTestPool,
                      bool fBlock, bool fMiner, MapPrevTx& inputsRet, bool& fInvalid);
 
+    bool CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInvalid, bool fCheckExists);
+
     /** Sanity check previous transactions, then, if all checks succeed,
         mark them as spent by this transaction.
 
@@ -546,7 +530,7 @@ public:
                        std::map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx,
                        const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags = STANDARD_SCRIPT_VERIFY_FLAGS, bool fValidateSig = true);
     bool CheckTransaction() const;
-    //bool AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs=NULL);
+    bool AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs=NULL);
     bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
 
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
@@ -562,7 +546,7 @@ class CMerkleTx : public CTransaction
 private:
     /** Constant used in hashBlock to indicate tx has been abandoned */
     static const uint256 ABANDON_HASH;
-    
+
     int GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet) const;
 public:
     uint256 hashBlock;
@@ -612,11 +596,10 @@ public:
     int GetDepthInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }
     bool IsInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChainINTERNAL(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
-    bool AcceptToMemoryPool(bool fLimitFree=true);
+    bool AcceptToMemoryPool(CTxDB& txdb);
+    bool AcceptToMemoryPool();
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
-	int GetTransactionLockSignatures() const;
-    bool IsTransactionLockTimedOut() const;
 };
 
 
@@ -985,7 +968,7 @@ public:
     int64_t nMoneySupply;
 
     unsigned int nFlags;  // ppcoin: block index flags
-    enum  
+    enum
     {
         BLOCK_PROOF_OF_STAKE = (1 << 0), // is proof-of-stake block
         BLOCK_STAKE_ENTROPY  = (1 << 1), // entropy bit for stake modifier
@@ -1177,7 +1160,7 @@ public:
             pprev, pnext, nFile, nBlockPos, nHeight,
             FormatMoney(nMint).c_str(), FormatMoney(nMoneySupply).c_str(),
             GeneratedStakeModifier() ? "MOD" : "-", GetStakeEntropyBit(), IsProofOfStake()? "PoS" : "PoW",
-            nStakeModifier, nStakeModifierChecksum, 
+            nStakeModifier, nStakeModifierChecksum,
             hashProof.ToString().c_str(),
             prevoutStake.ToString().c_str(), nStakeTime,
             hashMerkleRoot.ToString().c_str(),
@@ -1482,5 +1465,76 @@ public:
     unsigned char GetRejectCode() const { return chRejectCode; }
     std::string GetRejectReason() const { return strRejectReason; }
 };
+
+class CTxMemPool
+{
+private:
+    unsigned int nTransactionsUpdated;
+public:
+    mutable CCriticalSection cs;
+    std::map<uint256, CTransaction> mapTx;
+    std::map<COutPoint, CInPoint> mapNextTx;
+
+    std::map<std::vector<uint8_t>, CKeyImageSpent> mapKeyImage;
+
+    bool accept(CTxDB& txdb, CTransaction &tx,
+                bool* pfMissingInputs);
+    bool addUnchecked(const uint256& hash, CTransaction &tx);
+    bool remove(const CTransaction &tx, bool fRecursive = false);
+    bool removeConflicts(const CTransaction &tx);
+    void clear();
+    void queryHashes(std::vector<uint256>& vtxid);
+    unsigned int GetTransactionsUpdated() const;
+    void AddTransactionsUpdated(unsigned int n);
+
+    unsigned long size() const
+    {
+        LOCK(cs);
+        return mapTx.size();
+    }
+
+    bool exists(uint256 hash) const
+    {
+        LOCK(cs);
+        return (mapTx.count(hash) != 0);
+    }
+
+    bool lookup(uint256 hash, CTransaction& result) const
+    {
+        LOCK(cs);
+        std::map<uint256, CTransaction>::const_iterator i = mapTx.find(hash);
+        if (i == mapTx.end()) return false;
+        result = i->second;
+        return true;
+    }
+
+    bool insertKeyImage(const std::vector<uint8_t>& vchImage, CKeyImageSpent& kis)
+    {
+        LOCK(cs);
+
+        mapKeyImage[vchImage] = kis;
+
+        return true;
+    }
+    bool lookupKeyImage(const std::vector<uint8_t>& vchImage, CKeyImageSpent& result) const
+    {
+        LOCK(cs);
+
+        std::map<std::vector<uint8_t>, CKeyImageSpent>::const_iterator it = mapKeyImage.find(vchImage);
+        if (it == mapKeyImage.end())
+            return false;
+
+        result = it->second;
+
+        return true;
+    }
+};
+
+extern CTxMemPool mempool;
+
+/** (try to) add transaction to memory pool **/
+
+bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
+                        bool* pfMissingInputs);
 
 #endif

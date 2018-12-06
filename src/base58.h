@@ -86,7 +86,7 @@ public:
  * The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
  * Script-hash-addresses have version 85 (or 196 testnet).
  * The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
- */ 
+ */
 class CBitcoinAddress;
 class CBitcoinAddressVisitor : public boost::static_visitor<bool>
 {
@@ -149,7 +149,7 @@ bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const {
 class CBitcoinSecret : public CBase58Data
 {
 public:
-    
+
     void SetSecret(const CSecret& vchSecret, bool fCompressed);
     CSecret GetSecret(bool &fCompressedOut);
     void SetKey(const CKey& vchSecret);
@@ -162,7 +162,7 @@ public:
     {
         SetSecret(vchSecret, fCompressed);
     }
-	
+
 	CBitcoinSecret(const CKey& vchSecret)
     {
         SetKey(vchSecret);

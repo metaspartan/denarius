@@ -164,7 +164,7 @@ void MultisigDialog::on_createAddressButton_clicked()
         QMessageBox::warning(this, tr("Error"), tr("Number of required signatures > Number of keys involved in the creation of address."), QMessageBox::Ok);
         return;
     }
-    
+
     CScript script;
     script.SetMultisigpub(required, pubkeys);
     if (script.size() > MAX_SCRIPT_ELEMENT_SIZE)
@@ -521,13 +521,13 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     int64_t minFee = MIN_TX_FEE * (1 + (int64_t) transactionSize / 10000);
     if(fee < minFee)
     {
-        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 DNR) is smaller than the expected fee (%2 DNR). Do you want to send the transaction anyway?").arg((double) fee / COIN).arg((double) minFee / COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 D) is smaller than the expected fee (%2 D). Do you want to send the transaction anyway?").arg((double) fee / COIN).arg((double) minFee / COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
         if(ret != QMessageBox::Yes)
             return;
     }
     else if(fee > minFee)
     {
-        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 DNR) is bigger than the expected fee (%2 DNR). Do you want to send the transaction anyway?").arg((double) fee / COIN).arg((double) minFee / COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 D) is bigger than the expected fee (%2 D). Do you want to send the transaction anyway?").arg((double) fee / COIN).arg((double) minFee / COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
         if(ret != QMessageBox::Yes)
             return;
     }
@@ -556,9 +556,9 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     }
 
     // Send the transaction to the local node
-    //CTxDB txdb("r");
-    //if(!tx.AcceptToMemoryPool(txdb, false))
-	if (!AcceptToMemoryPool(mempool, tx, true, NULL))
+  CTxDB txdb("r");
+  if(!tx.AcceptToMemoryPool(txdb))
+	//if (!AcceptToMemoryPool(mempool, tx, true, NULL))
     return;
     SyncWithWallets(tx, NULL, true);
     //(CInv(MSG_TX, txHash), tx);

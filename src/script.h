@@ -17,6 +17,7 @@
 #include "keystore.h"
 #include "bignum.h"
 #include "stealth.h"
+#include "ringsig.h"
 
 typedef std::vector<unsigned char> valtype;
 
@@ -115,7 +116,7 @@ enum
 
     // Using a non-push operator in the scriptSig causes script failure (softfork safe, BIP62 rule 2).
     SCRIPT_VERIFY_SIGPUSHONLY = (1U << 5),
-    
+
     // BIP65 Bob Atomic Swap Support CLTV
     SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY = (1U << 6),
 
@@ -318,7 +319,7 @@ enum opcodetype
     OP_NOP7 = 0xb6,
     OP_NOP8 = 0xb7,
     OP_NOP9 = 0xb8,
-    OP_NOP10 = 0xb9,
+    OP_ANON_MARKER = 0xb9, //OP_NOP10
 
 
 
@@ -879,7 +880,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
 int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
 bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
-isminetype IsMine(const CKeyStore& keystore, const CTxDestination &dest);
+isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);

@@ -33,7 +33,7 @@ LIBS += \
  $(DEPSDIR)/lib/libboost_program_options-mt.a \
  $(DEPSDIR)/lib/libboost_thread-mt.a \
  $(DEPSDIR)/lib/libssl.a \
- $(DEPSDIR)/lib/libcrypto.a 
+ $(DEPSDIR)/lib/libcrypto.a
 else
 LIBS += \
  -ldb_cxx-4.8 \
@@ -42,7 +42,7 @@ LIBS += \
  -lboost_program_options-mt \
  -lboost_thread-mt \
  -lssl \
- -lcrypto 
+ -lcrypto
 endif
 
 DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE
@@ -64,7 +64,7 @@ OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	obj/alert.o \
+	  obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -79,8 +79,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	obj/core.o \
-	obj/txmempool.o \
+	  obj/core.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -104,8 +103,14 @@ OBJS= \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
     obj/stealth.o \
-	obj/richlistdb.o \
-	obj/richlistdata.o
+	  obj/activefortunastake.o \
+	  obj/fortunastakeconfig.o \
+    obj/fortunastake.o \
+    obj/rpcfortuna.o \
+    obj/spork.o \
+    obj/fortuna.o \
+	  obj/eccryptoverify.o \
+    obj/ringsig.o
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -176,12 +181,14 @@ obj/%.o: json/%.cpp
 	rm -f $(@:%.o=%.d)
 
 denariusd: $(OBJS:obj/%=obj/%)
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
 	-rm -f denariusd
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/*.d
 	-rm -f obj/build.h
+	-cd leveldb && $(MAKE) clean || true
 
 FORCE:

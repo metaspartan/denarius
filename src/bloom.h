@@ -8,6 +8,7 @@
 
 #include "uint256.h"
 #include "serialize.h"
+#include "core.h"
 
 class COutPoint;
 class CTransaction;
@@ -25,16 +26,19 @@ enum bloomflags
     // Only adds outpoints to the filter if the output is a pay-to-pubkey/pay-to-multisig script
     BLOOM_UPDATE_P2PUBKEY_ONLY = 2,
     BLOOM_UPDATE_MASK = 3,
+
+    BLOOM_ACCEPT_STEALTH = (1 << 2),
+
 };
 
 /**
  * BloomFilter is a probabilistic filter which SPV clients provide
  * so that we can filter the transactions we sends them.
- * 
+ *
  * This allows for significantly more efficient transaction and block downloads.
- * 
+ *
  * Because bloom filters are probabilistic, an SPV node can increase the false-
- * positive rate, making us send them transactions which aren't actually theirs, 
+ * positive rate, making us send them transactions which aren't actually theirs,
  * allowing clients to trade more bandwidth for more privacy by obfuscating which
  * keys are owned by them.
  */

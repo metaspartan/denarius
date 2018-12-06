@@ -19,13 +19,13 @@ using namespace std;
 using namespace boost;
 
 // Don't ever reuse these IDs for other sporks
-#define SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT               10000
+#define SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT               10000
 #define SPORK_2_MAX_VALUE                                     10002
 #define SPORK_3_REPLAY_BLOCKS                                 10003
 
 
-#define SPORK_1_MASTERNODE_PAYMENTS_ENFORCEMENT_DEFAULT       1515900783  //2018-1-14 03:33:03 GMT
-#define SPORK_2_MAX_VALUE_DEFAULT                             5000        //5000 DNR
+#define SPORK_1_FORTUNASTAKE_PAYMENTS_ENFORCEMENT_DEFAULT       1515900783  //2018-1-14 03:33:03 GMT
+#define SPORK_2_MAX_VALUE_DEFAULT                             5000        //5000 D
 #define SPORK_3_REPLAY_BLOCKS_DEFAULT                         0
 #define SPORK_4_RECONVERGE_DEFAULT                            1420070400  //2047-1-1
 
@@ -37,7 +37,7 @@ class CSporkManager;
 #include "key.h"
 #include "util.h"
 #include "protocol.h"
-#include "darksend.h"
+#include "fortuna.h"
 #include <boost/lexical_cast.hpp>
 
 using namespace std;

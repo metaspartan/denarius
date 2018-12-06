@@ -325,7 +325,7 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP7                   : return "OP_NOP7";
     case OP_NOP8                   : return "OP_NOP8";
     case OP_NOP9                   : return "OP_NOP9";
-    case OP_NOP10                  : return "OP_NOP10";
+    case OP_ANON_MARKER            : return "OP_ANON_MARKER"; // Ring Sigs
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
@@ -533,13 +533,13 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
         // CHECKLOCKTIMEVERIFY
         //
         // (nLockTime -- nLockTime )
-    
+
         if (!(flags & SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY))
             break; // not enabled; treat as a NOP
-    
+
         if (stack.size() < 1)
             return false;
-    
+
         // Note that elsewhere numeric opcodes are limited to
         // operands in the range -2**31+1 to 2**31-1, however it is
         // legal for opcodes to produce results exceeding that
@@ -555,13 +555,13 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
         // to 5-byte bignums, which are good until 2**32-1, the
         // same limit as the nLockTime field itself.
         const CScriptNum nLockTime(stacktop(-1), 5);
-    
+
         // In the rare event that the argument may be < 0 due to
         // some arithmetic being done first, you can always use
         // 0 MAX CHECKLOCKTIMEVERIFY.
         if (nLockTime < 0)
             return false;
-    
+
         // There are two types of nLockTime: lock-by-blockheight
         // and lock-by-blocktime, distinguished by whether
         // nLockTime < LOCKTIME_THRESHOLD.
@@ -574,12 +574,12 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
               (txTo.nLockTime >= LOCKTIME_THRESHOLD && nLockTime >= LOCKTIME_THRESHOLD)
              ))
             return false;
-    
+
         // Now that we know we're comparing apples-to-apples, the
         // comparison is a simple numeric one.
         if (nLockTime > (int64_t)txTo.nLockTime)
             return false;
-    
+
         // Finally the nLockTime feature can be disabled and thus
         // CHECKLOCKTIMEVERIFY bypassed if every txin has been
         // finalized by setting nSequence to maxint. The
@@ -592,13 +592,13 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
         // required to prove correct CHECKLOCKTIMEVERIFY execution.
         if (txTo.vin[nIn].IsFinal())
             return false;
-    
+
         break;
-    
+
     }
 
                 case OP_NOP1: case OP_NOP3: case OP_NOP4: case OP_NOP5:
-                case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
+                case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9:
                 {
                     if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
                         return false;
@@ -1940,7 +1940,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                     popstack(stack);
                     stack.push_back(vchHash);
                 }
-                break;                              
+                break;
 
                 case OP_CODESEPARATOR:
                 {
@@ -2312,7 +2312,7 @@ bool CheckSig(vector<unsigned char> vchSig, const vector<unsigned char> &vchPubK
 
 
 
-//  
+//
 // Return public keys or hashes from scriptPubKey, for 'standard' transaction types.
 //
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsigned char> >& vSolutionsRet)
@@ -2582,13 +2582,11 @@ public:
     }
 };
 
-isminetype IsMine(const CKeyStore &keystore, const CTxDestination &dest)
+isminetype IsMine(const CKeyStore &keystore, const CTxDestination& dest)
 {
-    if (boost::apply_visitor(CKeyStoreIsMineVisitor(&keystore), dest))
-        return MINE_SPENDABLE;
-    if (keystore.HaveWatchOnly(dest))
-        return MINE_WATCH_ONLY;
-    return MINE_NO;
+    CScript script;
+    script.SetDestination(dest);
+    return IsMine(keystore, script);
 }
 
 isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
@@ -2596,7 +2594,7 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
     vector<valtype> vSolutions;
     txnouttype whichType;
     if (!Solver(scriptPubKey, whichType, vSolutions)) {
-        if (keystore.HaveWatchOnly(scriptPubKey.GetID()))
+        if (keystore.HaveWatchOnly(scriptPubKey))
             return MINE_WATCH_ONLY;
         return MINE_NO;
     }
@@ -2611,15 +2609,11 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
         keyID = CPubKey(vSolutions[0]).GetID();
         if (keystore.HaveKey(keyID))
             return MINE_SPENDABLE;
-        if (keystore.HaveWatchOnly(keyID))
-            return MINE_WATCH_ONLY;
         break;
     case TX_PUBKEYHASH:
         keyID = CKeyID(uint160(vSolutions[0]));
         if (keystore.HaveKey(keyID))
             return MINE_SPENDABLE;
-        if (keystore.HaveWatchOnly(keyID))
-            return MINE_WATCH_ONLY;
         break;
     case TX_SCRIPTHASH:
     {
@@ -2627,11 +2621,9 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
         CScript subscript;
         if (keystore.GetCScript(scriptID, subscript)) {
             isminetype ret = IsMine(keystore, subscript);
-            if (ret)
+            if (ret == MINE_SPENDABLE)
                 return ret;
         }
-        if (keystore.HaveWatchOnly(scriptID))
-            return MINE_WATCH_ONLY;
         break;
     }
     case TX_MULTISIG:
@@ -2648,7 +2640,7 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
     }
     }
 
-    if (keystore.HaveWatchOnly(scriptPubKey.GetID()))
+    if (keystore.HaveWatchOnly(scriptPubKey))
         return MINE_WATCH_ONLY;
     return MINE_NO;
 }
@@ -2707,10 +2699,10 @@ public:
         if (keystore.GetCScript(scriptId, script))
             Process(script);
     }
-    
+
     void operator()(const CStealthAddress &stxAddr) {
         CScript script;
-        
+
     }
 
     void operator()(const CNoDestination &none) {}
@@ -3115,7 +3107,7 @@ public:
         *script << OP_HASH160 << scriptID << OP_EQUAL;
         return true;
     }
-    
+
     bool operator()(const CStealthAddress &stxAddr) const {
         script->clear();
         //*script << OP_HASH160 << scriptID << OP_EQUAL;

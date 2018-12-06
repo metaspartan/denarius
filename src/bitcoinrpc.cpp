@@ -121,6 +121,15 @@ std::string HexBits(unsigned int nBits)
     return HexStr(BEGIN(uBits.cBits), END(uBits.cBits));
 }
 
+bool IsStringBoolPositive(std::string& value)
+{
+    return (value == "+" || value == "on"  || value == "true"  || value == "1" || value == "yes");
+};
+
+bool IsStringBoolNegative(std::string& value)
+{
+    return (value == "-" || value == "off" || value == "false" || value == "0" || value == "no");
+};
 
 //
 // Utilities: convert hex-encoded Values
@@ -165,6 +174,10 @@ vector<unsigned char> ParseHexO(const Object& o, string strKey)
 
 string CRPCTable::help(string strCommand) const
 {
+    //Ring Sigs - D e n a r i u s
+    bool fAllAnon = strCommand == "anon" ? true : false;
+    printf("fAllAnon %d %s\n", fAllAnon, strCommand.c_str());
+
     string strRet;
     set<rpcfn_type> setDone;
     for (map<string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)
@@ -174,25 +187,33 @@ string CRPCTable::help(string strCommand) const
         // We already filter duplicates, but these deprecated screw up the sort order
         if (strMethod.find("label") != string::npos)
             continue;
+
+        if (fAllAnon)
+        {
+                if(strMethod != "anonoutputs"
+                && strMethod != "anoninfo"
+                && strMethod != "reloadanondata")
+            continue;
+        } else
         if (strCommand != "" && strMethod != strCommand)
             continue;
+
         try
         {
             Array params;
             rpcfn_type pfn = pcmd->actor;
             if (setDone.insert(pfn).second)
                 (*pfn)(params, true);
-        }
-        catch (std::exception& e)
+        } catch (std::exception& e)
         {
             // Help text is returned in an exception
             string strHelp = string(e.what());
-            if (strCommand == "")
+            if (fAllAnon || strCommand == "")
                 if (strHelp.find('\n') != string::npos)
                     strHelp = strHelp.substr(0, strHelp.find('\n'));
             strRet += strHelp + "\n";
-        }
-    }
+        };
+    };
     if (strRet == "")
         strRet = strprintf("help: unknown command: %s\n", strCommand.c_str());
     strRet = strRet.substr(0,strRet.size()-1);
@@ -271,6 +292,7 @@ static const CRPCCommand vRPCCommands[] =
     { "encryptwallet",          &encryptwallet,          false,  false },
     { "validateaddress",        &validateaddress,        true,   false },
     { "validatepubkey",         &validatepubkey,         true,   false },
+    { "fetchbalance",           &fetchbalance,           true,   false },
     { "getbalance",             &getbalance,             false,  false },
     { "move",                   &movecmd,                false,  false },
     { "sendfrom",               &sendfrom,               false,  false },
@@ -279,6 +301,7 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
+	  { "getblockheader",         &getblockheader,         false,  false },
     { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
@@ -313,6 +336,7 @@ static const CRPCCommand vRPCCommands[] =
     { "repairwallet",           &repairwallet,           false,  true},
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
+    { "setdebug",               &setdebug,               true,   false },
     { "sendalert",              &sendalert,              false,  false},
     { "gettxout",               &gettxout,               true,   false },
     { "importaddress",          &importaddress,          false,  false },
@@ -320,22 +344,24 @@ static const CRPCCommand vRPCCommands[] =
     { "getnewstealthaddress",   &getnewstealthaddress,   false,  false},
     { "liststealthaddresses",   &liststealthaddresses,   false,  false},
     { "importstealthaddress",   &importstealthaddress,   false,  false},
-    { "sendtostealthaddress",   &sendtostealthaddress,   false,  false},
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
-    { "scanforstealthtxns",     &scanforstealthtxns,     false,  false},
 
-    /* Dark features */
-    { "darksend",               &darksend,               false,  false},
+    // Ring Signatures - D e n a r i u s - v3.1.0
+    { "senddtoanon",          	&senddtoanon,          	 false,  false},
+    { "sendanontoanon",         &sendanontoanon,         false,  false},
+    { "sendanontod",          	&sendanontod,         	 false,  false},
+    { "estimateanonfee",        &estimateanonfee,        false,  false},
+    { "txnreport",              &txnreport,              false,  false},
+    { "anonoutputs",            &anonoutputs,            false,  false},
+    { "anoninfo",               &anoninfo,               false,  false},
+    { "reloadanondata",         &reloadanondata,         false,  false},
+
+    /* Fortunastake features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "spork",                  &spork,                  true,   false},
-    { "masternode",             &masternode,             true,   false},
-    { "denominate",             &denominate,             false,  false},
-
-    /* Rich List */
-    { "resetrichlist",          &resetrichlist,          true,   false},
-    { "updaterichlist",         &updaterichlist,         true,   false},
-    { "getrichlist",            &getrichlist,            true,   false},    
+    { "masternode",           	&masternode,             true,   false},
+    { "fortunastake",           &fortunastake,           true,   false},
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -350,11 +376,9 @@ static const CRPCCommand vRPCCommands[] =
     { "smsginbox",              &smsginbox,              false,  false},
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
-    
-    
-    
-    
-    
+
+
+
 };
 
 CRPCTable::CRPCTable()
@@ -1290,6 +1314,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
+	  if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
@@ -1301,6 +1326,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendfrom"               && n > 3) ConvertTo<int64_t>(params[3]);
     if (strMethod == "listtransactions"       && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "listtransactions"       && n > 2) ConvertTo<int64_t>(params[2]);
+    if (strMethod == "listtransactions"       && n > 3) ConvertTo<bool>(params[3]);
     if (strMethod == "listaccounts"           && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "walletpassphrase"       && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "walletpassphrase"       && n > 2) ConvertTo<bool>(params[2]);
@@ -1333,9 +1359,14 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "gettxout"               && n == 2) ConvertTo<int64_t>(params[1]);
     if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
-    
-    if (strMethod == "sendtostealthaddress"   && n > 1) ConvertTo<double>(params[1]);
-    if (strMethod == "darksend"               && n > 1) ConvertTo<double>(params[1]);
+
+    if (strMethod == "senddtoanon"         	  && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontoanon"         && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
+    if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
+	  if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	  if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
@@ -1343,6 +1374,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);
     if (strMethod == "createmultisig"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
+
+    if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
     return params;
 }

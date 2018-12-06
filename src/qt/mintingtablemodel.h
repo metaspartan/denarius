@@ -27,7 +27,15 @@ public:
         MintProbability = 5
         //MintReward = 6
     };
-
+    enum RoleIndex {
+        /** Type of transaction */
+        TxHashRole = Qt::UserRole,
+        AddressRole,
+        BalanceRole,
+        AgeRole,
+        CoinDayRole,
+        MintProbabilityRole
+    };
     void setMintingProxyModel(MintingFilterProxy *mintingProxy);
     int rowCount(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent) const;

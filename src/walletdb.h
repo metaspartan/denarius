@@ -8,6 +8,7 @@
 #include "db.h"
 #include "base58.h"
 #include "stealth.h"
+#include "ringsig.h"
 
 class CKeyPool;
 class CAccount;
@@ -60,13 +61,13 @@ class CStealthKeyMetadata
 // -- used to get secret for keys created by stealth transaction with wallet locked
 public:
     CStealthKeyMetadata() {};
-    
+
     CStealthKeyMetadata(CPubKey pkEphem_, CPubKey pkScan_)
     {
         pkEphem = pkEphem_;
         pkScan = pkScan_;
     };
-    
+
     CPubKey pkEphem;
     CPubKey pkScan;
 
@@ -84,21 +85,86 @@ public:
     int nVersion;
     std::string sAlias;
     std::string sAddress;
-    std::string sCollateralAddress;
-    std::string sMasternodePrivKey;
+    std::string sFortunastakePrivKey;
+    std::string sTxHash;
+    std::string sOutputIndex;
 
     CAdrenalineNodeConfig()
     {
 	nVersion = 0;
     }
 
+    CAdrenalineNodeConfig(std::string alias, std::string address, std::string privKey, std::string txHash, std::string outputIndex) {
+        nVersion = 0;
+        sAlias = alias;
+        sAddress = address;
+        sFortunastakePrivKey = privKey;
+        sTxHash = txHash;
+        sOutputIndex = outputIndex;
+    }
+
     IMPLEMENT_SERIALIZE(
         READWRITE(nVersion);
         READWRITE(sAlias);
         READWRITE(sAddress);
-        READWRITE(sCollateralAddress);
-	READWRITE(sMasternodePrivKey);
+        READWRITE(sFortunastakePrivKey);
+        READWRITE(sTxHash);
+        READWRITE(sOutputIndex);
     )
+};
+
+class CLockedAnonOutput
+{
+// expand key for anon output received with wallet locked
+// stored in walletdb, key is pubkey hash160
+public:
+    CLockedAnonOutput() {};
+
+    CLockedAnonOutput(CPubKey pkEphem_, CPubKey pkScan_, COutPoint outpoint_)
+    {
+        pkEphem = pkEphem_;
+        pkScan = pkScan_;
+        outpoint = outpoint_;
+    };
+
+    CPubKey   pkEphem;
+    CPubKey   pkScan;
+    COutPoint outpoint;
+
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(pkEphem);
+        READWRITE(pkScan);
+        READWRITE(outpoint);
+    )
+
+};
+
+class COwnedAnonOutput
+{
+// stored in walletdb, key is keyimage
+// TODO: store nValue?
+public:
+    COwnedAnonOutput() {};
+
+    COwnedAnonOutput(COutPoint outpoint_, bool fSpent_)
+    {
+        outpoint = outpoint_;
+        fSpent   = fSpent_;
+    };
+
+    std::vector<uint8_t> vchImage;
+    int64_t nValue;
+
+    COutPoint outpoint;
+    bool fSpent;
+
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(outpoint);
+        READWRITE(fSpent);
+    )
+
 };
 
 /** Access to the wallet database (wallet.dat) */
@@ -116,29 +182,32 @@ public:
     {
         return GetCursor();
     }
-    
+
     Dbc* GetTxnCursor()
     {
         if (!pdb)
             return NULL;
-        
+
         DbTxn* ptxnid = activeTxn; // call TxnBegin first
-        
+
         Dbc* pcursor = NULL;
         int ret = pdb->cursor(ptxnid, &pcursor, 0);
         if (ret != 0)
             return NULL;
         return pcursor;
     }
-    
+
     DbTxn* GetAtActiveTxn()
     {
         return activeTxn;
     }
-    
+
     bool WriteName(const std::string& strAddress, const std::string& strName);
 
     bool EraseName(const std::string& strAddress);
+
+    bool WritePurpose(const std::string& strAddress, const std::string& purpose);
+    bool ErasePurpose(const std::string& strAddress);
 
     bool WriteTx(uint256 hash, const CWalletTx& wtx)
     {
@@ -151,42 +220,107 @@ public:
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("tx"), hash));
     }
-    
+
+     bool ReadLockedAnonOutput(const CKeyID& keyId, CLockedAnonOutput& lockedAo)
+    {
+        return Read(std::make_pair(std::string("lao"), keyId), lockedAo);
+    }
+
+    bool WriteLockedAnonOutput(const CKeyID& keyId, const CLockedAnonOutput& lockedAo)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("lao"), keyId), lockedAo, true);
+    }
+
+    bool EraseLockedAnonOutput(const CKeyID& keyId)
+    {
+        nWalletDBUpdated++;
+        return Erase(std::make_pair(std::string("lao"), keyId));
+    }
+
+    bool ReadOwnedAnonOutput(const std::vector<uint8_t>& vchImage, COwnedAnonOutput& ownAo)
+    {
+        return Read(std::make_pair(std::string("oao"), vchImage), ownAo);
+    }
+
+    bool WriteOwnedAnonOutput(const std::vector<uint8_t>& vchImage, const COwnedAnonOutput& ownAo)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("oao"), vchImage), ownAo, true);
+    }
+
+    bool EraseOwnedAnonOutput(const std::vector<uint8_t>& vchImage)
+    {
+        nWalletDBUpdated++;
+        return Erase(std::make_pair(std::string("oao"), vchImage));
+    }
+
+    bool ReadOwnedAnonOutputLink(const CPubKey& pkCoin, std::vector<uint8_t>& vchImage)
+    {
+        return Read(std::make_pair(std::string("oal"), pkCoin), vchImage);
+    }
+
+    bool WriteOwnedAnonOutputLink(const CPubKey& pkCoin, const std::vector<uint8_t>& vchImage)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("oal"), pkCoin), vchImage, true);
+    }
+
+    bool EraseOwnedAnonOutputLink(const CPubKey& pkCoin)
+    {
+        nWalletDBUpdated++;
+        return Erase(std::make_pair(std::string("oal"), pkCoin));
+    }
+
+    bool ReadOldOutputLink(const std::vector<uint8_t>& pkImage, std::vector<uint8_t>& vchImage)
+    {
+        return Read(std::make_pair(std::string("ool"), pkImage), vchImage);
+    }
+
+    bool WriteOldOutputLink(const std::vector<uint8_t>& pkImage, const std::vector<uint8_t>& vchImage)
+    {
+        nWalletDBUpdated++;
+        return Write(std::make_pair(std::string("ool"), pkImage), vchImage, true);
+    }
+
+    bool EraseOldOutputLink(const std::vector<uint8_t>& pkImage)
+    {
+        nWalletDBUpdated++;
+        return Erase(std::make_pair(std::string("ool"), pkImage));
+    }
+
     bool WriteStealthKeyMeta(const CKeyID& keyId, const CStealthKeyMetadata& sxKeyMeta)
     {
         nWalletDBUpdated++;
         return Write(std::make_pair(std::string("sxKeyMeta"), keyId), sxKeyMeta, true);
     }
-    
+
     bool EraseStealthKeyMeta(const CKeyID& keyId)
     {
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("sxKeyMeta"), keyId));
     }
-    
+
     bool WriteStealthAddress(const CStealthAddress& sxAddr)
     {
         nWalletDBUpdated++;
 
         return Write(std::make_pair(std::string("sxAddr"), sxAddr.scan_pubkey), sxAddr, true);
     }
-    
+
     bool ReadStealthAddress(CStealthAddress& sxAddr)
     {
         // -- set scan_pubkey before reading
         return Read(std::make_pair(std::string("sxAddr"), sxAddr.scan_pubkey), sxAddr);
     }
-	
+
 	bool WriteAdrenalineNodeConfig(std::string sAlias, const CAdrenalineNodeConfig& nodeConfig);
     bool ReadAdrenalineNodeConfig(std::string sAlias, CAdrenalineNodeConfig& nodeConfig);
     bool EraseAdrenalineNodeConfig(std::string sAlias);
-    
-    bool WriteWatchOnly(const CTxDestination &dest)
-    {
-        nWalletDBUpdated++;
-        return Write(std::make_pair(std::string("watch"), CBitcoinAddress(dest).ToString()), '1');
-    }
-    
+
+    bool WriteWatchOnly(const CScript &script);
+    bool EraseWatchOnly(const CScript &script);
+
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta)
     {
         nWalletDBUpdated++;

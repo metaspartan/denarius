@@ -1,15 +1,17 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 2.0.5.0
-INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
+VERSION = 3.2.0.0
+INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
+CONFIG += static
 QT += core gui network widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
-QMAKE_CXXFLAGS = -fpermissive
+QMAKE_CXXFLAGS += -fpermissive
+QMAKE_CFLAGS += -std=c99
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets printsupport
@@ -17,19 +19,21 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 win32 {
-BOOST_LIB_SUFFIX=-mgw49-mt-s-1_55
-BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+BOOST_LIB_SUFFIX=-mgw49-mt-s-1_57
+BOOST_INCLUDE_PATH=C:/deps/boost_1_57_0
+BOOST_LIB_PATH=C:/deps/boost_1_57_0/stage/lib
 BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
 BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1l/include
+OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1l
 MINIUPNPC_INCLUDE_PATH=C:/deps/
 MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
 LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
 LIBPNG_LIB_PATH=C:/deps/libpng-1.6.16/.libs
 QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
+LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
@@ -67,7 +71,8 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
 # win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
 win32:QMAKE_LFLAGS *= -static
-win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
+#win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
+#win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
 # use: qmake "USE_QRCODE=1"
@@ -76,6 +81,15 @@ contains(USE_QRCODE, 1) {
     message(Building with QRCode support)
     DEFINES += USE_QRCODE
     LIBS += -lqrencode
+}
+contains(USE_PROFILER, 1) {
+    QMAKE_LFLAGS += -pg
+    QMAKE_CXXFLAGS += -pg
+}
+
+contains(USE_DEBUG_FLAGS, 1) {
+    QMAKE_LFLAGS += -Og
+    QMAKE_CXXFLAGS += -Og
 }
 
 # use: qmake "USE_UPNP=1" ( enabled by default; default)
@@ -127,7 +141,7 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 #  or: qmake "USE_LEVELDB=-" (not supported)
 contains(USE_LEVELDB, -) {
 	message(Building with Berkeley DB transaction index)
-	
+
 	    SOURCES += src/txdb-bdb.cpp \
 		src/bloom.cpp \
 		src/hash.cpp \
@@ -135,13 +149,13 @@ contains(USE_LEVELDB, -) {
 		src/echo.c \
 		src/jh.c \
 		src/keccak.c
-		
+
 } else {
 	message(Building with LevelDB transaction index)
 	count(USE_LEVELDB, 0) {
         USE_LEVELDB=1
     }
-	
+
 	DEFINES += USE_LEVELDB
 
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
@@ -198,7 +212,7 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -msse2
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wno-format -Wno-unused-parameter -Wstack-protector
 
 
 # Input
@@ -224,7 +238,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
-    src/qt/tradingdialog.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -241,25 +254,22 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/smessage.h \
-	src/richlistdb.h \
-	src/richlistdata.h \
     src/main.h \
-	src/core.h \
+	  src/core.h \
+    src/ringsig.h \
     src/miner.h \
     src/net.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
-	src/txmempool.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
-	src/darksend.h \
-	src/activemasternode.h \
-	src/instantx.h \
-	src/masternode.h \
-	src/masternodeconfig.h \
-	src/spork.h \
+	  src/fortuna.h \
+	  src/activefortunastake.h \
+	  src/fortunastake.h \
+	  src/fortunastakeconfig.h \
+	  src/spork.h \
     src/init.h \
     src/mruset.h \
     src/json/json_spirit_writer_template.h \
@@ -305,9 +315,7 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/statisticspage.h \
 	src/qt/marketbrowser.h \
 	src/qt/qcustomplot.h \
-	src/qt/richlist.h \
-	src/qt/darksendconfig.h \
-	src/qt/masternodemanager.h \
+	src/qt/fortunastakemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
     src/qt/termsofuse.h \
@@ -350,32 +358,29 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 	src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
-	src/qt/multisigaddressentry.cpp \
+	  src/qt/multisigaddressentry.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
-    src/qt/tradingdialog.cpp \
     src/alert.cpp \
-	src/base58.cpp \
+	  src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
-	src/richlistdb.cpp \
-	src/richlistdata.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
-	src/core.cpp \
+	  src/core.cpp \
+    src/ringsig.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
-	src/txmempool.cpp \
 	src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
@@ -397,7 +402,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
-	src/rpcdarksend.cpp \
+	src/rpcfortuna.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -417,13 +422,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
 	src/qt/qcustomplot.cpp \
-	src/qt/richlist.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/darksendconfig.cpp \
-	src/qt/masternodemanager.cpp \
+	src/qt/fortunastakemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
@@ -434,14 +437,176 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
-	src/darksend.cpp \
-	src/activemasternode.cpp \
-	src/instantx.cpp \
-	src/masternode.cpp \
-	src/masternodeconfig.cpp \
+	src/fortuna.cpp \
+	src/activefortunastake.cpp \
+	src/fortunastake.cpp \
+	src/fortunastakeconfig.cpp \
 	src/spork.cpp
 
-#### DNR sources
+#### D e n a r i u s sources
+
+### liboqs - Post Quantum Algorithm sources
+
+### Tor native integration sources
+SOURCES += src/tor/anonymize.cpp \
+    src/tor/address.c \
+    src/tor/addressmap.c \
+    src/tor/aes.c \
+    src/tor/backtrace.c \
+    src/tor/blinding.c \
+    src/tor/bridges.c \
+    src/tor/buffers.c \
+    src/tor/cell_common.c \
+    src/tor/cell_establish_intro.c \
+    src/tor/cell_introduce1.c \
+    src/tor/channel.c \
+    src/tor/channeltls.c \
+    src/tor/circpathbias.c \
+    src/tor/circuitbuild.c \
+    src/tor/circuitlist.c \
+    src/tor/circuitmux.c \
+    src/tor/circuitmux_ewma.c \
+    src/tor/circuitstats.c \
+    src/tor/circuituse.c \
+    src/tor/command.c \
+    src/tor/compat_libevent.c \
+    src/tor/compat_threads.c \
+    src/tor/compat_time.c \
+    src/tor/config.c \
+    src/tor/confparse.c \
+    src/tor/connection.c \
+    src/tor/connection_edge.c \
+    src/tor/connection_or.c \
+    src/tor/container.c \
+    src/tor/control.c \
+    src/tor/crypto.c \
+    src/tor/crypto_curve25519.c \
+    src/tor/crypto_ed25519.c \
+    src/tor/crypto_format.c \
+    src/tor/crypto_pwbox.c \
+    src/tor/crypto_s2k.c \
+    src/tor/cpuworker.c \
+    src/tor/csiphash.c \
+    src/tor/curve25519-donna.c \
+    src/tor/di_ops.c \
+    src/tor/dircollate.c \
+    src/tor/directory.c \
+    src/tor/dirserv.c \
+    src/tor/dirvote.c \
+    src/tor/dns.c \
+    src/tor/dnsserv.c \
+    src/tor/ed25519_cert.c \
+    src/tor/ed25519_tor.c \
+    src/tor/entrynodes.c \
+    src/tor/ext_orport.c \
+    src/tor/fe_copy.c \
+    src/tor/fe_cmov.c \
+    src/tor/fe_isnegative.c \
+    src/tor/fe_sq.c \
+    src/tor/fe_pow22523.c \
+    src/tor/fe_isnonzero.c \
+    src/tor/fe_neg.c \
+    src/tor/fe_frombytes.c \
+    src/tor/fe_invert.c \
+    src/tor/fe_sub.c \
+    src/tor/fe_add.c \
+    src/tor/fe_1.c \
+    src/tor/fe_mul.c \
+    src/tor/fe_tobytes.c \
+    src/tor/fe_0.c \
+    src/tor/fe_sq2.c \
+    src/tor/fp_pair.c \
+    src/tor/ge_scalarmult_base.c \
+    src/tor/ge_p3_tobytes.c \
+    src/tor/ge_frombytes.c \
+    src/tor/ge_double_scalarmult.c \
+    src/tor/ge_tobytes.c \
+    src/tor/ge_p3_to_cached.c \
+    src/tor/ge_p3_to_p2.c \
+    src/tor/ge_p3_dbl.c \
+    src/tor/ge_p3_0.c \
+    src/tor/ge_p1p1_to_p2.c \
+    src/tor/ge_p1p1_to_p3.c \
+    src/tor/ge_add.c \
+    src/tor/ge_p2_0.c \
+    src/tor/ge_p2_dbl.c \
+    src/tor/ge_madd.c \
+    src/tor/ge_msub.c \
+    src/tor/ge_sub.c \
+    src/tor/ge_precomp_0.c \
+    src/tor/geoip.c \
+    src/tor/hibernate.c \
+    src/tor/hs_cache.c \
+    src/tor/hs_circuitmap.c \
+    src/tor/hs_common.c \
+    src/tor/hs_descriptor.c \
+    src/tor/hs_intropoint.c \
+    src/tor/hs_service.c \
+    src/tor/keyconv.c \
+    src/tor/keypair.c \
+    src/tor/keypin.c \
+    src/tor/keccak-tiny-unrolled.c \
+    src/tor/link_handshake.c \
+    src/tor/log.c \
+    src/tor/tormain.c \
+    src/tor/memarea.c \
+    src/tor/microdesc.c \
+    src/tor/networkstatus.c \
+    src/tor/nodelist.c \
+    src/tor/ntmain.c \
+    src/tor/onion.c \
+    src/tor/onion_fast.c \
+    src/tor/onion_ntor.c \
+    src/tor/onion_tap.c \
+    src/tor/open.c \
+    src/tor/parsecommon.c \
+    src/tor/periodic.c \
+    src/tor/policies.c \
+    src/tor/procmon.c \
+    src/tor/protover.c \
+    src/tor/pwbox.c \
+    src/tor/reasons.c \
+    src/tor/relay.c \
+    src/tor/rendcache.c \
+    src/tor/rendclient.c \
+    src/tor/rendcommon.c \
+    src/tor/rendmid.c \
+    src/tor/rendservice.c \
+    src/tor/rephist.c \
+    src/tor/replaycache.c \
+    src/tor/router.c \
+    src/tor/routerkeys.c \
+    src/tor/routerlist.c \
+    src/tor/routerparse.c \
+    src/tor/routerset.c \
+    src/tor/sandbox.c \
+    src/tor/sc_reduce.c \
+    src/tor/sc_muladd.c \
+    src/tor/scheduler.c \
+    src/tor/shared_random.c \
+    src/tor/shared_random_state.c \
+    src/tor/sign.c \
+    src/tor/statefile.c \
+    src/tor/status.c \
+    src/tor/torcert.c \
+    src/tor/torcompat.c \
+    src/tor/tor_main.c \
+    src/tor/torgzip.c \
+    src/tor/tortls.c \
+    src/tor/torutil.c \
+    src/tor/transports.c \
+    src/tor/trunnel.c \
+    src/tor/util_bug.c \
+    src/tor/util_format.c \
+    src/tor/util_process.c \
+    src/tor/workqueue.c \
+
+win32 {
+    SOURCES += src/tor/compat_winthreads.c
+} else {
+    SOURCES += src/tor/compat_pthreads.c \
+        src/tor/readpassphrase.c
+}
 
 RESOURCES += \
     src/qt/bitcoin.qrc \
@@ -462,22 +627,19 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
     src/qt/forms/messagepage.ui \
-	src/qt/forms/statisticspage.ui \
-	src/qt/forms/blockbrowser.ui \
-	src/qt/forms/marketbrowser.ui \
-	src/qt/forms/richlist.ui \
+	  src/qt/forms/statisticspage.ui \
+	  src/qt/forms/blockbrowser.ui \
+	  src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
-	src/qt/forms/darksendconfig.ui \
-    src/qt/forms/masternodemanager.ui \
+    src/qt/forms/fortunastakemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \
-	src/qt/forms/multisigaddressentry.ui \
+	  src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
-    src/qt/forms/tradingdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
 
 contains(USE_QRCODE, 1) {
@@ -573,9 +735,10 @@ macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+LIBS += -lz -levent
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
@@ -588,5 +751,10 @@ contains(RELEASE, 1) {
         LIBS += -Wl,-Bdynamic
     }
 }
+
+!windows:!macx:!android:!ios {
+     DEFINES += LINUX
+     LIBS += -lrt -ldl
+ }
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)

@@ -9,7 +9,7 @@
 #include "guiutil.h"
 #include "guiconstants.h"
 #include "intro.h"
-
+#include "ringsig.h"
 #include "init.h"
 #include "ui_interface.h"
 #include "qtipcserver.h"
@@ -182,8 +182,8 @@ int main(int argc, char *argv[])
     ReadConfigFile(mapArgs, mapMultiArgs);
 
     // ... then GUI settings:
-    OptionsModel optionsModel;	
-	
+    OptionsModel optionsModel;
+
     // Subscribe to global signals from core
     uiInterface.ThreadSafeMessageBox.connect(ThreadSafeMessageBox);
     uiInterface.ThreadSafeAskFee.connect(ThreadSafeAskFee);
@@ -201,9 +201,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // show a persistent splash screen unless it is disabled from flags
     QSplashScreen splash(QPixmap(":/images/splash"), 0);
     if (GetBoolArg("-splash", true) && !GetBoolArg("-min"))
     {
+        splash.setEnabled(false);
         splash.show();
         splashref = &splash;
     }
@@ -217,13 +219,10 @@ int main(int argc, char *argv[])
         // Regenerate startup link, to fix links to old versions
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
-		
-		boost::thread_group threadGroup;
-		
+
         BitcoinGUI window;
         guiref = &window;
-		
-        if(AppInit2(threadGroup))
+        if(AppInit2())
         {
             {
                 // Put this in a block, so that the Model objects are cleaned up before
@@ -231,7 +230,7 @@ int main(int argc, char *argv[])
 
                 if (splashref)
                     splash.finish(&window);
-                
+
                 //make sure user has agreed to TOU
                 window.checkTOU();
 
@@ -264,6 +263,14 @@ int main(int argc, char *argv[])
                 window.setMessageModel(0);
                 guiref = 0;
             }
+
+            // Show a persistent splash screen while shutting down
+            QSplashScreen splash(QPixmap(":/images/splash"), 0);
+            splash.setEnabled(false);
+            splash.show();
+            splashref = &splash;
+            uiInterface.InitMessage(_("Denarius is shutting down, please do not turn off your computer..."));
+
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
             Shutdown(NULL);
         }

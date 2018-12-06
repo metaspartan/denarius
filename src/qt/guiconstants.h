@@ -4,6 +4,9 @@
 /* Milliseconds between model updates */
 static const int MODEL_UPDATE_DELAY = 500;
 
+/* Number of seconds for blocks/sec rate in progress bar */
+static const int BPS_PERIOD = 10;
+
 /* AskPassphraseDialog -- Maximum passphrase length */
 static const int MAX_PASSPHRASE_SIZE = 1024;
 

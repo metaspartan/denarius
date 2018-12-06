@@ -73,13 +73,12 @@ public:
             LOCK(wallet->cs_wallet);
             for(std::map<uint256, CWalletTx>::iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             {
-                std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
-                BOOST_FOREACH(KernelRecord& kr, txList) {
-                    if(!kr.spent) {
-                        cachedWallet.append(kr);
+                    std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
+                    BOOST_FOREACH(KernelRecord& kr, txList) {
+                        if(!kr.spent) {
+                            cachedWallet.append(kr);
+                        }
                     }
-                }
-
             }
         }
     }
@@ -101,13 +100,14 @@ public:
         qSort(updated_sorted);
 
         {
-            LOCK(wallet->cs_wallet);
+            LOCK2(cs_main, wallet->cs_wallet);
             for(int update_idx = updated_sorted.size()-1; update_idx >= 0; --update_idx)
             {
                 const uint256 &hash = updated_sorted.at(update_idx);
                 // Find transaction in wallet
                 std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(hash);
                 bool inWallet = mi != wallet->mapWallet.end();
+
                 // Find bounds of this transaction in model
                 QList<KernelRecord>::iterator lower = qLowerBound(
                     cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
@@ -285,6 +285,8 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
     if(!index.isValid())
         return QVariant();
     KernelRecord *rec = static_cast<KernelRecord*>(index.internalPointer());
+    int minAge;
+    int maxAge;
 
     switch(role)
     {
@@ -353,8 +355,8 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
         }
         break;
       case Qt::BackgroundColorRole:
-        int minAge = nStakeMinAge / 60 / 60 / 8;
-        int maxAge = nStakeMaxAge / 60 / 60 / 24;
+        minAge = nStakeMinAge / 60 / 60 / 8;
+        maxAge = nStakeMaxAge / 60 / 60 / 24;
         if(rec->getAge() < minAge)
         {
             return COLOR_MINT_YOUNG;
@@ -368,7 +370,9 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
             return COLOR_MINT_OLD;
         }
         break;
-
+      case AddressRole:
+        return QString::fromStdString(rec->address);
+        break;
     }
     return QVariant();
 }

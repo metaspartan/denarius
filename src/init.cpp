@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2017-2018 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-    
+
 #include "init.h"
 #include "main.h"
 #include "txdb.h"
@@ -13,10 +14,12 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
-#include "activemasternode.h"
-#include "masternodeconfig.h"
+#include "activefortunastake.h"
+#include "fortunastakeconfig.h"
 #include "spork.h"
 #include "smessage.h"
+#include "ringsig.h"
+#include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -43,6 +46,14 @@ bool fMinimizeCoinAge;
 unsigned int nNodeLifespan;
 unsigned int nDerivationMethodIndex;
 unsigned int nMinerSleep;
+
+unsigned short const onion_port = 9089; //Tor Onion Routing Default Port
+
+unsigned int nBlockMaxSize;
+unsigned int nBlockPrioritySize;
+unsigned int nBlockMinSize;
+int64_t nMinTxFee = MIN_TX_FEE;
+
 bool fUseFastIndex;
 enum Checkpoints::CPMode CheckpointsMode;
 
@@ -51,31 +62,11 @@ enum Checkpoints::CPMode CheckpointsMode;
 // Shutdown
 //
 
-bool ShutdownRequested()
-{
-    return fRequestShutdown;
-}
-
-void WaitForShutdown(boost::thread_group* threadGroup)
-{
-    bool fShutdown = ShutdownRequested();
-    // Tell the main threads to shutdown.
-    while (!fShutdown)
-    {
-        MilliSleep(200);
-        fShutdown = ShutdownRequested();
-    }
-    if (threadGroup)
-    {
-        threadGroup->interrupt_all();
-        threadGroup->join_all();
-    }
-}
-
 void ExitTimeout(void* parg)
 {
 #ifdef WIN32
-    MilliSleep(5000);
+    //MilliSleep(5000);
+    sleep(5);
     ExitProcess(0);
 #endif
 }
@@ -89,7 +80,6 @@ void StartShutdown()
     // Without UI, Shutdown() can simply be started in a new thread
     NewThread(Shutdown, NULL);
 #endif
-    fRequestShutdown = true;
 }
 
 void Shutdown(void* parg)
@@ -114,9 +104,11 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
-        
+
+        Finalise();
+        /*
         SecureMsgShutdown();
-        
+
         mempool.AddTransactionsUpdated(1);
 //        CTxDB().Close();
         bitdb.Flush(false);
@@ -125,6 +117,7 @@ void Shutdown(void* parg)
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
         delete pwalletMain;
+        */
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Denarius exited\n\n");
@@ -133,14 +126,13 @@ void Shutdown(void* parg)
         // ensure non-UI client gets exited here, but let Bitcoin-Qt reach 'return 0;' in bitcoin.cpp
         exit(0);
 #endif
-    }
-    else
+    } else
     {
         while (!fExit)
             MilliSleep(500);
         MilliSleep(100);
         ExitThread(0);
-    }
+    };
 }
 
 void HandleSIGTERM(int)
@@ -164,9 +156,6 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
-    
-    boost::thread_group threadGroup;
-    
     bool fRet = false;
     try
     {
@@ -179,7 +168,7 @@ bool AppInit(int argc, char* argv[])
         {
             fprintf(stderr, "Error: Specified directory does not exist\n");
             Shutdown(NULL);
-        }
+        };
         ReadConfigFile(mapArgs, mapMultiArgs);
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
@@ -196,7 +185,7 @@ bool AppInit(int argc, char* argv[])
 
             fprintf(stdout, "%s", strUsage.c_str());
             return false;
-        }
+        };
 
         // Command-line RPC
         for (int i = 1; i < argc; i++)
@@ -207,7 +196,7 @@ bool AppInit(int argc, char* argv[])
         {
             int ret = CommandLineRPC(argc, argv);
             exit(ret);
-        }
+        };
 
 #if !defined(WIN32) && !defined(QT_GUI)
     fDaemon = GetBoolArg("-daemon", false);
@@ -232,25 +221,19 @@ bool AppInit(int argc, char* argv[])
     }
 #endif
 
-        fRet = AppInit2(threadGroup);
-    }
-    catch (std::exception& e) {
+        fRet = AppInit2();
+    } catch (std::exception& e)
+    {
         PrintException(&e, "AppInit()");
-    } catch (...) {
+    } catch (...)
+    {
         PrintException(NULL, "AppInit()");
-    }
+    };
     //if (!fRet)
         //Shutdown(NULL);
     if (!fRet)
-    {
-        threadGroup.interrupt_all();
-        // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
-        // the startup-failure cases to make sure they don't result in a hang due to some
-        // thread-blocking-waiting-for-another-thread-during-startup case
-    } else {
-        WaitForShutdown(&threadGroup);
-    }
-    Shutdown(NULL);
+      Shutdown(NULL);
+
     return fRet;
 }
 
@@ -284,15 +267,18 @@ bool static InitWarning(const std::string &str)
 }
 
 
-bool static Bind(const CService &addr, bool fError = true) {
+bool static Bind(const CService &addr, bool fError = true)
+{
     if (IsLimited(addr))
         return false;
+
     std::string strError;
-    if (!BindListenPort(addr, strError)) {
+    if (!BindListenPort(addr, strError))
+    {
         if (fError)
             return InitError(strError);
         return false;
-    }
+    };
     return true;
 }
 
@@ -323,11 +309,16 @@ std::string HelpMessage()
         "  -listen                " + _("Accept connections from outside (default: 1 if no -proxy or -connect)") + "\n" +
         "  -bind=<addr>           " + _("Bind to given address. Use [host]:port notation for IPv6") + "\n" +
         "  -dnsseed               " + _("Find peers using DNS lookup (default: 1)") + "\n" +
+        "  -onionseed             " + _("Find peers using .onion seeds (default: 0 unless -connect)") + "\n" +
+        "  -nativetor=<n>         " + _("Enable or disable Native Tor Onion Node (default: 0)") +
         "  -staking               " + _("Stake your coins to support network and gain reward (default: 1)") + "\n" +
+        "  -minstakeinterval=<n>  " + _("Minimum time in seconds between successful stakes (default: 30)") + "\n" +
+        "  -minersleep=<n>        " + _("Milliseconds between stake attempts. Lowering this param will not result in more stakes. (default: 1000)") + "\n" +
         "  -synctime              " + _("Sync time with other nodes. Disable if time on your system is precise e.g. syncing with NTP (default: 1)") + "\n" +
         "  -cppolicy              " + _("Sync checkpoints policy (default: strict)") + "\n" +
         "  -banscore=<n>          " + _("Threshold for disconnecting misbehaving peers (default: 100)") + "\n" +
         "  -bantime=<n>           " + _("Number of seconds to keep misbehaving peers from reconnecting (default: 86400)") + "\n" +
+        "  -softbantime=<n>       " + _("Number of seconds to keep soft banned peers from reconnecting (default: 3600)") + "\n" +
         "  -maxreceivebuffer=<n>  " + _("Maximum per-connection receive buffer, <n>*1000 bytes (default: 5000)") + "\n" +
         "  -maxsendbuffer=<n>     " + _("Maximum per-connection send buffer, <n>*1000 bytes (default: 1000)") + "\n" +
 #ifdef USE_UPNP
@@ -349,6 +340,7 @@ std::string HelpMessage()
         "  -testnet               " + _("Use the test network") + "\n" +
         "  -debug                 " + _("Output extra debugging information. Implies all other -debug* options") + "\n" +
         "  -debugnet              " + _("Output extra network debugging information") + "\n" +
+        "  -debugchain            " + _("Output extra blockchain debugging information") + "\n" +
         "  -logtimestamps         " + _("Prepend debug output with timestamp") + "\n" +
         "  -shrinkdebugfile       " + _("Shrink debug.log file on client startup (default: 1 when no -debug)") + "\n" +
         "  -printtoconsole        " + _("Send trace/debug info to console instead of debug.log file") + "\n" +
@@ -383,24 +375,15 @@ std::string HelpMessage()
         "  -rpcsslcertificatechainfile=<file.cert>  " + _("Server certificate file (default: server.cert)") + "\n" +
         "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n" +
         "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)") + "\n" +
-        "  -litemode=<n>          " + _("Disable all Masternode and Darksend related functionality (0-1, default: 0)") + "\n" +
-        "\n" + _("Masternode options:") + "\n" +
-        "  -masternode=<n>            " + _("Enable the client to act as a masternode (0-1, default: 0)") + "\n" +
-        "  -mnconf=<file>             " + _("Specify masternode configuration file (default: masternode.conf)") + "\n" +
-        "  -masternodeprivkey=<n>     " + _("Set the masternode private key") + "\n" +
-        "  -masternodeaddr=<n>        " + _("Set external address:port to get to this masternode (example: address:port)") + "\n" +
-        "  -masternodeminprotocol=<n> " + _("Ignore masternodes less than version (example: 70007; default : 0)") + "\n" +
 
-        "\n" + _("Darksend options:") + "\n" +
-        "  -enabledarksend=<n>          " + _("Enable use of automated darksend for funds stored in this wallet (0-1, default: 0)") + "\n" +
-        "  -darksendrounds=<n>          " + _("Use N separate masternodes to anonymize funds  (2-8, default: 2)") + "\n" +
-        "  -anonymizedenariusamount=<n> " + _("Keep N Denarius anonymized (default: 0)") + "\n" +
-        "  -liquidityprovider=<n>       " + _("Provide liquidity to Darksend by infrequently mixing coins on a continual basis (0-100, default: 0, 1=very frequent, high fees, 100=very infrequent, low fees)") + "\n" +
+        "\n" + _("Fortunastake options:") + "\n" +
+        "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
+        "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
+        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
+        "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
+        "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
+        "  -fortunastakeminprotocol=<n> " + _("Ignore fortunastakes less than version (example: 70007; default : 0)") + "\n" +
 
-        "\n" + _("InstantX options:") + "\n" +
-        "  -enableinstantx=<n>    " + _("Enable instantx, show confirmations for locked transactions (bool, default: true)") + "\n" +
-        "  -instantxdepth=<n>     " + _("Show N confirmations for a successfully locked transaction (0-9999, default: 1)") + "\n" +
-        
         "\n" + _("Secure messaging options:") + "\n" +
         "  -nosmsg                                  " + _("Disable secure messaging.") + "\n" +
         "  -debugsmsg                               " + _("Log extra debug messages.") + "\n" +
@@ -415,11 +398,12 @@ std::string HelpMessage()
  */
 bool InitSanityCheck(void)
 {
-    if(!ECC_InitSanityCheck()) {
+    if(!ECC_InitSanityCheck())
+    {
         InitError("OpenSSL appears to lack support for elliptic curve cryptography. For more "
                   "information, visit https://en.bitcoin.it/wiki/OpenSSL_and_EC_Libraries");
         return false;
-    }
+    };
 
     // TODO: remaining sanity checks, see #4081
 
@@ -429,7 +413,7 @@ bool InitSanityCheck(void)
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group& threadGroup)
+bool AppInit2()
 {
     // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -473,67 +457,105 @@ bool AppInit2(boost::thread_group& threadGroup)
     sigaction(SIGHUP, &sa_hup, NULL);
 #endif
 
+    if (!CheckDiskSpace())
+        return false;
+
     // ********************************************************* Step 2: parameter interactions
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
-    nMinerSleep = GetArg("-minersleep", 500);
+    nMinStakeInterval = GetArg("-minstakeinterval", 30);
+    nMinerSleep = GetArg("-minersleep", 30000); //500
 
+    // Largest block you're willing to create.
+    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
+    nBlockMaxSize = GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
+    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
+
+    // How much of the block should be dedicated to high-priority transactions,
+    // included regardless of the fees they pay
+    nBlockPrioritySize = GetArg("-blockprioritysize", 27000);
+    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
+
+    // Minimum block size you want to create; block will be filled with free transactions
+    // until there are no more or the block reaches this size:
+    nBlockMinSize = GetArg("-blockminsize", 0);
+    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
+
+    // Fee-per-kilobyte amount considered the same as "free"
+    // Be careful setting this: if you set it to zero then
+    // a transaction spammer can cheaply fill blocks using
+    // 1-satoshi-fee transactions. It should be set above the real
+    // cost to you of processing a transaction.
+    if (mapArgs.count("-mintxfee"))
+        ParseMoney(mapArgs["-mintxfee"], nMinTxFee);
+
+    if (fDebug)
+        printf("nMinerSleep %u\n", nMinerSleep);
+        
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
 
-    if(strCpMode == "strict")
+    if (strCpMode == "strict")
         CheckpointsMode = Checkpoints::STRICT;
 
-    if(strCpMode == "advisory")
+    if (strCpMode == "advisory")
         CheckpointsMode = Checkpoints::ADVISORY;
 
-    if(strCpMode == "permissive")
+    if (strCpMode == "permissive")
         CheckpointsMode = Checkpoints::PERMISSIVE;
 
     nDerivationMethodIndex = 0;
 
     fTestNet = GetBoolArg("-testnet");
-    
+    fNativeTor = GetBoolArg("-nativetor");
+
     //if (fTestNet)
 
-    if (mapArgs.count("-bind")) {
+    if (mapArgs.count("-bind"))
+    {
         // when specifying an explicit binding address, you want to listen on it
         // even when -connect or -proxy is specified
         SoftSetBoolArg("-listen", true);
     }
 
-    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
+    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0)
+    {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
         SoftSetBoolArg("-dnsseed", false);
         SoftSetBoolArg("-listen", false);
+        SoftSetBoolArg("-onionseed", false);
     }
 
-    if (mapArgs.count("-proxy")) {
+    if (mapArgs.count("-proxy"))
+    {
         // to protect privacy, do not listen by default if a proxy server is specified
         SoftSetBoolArg("-listen", false);
     }
 
-    if (!GetBoolArg("-listen", true)) {
+    if (!GetBoolArg("-listen", true))
+    {
         // do not map ports or try to retrieve public IP when not listening (pointless)
         SoftSetBoolArg("-upnp", false);
         SoftSetBoolArg("-discover", false);
     }
 
-    if (mapArgs.count("-externalip")) {
+    if (mapArgs.count("-externalip"))
+    {
         // if an explicit public IP is specified, do not try to find others
         SoftSetBoolArg("-discover", false);
     }
 
-    if (GetBoolArg("-salvagewallet")) {
+    if (GetBoolArg("-salvagewallet"))
+    {
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
-    // Process Masternode config
+    // Process Fortunastake config
     std::string err;
-    masternodeConfig.read(err);
+    fortunastakeConfig.read(err);
     if (!err.empty())
-        InitError("error while parsing masternode.conf Error: " + err);
+        InitError("error while parsing fortunastake.conf Error: " + err);
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
@@ -546,18 +568,24 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     fDebug = GetBoolArg("-debug");
 
-    // -debug implies fDebug*
+    // - debug implies fDebug*, unless otherwise specified, except net/fs/smsg since they are -really- noisy.
     if (fDebug)
     {
-        fDebugNet  = true;
-        fDebugSmsg = true;
-    } else
-    {
-        fDebugNet  = GetBoolArg("-debugnet");
-        fDebugSmsg = GetBoolArg("-debugsmsg");
-    }
+        SoftSetBoolArg("-debugnet", false);
+        SoftSetBoolArg("-debugfs", false);
+        SoftSetBoolArg("-debugsmsg", false);
+        SoftSetBoolArg("-debugchain", true);
+        SoftSetBoolArg("-debugringsig", true);
+    };
+
+    fDebugNet = GetBoolArg("-debugnet");
+    fDebugSmsg = GetBoolArg("-debugsmsg");
+    fDebugChain = GetBoolArg("-debugchain");
+    fDebugFS = GetBoolArg("-debugfs");
+    fDebugRingSig = GetBoolArg("-debugringsig");
+
     fNoSmsg = GetBoolArg("-nosmsg");
-    
+
     bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
 #if !defined(WIN32) && !defined(QT_GUI)
@@ -584,7 +612,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         int nNewTimeout = GetArg("-timeout", 5000);
         if (nNewTimeout > 0 && nNewTimeout < 600000)
             nConnectTimeout = nNewTimeout;
-    }
+    };
 
     if (mapArgs.count("-paytxfee"))
     {
@@ -592,7 +620,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), mapArgs["-paytxfee"].c_str()));
         if (nTransactionFee > 0.25 * COIN)
             InitWarning(_("Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
-    }
+    };
 
     fConfChange = GetBoolArg("-confchange", false);
     fEnforceCanonical = GetBoolArg("-enforcecanonical", true);
@@ -601,7 +629,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         if (!ParseMoney(mapArgs["-mininput"], nMinimumInputValue))
             return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), mapArgs["-mininput"].c_str()));
-    }
+    };
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
     // Sanity check
@@ -618,7 +646,9 @@ bool AppInit2(boost::thread_group& threadGroup)
     // Make sure only a single Bitcoin process is using the data directory.
     boost::filesystem::path pathLockFile = GetDataDir() / ".lock";
     FILE* file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
-    if (file) fclose(file);
+    if (file)
+        fclose(file);
+
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (!lock.try_lock())
         return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  Denarius is probably already running."), strDataDir.c_str()));
@@ -633,22 +663,27 @@ bool AppInit2(boost::thread_group& threadGroup)
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
-    
-    if (mapArgs.count("-masternodepaymentskey")) // masternode payments priv key
+
+    if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
-        if (!masternodePayments.SetPrivKey(GetArg("-masternodepaymentskey", "")))
-            return InitError(_("Unable to sign masternode payment winner, wrong key?"));
-        if (!sporkManager.SetPrivKey(GetArg("-masternodepaymentskey", "")))
+        if (!fortunastakePayments.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
+            return InitError(_("Unable to sign fortunastake payment winner, wrong key?"));
+        if (!sporkManager.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
             return InitError(_("Unable to sign spork message, wrong key?"));
     }
 
-    //ignore masternodes below protocol version
-    CMasterNode::minProtoVersion = GetArg("-masternodeminprotocol", MIN_MN_PROTO_VERSION);
+    //ignore fortunastakes below protocol version
+    CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
 
     if (fDaemon)
         fprintf(stdout, "Denarius server starting\n");
 
     int64_t nStart;
+
+    // Anonymous Ring Signatures ~ D e n a r i u s - v3.0.0.0
+    if (initialiseRingSigs() != 0)
+        return InitError("initialiseRingSigs() failed.");
+
 
     // ********************************************************* Step 5: verify database integrity
 
@@ -657,7 +692,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (!bitdb.Open(GetDataDir()))
     {
         string msg = strprintf(_("Error initializing database environment %s!"
-                                 " To recover, BACKUP THAT DIRECDNRY, then remove"
+                                 " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
@@ -667,7 +702,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         // Recover readable keypairs:
         if (!CWalletDB::Recover(bitdb, strWalletFileName, true))
             return false;
-    }
+    };
 
     if (filesystem::exists(GetDataDir() / strWalletFileName))
     {
@@ -679,103 +714,190 @@ bool AppInit2(boost::thread_group& threadGroup)
                                      " your balance or transactions are incorrect you should"
                                      " restore from a backup."), strDataDir.c_str());
             uiInterface.ThreadSafeMessageBox(msg, _("Denarius"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
-        }
+        };
+
         if (r == CDBEnv::RECOVER_FAIL)
             return InitError(_("wallet.dat corrupt, salvage failed"));
-    }
+    };
 
     // ********************************************************* Step 6: network initialization
+
+    //nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
 
     int nSocksVersion = GetArg("-socks", 5);
 
     if (nSocksVersion != 4 && nSocksVersion != 5)
         return InitError(strprintf(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
 
-    if (mapArgs.count("-onlynet")) {
-        std::set<enum Network> nets;
-        BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"]) {
-            enum Network net = ParseNetwork(snet);
-            if (net == NET_UNROUTABLE)
-                return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
-            nets.insert(net);
-        }
-        for (int n = 0; n < NET_MAX; n++) {
-            enum Network net = (enum Network)n;
-            if (!nets.count(net))
-                SetLimited(net);
-        }
-    }
+    // Native Tor Onion Relay Integration
+    if(fNativeTor)
+    {
+        do {
+            std::set<enum Network> nets;
+            nets.insert(NET_TOR);
 
-    CService addrProxy;
-    bool fProxy = false;
-    if (mapArgs.count("-proxy")) {
-        addrProxy = CService(mapArgs["-proxy"], 9050);
-        if (!addrProxy.IsValid())
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), mapArgs["-proxy"].c_str()));
+            for (int n = 0; n < NET_MAX; n++) {
+                enum Network net = (enum Network)n;
+                if (!nets.count(net))
+                    SetLimited(net);
+            }
+        } while (false);
+    };
 
-        if (!IsLimited(NET_IPV4))
-            SetProxy(NET_IPV4, addrProxy, nSocksVersion);
-        if (nSocksVersion > 4) {
-            if (!IsLimited(NET_IPV6))
-                SetProxy(NET_IPV6, addrProxy, nSocksVersion);
-            SetNameProxy(addrProxy, nSocksVersion);
-        }
-        fProxy = true;
-    }
+    if(!fNativeTor)
+    {
+        if (mapArgs.count("-onlynet"))
+        {
+            std::set<enum Network> nets;
+            BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"])
+            {
+                enum Network net = ParseNetwork(snet);
+                if (net == NET_UNROUTABLE)
+                    return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
+                nets.insert(net);
+            };
+            for (int n = 0; n < NET_MAX; n++)
+            {
+                enum Network net = (enum Network)n;
+                if (!nets.count(net))
+                    SetLimited(net);
+            };
+        };
 
-    // -tor can override normal proxy, -notor disables tor entirely
-    if (!(mapArgs.count("-tor") && mapArgs["-tor"] == "0") && (fProxy || mapArgs.count("-tor"))) {
-        CService addrOnion;
-        if (!mapArgs.count("-tor"))
-            addrOnion = addrProxy;
-        else
-            addrOnion = CService(mapArgs["-tor"], 9050);
-        if (!addrOnion.IsValid())
-            return InitError(strprintf(_("Invalid -tor address: '%s'"), mapArgs["-tor"].c_str()));
-        SetProxy(NET_DNR, addrOnion, 5);
-        SetReachable(NET_DNR);
-    }
+        CService addrProxy;
+        bool fProxy = false;
+        if (mapArgs.count("-proxy"))
+        {
+            addrProxy = CService(mapArgs["-proxy"], 9089);
+            if (!addrProxy.IsValid())
+                return InitError(strprintf(_("Invalid -proxy address: '%s'"), mapArgs["-proxy"].c_str()));
+
+            if (!IsLimited(NET_IPV4))
+                SetProxy(NET_IPV4, addrProxy, nSocksVersion);
+            if (nSocksVersion > 4)
+            {
+                if (!IsLimited(NET_IPV6))
+                    SetProxy(NET_IPV6, addrProxy, nSocksVersion);
+                SetNameProxy(addrProxy, nSocksVersion);
+            };
+            fProxy = true;
+        };
+
+        // -tor can override normal proxy, -notor disables tor entirely
+        if (!(mapArgs.count("-tor") && mapArgs["-tor"] == "0") && (fProxy || mapArgs.count("-tor")))
+        {
+            CService addrOnion;
+            if (!mapArgs.count("-tor"))
+                addrOnion = addrProxy;
+            else
+                addrOnion = CService(mapArgs["-tor"], onion_port);
+
+            if (!addrOnion.IsValid())
+                return InitError(strprintf(_("Invalid -tor address: '%s'"), mapArgs["-tor"].c_str()));
+            SetProxy(NET_TOR, addrOnion, 5);
+            SetReachable(NET_TOR);
+        };
+
+    };
+
+    // Native Tor Onion and -tor flag integration
+    if(fNativeTor)
+    {
+        if (mapArgs.count("-tor") && mapArgs["-tor"] != "0")
+        {
+            CService addrOnion;
+            if (mapArgs.count("-tor"))
+                addrOnion = CService(mapArgs["-tor"], onion_port);
+            else
+                addrOnion = CService("127.0.0.1", onion_port);
+
+            if (!addrOnion.IsValid())
+                return InitError(strprintf(_("Invalid -tor address: '%s'"), mapArgs["-tor"].c_str()));
+            SetProxy(NET_TOR, addrOnion);
+            SetReachable(NET_TOR);
+        };
+    };
 
     // see Step 2: parameter interactions for more information about these
-    fNoListen = !GetBoolArg("-listen", true);
-    fDiscover = GetBoolArg("-discover", true);
+    if(!fNativeTor) // Available if nativetor is disabled
+    {
+        fNoListen = !GetBoolArg("-listen", true);
+        fDiscover = GetBoolArg("-discover", true);
+    };
+
     fNameLookup = GetBoolArg("-dns", true);
 #ifdef USE_UPNP
     fUseUPnP = GetBoolArg("-upnp", USE_UPNP);
 #endif
 
     bool fBound = false;
-    if (!fNoListen)
+    if(!fNativeTor)
     {
-        std::string strError;
-        if (mapArgs.count("-bind")) {
-            BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
-                CService addrBind;
-                if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
-                    return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
-                fBound |= Bind(addrBind);
-            }
-        } else {
-            struct in_addr inaddr_any;
-            inaddr_any.s_addr = INADDR_ANY;
-            if (!IsLimited(NET_IPV6))
-                fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
-            if (!IsLimited(NET_IPV4))
-                fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
-        }
+        if (!fNoListen)
+        {
+            std::string strError;
+            if (mapArgs.count("-bind"))
+            {
+                BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
+                    CService addrBind;
+                    if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
+                        return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
+                    fBound |= Bind(addrBind);
+                }
+            } else
+            {
+                struct in_addr inaddr_any;
+                inaddr_any.s_addr = INADDR_ANY;
+                if (!IsLimited(NET_IPV6))
+                    fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
+                if (!IsLimited(NET_IPV4))
+                    fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
+            };
+            if (!fBound)
+                return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
+        };
+    };
+
+    // Native Tor Integration Continued - D e n a r i u s v3
+    if(fNativeTor)
+    {
+        CService addrBind;
+        if (!Lookup("127.0.0.1", addrBind, GetListenPort(), false))
+            return InitError(strprintf(_("Cannot resolve binding address: '%s'"), "127.0.0.1"));
+
+        fBound |= Bind(addrBind);
+
         if (!fBound)
-            return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
-    }
+            return InitError(_("Failed to listen on any port."));
+
+        if (!(mapArgs.count("-tor") && mapArgs["-tor"] != "0")) {
+              if (!NewThread(StartTor, NULL))
+                      return InitError(_("Error: Could Not Start Tor Onion Node"));
+        }
+        wait_initialized();
+
+        string automatic_onion;
+        filesystem::path const hostname_path = GetDefaultDataDir() / "onion" / "hostname";
+
+        if (!filesystem::exists(hostname_path)) {
+            return InitError(_("No external address found."));
+        }
+
+        ifstream file(hostname_path.string().c_str());
+        file >> automatic_onion;
+        AddLocal(CService(automatic_onion, GetListenPort(), fNameLookup), LOCAL_MANUAL);
+    };
 
     if (mapArgs.count("-externalip"))
     {
-        BOOST_FOREACH(string strAddr, mapMultiArgs["-externalip"]) {
+        BOOST_FOREACH(string strAddr, mapMultiArgs["-externalip"])
+        {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
             AddLocal(CService(strAddr, GetListenPort(), fNameLookup), LOCAL_MANUAL);
-        }
-    }
+        };
+    };
 
     if (mapArgs.count("-reservebalance")) // ppcoin: reserve balance amount
     {
@@ -783,14 +905,14 @@ bool AppInit2(boost::thread_group& threadGroup)
         {
             InitError(_("Invalid amount for -reservebalance=<amount>"));
             return false;
-        }
-    }
+        };
+    };
 
     if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
     {
         if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
-    }
+    };
 
     BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
         AddOneShot(strDest);
@@ -800,10 +922,10 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (!bitdb.Open(GetDataDir()))
     {
         string msg = strprintf(_("Error initializing database environment %s!"
-                                 " To recover, BACKUP THAT DIRECDNRY, then remove"
+                                 " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
-    }
+    };
 
     if (GetBoolArg("-loadblockindextest"))
     {
@@ -811,7 +933,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         txdb.LoadBlockIndex();
         PrintBlockTree();
         return false;
-    }
+    };
 
     uiInterface.InitMessage(_("Loading block index..."));
     printf("Loading block index...\n");
@@ -827,14 +949,14 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         printf("Shutdown requested. Exiting.\n");
         return false;
-    }
+    };
     printf(" block index %15"PRId64"ms\n", GetTimeMillis() - nStart);
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
         PrintBlockTree();
         return false;
-    }
+    };
 
     if (mapArgs.count("-printblock"))
     {
@@ -852,12 +974,12 @@ bool AppInit2(boost::thread_group& threadGroup)
                 block.print();
                 printf("\n");
                 nFound++;
-            }
-        }
+            };
+        };
         if (nFound == 0)
             printf("No blocks matching %s were found\n", strMatch.c_str());
         return false;
-    }
+    };
 
     // ********************************************************* Step 8: load wallet
 
@@ -871,23 +993,28 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         if (nLoadWalletRet == DB_CORRUPT)
             strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
-        else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
+        else
+        if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
         {
             string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
                          " or address book entries might be missing or incorrect."));
             uiInterface.ThreadSafeMessageBox(msg, _("Denarius"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
-        else if (nLoadWalletRet == DB_TOO_NEW)
+        else
+        if (nLoadWalletRet == DB_TOO_NEW)
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of Denarius") << "\n";
-        else if (nLoadWalletRet == DB_NEED_REWRITE)
+        else
+        if (nLoadWalletRet == DB_NEED_REWRITE)
         {
             strErrors << _("Wallet needed to be rewritten: restart Denarius to complete") << "\n";
             printf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         }
         else
+        {
             strErrors << _("Error loading wallet.dat") << "\n";
-    }
+        };
+    };
 
     if (GetBoolArg("-upgradewallet", fFirstRun))
     {
@@ -897,13 +1024,15 @@ bool AppInit2(boost::thread_group& threadGroup)
             printf("Performing wallet upgrade to %i\n", FEATURE_LATEST);
             nMaxVersion = CLIENT_VERSION;
             pwalletMain->SetMinVersion(FEATURE_LATEST); // permanently upgrade the wallet immediately
-        }
-        else
+        } else
+        {
             printf("Allowing wallet upgrade up to %i\n", nMaxVersion);
+        };
+
         if (nMaxVersion < pwalletMain->GetVersion())
             strErrors << _("Cannot downgrade wallet") << "\n";
         pwalletMain->SetMaxVersion(nMaxVersion);
-    }
+    };
 
     if (fFirstRun)
     {
@@ -911,12 +1040,13 @@ bool AppInit2(boost::thread_group& threadGroup)
         RandAddSeedPerfmon();
 
         CPubKey newDefaultKey;
-        if (pwalletMain->GetKeyFromPool(newDefaultKey, false)) {
+        if (pwalletMain->GetKeyFromPool(newDefaultKey, false))
+        {
             pwalletMain->SetDefaultKey(newDefaultKey);
             if (!pwalletMain->SetAddressBookName(pwalletMain->vchDefaultKey.GetID(), ""))
                 strErrors << _("Cannot write default address") << "\n";
-        }
-    }
+        };
+    };
 
     printf("%s", strErrors.str().c_str());
     printf(" wallet      %15"PRId64"ms\n", GetTimeMillis() - nStart);
@@ -925,14 +1055,16 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     CBlockIndex *pindexRescan = pindexBest;
     if (GetBoolArg("-rescan"))
+    {
         pindexRescan = pindexGenesisBlock;
-    else
+    } else
     {
         CWalletDB walletdb(strWalletFileName);
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator))
             pindexRescan = locator.GetBlockIndex();
-    }
+    };
+
     if (pindexBest != pindexRescan && pindexBest && pindexRescan && pindexBest->nHeight > pindexRescan->nHeight)
     {
         uiInterface.InitMessage(_("Rescanning..."));
@@ -940,7 +1072,10 @@ bool AppInit2(boost::thread_group& threadGroup)
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
         printf(" rescan      %15"PRId64"ms\n", GetTimeMillis() - nStart);
-    }
+    };
+
+    // Add wallet transactions that aren't already in a block to mapTransactions
+    pwalletMain->ReacceptWalletTransactions();
 
     // ********************************************************* Step 9: import blocks
 
@@ -983,123 +1118,104 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     printf("Loaded %i addresses from peers.dat  %"PRId64"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
-    
-    
+
+
     // ********************************************************* Step 10.1: startup secure messaging
-    
+
     SecureMsgStart(fNoSmsg, GetBoolArg("-smsgscanchain"));
-    
+
     // ********************************************************* Step 11: start node
-    
+
     if (!CheckDiskSpace())
-        return false;
-    
+    {
+        return InitError(_("Error: not enough disk space to start Denarius."));
+    }
+
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
-    
-    fMasterNode = GetBoolArg("-masternode", false);
-    if(fMasterNode) {
-        printf("Masternode Enabled\n");
-        strMasterNodeAddr = GetArg("-masternodeaddr", "");
 
-        printf("Masternode address: %s\n", strMasterNodeAddr.c_str());
+    fFortunaStake = GetBoolArg("-fortunastake", false);
+    if(fFortunaStake) {
+        printf("Fortunastake Enabled\n");
+        strFortunaStakeAddr = GetArg("-fortunastakeaddr", "");
 
-        if(!strMasterNodeAddr.empty()){
-            CService addrTest = CService(strMasterNodeAddr);
+        printf("Fortunastake address: %s\n", strFortunaStakeAddr.c_str());
+
+        if(!strFortunaStakeAddr.empty()){
+            CService addrTest = CService(strFortunaStakeAddr);
             if (!addrTest.IsValid()) {
-                return InitError("Invalid -masternodeaddr address: " + strMasterNodeAddr);
+                return InitError("Invalid -fortunastakeaddr address: " + strFortunaStakeAddr);
             }
         }
 
-        strMasterNodePrivKey = GetArg("-masternodeprivkey", "");
-        if(!strMasterNodePrivKey.empty()){
+        strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
+        if(!strFortunaStakePrivKey.empty()){
             std::string errorMessage;
 
             CKey key;
             CPubKey pubkey;
 
-            if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, key, pubkey))
+            if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
             {
-                return InitError(_("Invalid masternodeprivkey. Please see documenation."));
+                return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
             }
 
-            activeMasternode.pubKeyMasternode = pubkey;
+            activeFortunastake.pubKeyFortunastake = pubkey;
 
         } else {
-            return InitError(_("You must specify a masternodeprivkey in the configuration. Please see documentation for help."));
+            return InitError(_("You must specify a fortunastakeprivkey in the configuration. Please see documentation for help."));
         }
     }
 
-    fEnableDarksend = GetBoolArg("-enabledarksend", false);
-
-    nDarksendRounds = GetArg("-darksendrounds", 2);
-    if(nDarksendRounds > 16) nDarksendRounds = 16;
-    if(nDarksendRounds < 1) nDarksendRounds = 1;
-
-    nLiquidityProvider = GetArg("-liquidityprovider", 0); //0-100
-    if(nLiquidityProvider != 0) {
-        darkSendPool.SetMinBlockSpacing(std::min(nLiquidityProvider,100)*15);
-        fEnableDarksend = true;
-        nDarksendRounds = 99999;
+    if(GetBoolArg("-mnconflock", true) && pwalletMain) {
+        LOCK(pwalletMain->cs_wallet);
+        printf("Locking Fortunastakes:\n");
+        uint256 mnTxHash;
+        int outputIndex;
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
+            mnTxHash.SetHex(mne.getTxHash());
+            outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+            // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
+            if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                printf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+                continue;
+            }
+            pwalletMain->LockCoin(outpoint);
+            printf("  %s %s - locked successfully\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+        }
     }
 
-    nAnonymizeDenariusAmount = GetArg("-anonymizedenariusamount", 0);
-    if(nAnonymizeDenariusAmount > 999999) nAnonymizeDenariusAmount = 999999;
-    if(nAnonymizeDenariusAmount < 2) nAnonymizeDenariusAmount = 2;
 
-    bool fEnableInstantX = GetBoolArg("-enableinstantx", true);
-    if(fEnableInstantX){
-        nInstantXDepth = GetArg("-instantxdepth", 5);
-        if(nInstantXDepth > 60) nInstantXDepth = 60;
-        if(nInstantXDepth < 0) nAnonymizeDenariusAmount = 0;
-    } else {
-        nInstantXDepth = 0;
+    // Add any fortunastake.conf fortunastakes to the adrenaline nodes
+    BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries())
+    {
+        CAdrenalineNodeConfig c(mne.getAlias(), mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex());
+        CWalletDB walletdb(strWalletFileName);
+
+        // add it to wallet db if doesn't exist already
+        if (!walletdb.ReadAdrenalineNodeConfig(c.sAddress, c))
+        {
+            if (!walletdb.WriteAdrenalineNodeConfig(c.sAddress, c))
+                printf("Could not add fortunastake config %s to adrenaline nodes.", c.sAddress.c_str());
+        }
+        // add it to adrenaline nodes if it doesn't exist already
+        if (!pwalletMain->mapMyAdrenalineNodes.count(c.sAddress))
+            pwalletMain->mapMyAdrenalineNodes.insert(make_pair(c.sAddress, c));
+
+        uiInterface.NotifyAdrenalineNodeChanged(c);
     }
 
-    //lite mode disables all Masternode and Darksend related functionality
-    fLiteMode = GetBoolArg("-litemode", false);
-    if(fMasterNode && fLiteMode){
-        return InitError("You can not start a masternode in litemode");
-    }
-
-    printf("fLiteMode %d\n", fLiteMode);
-    printf("fEnableDarksend %d\n", fEnableDarksend);
-    printf("fMasterNode %d\n", fMasterNode);
-    printf("nInstantXDepth %d\n", nInstantXDepth);
-    printf("Darksend rounds %d\n", nDarksendRounds);
-    printf("Anonymize Denarius Amount %d\n", nAnonymizeDenariusAmount);
-
-    /* Denominations
-       A note about convertability. Within Darksend pools, each denomination
-       is convertable to another.
-       For example:
-       1DNR+1000 == (.1DNR+100)*10
-       10DNR+10000 == (1DNR+1000)*10
-    */
-    darkSendDenominations.push_back( (100000      * COIN)+100000000 );    
-    darkSendDenominations.push_back( (10000       * COIN)+10000000 );
-    darkSendDenominations.push_back( (1000        * COIN)+1000000 );
-    darkSendDenominations.push_back( (100         * COIN)+100000 );
-    darkSendDenominations.push_back( (10          * COIN)+10000 );
-    darkSendDenominations.push_back( (1           * COIN)+1000 );
-    darkSendDenominations.push_back( (.1          * COIN)+100 );
-    /* Disabled till we need them
-    darkSendDenominations.push_back( (.01      * COIN)+10 );
-    darkSendDenominations.push_back( (.001     * COIN)+1 );
-    */
-
-    darkSendPool.InitCollateralAddress();
-
-    threadGroup.create_thread(boost::bind(&ThreadCheckDarkSendPool));
-
+    //Threading still needs reworking
+    NewThread(ThreadCheckForTunaPool, NULL);
 
     RandAddSeedPerfmon();
-    
-    
+
     // reindex addresses found in blockchain
     if(GetBoolArg("-reindexaddr", false))
     {
         uiInterface.InitMessage(_("Rebuilding address index..."));
+        nStart = GetTimeMillis();
         CBlockIndex *pblockAddrIndex = pindexBest;
     CTxDB txdbAddr("rw");
     while(pblockAddrIndex)
@@ -1111,6 +1227,9 @@ bool AppInit2(boost::thread_group& threadGroup)
             pblockAddr.RebuildAddressIndex(txdbAddr);
         pblockAddrIndex = pblockAddrIndex->pprev;
     }
+
+    printf("Rebuilt address index of %i blocks in %"PRId64"ms\n",
+           pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
 
     //// debug print
@@ -1119,6 +1238,16 @@ bool AppInit2(boost::thread_group& threadGroup)
     printf("setKeyPool.size() = %"PRIszu"\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %"PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %"PRIszu"\n",  pwalletMain->mapAddressBook.size());
+
+    if(fNativeTor)
+        printf("Native Tor Onion Relay Node Enabled");
+    else
+        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+	
+    if (fDebug)
+        printf("Debugging is Enabled.");
+	else
+        printf("Debugging is not enabled.");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
@@ -1134,23 +1263,12 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
 
-     // Add wallet transactions that aren't already in a block to mapTransactions
-    pwalletMain->ReacceptWalletTransactions();
-    
-    if (pwalletMain) {
-    BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
-    {
-        uiInterface.NotifyAdrenalineNodeChanged(adrenaline.second);
-    }
-        // Run a thread to flush wallet periodically
-        //threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
-    }
-
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
     while (1)
-        MilliSleep(5000);
+        //MilliSleep(5000);
+        sleep(5);
 #endif
 
     fSuccessfullyLoaded = true;

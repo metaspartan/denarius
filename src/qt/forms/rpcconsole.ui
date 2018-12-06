@@ -201,6 +201,13 @@
          </property>
         </widget>
        </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Native Tor On/Off</string>
+         </property>
+        </widget>
+       </item>
        <item row="8" column="1">
         <widget class="QCheckBox" name="isTestNet">
          <property name="enabled">
@@ -211,15 +218,8 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="0">
-        <widget class="QLabel" name="label_99">
-         <property name="text">
-          <string>LiteMode On/Off</string>
-         </property>
-        </widget>
-       </item>
        <item row="9" column="1">
-        <widget class="QCheckBox" name="isLiteMode">
+        <widget class="QCheckBox" name="isNativeTor">
          <property name="enabled">
           <bool>false</bool>
          </property>

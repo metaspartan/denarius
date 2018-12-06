@@ -57,27 +57,29 @@ namespace boost {
 
 using namespace std;
 
-//Dark  features
-bool fMasterNode = false;
-string strMasterNodePrivKey = "";
-string strMasterNodeAddr = "";
-bool fLiteMode = false;
-int nInstantXDepth = 1;
-int nDarksendRounds = 2;
-int nAnonymizeDenariusAmount = 500;
-int nLiquidityProvider = 0;
+//Fortunastake  features
+bool fFortunaStake = false;
+string strFortunaStakePrivKey = "";
+string strFortunaStakeAddr = "";
+int nFortunaRounds = 2;
+
+int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
+
 /** Spork enforcement enabled time */
-int64_t enforceMasternodePaymentsTime = 4085657524;
+int64_t enforceFortunastakePaymentsTime = 4085657524;
 bool fSuccessfullyLoaded = false;
-bool fEnableDarksend = false;
-/** All denominations used by darksend */
-std::vector<int64_t> darkSendDenominations;
+
+/** All denominations used by fortuna */
+std::vector<int64_t> forTunaDenominations;
 
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
 bool fDebugSmsg = false;
+bool fDebugFS = false;
+bool fDebugChain = false;
+bool fDebugRingSig = false;
 bool fNoSmsg = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugger = false;
@@ -88,6 +90,7 @@ bool fServer = false;
 bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
+bool fNativeTor = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -1079,9 +1082,9 @@ boost::filesystem::path GetConfigFile()
     return pathConfigFile;
 }
 
-boost::filesystem::path GetMasternodeConfigFile()
+boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "masternode.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }

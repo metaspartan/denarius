@@ -7,15 +7,18 @@ using namespace std;
 
 bool KernelRecord::showTransaction(const CWalletTx &wtx)
 {
-    if (wtx.IsCoinBase())
+    if (wtx.GetBlocksToMaturity() > 0 || !wtx.IsFinal() || !wtx.IsTrusted() || !wtx.IsInMainChain())
     {
-        if (wtx.GetDepthInMainChain() < 2)
-        {
-            return false;
-        }
+        return false;
     }
 
-    return true;
+    if (wtx.IsCoinBase() || wtx.IsCoinStake())
+    {
+        return true;
+    }
+
+    return false;
+
 }
 
 /*
@@ -34,7 +37,9 @@ vector<KernelRecord> KernelRecord::decomposeOutput(const CWallet *wallet, const 
         for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
         {
             CTxOut txOut = wtx.vout[nOut];
-            if( wallet->IsMine(txOut) ) {
+            isminetype filter = wallet->IsMine(txOut);
+            bool isSpent = wtx.IsSpent(nOut);
+            if( (filter & ISMINE_SPENDABLE) && !isSpent) {
                 CTxDestination address;
                 std::string addrStr;
 

@@ -34,6 +34,18 @@ bool CWalletDB::EraseName(const string& strAddress)
     return Erase(make_pair(string("name"), strAddress));
 }
 
+bool CWalletDB::WritePurpose(const string& strAddress, const string& strPurpose)
+{
+    nWalletDBUpdated++;
+    return Write(make_pair(string("purpose"), strAddress), strPurpose);
+}
+
+bool CWalletDB::ErasePurpose(const string& strPurpose)
+{
+    nWalletDBUpdated++;
+    return Erase(make_pair(string("purpose"), strPurpose));
+}
+
 bool CWalletDB::ReadAccount(const string& strAccount, CAccount& account)
 {
     account.SetNull();
@@ -72,6 +84,17 @@ bool CWalletDB::EraseAdrenalineNodeConfig(std::string sAlias)
     return Erase(std::make_pair(std::string("adrenaline"), sAlias));
 }
 
+bool CWalletDB::WriteWatchOnly(const CScript &dest)
+{
+    nWalletDBUpdated++;
+    return Write(std::make_pair(std::string("watchs"), dest), '1');
+}
+
+bool CWalletDB::EraseWatchOnly(const CScript &dest)
+{
+    nWalletDBUpdated++;
+    return Erase(std::make_pair(std::string("watchs"), dest));
+}
 
 int64_t CWalletDB::GetAccountCreditDebit(const string& strAccount)
 {
@@ -283,10 +306,10 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             if (fDebug)
                 printf("WalletDB ReadKeyValue sxAddr\n");
-            
+
             CStealthAddress sxAddr;
             ssValue >> sxAddr;
-            
+
             pwallet->stealthAddresses.insert(sxAddr);
         } else if (strType == "acentry")
         {
@@ -305,14 +328,14 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                     wss.fAnyUnordered = true;
             }
         }
-        else if (strType == "watch")
+        else if (strType == "watchs")
         {
-            std::string strAddress;
-            ssKey >> strAddress;
+            CScript script;
+            ssKey >> script;
             char fYes;
             ssValue >> fYes;
             if (fYes == '1')
-                pwallet->LoadWatchOnly(CBitcoinAddress(strAddress).Get());
+                pwallet->LoadWatchOnly(script);
 
             // Watch-only addresses have no birthday information for now,
             // so set the wallet birthday to the beginning of time.
@@ -430,7 +453,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             if (fDebug)
                 printf("WalletDB ReadKeyValue sxKeyMeta\n");
-            
+
             CKeyID keyId;
             ssKey >> keyId;
             CStealthKeyMetadata sxKeyMeta;
