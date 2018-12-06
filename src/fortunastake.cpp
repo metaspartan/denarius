@@ -563,7 +563,16 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
-    //sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareSigTimeTo(pindex)); // put mn's that are new to last rank
+    // put mn's that are new to last rank
+    i = 0;
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
+    {
+        i++;
+        if (mn.nTimeRegistered > pindex->GetBlockTime()) {
+            vecFortunastakeScores.push_back(vecFortunastakeScores[i]);
+            vecFortunastakeScores.erase(vecFortunastakeScores.begin() + i);
+        }
+    }
 
     return true;
 }
