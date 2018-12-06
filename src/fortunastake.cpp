@@ -753,7 +753,6 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
     // reset counts
     payCount = 0;
     payValue = 0;
-    payData.clear();
 
     LOCK(cs_fortunastakes);
     for (int i = 0; i < scanBack; i++) {
