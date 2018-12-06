@@ -2478,7 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+20) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
