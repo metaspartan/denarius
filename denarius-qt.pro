@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.2.0.0
+VERSION = 3.2.5.0
 INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -85,6 +85,11 @@ contains(USE_QRCODE, 1) {
 contains(USE_PROFILER, 1) {
     QMAKE_LFLAGS += -pg
     QMAKE_CXXFLAGS += -pg
+}
+
+contains(USE_DEBUG_FLAGS, 1) {
+    QMAKE_LFLAGS += -Og
+    QMAKE_CXXFLAGS += -Og
 }
 
 # use: qmake "USE_UPNP=1" ( enabled by default; default)
@@ -207,7 +212,7 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -msse2
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wno-format -Wno-unused-parameter -Wstack-protector
 
 
 # Input

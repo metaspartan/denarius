@@ -336,6 +336,7 @@ static const CRPCCommand vRPCCommands[] =
     { "repairwallet",           &repairwallet,           false,  true},
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
+    { "setdebug",               &setdebug,               true,   false },
     { "sendalert",              &sendalert,              false,  false},
     { "gettxout",               &gettxout,               true,   false },
     { "importaddress",          &importaddress,          false,  false },

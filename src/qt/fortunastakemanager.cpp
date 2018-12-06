@@ -178,7 +178,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
 
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
         if (mn.addr.ToString().c_str() == addr){
-            rank = GetFortunastakeRank(mn, pindexBest->nHeight);
+            rank = GetFortunastakeRank(mn, pindexBest);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
             //int64_t value;
@@ -262,7 +262,7 @@ void FortunastakeManager::updateNodeList()
     {
         int mnRow = 0;
         ui->tableWidget->insertRow(0);
-        int mnRank = GetFortunastakeRank(mn, pindexBest->nHeight);
+        int mnRank = GetFortunastakeRank(mn, pindexBest);
         int64_t value;
         double rate;
         mn.GetPaymentInfo(pindexBest, value, rate);

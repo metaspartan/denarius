@@ -193,7 +193,7 @@ bool Finalise();
 bool FindTransactionsByDestination(const CTxDestination &dest, std::vector<uint256> &vtxhash);
 
 
-int GetInputAge(CTxIn& vin);
+int GetInputAge(CTxIn& vin, CBlockIndex* pindex);
 int GetInputAgeIX(uint256 nTXHash, CTxIn& vin);
 int GetIXConfirmations(uint256 nTXHash);
 /** Abort with a message */

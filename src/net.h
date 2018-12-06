@@ -506,7 +506,7 @@ public:
         ENTER_CRITICAL_SECTION(cs_vSend);
         assert(ssSend.size() == 0);
         ssSend << CMessageHeader(pszCommand, 0);
-        if (fDebug)
+        if (fDebugNet)
             printf("net: to %s: %s ", this->addr.ToString().c_str(), pszCommand);
     }
 
@@ -516,7 +516,7 @@ public:
 
         LEAVE_CRITICAL_SECTION(cs_vSend);
 
-        if (fDebug)
+        if (fDebugNet)
             printf("(aborted)\n");
     }
 
@@ -543,7 +543,7 @@ public:
         assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
         memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
 
-        if (fDebug) {
+        if (fDebugNet) {
             printf("(%d bytes)\n", nSize);
         }
 

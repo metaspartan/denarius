@@ -96,6 +96,7 @@ public:
     int nBlockLastPaid;
     int64_t nTimeLastChecked;
     int64_t nTimeLastPaid;
+    int64_t nTimeRegistered;
 
 
     //the dsq count from the last dsq broadcast of this node
@@ -121,6 +122,7 @@ public:
         nBlockLastPaid = 0;
         nTimeLastChecked = 0;
         nTimeLastPaid = 0;
+        nTimeRegistered = newNow;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
@@ -167,16 +169,16 @@ public:
         return enabled == 1;
     }
 
-    int GetFortunastakeInputAge()
+    int GetFortunastakeInputAge(CBlockIndex* pindex=pindexBest)
     {
-        if(pindexBest == NULL) return 0;
+        if(pindex == NULL) return 0;
 
         if(cacheInputAge == 0){
-            cacheInputAge = GetInputAge(vin);
-            cacheInputAgeBlock = pindexBest->nHeight;
+            cacheInputAge = GetInputAge(vin, pindex);
+            cacheInputAgeBlock = pindex->nHeight;
         }
 
-        return cacheInputAge+(pindexBest->nHeight-cacheInputAgeBlock);
+        return cacheInputAge+(pindex->nHeight-cacheInputAgeBlock);
     }
 };
 
@@ -186,7 +188,7 @@ public:
 int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 
 int GetFortunastakeByVin(CTxIn& vin);
-int GetFortunastakeRank(CFortunaStake& tmn, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
+int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 

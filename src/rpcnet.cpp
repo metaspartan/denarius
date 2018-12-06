@@ -109,7 +109,33 @@ Value addnode(const Array& params, bool fHelp)
 
     return Value::null;
 }
- 
+
+Value setdebug(const Array& params, bool fHelp)
+{
+    string strType;
+    string strOn;
+    if (params.size() == 2)
+    {
+        strType = params[0].get_str();
+        strOn = params[1].get_str();
+    }
+    if (fHelp || params.size() != 2 ||
+        (strOn != "on" && strOn != "off" && (strType != "all" && strType != "fs" && strType != "net" && strType != "chain" && strType != "ringsig" && strType != "smsg") ))
+        throw runtime_error(
+            "setdebug <type> <on|off>\n"
+            "Sets the debug mode on the wallet. type 'all' includes 'fs', 'net', 'chain', 'ringsig', 'smsg'");
+
+
+    fDebug = strType == "all" && strOn == "on";
+    fDebugFS = (strType == "all" || strType == "fs") && strOn == "on";
+    fDebugChain = (strType == "all" || strType == "chain") && strOn == "on";
+    fDebugNet = (strType == "all" || strType == "net") && strOn == "on";
+    fDebugRingSig = (strType == "all" || strType == "ringsig") && strOn == "on";
+    fDebugSmsg = (strType == "all" || strType == "smsg") && strOn == "on";
+
+    return Value::null;
+}
+
 // ppcoin: send alert.  
 // There is a known deadlock situation with ThreadMessageHandler
 // ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()

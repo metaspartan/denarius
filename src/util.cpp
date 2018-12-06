@@ -77,6 +77,7 @@ map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
 bool fDebugSmsg = false;
+bool fDebugFS = false;
 bool fDebugChain = false;
 bool fDebugRingSig = false;
 bool fNoSmsg = false;
