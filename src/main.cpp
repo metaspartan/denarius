@@ -2874,6 +2874,13 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
                 vResurrect.push_front(tx);
     }
 
+    // Clear pay data from Fortunastakes. Will be recalculated in ConnectBlock.
+    // TODO: Cache this payData somewhere under the current BlockHash, so we don't have to run the block loop again if the chain reorgs to the same block again
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    {
+        mn.payData.clear();
+    }
+
     // Connect longer branch
     vector<CTransaction> vDelete;
     for (unsigned int i = 0; i < vConnect.size(); i++)

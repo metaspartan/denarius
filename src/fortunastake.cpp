@@ -732,6 +732,8 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
     if (!pindex || IsInitialBlockDownload()) return 0;
     if(!pindex) return 0;
 
+    if (payData.size()) return; // let's only do the payData once, it is cleared if the chain is reorged
+
     const CBlockIndex *BlockReading = pindex;
     int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
 
