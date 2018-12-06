@@ -64,6 +64,8 @@ bool fImporting = false;
 bool fReindex = false;
 bool fAddrIndex = false;
 
+bool FortunaReorgBlock = false;
+
 CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
 
 map<int64_t, CAnonOutputCount> mapAnonOutputStats; // display only, not 100% accurate, height could become inaccurate due to undos
@@ -2478,7 +2480,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if (fDebug && FortunaReorgBlock) { printf("CheckBlock() : Fortunastake payments reorganization calculated."); }
+
+    if(!FortunaReorgBlock && pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2833,6 +2837,8 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
 
+    FortunaReorgBlock = true;
+
     // Find the fork
     CBlockIndex* pfork = pindexBest;
     CBlockIndex* plonger = pindexNew;
@@ -2938,6 +2944,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 
     printf("REORGANIZE: done\n");
 
+    FortunaReorgBlock = false;
     return true;
 }
 

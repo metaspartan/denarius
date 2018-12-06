@@ -38,7 +38,6 @@ std::map<COutPoint, int64_t> askedForFortunastakeListEntry;
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
 unsigned int mnCount = 0;
-bool FortunaReorgBlock = false;
 
 // manage the fortunastake connections
 void ProcessFortunastakeConnections(){
