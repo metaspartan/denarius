@@ -1020,7 +1020,7 @@ void ThreadCheckForTunaPool(void* parg)
 
 
             //if we're low on peers, let's connect to some random ipv4 fortunastakes. ipv6 probably won't route anyway
-            if (GetArg("-maxconnections", 125) > 16 && vNodes.size() < min(25, GetArg("-maxconnections", 125)) && vecFortunastakes.size() > 25) {
+            if (GetArg("-maxconnections", 125) > 16 && vNodes.size() < min(25, (int)GetArg("-maxconnections", 125)) && vecFortunastakes.size() > 25) {
                 int x = 25 - vNodes.size();
                 for (int i = x; i-- > 0; ) {
                     int fs = rand() % vecFortunastakes.size();
