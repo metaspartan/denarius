@@ -85,7 +85,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         // make sure signature isn't in the future (past is OK)
         if (sigTime > GetAdjustedTime() + 60 * 60) {
-            printf("dsee - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
+            if (fDebugFS) printf("dsee - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
             return;
         }
 
@@ -98,7 +98,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
         if(protocolVersion < MIN_MN_PROTO_VERSION) {
-            printf("dsee - ignoring outdated fortunastake %s protocol version %d\n", vin.ToString().c_str(), protocolVersion);
+            if (fDebugFS) printf("dsee - ignoring outdated fortunastake %s protocol version %d\n", vin.ToString().c_str(), protocolVersion);
             return;
         }
 
@@ -106,7 +106,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         pubkeyScript = GetScriptForDestination(pubkey.GetID());
 
         if(pubkeyScript.size() != 25) {
-            printf("dsee - pubkey the wrong size\n");
+            if (fDebugFS) printf("dsee - pubkey the wrong size\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
         }
@@ -115,14 +115,14 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         pubkeyScript2 =GetScriptForDestination(pubkey2.GetID());
 
         if(pubkeyScript2.size() != 25) {
-            printf("dsee - pubkey2 the wrong size\n");
+            if (fDebugFS) printf("dsee - pubkey2 the wrong size\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
         std::string errorMessage = "";
         if(!forTunaSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)){
-            printf("dsee - Got bad fortunastake address signature\n");
+            if (fDebugFS) printf("dsee - Got bad fortunastake address signature\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
         }
@@ -141,7 +141,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
                     mn.UpdateLastSeen();
 
                     if(mn.now < sigTime){ //take the newest entry
-                        printf("dsee - Got updated entry for %s\n", addr.ToString().c_str());
+                        if (fDebugFS & fDebugNet) printf("dsee - Got updated entry for %s\n", addr.ToString().c_str());
                         mn.pubkey2 = pubkey2;
                         mn.now = sigTime;
                         mn.sig = vchSig;
@@ -164,7 +164,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         // make sure the vout that was signed is related to the transaction that spawned the fortunastake
         //  - this is expensive, so it's only done once per fortunastake
         if(!forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
-            printf("dsee - Got mismatched pubkey and vin\n");
+            if (fDebugFS) printf("dsee - Got mismatched pubkey and vin\n");
             Misbehaving(pfrom->GetId(), 100);
             return;
         }
@@ -175,10 +175,10 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         //  - this is checked later by .check() in many places and by ThreadCheckForTunaPool()
         std::string vinError;
         if(CheckFortunastakeVin(vin,vinError)){
-            if (fDebugNet) printf("dsee - Accepted input for fortunastake entry %i %i\n", count, current);
+            if (fDebugFS && fDebugNet) printf("dsee - Accepted input for fortunastake entry %i %i\n", count, current);
 
             if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
-                if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
+                if (fDebugFS && fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
@@ -207,7 +207,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             vecFortunastakes.push_back(mn);
 
         } else {
-            printf("dsee - Rejected fortunastake entry %s: %s\n", addr.ToString().c_str(),vinError.c_str());
+            if (fDebugFS) printf("dsee - Rejected fortunastake entry %s: %s\n", addr.ToString().c_str(),vinError.c_str());
         }
     }
 
@@ -221,14 +221,14 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         bool stop;
         vRecv >> vin >> vchSig >> sigTime >> stop;
 
-        if (fDebug) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
+        if (fDebugFS & fDebugSmsg) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
         if (sigTime > GetAdjustedTime() + (60 * 60)*2) {
-            printf("dseep - Signature rejected, too far into the future %s, sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
+            if (fDebugFS) printf("dseep - Signature rejected, too far into the future %s, sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
         if (sigTime <= GetAdjustedTime() - (60 * 60)*2) {
-            printf("dseep - Signature rejected, too far into the past %s - sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
+            if (fDebugFS) printf("dseep - Signature rejected, too far into the past %s - sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
@@ -243,7 +243,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
                     std::string errorMessage = "";
                     if(!forTunaSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
-                        printf("dseep - Got bad fortunastake address signature %s \n", vin.ToString().c_str());
+                        if (fDebugFS) printf("dseep - Got bad fortunastake address signature %s \n", vin.ToString().c_str());
                         //Misbehaving(pfrom->GetId(), 100);
                         return;
                     }
@@ -263,7 +263,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             }
         }
 
-        if (fDebugNet) printf("dseep - Couldn't find fortunastake entry %s\n", vin.ToString().c_str());
+        if (fDebugFS) printf("dseep - Couldn't find fortunastake entry %s\n", vin.ToString().c_str());
 
         std::map<COutPoint, int64_t>::iterator i = askedForFortunastakeListEntry.find(vin.prevout);
         if (i != askedForFortunastakeListEntry.end()){
@@ -276,7 +276,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         // ask for the dsee info once from the node that sent dseep
 
-        if (fDebugNet) printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
+        if (fDebugFS && fDebugNet) printf("dseep - Asking source node for missing entry %s\n", vin.ToString().c_str());
         pfrom->PushMessage("dseg", vin);
         int64_t askAgain = GetTime()+(60*1); // only ask for each dsee once per minute
         askedForFortunastakeListEntry[vin.prevout] = askAgain;
