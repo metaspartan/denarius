@@ -169,7 +169,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             return;
         }
 
-        if(fDebug) printf("dsee - Got NEW fortunastake entry %s\n", addr.ToString().c_str());
+        if(fDebugFS) printf("dsee - Got NEW fortunastake entry %s\n", addr.ToString().c_str());
 
         // make sure it's still unspent
         //  - this is checked later by .check() in many places and by ThreadCheckForTunaPool()
@@ -177,7 +177,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         if(CheckFortunastakeVin(vin,vinError)){
             if (fDebugNet) printf("dsee - Accepted input for fortunastake entry %i %i\n", count, current);
 
-            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+            if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
                 if (fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
                 Misbehaving(pfrom->GetId(), 20);
                 return;
@@ -199,12 +199,11 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             if(count == -1 && !isLocal)
                 RelayForTunaElectionEntry(vin, addr, vchSig, sigTime, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
 
-            // mn.UpdateLastPaidBlock(pindex, 1000); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment
-            int value;
-            int payments = mn.UpdateLastPaidAmounts(pindex, 1000, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
-            if (payments > 0) {
-                printf("Registered new fortunastake %s(%i/%i) - paid %d times for %f D\n", addr.ToString().c_str(), count, current, payments, value);
-            }
+            // no need to look up the payment amounts right now, they aren't eligible for payment now anyway
+            //int payments = mn.UpdateLastPaidAmounts(pindex, 1000, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
+
+            if (fDebugFS) printf("Registered new fortunastake %s (%i/%i)\n", addr.ToString().c_str(), count, current);
+
             vecFortunastakes.push_back(mn);
 
         } else {
@@ -327,11 +326,11 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             if(vin == CTxIn()){
                 mn.Check(true);
                 if(mn.IsEnabled()) {
-                    if(fDebug) printf("dseg - Sending fortunastake entry - %s \n", mn.addr.ToString().c_str());
+                    if(fDebugFS && fDebugNet) printf("dseg - Sending fortunastake entry - %s \n", mn.addr.ToString().c_str());
                     pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
                 }
             } else if (vin == mn.vin) {
-                if(fDebug) printf("dseg - Sending fortunastake entry - %s \n", mn.addr.ToString().c_str());
+                if(fDebugFS && fDebugNet) printf("dseg - Sending fortunastake entry - %s \n", mn.addr.ToString().c_str());
                 pfrom->PushMessage("dsee", mn.vin, mn.addr, mn.sig, mn.now, mn.pubkey, mn.pubkey2, count, i, mn.lastTimeSeen, mn.protocolVersion);
                 printf("dseg - Sent 1 fortunastake entries to %s\n", pfrom->addr.ToString().c_str());
                 return;
@@ -432,7 +431,19 @@ struct CompareLastPay
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
+        if (t2.second->nTimeRegistered > pindex->GetBlockHash()) return true;
         return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
+    }
+    CBlockIndex* pindex;
+};
+
+struct CompareSigTimeTo
+{
+    CompareSigTimeTo(CBlockIndex* pindex) { this->pindex = pindex; }
+    bool operator()(const pair<int, CFortunaStake*>& t1,
+                    const pair<int, CFortunaStake*>& t2) const
+    {
+        return (t2.second->nTimeRegistered > pindex->GetBlockTime() && t1.second->nTimeRegistered == t2.second->nTimeRegistered ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t2.second->nTimeRegistered > pindex->GetBlockTime());
     }
     CBlockIndex* pindex;
 };
@@ -516,7 +527,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     if (!pindex || IsInitialBlockDownload() || pindex->GetBlockTime() < GetTime() - 30*nCoinbaseMaturity) return true;
 
     vecFortunastakeScores.clear();
-    int i;
+    int i = 0;
     if (vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
         // if ScoresList was calculated for the current pindex hash, then just use that list
         // TODO: make a vector of these somehow
@@ -533,6 +544,10 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
             mn.Check();
             if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
 
+            // check the block time against the entry and don't use it if it's newer than the current block time + 600 secs
+            // stops new stakes from being calculated in rank lists until the time of their first seen broadcast
+            // if (mn.now > pindex->GetBlockTime()) continue;
+
             int value = -1;
             // CBlockIndex* pindex = pindexBest; // don't use the best chain, use the chain we're asking about!
             int payments = mn.UpdateLastPaidAmounts(pindex, max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS, value); // do a search back 1000 blocks when receiving a new fortunastake to find their last payment, payments = number of payments received, value = amount
@@ -547,17 +562,17 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     // NO MORE TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
-    sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex as pindexBest is different between clients
-
+    sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
+    //sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareSigTimeTo(pindex)); // put mn's that are new to last rank
 
     return true;
 }
 
-int GetFortunastakeRank(CFortunaStake &tmn, int64_t nBlockHeight, int minProtocol)
+int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol)
 {
     if (IsInitialBlockDownload()) return 0;
     LOCK(cs_fortunastakes);
-    GetFortunastakeRanks(pindexBest);
+    GetFortunastakeRanks(pindex);
     unsigned int i = 0;
 
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
@@ -734,9 +749,9 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
     if (!pindex || IsInitialBlockDownload()) return 0;
-    if(!pindex) return 0;
+    if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
 
-    if (payData.size()) return; // let's only do the payData once, it is cleared if the chain is reorged
+    if (payData.size()) return 0; // let's only do the payData once, it is cleared if the chain is reorged
 
     const CBlockIndex *BlockReading = pindex;
     int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;

@@ -509,7 +509,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
 
 
     /// debug print
-        printf("net: trying connection %s lastseen=%.1fhrs\n",
+        if (fDebugNet) printf("net: trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString().c_str(),
         pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
@@ -521,7 +521,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
     {
         addrman.Attempt(addrConnect);
 
-        printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
+        if (fDebugNet) printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
 
         // Set to non-blocking
 #ifdef WIN32

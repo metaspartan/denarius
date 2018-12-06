@@ -854,7 +854,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             if (nBlocksPerSec>0)
                 progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
             else
-                progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
+                progressBar->setFormat(tr("~%1 block(s) remaining", "", nRemainingBlocks));
             progressBar->setMaximum(nTotalBlocks);
             progressBar->setValue(count);
             progressBar->setVisible(true);

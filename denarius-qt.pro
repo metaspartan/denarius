@@ -24,8 +24,8 @@ BOOST_INCLUDE_PATH=C:/deps/boost_1_57_0
 BOOST_LIB_PATH=C:/deps/boost_1_57_0/stage/lib
 BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
 BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
-OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
-OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1j
+OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1l/include
+OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1l
 MINIUPNPC_INCLUDE_PATH=C:/deps/
 MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
 LIBPNG_INCLUDE_PATH=C:/deps/libpng-1.6.16
@@ -85,6 +85,11 @@ contains(USE_QRCODE, 1) {
 contains(USE_PROFILER, 1) {
     QMAKE_LFLAGS += -pg
     QMAKE_CXXFLAGS += -pg
+}
+
+contains(USE_DEBUG_FLAGS, 1) {
+    QMAKE_LFLAGS += -Og
+    QMAKE_CXXFLAGS += -Og
 }
 
 # use: qmake "USE_UPNP=1" ( enabled by default; default)
@@ -207,7 +212,7 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -msse2
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wno-format -Wno-unused-parameter -Wstack-protector
 
 
 # Input

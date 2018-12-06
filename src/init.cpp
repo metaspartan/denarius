@@ -568,12 +568,12 @@ bool AppInit2()
 
     fDebug = GetBoolArg("-debug");
 
-    // - debug implies fDebug*, unless otherwise specified, except debugnet/debugfs since it's -really- noisy.
+    // - debug implies fDebug*, unless otherwise specified, except net/fs/smsg since they are -really- noisy.
     if (fDebug)
     {
         SoftSetBoolArg("-debugnet", false);
         SoftSetBoolArg("-debugfs", false);
-        SoftSetBoolArg("-debugsmsg", true);
+        SoftSetBoolArg("-debugsmsg", false);
         SoftSetBoolArg("-debugchain", true);
         SoftSetBoolArg("-debugringsig", true);
     };

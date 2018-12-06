@@ -249,7 +249,7 @@ Value fortunastake(const Array& params, bool fHelp)
             } else if (strCommand == "activeseconds") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
             }
 			else if (strCommand == "full") {
                 Object list;
@@ -267,7 +267,7 @@ Value fortunastake(const Array& params, bool fHelp)
                 list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
                 list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
                 list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
                 obj.push_back(Pair(mn.addr.ToString().c_str(), list));
             }
@@ -853,7 +853,7 @@ Value masternode(const Array& params, bool fHelp)
             } else if (strCommand == "activeseconds") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
             }
 			else if (strCommand == "full") {
                 Object list;
@@ -871,7 +871,7 @@ Value masternode(const Array& params, bool fHelp)
                 list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
                 list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
                 list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
                 obj.push_back(Pair(mn.addr.ToString().c_str(), list));
             }
