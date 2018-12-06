@@ -2482,9 +2482,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     {
         LOCK2(cs_main, mempool.cs);
 
-        CBlockIndex *pindex = pindexBest;
-        if(IsProofOfStake() && pindex != NULL){
-            if(pindex->GetBlockHash() == hashPrevBlock){
+        if(IsProofOfStake() && pindexBest != NULL){
+            if(pindexBest->GetBlockHash() == hashPrevBlock){
 
                 // Calculate Coin Age for Fortunastake Reward Calculation
                 uint64_t nCoinAge;
@@ -2612,8 +2611,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             } else {
                 if(fDebug) { printf("CheckBlock-POS() : Skipping fortunastake payment check - nHeight %ld Hash %s\n", pindexBest->nHeight+1, GetHash().ToString().c_str()); }
             }
-        }else if(IsProofOfWork() && pindex != NULL){
-            if(pindex->GetBlockHash() == hashPrevBlock){
+        }else if(IsProofOfWork() && pindexBest != NULL){
+            if(pindexBest->GetBlockHash() == hashPrevBlock){
                 int64_t fortunastakePaymentAmount = GetFortunastakePayment(pindex->nHeight+1, vtx[0].GetValueOut());
 
                 // If we don't already have its previous block, skip fortunastake payment step
