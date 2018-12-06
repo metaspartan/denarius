@@ -542,6 +542,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
             vNodes.push_back(pnode);
         }
 
+        if(forTunaMaster)
+                pnode->fForTunaMaster = true;
         pnode->nTimeConnected = GetTime();
         return pnode;
     } else if (!proxyConnectionFailed) {
