@@ -2482,6 +2482,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     {
         LOCK2(cs_main, mempool.cs);
 
+        CScript burnPayee;
+        CBitcoinAddress burnDestination;
+        burnDestination.SetString("DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw");
+        burnPayee = GetScriptForDestination(burnDestination.Get());
+
         if(IsProofOfStake() && pindexBest != NULL){
             if(pindexBest->GetBlockHash() == hashPrevBlock){
 
@@ -2502,12 +2507,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                     bool paymentOK = false;
 
                     CScript payee;
-
                     // Non specific payee
                     if(!fortunastakePayments.GetBlockPayee(pindexBest->nHeight+1, payee) || payee == CScript()){
                         foundPayee = true; //doesn't require a specific payee
                         if(fDebug) { printf("CheckBlock-POS() : Using non-specific fortunastake payments %ld\n", pindexBest->nHeight+1); }
                     }
+
+
 
                     // Check transaction for payee and if contains fortunastake reward payment
                     if(fDebug) { printf("CheckBlock-POS(): Transaction 1 Size : %i\n", vtx[1].vout.size()); }
@@ -2521,6 +2527,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                             if (pubScript == vtx[1].vout[i].scriptPubKey) {
                                 printf("CheckBlock-POS() : Found fortunastake payment: %s D to anonymous payee.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                foundPayee = true;
+                            } else if (pubScript == burnPayee) {
+                                printf("CheckBlock-POS() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
                                 foundPayee = true;
                             } else {
                                 CTxDestination mnDest;
@@ -2580,6 +2589,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                             }
                         }
                     }
+
+
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
@@ -2695,6 +2706,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     foundPayee = true;
                                     paymentOK = true;
                                     break;
+                                } else if (pubScript == burnPayee) {
+                                    printf("CheckBlock-POW() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                    foundPayee = true;
                                 }
                             }
                         }
