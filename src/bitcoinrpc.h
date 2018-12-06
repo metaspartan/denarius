@@ -157,6 +157,7 @@ extern json_spirit::Value importwallet(const json_spirit::Array& params, bool fH
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);
 
+extern json_spirit::Value setdebug(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendalert(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getsubsidy(const json_spirit::Array& params, bool fHelp);
