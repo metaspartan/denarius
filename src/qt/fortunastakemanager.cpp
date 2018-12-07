@@ -252,7 +252,7 @@ void FortunastakeManager::updateNodeList()
         return;
 
     ui->countLabel->setText("Updating...");
-    if (mnCount == 0) { MilliSleep(2500); if (mnCount == 0) return; } // if we have no list, wait a few seconds for it to fill.
+    if (mnCount == 0 || IsInitialBlockDownload()) return;
 
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
