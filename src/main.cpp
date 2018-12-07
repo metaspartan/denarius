@@ -2480,9 +2480,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if (fDebug && FortunaReorgBlock) { printf("CheckBlock() : Fortunastake payments reorganization calculated."); }
+    if (fDebug && FortunaReorgBlock) { printf("CheckBlock() : Fortunastake payments reorganization calculated.\n"); }
 
-    if(!FortunaReorgBlock && pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(!fJustCheck && !FortunaReorgBlock && pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -3019,9 +3019,6 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
             InvalidChainFound(pindexNew);
             return error("SetBestChain() : Reorganize failed");
         }
-
-        // Force MN rank calculation here, as ranks are cleared during reorganization
-        GetFortunastakeRanks(pindexBest);
 
         // Connect further blocks
         BOOST_REVERSE_FOREACH(CBlockIndex *pindex, vpindexSecondary)
@@ -3577,8 +3574,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     if (fDebug) printf("ProcessBlock: ACCEPTED\n");
-
-    GetFortunastakeRanks(pindexBest); // calculate ranks for the next payment before any new data comes in
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
