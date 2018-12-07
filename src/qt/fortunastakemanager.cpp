@@ -181,10 +181,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
             rank = GetFortunastakeRank(mn, pindexBest);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
-            //int64_t value;
-            //double rate;
-            //mn.GetPaymentInfo(pindexBest, value, rate);
-            payrate = QString::fromStdString(strprintf("%.2f D/100", mn.payRate, max(200, (int)(3*mnCount))));
+            payrate = QString::fromStdString(strprintf("%.2f D", mn.payValue));
         }
     }
 
@@ -252,7 +249,7 @@ void FortunastakeManager::updateNodeList()
         return;
 
     ui->countLabel->setText("Updating...");
-    if (mnCount == 0) return;
+    if (mnCount == 0 || IsInitialBlockDownload()) return;
 
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
@@ -299,12 +296,12 @@ void FortunastakeManager::updateNodeList()
     }
 
     if (mnCount > 0)
-        ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecFortunastakes.size()).arg(mnCount));
+        ui->countLabel->setText(QString("%1/%2 active (average income: %3)").arg(vecFortunastakes.size()).arg(mnCount).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
     else
         ui->countLabel->setText("Loading...");
 
     if (mnCount < vecFortunastakes.size())
-        ui->countLabel->setText(QString("%1 active").arg(vecFortunastakes.size()));
+        ui->countLabel->setText(QString("%1 active (average income: %2)").arg(vecFortunastakes.size()).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
 
     ui->tableWidget->setSortingEnabled(true);
 

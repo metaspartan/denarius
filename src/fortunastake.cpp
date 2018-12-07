@@ -38,6 +38,7 @@ std::map<COutPoint, int64_t> askedForFortunastakeListEntry;
 std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
 unsigned int mnCount = 0;
+int64_t nAverageFSIncome;
 
 // manage the fortunastake connections
 void ProcessFortunastakeConnections(){
@@ -62,8 +63,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 {
 
     if (strCommand == "dsee") { //ForTuna Election Entry
-
-        bool fIsInitialDownload = IsInitialBlockDownload();
+        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
         CTxIn vin;
@@ -211,7 +212,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
     }
 
     else if (strCommand == "dseep") { //ForTuna Election Entry Ping
-        bool fIsInitialDownload = IsInitialBlockDownload();
+        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
         CTxIn vin;
@@ -589,6 +591,29 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
         if (s.second->vin == tmn.vin)
             return i;
     }
+}
+
+bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
+    // find height
+    // calculate average payment across all FS
+    // check if value is > 25% higher
+    nAverageFSIncome = avg2(vecFortunastakeScoresList);
+    int64_t max = nAverageFSIncome * 10 / 8;
+    if (value > max) {
+        return false;
+    }
+}
+
+int64_t avg2(std::vector<CFortunaStake> const& v) {
+    int n = 0;
+    int64_t mean = 0;
+    for (int i = 0; i < v.size(); i++) {
+        int64_t x = v[i].payValue;
+        int64_t delta = x - mean;
+        if (v[i].payValue < 1*COIN) { continue; } // don't consider payees below 1.00000000D (pos only / new payees)
+        mean += delta/++n;
+    }
+    return mean;
 }
 
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
