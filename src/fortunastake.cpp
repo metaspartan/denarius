@@ -63,8 +63,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 {
 
     if (strCommand == "dsee") { //ForTuna Election Entry
-
-        bool fIsInitialDownload = IsInitialBlockDownload();
+        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
         CTxIn vin;
@@ -212,7 +212,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
     }
 
     else if (strCommand == "dseep") { //ForTuna Election Entry Ping
-        bool fIsInitialDownload = IsInitialBlockDownload();
+        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
         CTxIn vin;
