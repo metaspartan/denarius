@@ -252,7 +252,7 @@ void FortunastakeManager::updateNodeList()
         return;
 
     ui->countLabel->setText("Updating...");
-    if (mnCount == 0) return;
+    if (mnCount == 0) { MilliSleep(2500); if (mnCount == 0) return; } // if we have no list, wait a few seconds for it to fill.
 
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
@@ -299,12 +299,12 @@ void FortunastakeManager::updateNodeList()
     }
 
     if (mnCount > 0)
-        ui->countLabel->setText(QString("%1 active (%2 seen)").arg(vecFortunastakes.size()).arg(mnCount));
+        ui->countLabel->setText(QString("%1/%2 active (average income: %3)").arg(vecFortunastakes.size()).arg(mnCount).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
     else
         ui->countLabel->setText("Loading...");
 
     if (mnCount < vecFortunastakes.size())
-        ui->countLabel->setText(QString("%1 active").arg(vecFortunastakes.size()));
+        ui->countLabel->setText(QString("%1 active (average income: %2)").arg(vecFortunastakes.size()).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
 
     ui->tableWidget->setSortingEnabled(true);
 
