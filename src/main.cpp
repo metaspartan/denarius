@@ -2562,7 +2562,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         }
 
                                         if (!fIsInitialDownload) {
-                                            if (lastPaid > 1 && rank > maxrank) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
+                                            if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
                                                     return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
@@ -2679,7 +2679,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     }
 
                                     if (!fIsInitialDownload) {
-                                        if (lastPaid > 1 && rank > maxrank) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
+                                        if (!CheckFSPayment(pindex, vtx[0].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
