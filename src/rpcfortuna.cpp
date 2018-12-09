@@ -217,9 +217,9 @@ Value fortunastake(const Array& params, bool fHelp)
             strCommand = params[1].get_str().c_str();
         }
 
-        if (strCommand != "active" && strCommand != "txid" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "n" && strCommand != "full" && strCommand != "protocol"){
+        if (strCommand != "active" && strCommand != "txid" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "n" && strCommand != "full" && strCommand != "protocol" && strCommand != "roundpayments" && strCommand != "roundearnings" && strCommand != "dailyrate"){
             throw runtime_error(
-                "list supports 'active', 'txid', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'n', 'protocol', 'full'\n");
+                "list supports 'active', 'txid', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'n', 'protocol', 'roundpayments', 'roundearnings', 'dailyrate', full'\n");
         }
 
         Object obj;
@@ -227,7 +227,7 @@ Value fortunastake(const Array& params, bool fHelp)
             mn.Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsEnabled()));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive()));
             } else if (strCommand == "txid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
@@ -250,10 +250,16 @@ Value fortunastake(const Array& params, bool fHelp)
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
+            } else if (strCommand == "roundpayments") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payCount));
+            } else if (strCommand == "roundearnings") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payRate));
+            } else if (strCommand == "dailyrate") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payValue));
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsEnabled()));
+                list.push_back(Pair("active",        (int)mn.IsActive()));
                 list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
                 list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
 
@@ -269,6 +275,9 @@ Value fortunastake(const Array& params, bool fHelp)
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
                 list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
                 list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
+                list.push_back(Pair("roundpayments",       mn.payCount));
+                list.push_back(Pair("roundearnings",       mn.payValue));
+                list.push_back(Pair("dailyrate",       mn.payRate));
                 obj.push_back(Pair(mn.addr.ToString().c_str(), list));
             }
         }

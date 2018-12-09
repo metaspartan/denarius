@@ -706,8 +706,8 @@ int CFortunaStake::SetPayRate(int nHeight)
              payCount = matches;
              payValue = amount;
              // set the node's current 'reward rate' - pay value divided by rounds (3)
-             // this rate is representative of "D per 100 blocks"
-             payRate = (payValue / scanBack) * 100;
+             // this rate is representative of "D per day"
+             payRate = ((payValue / scanBack) / 30) * 86400;
              // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
@@ -839,10 +839,10 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
         payCount = rewardCount;
         payValue = rewardValue;
 
-        // set the node's current 'reward rate' - pay value divided by rounds (3)
-        payRate = (payValue / scanBack)*100;
+        // set the node's current 'reward rate' - pay per day
+        payRate = ((payValue / scanBack) / 30) * 86400;
 
-        if (fDebugFS) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%s count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), FormatMoney(payRate).c_str(), payCount, FormatMoney(payValue).c_str());
+        if (fDebugFS) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rateperday:%s count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), FormatMoney(payRate).c_str(), payCount, FormatMoney(payValue).c_str());
 
         return rewardCount;
     } else {
