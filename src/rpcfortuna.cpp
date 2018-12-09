@@ -259,7 +259,7 @@ Value fortunastake(const Array& params, bool fHelp)
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsActive()));
+                list.push_back(Pair("active",        (int)mn.IsActive(pindexBest)));
                 list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
                 list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
 
