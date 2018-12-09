@@ -2977,7 +2977,10 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)
 bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     uint256 hash = GetHash();
-
+    if (pindexNew->GetBlockTime() < pindexBest->GetBlockTime() - 300) {
+        if (fDebug) printf("SetBestChain() : Chain is considerably newer than our own, skipping payment checks.");
+        FortunaReorgBlock = true;
+    }
     if (!txdb.TxnBegin())
         return error("SetBestChain() : TxnBegin failed");
 
@@ -3048,6 +3051,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         const CBlockLocator locator(pindexNew);
         ::SetBestChain(locator);
     }
+
+    // Reset flag
+    FortunaReorgBlock = false;
 
     // New best block
     hashBestChain = hash;

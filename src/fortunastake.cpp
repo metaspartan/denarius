@@ -84,7 +84,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         vRecv >> vin >> addr >> vchSig >> sigTime >> pubkey >> pubkey2 >> count >> current >> lastUpdated >> protocolVersion;
 
         // make sure signature isn't in the future (past is OK)
-        if (sigTime > GetAdjustedTime() + 60 * 60) {
+        if (sigTime > pindexBest->GetBlockTime() + 30 * 30) {
             if (fDebugFS) printf("dsee - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
             return;
         }
@@ -163,9 +163,9 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         // make sure the vout that was signed is related to the transaction that spawned the fortunastake
         //  - this is expensive, so it's only done once per fortunastake
-        if(!forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
+        //  - if sigTime is newer than our chain, this will probably never work, so don't bother.
+        if(sigTime < pindexBest->GetBlockTime() && !forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
             if (fDebugFS) printf("dsee - Got mismatched pubkey and vin\n");
-            Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
@@ -223,12 +223,12 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         vRecv >> vin >> vchSig >> sigTime >> stop;
 
         if (fDebugFS & fDebugSmsg) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
-        if (sigTime > GetAdjustedTime() + (60 * 60)*2) {
+        if (sigTime > pindexBest->GetBlockTime() + (60 * 60)*2) {
             if (fDebugFS) printf("dseep - Signature rejected, too far into the future %s, sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
-        if (sigTime <= GetAdjustedTime() - (60 * 60)*2) {
+        if (sigTime <= pindexBest->GetBlockTime() - (60 * 60)*2) {
             if (fDebugFS) printf("dseep - Signature rejected, too far into the past %s - sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
