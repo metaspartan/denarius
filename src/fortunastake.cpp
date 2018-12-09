@@ -773,11 +773,94 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 
 }
 
+// loop back a full round
+// find the FS payment in each block
+// find the FS in our vector and add the payData
+
+bool UpdateFSPaymentAmounts(const CBlockIndex *pindex) {
+    const CBlockIndex *BlockReading = pindex;
+    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
+
+    CTxDB txdb;
+    int64_t amount;
+    CScript payee;
+
+    if (fDebug) { printf("UpdateFSPaymentAmounts(): Updating Fortunastake payments...");}
+    for (int i = 0; i < scanBack; i++) {
+            bool found = false;
+            CBlock block;
+            if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
+                continue;
+
+            MapPrevTx mapInputs;
+            map<uint256, CTxIndex> mapUnused;
+            bool fInvalid = false;
+            int64_t nFees;
+            if (!block.vtx[1].FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
+            {
+                if (fInvalid)
+                    return error("UpdateFSPaymentAmounts(): FetchInputs found invalid tx");
+                return false;
+            }
+
+            nFees = block.vtx[1].GetValueIn(mapInputs) - block.vtx[1].GetValueOut();
+
+            if(block.IsProofOfStake() && pindexBest != NULL){
+                // Calculate Coin Age for Fortunastake Reward Calculation
+                uint64_t nCoinAge;
+                if (!block.vtx[1].GetCoinAge(txdb, nCoinAge))
+                    return error("UpdateFSPaymentAmounts(): %s unable to get coin age for coinstake, Can't Calculate Fortunastake Reward\n", block.vtx[1].GetHash().ToString().substr(0,10).c_str());
+                int64_t nCalculatedStakeReward = GetProofOfStakeReward(nCoinAge, nFees);
+                // Calculate expected fortunastakePaymentAmmount
+                amount = GetFortunastakePayment(BlockReading->nHeight, nCalculatedStakeReward);
+                for (unsigned int i = 0; i < block.vtx[1].vout.size(); i++) {
+                    //if(fDebug) { printf("CheckBlock-POS() : Payment vout number: %i , Amount: %ld\n",i, vtx[1].vout[i].nValue); }
+                    if(block.vtx[1].vout[i].nValue == amount )
+                    {
+                        payee = block.vtx[1].vout[i].scriptPubKey;
+                        found = true;
+                    }
+                }
+            }
+
+            if(block.IsProofOfWork() && pindexBest != NULL){
+                amount = GetFortunastakePayment(BlockReading->nHeight, block.vtx[0].GetValueOut());
+                for (unsigned int i = 0; i < block.vtx[0].vout.size(); i++) {
+                    //if(fDebug) { printf("CheckBlock-POW() : Payment vout number: %i , Amount: %lld\n",i, vtx[0].vout[i].nValue); }
+                    if(block.vtx[0].vout[i].nValue == amount)
+                    {
+                        payee = block.vtx[0].vout[i].scriptPubKey;
+                        found = true;
+                    }
+                }
+            }
+
+            if (found && amount) {
+                // search our list to update the payData
+                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                {
+                    CScript pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                    if (payee == pubScript)
+                    {
+//                        CTxDestination address1;
+//                        ExtractDestination(pubScript, address1);
+//                        CBitcoinAddress address2(address1);
+                        mn.payData.push_back(make_pair(BlockReading->nHeight, amount));
+                        //if (fDebug) { printf("UpdateFSPaymentAmounts(): Block height %d payment data %s written for %s.",BlockReading->nHeight,FormatMoney(amount).c_str(), address2.ToString().c_str()); }
+                    }
+                }
+            }
+    }
+
+}
+
+// result vector = cscript, intr64_t e.g payment value
+// 2nd vector cscript, int e.g. payment count
 int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
     if (!pindex || IsInitialBlockDownload()) return 0;
     if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
-
+    UpdateFSPaymentAmounts(pindex);
     if (payData.size()) return 0; // let's only do the payData once, it is cleared if the chain is reorged
 
     const CBlockIndex *BlockReading = pindex;
