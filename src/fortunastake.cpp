@@ -569,7 +569,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
     {
         i++;
-        if (mn.nTimeRegistered > pindex->GetBlockTime() || mn.active == 0) {
+        if (mn.nTimeRegistered > pindex->GetBlockTime() || mn.lastDseep > 0) {
             vecFortunastakeScores.push_back(vecFortunastakeScores[i]);
             vecFortunastakeScores.erase(vecFortunastakeScores.begin() + i);
         }
