@@ -227,7 +227,7 @@ Value fortunastake(const Array& params, bool fHelp)
             mn.Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive()));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive(pindexBest)));
             } else if (strCommand == "txid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
