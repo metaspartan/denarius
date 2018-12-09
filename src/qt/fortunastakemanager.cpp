@@ -267,7 +267,7 @@ void FortunastakeManager::updateNodeList()
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
-        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsEnabled() ? "Y" : "N"));
+        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsActive(pindexBest) ? "Y" : "N"));
         QTableWidgetItem *addressItem = new QTableWidgetItem();
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();

@@ -432,8 +432,12 @@ struct CompareLastPay
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
-        if (t2.second->nTimeRegistered > pindex->GetBlockHash()) return true;
-        return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
+        if (t1.second->IsActive(pindex) == t2.second->IsActive(pindex)) {
+            return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
+        } else {
+            if (t1.second->IsActive(pindex) < t2.second->IsActive(pindex)) return true; //always put actives before non-actives
+        }
+        return false;
     }
     CBlockIndex* pindex;
 };
@@ -560,23 +564,10 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
         vecFortunastakeScoresListHash = pindex->GetBlockHash();
     }
 
-    // NO MORE TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
+    // TODO: Store the whole Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
-    // put mn's that are new to last rank
-    i = 0;
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
-    {
-        i++;
-        if (mn.nTimeRegistered > pindex->GetBlockTime() // mn's broadcast is newer than our current block
-                || mn.lastDseep == 0 // mn has not sent a dseep yet, the node needs to be active to qualify
-                || mn.lastDseep < pindex->GetBlockTime() - 600) // mn last dseep was 600 seconds ago, they probably aren't active anymore so let's not rank them
-        {
-            vecFortunastakeScores.push_back(vecFortunastakeScores[i]);
-            vecFortunastakeScores.erase(vecFortunastakeScores.begin() + i);
-        }
-    }
 
     return true;
 }
