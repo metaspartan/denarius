@@ -569,7 +569,10 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
     {
         i++;
-        if (mn.nTimeRegistered > pindex->GetBlockTime() || mn.lastDseep > 0) {
+        if (mn.nTimeRegistered > pindex->GetBlockTime() // mn's broadcast is newer than our current block
+                || mn.lastDseep == 0 // mn has not sent a dseep yet, the node needs to be active to qualify
+                || mn.lastDseep < pindex->GetBlockTime() - 600) // mn last dseep was 600 seconds ago, they probably aren't active anymore so let's not rank them
+        {
             vecFortunastakeScores.push_back(vecFortunastakeScores[i]);
             vecFortunastakeScores.erase(vecFortunastakeScores.begin() + i);
         }
