@@ -2565,6 +2565,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                                    CBlock* pblock2 = new CBlock(*this);
+                                                    mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
+                                                    mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
                                                     return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
                                                 } else {
                                                     if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2593,6 +2596,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            CBlock* pblock2 = new CBlock(*this);
+                            mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
+                            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
+
                             return error("CheckBlock-POS() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2683,6 +2690,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
+                                                CBlock* pblock2 = new CBlock(*this);
+                                                mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
+                                                mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
+
                                                 return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%d",rank,FormatMoney(mn.payRate).c_str());
                                             } else
                                             {
@@ -2711,6 +2722,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                            CBlock* pblock2 = new CBlock(*this);
+                            mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
+                            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
+
                                 return error("CheckBlock-POW() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in  the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
