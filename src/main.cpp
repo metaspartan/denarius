@@ -2977,7 +2977,7 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)
 bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     uint256 hash = GetHash();
-    if (pindexNew->GetBlockTime() < pindexBest->GetBlockTime() - 300) {
+    if (pindexNew != NULL && pindexBest != NULL && pindexNew->GetBlockTime() < pindexBest->GetBlockTime() - 300) {
         if (fDebug) printf("SetBestChain() : Chain is considerably newer than our own, skipping payment checks.");
         FortunaReorgBlock = true;
     }
