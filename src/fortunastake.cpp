@@ -63,7 +63,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 {
 
     if (strCommand == "dsee") { //ForTuna Election Entry
-        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
         //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
@@ -84,7 +84,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         vRecv >> vin >> addr >> vchSig >> sigTime >> pubkey >> pubkey2 >> count >> current >> lastUpdated >> protocolVersion;
 
         // make sure signature isn't in the future (past is OK)
-        if (sigTime > GetAdjustedTime() + 60 * 60) {
+        if (sigTime > pindexBest->GetBlockTime() + 30 * 30) {
             if (fDebugFS) printf("dsee - Signature rejected, too far into the future %s\n", vin.ToString().c_str());
             return;
         }
@@ -163,9 +163,9 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         // make sure the vout that was signed is related to the transaction that spawned the fortunastake
         //  - this is expensive, so it's only done once per fortunastake
-        if(!forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
+        //  - if sigTime is newer than our chain, this will probably never work, so don't bother.
+        if(sigTime < pindexBest->GetBlockTime() && !forTunaSigner.IsVinAssociatedWithPubkey(vin, pubkey)) {
             if (fDebugFS) printf("dsee - Got mismatched pubkey and vin\n");
-            Misbehaving(pfrom->GetId(), 100);
             return;
         }
 
@@ -212,7 +212,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
     }
 
     else if (strCommand == "dseep") { //ForTuna Election Entry Ping
-        if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+        //if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
         //bool fIsInitialDownload = IsInitialBlockDownload();
         //if(fIsInitialDownload) return;
 
@@ -223,12 +223,12 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         vRecv >> vin >> vchSig >> sigTime >> stop;
 
         if (fDebugFS & fDebugSmsg) printf("dseep - Received: vin: %s sigTime: %lld stop: %s\n", vin.ToString().c_str(), sigTime, stop ? "true" : "false");
-        if (sigTime > GetAdjustedTime() + (60 * 60)*2) {
+        if (sigTime > pindexBest->GetBlockTime() + (60 * 60)*2) {
             if (fDebugFS) printf("dseep - Signature rejected, too far into the future %s, sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
 
-        if (sigTime <= GetAdjustedTime() - (60 * 60)*2) {
+        if (sigTime <= pindexBest->GetBlockTime() - (60 * 60)*2) {
             if (fDebugFS) printf("dseep - Signature rejected, too far into the past %s - sig %d local %d \n", vin.ToString().c_str(), sigTime, GetAdjustedTime());
             return;
         }
@@ -432,8 +432,12 @@ struct CompareLastPay
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
-        if (t2.second->nTimeRegistered > pindex->GetBlockHash()) return true;
-        return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
+        if (t1.second->IsActive(pindex) == t2.second->IsActive(pindex)) {
+            return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
+        } else {
+            if (t1.second->IsActive(pindex) < t2.second->IsActive(pindex)) return true; //always put actives before non-actives
+        }
+        return false;
     }
     CBlockIndex* pindex;
 };
@@ -560,20 +564,10 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
         vecFortunastakeScoresListHash = pindex->GetBlockHash();
     }
 
-    // NO MORE TODO: Store the Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
+    // TODO: Store the whole Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
-    // put mn's that are new to last rank
-    i = 0;
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
-    {
-        i++;
-        if (mn.nTimeRegistered > pindex->GetBlockTime()) {
-            vecFortunastakeScores.push_back(vecFortunastakeScores[i]);
-            vecFortunastakeScores.erase(vecFortunastakeScores.begin() + i);
-        }
-    }
 
     return true;
 }
@@ -712,8 +706,8 @@ int CFortunaStake::SetPayRate(int nHeight)
              payCount = matches;
              payValue = amount;
              // set the node's current 'reward rate' - pay value divided by rounds (3)
-             // this rate is representative of "D per 100 blocks"
-             payRate = (payValue / scanBack) * 100;
+             // this rate is representative of "D per day"
+             payRate = ((payValue / scanBack) / 30) * 86400;
              // printf("%d found with %s value %.2f rate\n", matches, FormatMoney(amount).c_str(), payRate);
              return matches;
          }
@@ -783,7 +777,6 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
 {
     if (!pindex || IsInitialBlockDownload()) return 0;
     if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
-
     if (payData.size()) return 0; // let's only do the payData once, it is cleared if the chain is reorged
 
     const CBlockIndex *BlockReading = pindex;
@@ -845,10 +838,10 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
         payCount = rewardCount;
         payValue = rewardValue;
 
-        // set the node's current 'reward rate' - pay value divided by rounds (3)
-        payRate = (payValue / scanBack)*100;
+        // set the node's current 'reward rate' - pay per day
+        payRate = ((payValue / scanBack) / 30) * 86400;
 
-        if (fDebugFS) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rate:%s count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), FormatMoney(payRate).c_str(), payCount, FormatMoney(payValue).c_str());
+        if (fDebugFS) printf("CFortunaStake::UpdateLastPaidAmounts -- MN %s in last %d blocks was paid %d times for %s D, rateperday:%s count:%d val:%s\n", address2.ToString().c_str(), scanBack, rewardCount, FormatMoney(rewardValue).c_str(), FormatMoney(payRate).c_str(), payCount, FormatMoney(payValue).c_str());
 
         return rewardCount;
     } else {
@@ -861,84 +854,6 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
 
 }
 
-/*
-int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
-{
-    if(!pindex) return 0;
-
-    const CBlockIndex *BlockReading = pindex;
-    int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
-
-    CScript mnpayee = GetScriptForDestination(pubkey.GetID());
-    CTxDestination address1;
-    ExtractDestination(mnpayee, address1);
-    CBitcoinAddress address2(address1);
-    int rewardCount = 0;
-    int64_t rewardValue = 0;
-    int64_t val = 0;
-    value = 0;
-
-    // reset counts
-    payCount = 0;
-    payValue = 0; // vector of payValues w/ payHeight as index means we dont have to clear it, we can just remove any indexes which are < pindexBest->nHeight and rely on new payment data once we have done the initial search
-    // payData.clear();
-
-    // edit associated code in ConnectBlock() code to add <int,int> to the payData
-
-    LOCK(cs_fortunastakes);
-    if (!payData.size()) { // if we don't have payData, let's look it up!
-        for (int i = 0; i < scanBack; i++) {
-                val = 0;
-                CBlock block;
-                if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
-                    continue;
-
-                // if it's a legit block, then count it against this node and record it in a vector
-                if (block.IsProofOfWork() || block.IsProofOfStake())
-                {
-                    BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
-                    {
-                        if(mnpayee == txout.scriptPubKey) {
-                            int height = BlockReading->nHeight;
-                            if (rewardCount == 0) {
-                                nBlockLastPaid = height;
-                                nTimeLastPaid = BlockReading->nTime;
-                            }
-                            // values
-                            val = txout.nValue;
-
-                            // add this profit & the reward itself
-                            rewardValue += val;
-                            rewardCount++;
-
-                            // make a note in the node for later lookup
-                            payData.push_back(make_pair(height, val));
-                        }
-                    }
-                }
-
-            if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
-
-            BlockReading = BlockReading->pprev;
-        }
-    }
-
-    // filter unneeded info from before scanBack height from payData,
-    // so we don't throw out data which might be needed if scanBack range gets bigger (e.g. huge new influx of stakes)
-    rewardCount = SetPayRate(pindexBest->nHeight);
-
-    if (rewardCount > 0)
-    {
-        value = payValue / COIN;
-        if (fDebug) printf("CFortunastake::UpdateLastPaidAmounts -- Processed stake %s (%d range) @ rate:%.2f count:%d val:%s\n", address2.ToString().c_str(), scanBack, payRate, payCount, FormatMoney(payValue).c_str());
-        return rewardCount;
-    } else {
-        value = 0;
-        return 0;
-    }
-
-}
-*/
 void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlocksToScanBack)
 {
     if(!pindex) return;

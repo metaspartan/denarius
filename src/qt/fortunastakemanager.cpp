@@ -181,7 +181,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
             rank = GetFortunastakeRank(mn, pindexBest);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
-            payrate = QString::fromStdString(strprintf("%.2f D", mn.payValue));
+            payrate = QString::fromStdString(strprintf("%sD/day", FormatMoney(mn.payRate).c_str()));
         }
     }
 
@@ -267,7 +267,7 @@ void FortunastakeManager::updateNodeList()
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
-        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsEnabled() ? "Y" : "N"));
+        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsActive(pindexBest) ? "Y" : "N"));
         QTableWidgetItem *addressItem = new QTableWidgetItem();
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
@@ -295,13 +295,20 @@ void FortunastakeManager::updateNodeList()
         ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
     }
 
+    // calc length of average round
+    int roundLengthSecs = 30 * (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS);
+    // figure out how the average per second this round is
+    int64_t roundPerSec = nAverageFSIncome / roundLengthSecs;
+    // how much is that per day?
+    int64_t payPer24H = roundPerSec * 86400;
+
     if (mnCount > 0)
-        ui->countLabel->setText(QString("%1/%2 active (average income: %3)").arg(vecFortunastakes.size()).arg(mnCount).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
+        ui->countLabel->setText(QString("%1/%2 active (average income: %3/day)").arg(vecFortunastakes.size()).arg(mnCount).arg(QString::fromStdString(FormatMoney(payPer24H))));
     else
         ui->countLabel->setText("Loading...");
 
     if (mnCount < vecFortunastakes.size())
-        ui->countLabel->setText(QString("%1 active (average income: %2)").arg(vecFortunastakes.size()).arg(QString::fromStdString(FormatMoney(nAverageFSIncome))));
+        ui->countLabel->setText(QString("%1 active (average income: %2/day)").arg(vecFortunastakes.size()).arg(QString::fromStdString(FormatMoney(payPer24H))));
 
     ui->tableWidget->setSortingEnabled(true);
 
