@@ -484,7 +484,7 @@ vector<COutput> CActiveFortunastake::SelectCoinsFortunastake(bool fSelectUnlocke
     vector<COutPoint> confLockedCoins;
 
     // Temporary unlock MN coins from fortunastake.conf
-    if(fSelectUnlocked && GetBoolArg("-mnconflock", true)) {
+    if(fSelectUnlocked && GetBoolArg("-mnconflock", true) || fSelectUnlocked && GetBoolArg("-fsconflock", true)) {
         uint256 mnTxHash;
         BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());

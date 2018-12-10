@@ -298,7 +298,7 @@ std::string HelpMessage()
         "  -socks=<n>             " + _("Select the version of socks proxy to use (4-5, default: 5)") + "\n" +
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
-        "  -port=<port>           " + _("Listen for connections on <port> (default: 33339 or testnet: 33338)") + "\n" +
+        "  -port=<port>           " + _("Listen for connections on <port> (default: 33369 or testnet: 33368)") + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
@@ -380,6 +380,7 @@ std::string HelpMessage()
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
         "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
+        "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
         "  -fortunastakeminprotocol=<n> " + _("Ignore fortunastakes less than version (example: 70007; default : 0)") + "\n" +
@@ -492,7 +493,7 @@ bool AppInit2()
 
     if (fDebug)
         printf("nMinerSleep %u\n", nMinerSleep);
-        
+
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
 
@@ -1167,7 +1168,7 @@ bool AppInit2()
         }
     }
 
-    if(GetBoolArg("-mnconflock", true) && pwalletMain) {
+    if(GetBoolArg("-mnconflock", true) && pwalletMain || GetBoolArg("-fsconflock", true) && pwalletMain) {
         LOCK(pwalletMain->cs_wallet);
         printf("Locking Fortunastakes:\n");
         uint256 mnTxHash;
@@ -1243,7 +1244,7 @@ bool AppInit2()
         printf("Native Tor Onion Relay Node Enabled");
     else
         printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
-	
+
     if (fDebug)
         printf("Debugging is Enabled.");
 	else

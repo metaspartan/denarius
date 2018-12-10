@@ -1370,10 +1370,7 @@ static const char *strDNSSeed[][2] = {
     {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
     {"seed.yiimp.eu", "seed.yiimp.eu"},
     {"chainz.cryptoid.info", "chainz.cryptoid.info"},
-    {"seed1.denarius.io", "seed1.denarius.io"},
-    {"seed2.denarius.io", "seed2.denarius.io"},
-    {"seed3.denarius.io", "seed3.denarius.io"},
-    {"seed4.denarius.io", "seed4.denarius.io"}
+    {"denarius.host", "denarius.host"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
