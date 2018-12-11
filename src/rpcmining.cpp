@@ -537,37 +537,42 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
     if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no fortunastake detected
-        int winningNode = GetFortunastakeByRank(1);
-        if(winningNode >= 0){
-            BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
-            {
-                if (s.first == winningNode)
+		bool found;
+                if (vecFortunastakes.size() > 0) {
+                GetFortunastakeRanks(pindexBest);
+                BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                 {
-                    payee.SetDestination(s.second->pubkey.GetID());
-                    break;
+                        if (s.second->nBlockLastPaid < pindexBest->nHeight - 10) {
+                                payee.SetDestination(s.second->pubkey.GetID());
+                                found = true;
+                                break;
+                        }
                 }
-            }
-        } else {
-            printf("getblocktemplate() RPC: Failed to detect fortunastake to pay, burning coins\n");
-            // fortunastakes are in-eligible for payment, burn the coins in-stead
-            std::string burnAddress;
-            if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
-            else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
-            CBitcoinAddress burnDestination;
-            burnDestination.SetString(burnAddress);
-            payee = GetScriptForDestination(burnDestination.Get());
-        }
+                }
+                if (found) {
+                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true));
+                } else {
+                    printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
+                    // pay the burn address if it can't detect
+                    if (fDebug) printf("CreateNewBlock(): Failed to detect fortunastake to pay, burning coins.");
+                    std::string burnAddress;
+                    if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+                    else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+                    CBitcoinAddress burnAddr;
+                    burnAddr.SetString(burnAddress);
+                    payee = GetScriptForDestination(burnAddr.Get());
+                }
     }
     printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
-    if(payee != CScript() && bFortunastakePayments){
+    if(payee != CScript()){
 		CTxDestination address1;
 		ExtractDestination(payee, address1);
 		CBitcoinAddress address2(address1);
 		result.push_back(Pair("payee", address2.ToString().c_str()));
 		result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
 	  } else {
-        result.push_back(Pair("payee", ""));
-        result.push_back(Pair("payee_amount", ""));
+        result.push_back(Pair("payee", "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw"));
+	result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
     }
 
 	  result.push_back(Pair("fortunastake_payments", bFortunastakePayments));

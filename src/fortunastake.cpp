@@ -529,7 +529,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
-    if (!pindex || IsInitialBlockDownload() || pindex->GetBlockTime() < GetTime() - 30*nCoinbaseMaturity) return true;
+    if (!pindex || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
 
     vecFortunastakeScores.clear();
     int i = 0;
