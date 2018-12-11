@@ -64,8 +64,6 @@ bool fImporting = false;
 bool fReindex = false;
 bool fAddrIndex = false;
 
-bool FortunaReorgBlock = false;
-
 CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
 
 map<int64_t, CAnonOutputCount> mapAnonOutputStats; // display only, not 100% accurate, height could become inaccurate due to undos
@@ -2480,9 +2478,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if (fDebug && FortunaReorgBlock) { printf("CheckBlock() : Fortunastake payments reorganization calculated.\n"); }
-
-    if(!fJustCheck && !FortunaReorgBlock && pindex->GetBlockTime() > GetTime() - 30*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(!fJustCheck && pindex->GetBlockTime() > GetTime() - 20*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2565,9 +2561,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                                    CBlock* pblock2 = new CBlock(*this);
-                                                    mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
-                                                    mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
                                                     return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
                                                 } else {
                                                     if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2596,10 +2589,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                            CBlock* pblock2 = new CBlock(*this);
-                            mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
-                            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
-
                             return error("CheckBlock-POS() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2690,10 +2679,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
-                                                CBlock* pblock2 = new CBlock(*this);
-                                                mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
-                                                mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
-
                                                 return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%d",rank,FormatMoney(mn.payRate).c_str());
                                             } else
                                             {
@@ -2722,10 +2707,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                            CBlock* pblock2 = new CBlock(*this);
-                            mapOrphanBlocks.insert(make_pair(pblock2->GetHash(), pblock2));
-                            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
-
                                 return error("CheckBlock-POW() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in  the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2852,8 +2833,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
 
-    FortunaReorgBlock = true;
-
     // Find the fork
     CBlockIndex* pfork = pindexBest;
     CBlockIndex* plonger = pindexNew;
@@ -2959,7 +2938,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 
     printf("REORGANIZE: done\n");
 
-    FortunaReorgBlock = false;
     return true;
 }
 
@@ -2992,10 +2970,6 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)
 bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     uint256 hash = GetHash();
-    if (pindexNew != NULL && pindexBest != NULL && pindexNew->GetBlockTime() < pindexBest->GetBlockTime() - 300) {
-        if (fDebug) printf("SetBestChain() : Chain is considerably newer than our own, skipping payment checks.");
-        FortunaReorgBlock = true;
-    }
     if (!txdb.TxnBegin())
         return error("SetBestChain() : TxnBegin failed");
 
@@ -3066,9 +3040,6 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         const CBlockLocator locator(pindexNew);
         ::SetBestChain(locator);
     }
-
-    // Reset flag
-    FortunaReorgBlock = false;
 
     // New best block
     hashBestChain = hash;
