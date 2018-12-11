@@ -31,7 +31,7 @@ public:
 
 
 public slots:
-    void updateNodeList(QString arg);
+    void updateNodeList(CBlockIndex pindex);
     void updateAdrenalineNode(QString alias, QString addr, QString privkey);
 
 signals:

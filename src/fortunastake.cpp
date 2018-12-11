@@ -174,14 +174,14 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         // make sure it's still unspent
         //  - this is checked later by .check() in many places and by ThreadCheckForTunaPool()
         std::string vinError;
-        if(CheckFortunastakeVin(vin,vinError)){
+        if(CheckFortunastakeVin(vin,vinError,pindexBest)){
             if (fDebugFS && fDebugNet) printf("dsee - Accepted input for fortunastake entry %i %i\n", count, current);
 
-            if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
-                if (fDebugFS && fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
-                Misbehaving(pfrom->GetId(), 20);
-                return;
-            }
+            //if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+            //    if (fDebugFS && fDebugNet) printf("dsee - Input must have least %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS));
+            //    Misbehaving(pfrom->GetId(), 20);
+            //    return;
+            //}
 
             // use this as a peer
             addrman.Add(CAddress(addr), pfrom->addr, 2*60*60);
@@ -971,7 +971,7 @@ void CFortunaStake::Check(bool forceCheck)
 
     if(!unitTest){
         std::string vinError;
-        if(!CheckFortunastakeVin(vin,vinError)) {
+        if(!CheckFortunastakeVin(vin,vinError,pindexBest)) {
                 enabled = 3; //MN input was spent, disable checks for this MN
                 if (fDebug) printf("error checking fortunastake %s: %s\n", vin.prevout.ToString().c_str(), vinError.c_str());
                 status = "vin was spent";
@@ -982,7 +982,7 @@ void CFortunaStake::Check(bool forceCheck)
     enabled = 1; // OK
 }
 
-bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage) {
+bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex* pindex) {
     CTxDB txdb("r");
     CTxIndex txindex;
     CTransaction ctx;
@@ -992,6 +992,15 @@ bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage) {
     {
         errorMessage = "could not find transaction";
         return false;
+    } else {
+        if(mapBlockIndex.find(hashBlock) != mapBlockIndex.end())
+        {
+            int confirms = pindex->nHeight - mapBlockIndex[hashBlock]->nHeight;
+            if (confirms < FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY) {
+                errorMessage = strprintf("specified vin has only %d/%d more confirms",confirms,FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
+                return false;
+            }
+        }
     }
 
     CTxOut vout = ctx.vout[vin.prevout.n];

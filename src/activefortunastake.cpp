@@ -69,11 +69,11 @@ void CActiveFortunastake::ManageStatus()
 
         if(GetFortunaStakeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
 
-            if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
-                printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS), GetInputAge(vin, pindexBest));
-                status = FORTUNASTAKE_INPUT_TOO_NEW;
-                return;
-            }
+            //if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+            //    printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS), GetInputAge(vin, pindexBest));
+            //    status = FORTUNASTAKE_INPUT_TOO_NEW;
+            //    return;
+            //}
 
             printf("CActiveFortunastake::ManageStatus() - Is capable master node!\n");
 

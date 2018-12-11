@@ -63,7 +63,7 @@ int CountFortunastakesAboveProtocol(int protocolVersion);
 
 
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
-bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage);
+bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
