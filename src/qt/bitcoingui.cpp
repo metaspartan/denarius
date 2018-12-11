@@ -843,7 +843,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         text = tr("%n day(s) ago","",secs/(60*60*24));
     }
 
-    if (IsInitialBlockDownload() || count < nTotalBlocks-30 || secs > 30*30) // if we're in initial download or more than 30 blocks behind
+    if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
     {
         int nRemainingBlocks = nTotalBlocks - count;
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
