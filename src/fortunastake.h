@@ -63,7 +63,7 @@ int CountFortunastakesAboveProtocol(int protocolVersion);
 
 
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
-bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage);
+bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
@@ -89,6 +89,7 @@ public:
     int cacheInputAge;
     int cacheInputAgeBlock;
     int enabled;
+    string status;
     bool unitTest;
     bool allowFreeTx;
     int protocolVersion;
@@ -97,6 +98,7 @@ public:
     int64_t nTimeLastChecked;
     int64_t nTimeLastPaid;
     int64_t nTimeRegistered;
+    int nRank;
 
 
     //the dsq count from the last dsq broadcast of this node
@@ -123,6 +125,7 @@ public:
         nTimeLastChecked = 0;
         nTimeLastPaid = 0;
         nTimeRegistered = newNow;
+        nRank = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
