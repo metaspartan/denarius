@@ -2939,6 +2939,11 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) // now clear the ranks because we need to reorganize the payments in case extras got in
+    {
+        mn.payData.clear();
+    }
+
     printf("REORGANIZE: done\n");
 
     return true;
