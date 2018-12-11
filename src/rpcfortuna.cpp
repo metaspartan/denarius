@@ -19,6 +19,20 @@
 using namespace json_spirit;
 using namespace std;
 
+
+
+string fsStatus[10][40] = {
+    "FORTUNASTAKE_NOT_PROCESSED"
+    "FORTUNASTAKE_IS_CAPABLE",
+    "FORTUNASTAKE_NOT_CAPABLE",
+    "FORTUNASTAKE_STOPPED",
+    "FORTUNASTAKE_INPUT_TOO_NEW",
+    "FORTUNASTAKE_PORT_NOT_OPEN",
+    "FORTUNASTAKE_PORT_OPEN",
+    "FORTUNASTAKE_SYNC_IN_PROCESS",
+    "FORTUNASTAKE_REMOTELY_ENABLED"
+};
+
 Value getpoolinfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -565,18 +579,45 @@ Value fortunastake(const Array& params, bool fHelp)
             CBitcoinAddress address2(address1);
             if (activeFortunastake.pubKeyFortunastake.IsFullyValid()) {
                 CScript pubkey;
-                pubkey = GetScriptForDestination(activeFortunastake.pubKeyFortunastake.GetID());
                 CTxDestination address1;
-                ExtractDestination(pubkey, address1);
-                if (pubkey.IsPayToScriptHash())
-                CBitcoinAddress address2(address1);
-
+                std::string address = "";
+                bool found = false;
                 Object localObj;
                 localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
                 localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
-                localObj.push_back(Pair("status", activeFortunastake.status));
-                localObj.push_back(Pair("address", address2.ToString().c_str()));
-                localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
+                LOCK(cs_fortunastakes);
+                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+                    if (mn.vin == activeFortunastake.vin) {
+                        int mnRank = GetFortunastakeRank(mn, pindexBest);
+                        pubkey = GetScriptForDestination(mn.pubkey.GetID());
+                        ExtractDestination(pubkey, address1);
+                        if (pubkey.IsPayToScriptHash())
+                        {
+                            CBitcoinAddress address2(address1);
+                            address = address2.ToString();
+                            localObj.push_back(Pair("payment_address", address));
+                        }
+                        localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+                        localObj.push_back(Pair("network_status", mn.IsActive(pindexBest) ? "active" : "registered"));
+                        if (mn.IsActive(pindexBest)) {
+                          localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+                        }
+                        localObj.push_back(Pair("earnings", mn.payValue));
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    localObj.push_back(Pair("network_status", "unregistered"));
+                    if (activeFortunastake.status != 9 && activeFortunastake.status != 7)
+                    {
+                        localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
+                    }
+                }
+
+                localObj.push_back(Pair("local_status", fsStatus[activeFortunastake.status]));
+                //localObj.push_back(Pair("address", address2.ToString().c_str()));
+
                 mnObj.push_back(Pair("local",localObj));
             } else {
                 Object localObj;
