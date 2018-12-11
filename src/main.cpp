@@ -2826,6 +2826,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     BOOST_FOREACH(CTransaction& tx, vtx)
         SyncWithWallets(tx, this, true);
 
+    // update the UI about the new block
+    uiInterface.NotifyRanksUpdated(pindex);
+
     return true;
 }
 

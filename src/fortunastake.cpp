@@ -569,6 +569,13 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
 
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
 
+    // set ranks
+    BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
+    {
+        i++;
+        s.second->nRank = i;
+    }
+
     return true;
 }
 
@@ -945,16 +952,19 @@ void CFortunaStake::Check(bool forceCheck)
     if(!forceCheck && (GetTime() - lastTimeChecked < FORTUNASTAKE_CHECK_SECONDS)) return;
     lastTimeChecked = GetTime();
 
+
     //once spent, stop doing the checks
     if(enabled==3) return;
 
 
     if(!UpdatedWithin(FORTUNASTAKE_REMOVAL_SECONDS)){
+        status = "Expired";
         enabled = 4;
         return;
     }
 
     if(!UpdatedWithin(FORTUNASTAKE_EXPIRATION_SECONDS)){
+        status = "Inactive, expiring soon";
         enabled = 2;
         return;
     }
@@ -964,10 +974,11 @@ void CFortunaStake::Check(bool forceCheck)
         if(!CheckFortunastakeVin(vin,vinError)) {
                 enabled = 3; //MN input was spent, disable checks for this MN
                 if (fDebug) printf("error checking fortunastake %s: %s\n", vin.prevout.ToString().c_str(), vinError.c_str());
+                status = "vin was spent";
                 return;
             }
         }
-
+    status = "OK";
     enabled = 1; // OK
 }
 

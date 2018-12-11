@@ -56,11 +56,14 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     subscribeToCoreSignals();
 
     timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
-    if(!GetBoolArg("-reindexaddr", false))
-        timer->start(30000);
+    //connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList(pindexBest)));
+    //if(!GetBoolArg("-reindexaddr", false))
+    //    timer->start(30000);
 
-    QTimer::singleShot(1500, this, SLOT(updateNodeList()));
+    QTimer::singleShot(1000, this, SLOT(updateNodeList(pindexBest)));
+    QTimer::singleShot(5000, this, SLOT(updateNodeList(pindexBest)));
+    QTimer::singleShot(10000, this, SLOT(updateNodeList(pindexBest)));
+    QTimer::singleShot(30000, this, SLOT(updateNodeList(pindexBest))); // try to load the node list ASAP for the user
 }
 
 FortunastakeManager::~FortunastakeManager()
@@ -90,17 +93,25 @@ static void NotifyAdrenalineNodeUpdated(FortunastakeManager *page, CAdrenalineNo
                               Q_ARG(QString, privkey)
                               );
 }
-
+static void NotifyRanksUpdated(FortunastakeManager *page, CBlockIndex* pindex)
+{
+    QString arg = QString::fromStdString("pindex->GetBlockHash().ToString()");
+    QMetaObject::invokeMethod(page, "updateNodeList", Qt::QueuedConnection,
+                              Q_ARG(QString, arg)
+                              );
+}
 void FortunastakeManager::subscribeToCoreSignals()
 {
     // Connect signals to core
     uiInterface.NotifyAdrenalineNodeChanged.connect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
+    uiInterface.NotifyRanksUpdated.connect(boost::bind(&NotifyRanksUpdated, this, _1));
 }
 
 void FortunastakeManager::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from core
     uiInterface.NotifyAdrenalineNodeChanged.disconnect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
+    uiInterface.NotifyRanksUpdated.disconnect(boost::bind(&NotifyRanksUpdated, this, _1));
 }
 
 void FortunastakeManager::on_tableWidget_2_itemSelectionChanged()
@@ -158,7 +169,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
                 if (vout.nValue != GetMNCollateral()*COIN)
                     errorMessage += "TX is not equal to 5000 D. ";
             }
-            if (fDebug) printf("FortunastakeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
+            //if (fDebug) printf("FortunastakeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
             break;
         }
     }
@@ -242,8 +253,12 @@ static QString seconds_to_DHMS(quint32 duration)
   return res.sprintf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
 }
 
-void FortunastakeManager::updateNodeList()
+uint256 lastNodeUpdateHash;
+void FortunastakeManager::updateNodeList(QString blockHash)
 {
+    if (pindexBest->GetBlockHash() == lastNodeUpdateHash) return;
+    lastNodeUpdateHash = pindexBest->GetBlockHash();
+
     TRY_LOCK(cs_fortunastakes, lockFortunastakes);
     if(!lockFortunastakes)
         return;
@@ -255,14 +270,31 @@ void FortunastakeManager::updateNodeList()
     ui->tableWidget->setRowCount(0);
     ui->tableWidget->setSortingEnabled(false);
 
-    BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) 
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
     {
-        int mnRow = 0;
-        ui->tableWidget->insertRow(0);
-        int mnRank = GetFortunastakeRank(mn, pindexBest);
-        int64_t value;
-        double rate;
-        mn.GetPaymentInfo(pindexBest, value, rate);
+        bool bFound = false;
+        int nodeRow = 0;
+        for(int i=0; i < ui->tableWidget->rowCount(); i++)
+        {
+            if(ui->tableWidget->item(i, 0)->text() == QString::fromStdString(mn.addr.ToString()))
+            {
+                bFound = true;
+                nodeRow = i;
+                break;
+            }
+        }
+
+        if(nodeRow == 0 && !bFound)
+        {
+            ui->tableWidget->insertRow(ui->tableWidget->rowCount());
+            nodeRow = ui->tableWidget->rowCount()-1;
+        }
+
+        //ui->tableWidget->insertRow(0);
+        //int mnRank = GetFortunastakeRank(mn, pindexBest);
+        int mnRank = mn.nRank;
+        int64_t value = mn.payValue;
+        //mn.GetPaymentInfo(pindexBest, value, rate);
         QString payrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
@@ -287,12 +319,93 @@ void FortunastakeManager::updateNodeList()
         CBitcoinAddress address2(address1);
         QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(address2.ToString())); // +strprintf(" - %.2fD (%3.0f%%)", FormatMoney(value).c_str(), rate)
 
-        ui->tableWidget->setItem(mnRow, 0, addressItem);
-        ui->tableWidget->setItem(mnRow, 1, rankItem);
-        ui->tableWidget->setItem(mnRow, 2, activeItem);
-        ui->tableWidget->setItem(mnRow, 3, activeSecondsItem);
-        ui->tableWidget->setItem(mnRow, 4, lastSeenItem);
-        ui->tableWidget->setItem(mnRow, 5, pubkeyItem);
+        ui->tableWidget->setItem(nodeRow, 0, addressItem);
+        ui->tableWidget->setItem(nodeRow, 1, rankItem);
+        ui->tableWidget->setItem(nodeRow, 2, activeItem);
+        ui->tableWidget->setItem(nodeRow, 3, activeSecondsItem);
+        ui->tableWidget->setItem(nodeRow, 4, lastSeenItem);
+        ui->tableWidget->setItem(nodeRow, 5, pubkeyItem);
+
+        // find any of our own nodes to update
+        bool found = false;
+        std::string errorMessage;
+        QString nstatus;
+        QString ncollateral;
+        QString npayrate;
+        QString nalias;
+        QString naddr;
+        int nrank = 0;
+        LOCK(cs_adrenaline);
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
+            if (mn.vin.prevout.hash.ToString() == mne.getTxHash() && mn.vin.prevout.n == boost::lexical_cast<unsigned int>(mne.getOutputIndex()))
+            {
+                CTxDestination address1;
+                ExtractDestination(GetScriptForDestination(mn.pubkey.GetID()), address1);
+                CBitcoinAddress address2(address1);
+                found = true;
+                nalias = QString::fromStdString(mne.getAlias());
+                naddr = QString::fromStdString(mne.getIp());
+                if (mn.IsActive(pindexBest)) {
+                    nstatus = QString::fromStdString("Active for payment");
+                } else if (mn.status == "OK") {
+                    nstatus = QString::fromStdString("Registered");
+                } else {
+                    nstatus = QString::fromStdString(mn.status);
+                }
+                npayrate = QString::fromStdString("");
+                if (value > 0) {
+                    npayrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
+                }
+                ncollateral = QString::fromStdString(address2.ToString().c_str());
+                found = true;
+                //if (fDebug) printf("\nFortunastakeManager:: %s %s - found %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address2.ToString().c_str(),mne.getAlias().c_str());
+                break;
+            }
+        }
+
+        if (!found) {
+            nstatus = QString::fromStdString("Stake node not started");
+        } else {
+            // find it in tableWidget_2
+            if (errorMessage == "OK") {
+                // nothing ... collateral = QString::fromStdString(errorMessage);
+            }
+
+            bool bFoundAdren = false;
+            int adrenRow = 0;
+            for(int i=0; i < ui->tableWidget_2->rowCount(); i++)
+            {
+                if(ui->tableWidget_2->item(i, 0)->text() == nalias)
+                {
+                    bFoundAdren = true;
+                    adrenRow = i;
+                    break;
+                }
+            }
+
+            if(adrenRow == 0 && !bFoundAdren)
+            {
+                ui->tableWidget_2->insertRow(ui->tableWidget_2->rowCount());
+                adrenRow = ui->tableWidget_2->rowCount()-1;
+            }
+
+            QTableWidgetItem *aliasItem = new QTableWidgetItem(nalias);
+            QTableWidgetItem *addrItem = new QTableWidgetItem(naddr);
+            QTableWidgetItem *statusItem = new QTableWidgetItem(nstatus);
+            QTableWidgetItem *collateralItem = new QTableWidgetItem(ncollateral);
+            SortedWidgetItem *nrankItem = new SortedWidgetItem();
+            SortedWidgetItem *payrateItem = new QTableWidgetItem(npayrate);
+
+            nrankItem->setData(Qt::UserRole, mnRank ? mnRank : 2000);
+            nrankItem->setData(Qt::DisplayRole, mnRank > 0 && mnRank < 500000 ? QString::number(mnRank) : "");
+
+            ui->tableWidget_2->setItem(adrenRow, 0, aliasItem);
+            ui->tableWidget_2->setItem(adrenRow, 1, addrItem);
+            ui->tableWidget_2->setItem(adrenRow, 2, nrankItem);
+            ui->tableWidget_2->setItem(adrenRow, 3, statusItem);
+            ui->tableWidget_2->setItem(adrenRow, 4, payrateItem);
+            ui->tableWidget_2->setItem(adrenRow, 5, collateralItem);
+        }
     }
 
     // calc length of average round
@@ -317,12 +430,11 @@ void FortunastakeManager::updateNodeList()
         LOCK(cs_adrenaline);
         BOOST_FOREACH(PAIRTYPE(std::string, CAdrenalineNodeConfig) adrenaline, pwalletMain->mapMyAdrenalineNodes)
         {
-            updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sFortunastakePrivKey));
+            // updateAdrenalineNode(QString::fromStdString(adrenaline.second.sAlias), QString::fromStdString(adrenaline.second.sAddress), QString::fromStdString(adrenaline.second.sFortunastakePrivKey));
         }
     }
-    
-}
 
+}
 
 void FortunastakeManager::setClientModel(ClientModel *model)
 {
