@@ -21,18 +21,6 @@ using namespace std;
 
 
 
-string fsStatus[10] = {
-    "FORTUNASTAKE_NOT_PROCESSED"
-    "FORTUNASTAKE_IS_CAPABLE",
-    "FORTUNASTAKE_NOT_CAPABLE",
-    "FORTUNASTAKE_STOPPED",
-    "FORTUNASTAKE_INPUT_TOO_NEW",
-    "FORTUNASTAKE_UNKNOWN_ERROR",
-    "FORTUNASTAKE_PORT_NOT_OPEN",
-    "FORTUNASTAKE_PORT_OPEN",
-    "FORTUNASTAKE_SYNC_IN_PROCESS",
-    "FORTUNASTAKE_REMOTELY_ENABLED"
-};
 
 Value getpoolinfo(const Array& params, bool fHelp)
 {
@@ -589,35 +577,49 @@ Value fortunastake(const Array& params, bool fHelp)
                 LOCK(cs_fortunastakes);
                 BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
                     if (mn.vin == activeFortunastake.vin) {
-                        int mnRank = GetFortunastakeRank(mn, pindexBest);
+                        //int mnRank = GetFortunastakeRank(mn, pindexBest);
                         pubkey = GetScriptForDestination(mn.pubkey.GetID());
                         ExtractDestination(pubkey, address1);
-                        if (pubkey.IsPayToScriptHash())
-                        {
-                            CBitcoinAddress address2(address1);
-                            address = address2.ToString();
-                            localObj.push_back(Pair("payment_address", address));
-                        }
-                        localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+                        CBitcoinAddress address2(address1);
+                        address = address2.ToString();
+                        localObj.push_back(Pair("payment_address", address));
+                        //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
                         localObj.push_back(Pair("network_status", mn.IsActive(pindexBest) ? "active" : "registered"));
                         if (mn.IsActive(pindexBest)) {
                           localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+
                         }
                         localObj.push_back(Pair("earnings", mn.payValue));
                         found = true;
                         break;
                     }
                 }
+                string reason;
+                if(activeFortunastake.status == FORTUNASTAKE_REMOTELY_ENABLED) reason = "fortunastake started remotely";
+                if(activeFortunastake.status == FORTUNASTAKE_INPUT_TOO_NEW) reason = "fortunastake input must have at least 15 confirmations";
+                if(activeFortunastake.status == FORTUNASTAKE_IS_CAPABLE) reason = "successfully started fortunastake";
+                if(activeFortunastake.status == FORTUNASTAKE_STOPPED) reason = "fortunastake is stopped";
+                if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) reason = "not capable fortunastake: " + activeFortunastake.notCapableReason;
+                if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) reason = "sync in process. Must wait until client is synced to start.";
+
+                CTxIn vin = CTxIn();
+                CPubKey pubkey = CScript();
+                CKey key;
+                bool found = activeFortunastake.GetFortunaStakeVin(vin, pubkey, key);
+                if(!found){
+                    reason = "Missing fortunastake input, please look at the documentation for instructions on fortunastake creation";
+                } else {
+                    reason = "No problems were found";
+                }
 
                 if (!found) {
                     localObj.push_back(Pair("network_status", "unregistered"));
                     if (activeFortunastake.status != 9 && activeFortunastake.status != 7)
                     {
-                        localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
+                        localObj.push_back(Pair("notCapableReason", reason));
                     }
-                }
-                else {
-                    localObj.push_back(Pair("local_status", fsStatus[activeFortunastake.status]));
+                } else {
+                    localObj.push_back(Pair("local_status", reason));
                 }
 
 
