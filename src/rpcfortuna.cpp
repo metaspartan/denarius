@@ -21,12 +21,13 @@ using namespace std;
 
 
 
-string fsStatus[10][40] = {
+string fsStatus[10] = {
     "FORTUNASTAKE_NOT_PROCESSED"
     "FORTUNASTAKE_IS_CAPABLE",
     "FORTUNASTAKE_NOT_CAPABLE",
     "FORTUNASTAKE_STOPPED",
     "FORTUNASTAKE_INPUT_TOO_NEW",
+    "FORTUNASTAKE_UNKNOWN_ERROR",
     "FORTUNASTAKE_PORT_NOT_OPEN",
     "FORTUNASTAKE_PORT_OPEN",
     "FORTUNASTAKE_SYNC_IN_PROCESS",
@@ -603,6 +604,7 @@ Value fortunastake(const Array& params, bool fHelp)
                           localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
                         }
                         localObj.push_back(Pair("earnings", mn.payValue));
+                        found = true;
                         break;
                     }
                 }
@@ -614,8 +616,11 @@ Value fortunastake(const Array& params, bool fHelp)
                         localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
                     }
                 }
+                else {
+                    localObj.push_back(Pair("local_status", fsStatus[activeFortunastake.status]));
+                }
 
-                localObj.push_back(Pair("local_status", fsStatus[activeFortunastake.status]));
+
                 //localObj.push_back(Pair("address", address2.ToString().c_str()));
 
                 mnObj.push_back(Pair("local",localObj));
