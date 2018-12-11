@@ -66,8 +66,8 @@ bool CFortunastakeConfig::read(std::string& strErr) {
             return false;
         }
 
-        if(CService(ip).GetPort() != 19969 && CService(ip).GetPort() != 9969)  {
-            strErr = "Invalid port (must be 9969 for mainnet or 19969 for testnet) detected in fortunastake.conf: " + line;
+        if(CService(ip).GetPort() != 19999 && CService(ip).GetPort() != 9999)  {
+            strErr = "Invalid port (must be 9999 for mainnet or 19999 for testnet) detected in fortunastake.conf: " + line;
             streamConfig.close();
             return false;
         }
