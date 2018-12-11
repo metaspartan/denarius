@@ -40,9 +40,15 @@ CActiveFortunastake activeFortunastake;
 // count peers we've requested the list from
 int RequestedFortunaStakeList = 0;
 
+//MIN_MN_PROTO_VERSION
+int MIN_MN_PROTO_VERSION = 31000;
+
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
+    Copyright 2018, Denarius Developers
+        carsenk - admin@denarius.io
+        enkayz - enkayz@denarius.io
 */
 
 int randomizeList (int i) { return std::rand()%i;}
