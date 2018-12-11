@@ -602,17 +602,16 @@ Value fortunastake(const Array& params, bool fHelp)
                 if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) reason = "not capable fortunastake: " + activeFortunastake.notCapableReason;
                 if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) reason = "sync in process. Must wait until client is synced to start.";
 
-                CTxIn vin = CTxIn();
-                CPubKey pubkey = CScript();
-                CKey key;
-                bool found = activeFortunastake.GetFortunaStakeVin(vin, pubkey, key);
-                if(!found){
-                    reason = "Missing fortunastake input, please look at the documentation for instructions on fortunastake creation";
-                } else {
-                    reason = "No problems were found";
-                }
+
 
                 if (!found) {
+                    bool vinFound = activeFortunastake.GetFortunaStakeVin(vin, pubkey, key);
+
+                    if(!vinFound){
+                        reason = "Missing fortunastake input, please look at the documentation for instructions on fortunastake creation. If this is a remotely enabled daemon, nothing is wrong.";
+                    } else {
+                        reason = "No problems were found";
+                    }
                     localObj.push_back(Pair("network_status", "unregistered"));
                     if (activeFortunastake.status != 9 && activeFortunastake.status != 7)
                     {
