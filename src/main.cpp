@@ -834,7 +834,7 @@ bool CTransaction::CheckTransaction() const
 			}
 	}
 	*/
-	
+
     return true;
 }
 
@@ -3566,6 +3566,11 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     if (fDebug) printf("ProcessBlock: ACCEPTED\n");
+
+    //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
+    if(nBestHeight >= 1500000) {
+        MIN_MN_PROTO_VERSION = 31005;
+    }
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
