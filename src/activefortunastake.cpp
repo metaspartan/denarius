@@ -69,11 +69,11 @@ void CActiveFortunastake::ManageStatus()
 
         if(GetFortunaStakeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
 
-            if(GetInputAge(vin) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
-                printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS), GetInputAge(vin));
-                status = FORTUNASTAKE_INPUT_TOO_NEW;
-                return;
-            }
+            //if(GetInputAge(vin, pindexBest) < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)){
+            //    printf("CActiveFortunastake::ManageStatus() - Input must have least %d confirmations - %d confirmations\n", (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS), GetInputAge(vin, pindexBest));
+            //    status = FORTUNASTAKE_INPUT_TOO_NEW;
+            //    return;
+            //}
 
             printf("CActiveFortunastake::ManageStatus() - Is capable master node!\n");
 
@@ -484,7 +484,7 @@ vector<COutput> CActiveFortunastake::SelectCoinsFortunastake(bool fSelectUnlocke
     vector<COutPoint> confLockedCoins;
 
     // Temporary unlock MN coins from fortunastake.conf
-    if(fSelectUnlocked && GetBoolArg("-mnconflock", true)) {
+    if(fSelectUnlocked && GetBoolArg("-mnconflock", true) || fSelectUnlocked && GetBoolArg("-fsconflock", true)) {
         uint256 mnTxHash;
         BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());

@@ -40,9 +40,15 @@ CActiveFortunastake activeFortunastake;
 // count peers we've requested the list from
 int RequestedFortunaStakeList = 0;
 
+//MIN_MN_PROTO_VERSION
+int MIN_MN_PROTO_VERSION = 31000;
+
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
+    Copyright 2018, Denarius Developers
+        carsenk - admin@denarius.io
+        enkayz - enkayz@denarius.io
 */
 
 int randomizeList (int i) { return std::rand()%i;}
@@ -997,7 +1003,6 @@ void ThreadCheckForTunaPool(void* parg)
                             pnode->nLastDseg = GetTime();
                             pnode->PushMessage("getsporks"); //get current network sporks
                             RequestedFortunaStakeList++;
-                            break;
                         }
                     }
                 }
@@ -1009,7 +1014,34 @@ void ThreadCheckForTunaPool(void* parg)
         }
 
         //if(c % (60*5) == 0){
-        if(c % 60 == 0){
+        if(c % 60 == 0 && vecFortunastakes.size()) {
+            //let's connect to a random fortunastake every minute!
+            int fs = rand() % vecFortunastakes.size();
+            CService addr = vecFortunastakes[fs].addr;
+            if(ConnectNode((CAddress)addr, NULL, true)){
+                if (fDebug) printf("successfully connected to fortunastake at %s\n",addr.ToStringIPPort().c_str());
+            } else {
+                printf("error connecting to fortunastake at %s\n",addr.ToStringIPPort().c_str());
+            }
+
+
+            //if we're low on peers, let's connect to some random ipv4 fortunastakes. ipv6 probably won't route anyway
+            if (GetArg("-maxconnections", 125) > 16 && vNodes.size() < min(25, (int)GetArg("-maxconnections", 125)) && vecFortunastakes.size() > 25) {
+                int x = 25 - vNodes.size();
+                for (int i = x; i-- > 0; ) {
+                    int fs = rand() % vecFortunastakes.size();
+                    CService addr = vecFortunastakes[fs].addr;
+                    if (addr.IsIPv4() && !addr.IsLocal()) {
+                        if(ConnectNode((CAddress)addr, NULL, true)){
+                            if (fDebug) printf("successfully connected to fortunastake at %s\n",addr.ToStringIPPort().c_str());
+                        } else {
+                            printf("error connecting to fortunastake at %s\n",addr.ToStringIPPort().c_str());
+                        }
+                    }
+                    //MilliSleep(250); // 250 msecs * 50 nodes = 42.5sec, just in time to run this again if needed!
+                }
+
+            }
             //if we've used 1/5 of the fortunastake list, then clear the list.
             if((int)vecFortunastakesUsed.size() > (int)vecFortunastakes.size() / 5)
                 vecFortunastakesUsed.clear();

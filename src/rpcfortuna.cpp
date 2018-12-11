@@ -19,6 +19,9 @@
 using namespace json_spirit;
 using namespace std;
 
+
+
+
 Value getpoolinfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -217,9 +220,9 @@ Value fortunastake(const Array& params, bool fHelp)
             strCommand = params[1].get_str().c_str();
         }
 
-        if (strCommand != "active" && strCommand != "txid" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "n" && strCommand != "full" && strCommand != "protocol"){
+        if (strCommand != "active" && strCommand != "txid" && strCommand != "pubkey" && strCommand != "lastseen" && strCommand != "lastpaid" && strCommand != "activeseconds" && strCommand != "rank" && strCommand != "n" && strCommand != "full" && strCommand != "protocol" && strCommand != "roundpayments" && strCommand != "roundearnings" && strCommand != "dailyrate"){
             throw runtime_error(
-                "list supports 'active', 'txid', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'n', 'protocol', 'full'\n");
+                "list supports 'active', 'txid', 'pubkey', 'lastseen', 'lastpaid', 'activeseconds', 'rank', 'n', 'protocol', 'roundpayments', 'roundearnings', 'dailyrate', full'\n");
         }
 
         Object obj;
@@ -227,7 +230,7 @@ Value fortunastake(const Array& params, bool fHelp)
             mn.Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsEnabled()));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive(pindexBest)));
             } else if (strCommand == "txid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
@@ -249,11 +252,17 @@ Value fortunastake(const Array& params, bool fHelp)
             } else if (strCommand == "activeseconds") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
+            } else if (strCommand == "roundpayments") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payCount));
+            } else if (strCommand == "roundearnings") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payRate));
+            } else if (strCommand == "dailyrate") {
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payValue));
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsEnabled()));
+                list.push_back(Pair("active",        (int)mn.IsActive(pindexBest)));
                 list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
                 list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
 
@@ -267,8 +276,11 @@ Value fortunastake(const Array& params, bool fHelp)
                 list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
                 list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
                 list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
+                list.push_back(Pair("roundpayments",       mn.payCount));
+                list.push_back(Pair("roundearnings",       mn.payValue));
+                list.push_back(Pair("dailyrate",       mn.payRate));
                 obj.push_back(Pair(mn.addr.ToString().c_str(), list));
             }
         }
@@ -556,18 +568,53 @@ Value fortunastake(const Array& params, bool fHelp)
             CBitcoinAddress address2(address1);
             if (activeFortunastake.pubKeyFortunastake.IsFullyValid()) {
                 CScript pubkey;
-                pubkey = GetScriptForDestination(activeFortunastake.pubKeyFortunastake.GetID());
                 CTxDestination address1;
-                ExtractDestination(pubkey, address1);
-                if (pubkey.IsPayToScriptHash())
-                CBitcoinAddress address2(address1);
-
+                std::string address = "";
+                bool found = false;
                 Object localObj;
                 localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
                 localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
-                localObj.push_back(Pair("status", activeFortunastake.status));
-                localObj.push_back(Pair("address", address2.ToString().c_str()));
-                localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
+                LOCK(cs_fortunastakes);
+                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+                    if (mn.vin == activeFortunastake.vin) {
+                        //int mnRank = GetFortunastakeRank(mn, pindexBest);
+                        pubkey = GetScriptForDestination(mn.pubkey.GetID());
+                        ExtractDestination(pubkey, address1);
+                        CBitcoinAddress address2(address1);
+                        address = address2.ToString();
+                        localObj.push_back(Pair("payment_address", address));
+                        //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+                        localObj.push_back(Pair("network_status", mn.IsActive(pindexBest) ? "active" : "registered"));
+                        if (mn.IsActive(pindexBest)) {
+                          localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+
+                        }
+                        localObj.push_back(Pair("earnings", mn.payValue));
+                        found = true;
+                        break;
+                    }
+                }
+                string reason;
+                if(activeFortunastake.status == FORTUNASTAKE_REMOTELY_ENABLED) reason = "fortunastake started remotely";
+                if(activeFortunastake.status == FORTUNASTAKE_INPUT_TOO_NEW) reason = "fortunastake input must have at least 15 confirmations";
+                if(activeFortunastake.status == FORTUNASTAKE_IS_CAPABLE) reason = "successfully started fortunastake";
+                if(activeFortunastake.status == FORTUNASTAKE_STOPPED) reason = "fortunastake is stopped";
+                if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) reason = "not capable fortunastake: " + activeFortunastake.notCapableReason;
+                if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) reason = "sync in process. Must wait until client is synced to start.";
+
+                if (!found) {
+                    localObj.push_back(Pair("network_status", "unregistered"));
+                    if (activeFortunastake.status != 9 && activeFortunastake.status != 7)
+                    {
+                        localObj.push_back(Pair("notCapableReason", reason));
+                    }
+                } else {
+                    localObj.push_back(Pair("local_status", reason));
+                }
+
+
+                //localObj.push_back(Pair("address", address2.ToString().c_str()));
+
                 mnObj.push_back(Pair("local",localObj));
             } else {
                 Object localObj;
@@ -853,7 +900,7 @@ Value masternode(const Array& params, bool fHelp)
             } else if (strCommand == "activeseconds") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
             }
 			else if (strCommand == "full") {
                 Object list;
@@ -871,7 +918,7 @@ Value masternode(const Array& params, bool fHelp)
                 list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
                 list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
                 list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest->nHeight))));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
                 list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
                 obj.push_back(Pair(mn.addr.ToString().c_str(), list));
             }

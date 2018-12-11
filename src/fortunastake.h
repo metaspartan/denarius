@@ -57,14 +57,13 @@ extern map<int64_t, uint256> mapCacheBlockHashes;
 extern unsigned int mnCount;
 
 
-
 // manage the fortunastake connections
 void ProcessFortunastakeConnections();
 int CountFortunastakesAboveProtocol(int protocolVersion);
 
 
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
-bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage);
+bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
@@ -82,7 +81,7 @@ public:
     std::vector<unsigned char> sig;
     std::vector<pair<int, int64_t> > payData;
     pair<int, int64_t> payInfo;
-    double payRate;
+    int64_t payRate;
     int payCount;
     int64_t payValue;
     int64_t now; //dsee message times
@@ -90,6 +89,7 @@ public:
     int cacheInputAge;
     int cacheInputAgeBlock;
     int enabled;
+    string status;
     bool unitTest;
     bool allowFreeTx;
     int protocolVersion;
@@ -97,6 +97,8 @@ public:
     int nBlockLastPaid;
     int64_t nTimeLastChecked;
     int64_t nTimeLastPaid;
+    int64_t nTimeRegistered;
+    int nRank;
 
 
     //the dsq count from the last dsq broadcast of this node
@@ -122,6 +124,8 @@ public:
         nBlockLastPaid = 0;
         nTimeLastChecked = 0;
         nTimeLastPaid = 0;
+        nTimeRegistered = newNow;
+        nRank = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
@@ -140,6 +144,10 @@ public:
         } else {
             lastTimeSeen = override;
         }
+    }
+
+    int IsActive(CBlockIndex* pindex) {
+        return (lastTimeSeen - now) > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30); // dsee broadcast is more than a round old & active from dseeps
     }
 
     inline uint64_t SliceHash(uint256& hash, int slice)
@@ -168,16 +176,16 @@ public:
         return enabled == 1;
     }
 
-    int GetFortunastakeInputAge()
+    int GetFortunastakeInputAge(CBlockIndex* pindex=pindexBest)
     {
-        if(pindexBest == NULL) return 0;
+        if(pindex == NULL) return 0;
 
         if(cacheInputAge == 0){
-            cacheInputAge = GetInputAge(vin);
-            cacheInputAgeBlock = pindexBest->nHeight;
+            cacheInputAge = GetInputAge(vin, pindex);
+            cacheInputAgeBlock = pindex->nHeight;
         }
 
-        return cacheInputAge+(pindexBest->nHeight-cacheInputAgeBlock);
+        return cacheInputAge+(pindex->nHeight-cacheInputAgeBlock);
     }
 };
 
@@ -185,11 +193,13 @@ public:
 
 // Get the current winner for this block
 int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
-
+bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
+int64_t avg2(std::vector<CFortunaStake> const& v);
 int GetFortunastakeByVin(CTxIn& vin);
-int GetFortunastakeRank(CFortunaStake& tmn, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
+int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
-bool GetFortunastakeRanks();
+bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
+extern int64_t nAverageFSIncome;
 
 // for storing the winning payments
 class CFortunastakePaymentWinner
@@ -277,7 +287,7 @@ public:
     // and get paid this block
     //
 
-    int vecFortunastakeRanksLastUpdated;
+    uint256 vecFortunastakeRanksLastUpdated;
     uint64_t CalculateScore(uint256 blockHash, CTxIn& vin);
     bool GetWinningFortunastake(int nBlockHeight, CTxIn& vinOut);
     bool AddWinningFortunastake(CFortunastakePaymentWinner& winner);

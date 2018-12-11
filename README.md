@@ -29,6 +29,9 @@ Specifications
 * Min stake age: 8 hours
 * Cost of Hybrid Fortuna Stakes: 5,000 D
 * Hybrid Fortuna Stake Reward: 33% of the current block reward
+* P2P Port: 33369, Testnet Port: 33368
+* RPC Port: 32369, Testnet RPC Port: 32368
+* Fortuna Stake Port: 9999, Testnet Port: 19999
 
 Technology
 ==========================

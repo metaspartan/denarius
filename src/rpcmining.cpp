@@ -31,13 +31,13 @@ Value getsubsidy(const Array& params, bool fHelp)
         throw runtime_error(
             "getsubsidy [nTarget]\n"
             "Returns proof-of-work subsidy value for the specified value of target.");
-    
+
     int nShowHeight;
     if (params.size() > 0)
         nShowHeight = atoi(params[0].get_str());
     else
         nShowHeight = nBestHeight+1; // block currently being solved
-    
+
     return (uint64_t)GetProofOfWorkReward(nShowHeight, 0);
 }
 
@@ -380,8 +380,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "  \"height\" : height of the next block\n"
             "  \"payee\" : required payee\n"
             "  \"payee_amount\" : required amount to pay\n"
-			"  \"fortunastake_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
+			      "  \"fortunastake_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
             "  \"enforce_fortunastake_payments\" : true|false  (boolean) true, if fortunastake payments are enforced"
+            "  \"masternode_payments\" : true|false,         (boolean) true, if fortunastake payments are enabled"
+            "  \"enforce_masternode_payments\" : true|false  (boolean) true, if fortunastake payments are enforced"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
@@ -504,13 +506,13 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
 	CScript payee;
-	
+
     Object result;
     result.push_back(Pair("version", pblock->nVersion));
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-	result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
+	  result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].GetValueOut()));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
     result.push_back(Pair("mutable", aMutable));
@@ -532,46 +534,52 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if(pindexPrev->nHeight+1 >= BLOCK_START_FORTUNASTAKE_PAYMENTS) bFortunastakePayments = true;
     }
 	if(fDebug) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
-	
+
     if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no fortunastake detected
-        int winningNode = GetFortunastakeByRank(1);
-        if(winningNode >= 0){
-            BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
-            {
-                if (s.first == winningNode)
+		bool found;
+                if (vecFortunastakes.size() > 0) {
+                GetFortunastakeRanks(pindexBest);
+                BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                 {
-                    payee.SetDestination(s.second->pubkey.GetID());
-                    break;
+                        if (s.second->nBlockLastPaid < pindexBest->nHeight - 10) {
+                                payee.SetDestination(s.second->pubkey.GetID());
+                                found = true;
+                                break;
+                        }
                 }
-            }
-        } else {
-            printf("getblocktemplate() RPC: Failed to detect fortunastake to pay, burning coins\n");
-            // fortunastakes are in-eligible for payment, burn the coins in-stead
-            std::string burnAddress;
-            if (fTestNet) burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
-            else burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
-            CBitcoinAddress burnDestination;
-            burnDestination.SetString(burnAddress);
-            payee = GetScriptForDestination(burnDestination.Get());
-        }
+                }
+                if (found) {
+                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true));
+                } else {
+                    printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
+                    // pay the burn address if it can't detect
+                    if (fDebug) printf("CreateNewBlock(): Failed to detect fortunastake to pay, burning coins.");
+                    std::string burnAddress;
+                    if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
+                    else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
+                    CBitcoinAddress burnAddr;
+                    burnAddr.SetString(burnAddress);
+                    payee = GetScriptForDestination(burnAddr.Get());
+                }
     }
     printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
-    if(payee != CScript() && bFortunastakePayments){   
+    if(payee != CScript()){
 		CTxDestination address1;
 		ExtractDestination(payee, address1);
 		CBitcoinAddress address2(address1);
 		result.push_back(Pair("payee", address2.ToString().c_str()));
 		result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
-	} 
-    else {
-        result.push_back(Pair("payee", ""));
-        result.push_back(Pair("payee_amount", ""));
+	  } else {
+        result.push_back(Pair("payee", "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw"));
+	result.push_back(Pair("payee_amount", (int64_t)GetFortunastakePayment(pindexPrev->nHeight+1, pblock->vtx[0].GetValueOut())));
     }
-	
-	result.push_back(Pair("fortunastake_payments", bFortunastakePayments));
+
+	  result.push_back(Pair("fortunastake_payments", bFortunastakePayments));
     result.push_back(Pair("enforce_fortunastake_payments", bFortunastakePayments));
-	
+    result.push_back(Pair("masternode_payments", bFortunastakePayments));
+    result.push_back(Pair("enforce_masternode_payments", bFortunastakePayments));
+
     return result;
 }
 
@@ -600,4 +608,3 @@ Value submitblock(const Array& params, bool fHelp)
 
     return Value::null;
 }
-

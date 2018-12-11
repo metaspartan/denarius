@@ -509,7 +509,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
 
 
     /// debug print
-        printf("net: trying connection %s lastseen=%.1fhrs\n",
+        if (fDebugNet) printf("net: trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString().c_str(),
         pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
@@ -521,7 +521,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
     {
         addrman.Attempt(addrConnect);
 
-        printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
+        if (fDebugNet) printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
 
         // Set to non-blocking
 #ifdef WIN32
@@ -542,6 +542,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
             vNodes.push_back(pnode);
         }
 
+        if(forTunaMaster)
+                pnode->fForTunaMaster = true;
         pnode->nTimeConnected = GetTime();
         return pnode;
     } else if (!proxyConnectionFailed) {
@@ -1368,10 +1370,7 @@ static const char *strDNSSeed[][2] = {
     {"seed.denariusexplorer.org", "seed.denariusexplorer.org"},
     {"seed.yiimp.eu", "seed.yiimp.eu"},
     {"chainz.cryptoid.info", "chainz.cryptoid.info"},
-    {"seed1.denarius.io", "seed1.denarius.io"},
-    {"seed2.denarius.io", "seed2.denarius.io"},
-    {"seed3.denarius.io", "seed3.denarius.io"},
-    {"seed4.denarius.io", "seed4.denarius.io"}
+    {"denarius.host", "denarius.host"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1911,13 +1910,10 @@ void ThreadMessageHandler2(void* parg)
                     if (!ProcessMessages(pnode))
                         pnode->CloseSocketDisconnect();
 
-                    if (pnode->nSendSize < SendBufferSize())
-                    {
-                        if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
-                        {
-                            fSleep = false;
-                        }
-                    }
+                      if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
+                      {
+                          fSleep = false; // don't sleep, we have work to do!
+                      }
                 }
             }
 

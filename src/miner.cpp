@@ -210,23 +210,27 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         if(bFortunaStakePayment) {
             bool hasPayment = true;
             //spork
+            bool found;
             CScript payee;
             if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
-                //no fortunastake detected
-                int winningNode = GetFortunastakeByRank(1);
-                if(winningNode >= 0){
-                    BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
-                    {
-                        if (s.first == winningNode)
-                        {
-                            payee.SetDestination(s.second->pubkey.GetID());
-                            break;
+                bool found;
+                if (vecFortunastakes.size() > 0) {
+                GetFortunastakeRanks(pindexBest);
+                BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
+                {
+                        if (s.second->nBlockLastPaid < pindexBest->nHeight - 10) {
+                                payee.SetDestination(s.second->pubkey.GetID());
+                                found = true;
+                                break;
                         }
-                    }
+                }
+                }
+                if (found) {
+                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true));
                 } else {
                     printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
                     // pay the burn address if it can't detect
-                    if (fDebug) printf("CreateNewBlock(): Failed to detect fortunastake to pay, burning coins..\n");
+                    if (fDebug) printf("CreateNewBlock(): Failed to detect fortunastake to pay, burning coins.");
                     std::string burnAddress;
                     if (fTestNet) std::string burnAddress = "8TestXXXXXXXXXXXXXXXXXXXXXXXXbCvpq";
                     else std::string burnAddress = "DNRXXXXXXXXXXXXXXXXXXXXXXXXXZeeDTw";
