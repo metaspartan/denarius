@@ -2457,6 +2457,21 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // We hope to proudly present you:
     // ----------- hybrid fortunastake payments -----------
 
+
+    // ... after a long time, it came to be known in the lands that the fortunastakes were indeed high.
+    // many of thy were so invested in their stakes they pushed it, to get all the D they could. the streets
+    // were dark and the days were long. people wanted a fair hand. they wanted to know they could rely
+    // on the D to bring them joy and happiness, and not worry for when they might next taste the D
+
+    // and oh ye of little faith, feast your eyes upon the broth of thine calling. the hybrid stakes are no more.
+    // gone are the days of not knowing when to expect the sweet caress of the glorious D to be gracing the silver linings
+    // of your wallet. forever more you shall know the D, and the D shall know you, and ye shall be fairly judged
+    // for all of eternity
+
+
+    // ----- Denarius fortuna stakes, the fair payment edition  -----
+    // proudly presented by enkayz
+
     bool FortunastakePayments = false;
     bool fIsInitialDownload = IsInitialBlockDownload();
 
@@ -2827,7 +2842,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         SyncWithWallets(tx, this, true);
 
     // update the UI about the new block
-    uiInterface.NotifyRanksUpdated(pindex);
+    uiInterface.NotifyRanksUpdated();
 
     return true;
 }

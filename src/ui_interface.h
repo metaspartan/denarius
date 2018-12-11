@@ -89,7 +89,7 @@ public:
     boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;
 
     boost::signals2::signal<void (CAdrenalineNodeConfig nodeConfig)> NotifyAdrenalineNodeChanged;
-    boost::signals2::signal<void (CBlockIndex* pindex)> NotifyRanksUpdated;
+    boost::signals2::signal<void ()> NotifyRanksUpdated;
 
     /**
      * New, updated or cancelled alert.

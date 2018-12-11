@@ -60,10 +60,10 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     //if(!GetBoolArg("-reindexaddr", false))
     //    timer->start(30000);
 
-    QTimer::singleShot(1000, this, SLOT(updateNodeList(pindexBest)));
-    QTimer::singleShot(5000, this, SLOT(updateNodeList(pindexBest)));
-    QTimer::singleShot(10000, this, SLOT(updateNodeList(pindexBest)));
-    QTimer::singleShot(30000, this, SLOT(updateNodeList(pindexBest))); // try to load the node list ASAP for the user
+    QTimer::singleShot(1000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(5000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(10000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(30000, this, SLOT(updateNodeList())); // try to load the node list ASAP for the user
 }
 
 FortunastakeManager::~FortunastakeManager()
@@ -93,25 +93,22 @@ static void NotifyAdrenalineNodeUpdated(FortunastakeManager *page, CAdrenalineNo
                               Q_ARG(QString, privkey)
                               );
 }
-static void NotifyRanksUpdated(FortunastakeManager *page, CBlockIndex* pindex)
+static void NotifyRanksUpdated(FortunastakeManager *page)
 {
-    QString arg = QString::fromStdString("pindex->GetBlockHash().ToString()");
-    QMetaObject::invokeMethod(page, "updateNodeList", Qt::QueuedConnection,
-                              Q_ARG(QString, arg)
-                              );
+    QMetaObject::invokeMethod(page, "updateNodeList", Qt::QueuedConnection);
 }
 void FortunastakeManager::subscribeToCoreSignals()
 {
     // Connect signals to core
     uiInterface.NotifyAdrenalineNodeChanged.connect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
-    uiInterface.NotifyRanksUpdated.connect(boost::bind(&NotifyRanksUpdated, this, _1));
+    uiInterface.NotifyRanksUpdated.connect(boost::bind(&NotifyRanksUpdated, this));
 }
 
 void FortunastakeManager::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from core
     uiInterface.NotifyAdrenalineNodeChanged.disconnect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
-    uiInterface.NotifyRanksUpdated.disconnect(boost::bind(&NotifyRanksUpdated, this, _1));
+    uiInterface.NotifyRanksUpdated.disconnect(boost::bind(&NotifyRanksUpdated, this));
 }
 
 void FortunastakeManager::on_tableWidget_2_itemSelectionChanged()
@@ -254,7 +251,7 @@ static QString seconds_to_DHMS(quint32 duration)
 }
 
 uint256 lastNodeUpdateHash;
-void FortunastakeManager::updateNodeList(QString blockHash)
+void FortunastakeManager::updateNodeList()
 {
     if (pindexBest->GetBlockHash() == lastNodeUpdateHash) return;
     lastNodeUpdateHash = pindexBest->GetBlockHash();
