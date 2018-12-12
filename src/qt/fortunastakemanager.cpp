@@ -345,7 +345,11 @@ void FortunastakeManager::updateNodeList()
                 if (mn.IsActive(pindexBest)) {
                     nstatus = QString::fromStdString("Active for payment");
                 } else if (mn.status == "OK") {
-                    nstatus = QString::fromStdString("Registered");
+                    if (mn.lastDseep > 0) {
+                        nstatus = QString::fromStdString("Verified");
+                    } else {
+                        nstatus = QString::fromStdString("Registered");
+                    }
                 } else {
                     nstatus = QString::fromStdString(mn.status);
                 }
