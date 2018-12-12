@@ -52,7 +52,7 @@ int64_t nLastCoinStakeSearchTime = 0;
 int nCoinbaseMaturity = 20; //30 on Mainnet D e n a r i u s, 20 for testnet
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
-
+bool FortunaReorgBlock;
 uint256 nBestChainTrust = 0;
 uint256 nBestInvalidTrust = 0;
 
@@ -2918,13 +2918,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
                 vResurrect.push_front(tx);
     }
 
-    // Clear pay data from Fortunastakes. Will be recalculated in ConnectBlock.
-    // TODO: Cache this payData somewhere under the current BlockHash, so we don't have to run the block loop again if the chain reorgs to the same block again
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-    {
-        mn.payData.clear();
-    }
-
     // Connect longer branch
     vector<CTransaction> vDelete;
     for (unsigned int i = 0; i < vConnect.size(); i++)
@@ -2977,6 +2970,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
     {
         mn.payData.clear();
     }
+    if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
 
     FortunaReorgBlock = false;
     printf("REORGANIZE: done\n");
