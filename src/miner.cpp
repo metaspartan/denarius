@@ -226,7 +226,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 }
                 }
                 if (found) {
-                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true));
+                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true).c_str());
                 } else {
                     printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
                     // pay the burn address if it can't detect
