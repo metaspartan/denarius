@@ -48,11 +48,11 @@ unsigned int nTargetSpacing     = 30;               // 30 seconds, FAST
 unsigned int nStakeMinAge       = 8 * 60 * 60;      // 8 hour min stake age
 unsigned int nStakeMaxAge       = -1;               // unlimited
 unsigned int nModifierInterval  = 10 * 60;          // time to elapse before new modifier is computed
-
+int64_t nLastCoinStakeSearchTime = 0;
 int nCoinbaseMaturity = 20; //30 on Mainnet D e n a r i u s, 20 for testnet
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
-
+bool FortunaReorgBlock;
 uint256 nBestChainTrust = 0;
 uint256 nBestInvalidTrust = 0;
 
@@ -2493,7 +2493,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(!fJustCheck && pindex->GetBlockTime() > GetTime() - 20*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(!FortunaReorgBlock && !fJustCheck && pindex->GetBlockTime() > GetTime() - 20*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2604,7 +2604,16 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                            return error("CheckBlock-POS() : Did not find this payee in the fortunastake list, rejecting block.");
+                                    LOCK(cs_vNodes);
+                                    BOOST_FOREACH(CNode* pnode, vNodes)
+                                    {
+                                        if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
+                                                printf("Asking for Fortunastake list from %s\n",pnode->addr.ToStringIPPort().c_str());
+                                                pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                                                pnode->nLastDseg = GetTime();
+                                        }
+                                    }
+                            return error("CheckBlock-POS() : Did not find this payee in the fortunastake list. Requesting list update and rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                             foundPayee = true;
@@ -2722,6 +2731,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                     if (!foundPayee) {
                         if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
+                                LOCK(cs_vNodes);
+                                BOOST_FOREACH(CNode* pnode, vNodes)
+                                {
+                                    if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
+                                            printf("Asking for Fortunastake list from %s\n",pnode->addr.ToStringIPPort().c_str());
+                                            pnode->PushMessage("dseg", CTxIn()); //request full mn list
+                                            pnode->nLastDseg = GetTime();
+                                    }
+                                }
                                 return error("CheckBlock-POW() : Did not find this payee in the fortunastake list, rejecting block.");
                         } else {
                             if (fDebug) printf("WARNING: Did not find this payee in  the fortunastake list, this block will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2851,6 +2869,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
 
+    FortunaReorgBlock = true;
     // Find the fork
     CBlockIndex* pfork = pindexBest;
     CBlockIndex* plonger = pindexNew;
@@ -2897,13 +2916,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         BOOST_REVERSE_FOREACH(const CTransaction& tx, block.vtx)
             if (!(tx.IsCoinBase() || tx.IsCoinStake()) && pindex->nHeight > Checkpoints::GetTotalBlocksEstimate())
                 vResurrect.push_front(tx);
-    }
-
-    // Clear pay data from Fortunastakes. Will be recalculated in ConnectBlock.
-    // TODO: Cache this payData somewhere under the current BlockHash, so we don't have to run the block loop again if the chain reorgs to the same block again
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-    {
-        mn.payData.clear();
     }
 
     // Connect longer branch
@@ -2958,7 +2970,9 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
     {
         mn.payData.clear();
     }
+    if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
 
+    FortunaReorgBlock = false;
     printf("REORGANIZE: done\n");
 
     return true;
@@ -3615,7 +3629,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
     if (IsProofOfStake())
         return true;
 
-    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
+    nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
 
     CKey key;
     CTransaction txCoinStake;

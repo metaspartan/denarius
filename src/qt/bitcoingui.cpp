@@ -257,6 +257,13 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     {
         QTimer *timerStakingIcon = new QTimer(labelStakingIcon);
         connect(timerStakingIcon, SIGNAL(timeout()), this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(1000, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(2500, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(5000, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(7500, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(10000, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(12500, this, SLOT(updateStakingIcon()));
+        QTimer::singleShot(15000, this, SLOT(updateStakingIcon()));
         timerStakingIcon->start(30 * 1000);
         updateStakingIcon();
     }
@@ -1443,10 +1450,10 @@ void BitcoinGUI::updateStakingIcon()
 {
     updateWeight();
 
-    if (nLastCoinStakeSearchInterval && nWeight)
+    if (nWeight && GetBoolArg("-staking", true))
     {
         uint64_t nNetworkWeight = GetPoSKernelPS();
-        unsigned nEstimateTime = nTargetSpacing * nNetworkWeight / nWeight;
+        unsigned nEstimateTime = (10 * nTargetSpacing) * nNetworkWeight / nWeight;
 
         QString text;
         if (nEstimateTime < 60)

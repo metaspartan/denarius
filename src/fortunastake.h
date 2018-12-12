@@ -147,7 +147,9 @@ public:
     }
 
     int IsActive(CBlockIndex* pindex) {
-        return (lastTimeSeen - now) > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30); // dsee broadcast is more than a round old & active from dseeps
+        return ((lastDseep > (GetAdjustedTime() - FORTUNASTAKE_MIN_DSEEP_SECONDS)) &&
+                (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
+                ); // dsee broadcast is more than a round old & active from dseeps
     }
 
     inline uint64_t SliceHash(uint256& hash, int slice)

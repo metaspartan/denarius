@@ -783,20 +783,47 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBlocksToScanBack, int &value)
 {
     if (!pindex || IsInitialBlockDownload()) return 0;
-    if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
-    if (payData.size()) return 0; // let's only do the payData once, it is cleared if the chain is reorged
-
     const CBlockIndex *BlockReading = pindex;
+    int rewardCount = 0;
+    int64_t rewardValue = 0;
+    int64_t val = 0;
+    value = 0;
     int scanBack = max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * FORTUNASTAKE_FAIR_PAYMENT_ROUNDS;
+
+    //if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
+    if (payData.size()) {
+        // when operating on cache, prune old entries to keep this at exactly the last 600 blocks.
+        // if a node doesn't get any reorgs, it won't clear old payments here and the average amount will increase
+        // then they will approve high rates, leading to other nodes who DID reorg seeing the average lower and rejecting it.
+
+        std::vector<pair<int, int64_t> >::iterator it = payData.begin();
+        while(it != payData.end()){
+            if ((*it).first > pindex->nHeight - scanBack) { // find payments in last scanrange
+               rewardValue += (*it).second;
+               rewardCount++;
+               ++it;
+            } else {
+                // remove it from payData
+                if (fDebug) { printf("Removing old payData for FS %s at height %d\n",addr.ToString().c_str(),(*it).first); }
+                it = payData.erase(it);
+            }
+        }
+
+        // return the count and value
+        value = rewardValue / COIN;
+        payCount = rewardCount;
+        payValue = rewardValue;
+
+        // set the node's current 'reward rate' - pay per day
+        payRate = ((payValue / scanBack) / 30) * 86400;
+        return payValue;
+    }
 
     CScript mnpayee = GetScriptForDestination(pubkey.GetID());
     CTxDestination address1;
     ExtractDestination(mnpayee, address1);
     CBitcoinAddress address2(address1);
-    int rewardCount = 0;
-    int64_t rewardValue = 0;
-    int64_t val = 0;
-    value = 0;
+
 
     // reset counts
     payCount = 0;
