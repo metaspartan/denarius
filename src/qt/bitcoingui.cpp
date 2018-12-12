@@ -1450,7 +1450,7 @@ void BitcoinGUI::updateStakingIcon()
 {
     updateWeight();
 
-    if (nWeight && GetBoolArg("-staking", true))
+    if (nWeight && GetBoolArg("-staking", true) && !pwalletMain->IsLocked() && !vNodes.empty() && !IsInitialBlockDownload())
     {
         uint64_t nNetworkWeight = GetPoSKernelPS();
         unsigned nEstimateTime = (10 * nTargetSpacing) * nNetworkWeight / nWeight;
