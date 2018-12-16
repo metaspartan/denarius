@@ -2556,21 +2556,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (vtx[1].vout[i].scriptPubKey == pubScript)
                                     {
                                         int64_t value = vtx[1].vout[i].nValue;
-                                        int lastPaid = mn.nBlockLastPaid;
-                                        int vinAge = mn.GetFortunastakeInputAge(pindex);
-                                        int rank = (GetFortunastakeRank(mn, pindex));
-                                        int maxrank = mnCount-(mnCount/10);
-                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, vinAge, rank);
-
-                                        if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
-                                        {
-                                            if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                                return error("CheckBlock-POS() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
-                                            } else {
-                                                if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
-                                            }
-                                            break;
-                                        }
+                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%"PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mn.nRank, mn.nBlockLastPaid);
 
                                         if (!fIsInitialDownload) {
                                             if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
@@ -2681,29 +2667,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                                 if (payee == pubScript)
                                 {
-                                    int lastPaid = mn.nBlockLastPaid;
-                                    int vinAge = mn.GetFortunastakeInputAge(pindex);
-                                    int rank = (GetFortunastakeRank(mn, pindex));
-                                    int maxrank = mnCount - (mnCount/10);
-
-                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), vinAge, rank);
-
-                                    if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
-                                    {
-                                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                            return error("CheckBlock-POW() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
-                                        } else {
-                                            if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge ,FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
-                                        }
-                                        break;
-                                    }
-
+                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%"PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), mn.nRank, mn.nBlockLastPaid);
                                     if (!fIsInitialDownload) {
                                         if (!CheckFSPayment(pindex, vtx[0].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
-                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%d",rank,FormatMoney(mn.payRate).c_str());
+                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s",mn.nRank,FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn.payRate).c_str());
                                             } else
                                             {
                                                 if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
