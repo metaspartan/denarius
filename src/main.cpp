@@ -3453,6 +3453,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
     AssertLockHeld(cs_main);
 
+    int64_t nStartTime = GetTimeMillis();
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
@@ -3574,7 +3575,11 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         mapOrphanBlocksByPrev.erase(hashPrev);
     }
 
-    if (fDebug) printf("ProcessBlock: ACCEPTED\n");
+    if (fDebug && GetBoolArg("-showtimers", false)) {
+        printf("ProcessBlock: ACCEPTED (%"PRId64"ms)\n", GetTimeMillis() - nStartTime);
+    } else {
+        if (fDebug) printf("ProcessBlock: ACCEPTED\n");
+    }
 
     //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
     if(nBestHeight >= 1500000) {

@@ -529,20 +529,25 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
+    int64_t nStartTime = GetTimeMillis();
+    if (fDebug) printf("GetFortunastakeRanks: ");
     if (!pindex || pindex == NULL || pindex->pprev == NULL || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
 
+    int i = 0;
+    vecFortunastakeScores.clear();
     if (vecFortunastakeScoresListHash.size() > 0 && vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
         // if ScoresList was calculated for the current pindex hash, then just use that list
         // TODO: make a vector of these somehow
-        //BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
-        //{
-        //    i++;
-        //    vecFortunastakeScores.push_back(make_pair(i, &mn));
-        //}
+        if (fDebug) printf(" STARTCOPY (%"PRId64"ms)", GetTimeMillis() - nStartTime);
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
+        {
+            i++;
+            vecFortunastakeScores.push_back(make_pair(i, &mn));
+        }
     } else {
-        vecFortunastakeScores.clear();
         vecFortunastakeScoresList.clear();
 
+        if (fDebug) printf(" STARTLOOP (%"PRId64"ms)", GetTimeMillis() - nStartTime);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
 
             mn.Check();
@@ -566,16 +571,17 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     // TODO: Store the whole Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
+    if (fDebug) printf(" SORT (%"PRId64"ms)", GetTimeMillis() - nStartTime);
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
 
-    int i = 0;
+    i = 0;
     // set ranks
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
     {
         i++;
         s.second->nRank = i;
     }
-
+    if (fDebug) printf(" DONE (%"PRId64"ms)\n", GetTimeMillis() - nStartTime);
     return true;
 }
 
