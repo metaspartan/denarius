@@ -65,6 +65,22 @@ int CountFortunastakesAboveProtocol(int protocolVersion);
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
+// For storing payData
+class CFortunaPayData
+{
+public:
+    int height;
+    uint256 hash;
+    int64_t amount;
+
+    CFortunaPayData() {
+        height = 0;
+        hash = 0;
+        amount = 0;
+    }
+
+};
+
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
@@ -79,7 +95,7 @@ public:
     CPubKey pubkey;
     CPubKey pubkey2;
     std::vector<unsigned char> sig;
-    std::vector<pair<int, int64_t> > payData;
+    std::vector<CFortunaPayData> payData;
     pair<int, int64_t> payInfo;
     int64_t payRate;
     int payCount;
@@ -96,7 +112,6 @@ public:
     int64_t lastTimeChecked;
     int nBlockLastPaid;
     int64_t nTimeLastChecked;
-    int64_t nTimeLastPaid;
     int64_t nTimeRegistered;
     int nRank;
 
@@ -123,7 +138,6 @@ public:
         lastTimeChecked = 0;
         nBlockLastPaid = 0;
         nTimeLastChecked = 0;
-        nTimeLastPaid = 0;
         nTimeRegistered = newNow;
         nRank = 0;
     }

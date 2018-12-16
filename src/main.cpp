@@ -2575,7 +2575,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         }
                                         // add mn payment data
                                         mn.nBlockLastPaid = pindex->nHeight;
-                                        mn.payData.push_back(make_pair(pindex->nHeight, value));
+                                        CFortunaPayData data;
+                                        data.height = pindex->nHeight;
+                                        data.amount = value;
+                                        data.hash = pindex->GetBlockHash();
+                                        mn.payData.push_back(data);
                                         mn.SetPayRate(pindex->nHeight);
                                         foundPayee = true;
                                         paymentOK = true;
@@ -2686,7 +2690,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     }
 
                                     mn.nBlockLastPaid = pindex->nHeight;
-                                    mn.payData.push_back(make_pair(pindex->nHeight, vtx[0].vout[i].nValue));
+                                    CFortunaPayData data;
+                                    data.height = pindex->nHeight;
+                                    data.amount = vtx[0].vout[i].nValue;
+                                    data.hash = pindex->GetBlockHash();
+                                    mn.payData.push_back(data);
                                     mn.SetPayRate(pindex->nHeight);
                                     foundPayee = true;
                                     paymentOK = true;
@@ -2935,12 +2943,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.remove(tx);
         mempool.removeConflicts(tx);
     }
-
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) // now clear the ranks because we need to reorganize the payments in case extras got in
-    {
-        mn.payData.clear();
-    }
-    if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
 
     FortunaReorgBlock = false;
     printf("REORGANIZE: done\n");
