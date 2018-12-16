@@ -531,8 +531,6 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
     if (!pindex || pindex == NULL || pindex->pprev == NULL || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
 
-    //vecFortunastakeScores.clear();
-
     if (vecFortunastakeScoresListHash.size() > 0 && vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
         // if ScoresList was calculated for the current pindex hash, then just use that list
         // TODO: make a vector of these somehow
@@ -542,6 +540,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
         //    vecFortunastakeScores.push_back(make_pair(i, &mn));
         //}
     } else {
+        vecFortunastakeScores.clear();
         vecFortunastakeScoresList.clear();
 
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
