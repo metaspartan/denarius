@@ -3403,7 +3403,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     // Select coins with suitable depth
     if (!SelectCoinsForStaking(nBalance - nReserveBalance, txNew.nTime, setCoins, nValueIn))
+    {
+        if (fDebug && GetBoolArg("-printcoinstakedebug"))
+            printf("CreateCoinStake() : valid staking coins not found\n");
         return false;
+    }
 
     if (setCoins.empty())
         return false;
