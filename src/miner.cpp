@@ -187,7 +187,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 				bFortunaStakePayment = true;
 			}
 		}
-        if(fDebug) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
+        if(fDebug && fDebugFS) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
 	}
 
     // Fee-per-kilobyte amount considered the same as "free"
@@ -226,7 +226,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 }
                 }
                 if (found) {
-                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true).c_str());
+                    if (fDebug && fDebugFS) printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true).c_str());
                 } else {
                     printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
                     // pay the burn address if it can't detect
@@ -242,7 +242,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 
             if(hasPayment){
                 payments = txNew.vout.size() + 1;
-                printf("CreateNewBlock(): Payment Size: %i\n", payments);
+                if (fDebug && fDebugNet) printf("CreateNewBlock(): Payment Size: %i\n", payments);
                 pblock->vtx[0].vout.resize(payments);
 
                 pblock->vtx[0].vout[payments-1].scriptPubKey = payee;
@@ -252,7 +252,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 ExtractDestination(payee, address1);
                 CBitcoinAddress address2(address1);
 
-                printf("CreateNewBlock(): Fortunastake payment to %s\n", address2.ToString().c_str());
+                if (fDebug && fDebugFS) printf("CreateNewBlock(): Fortunastake payment to %s\n", address2.ToString().c_str());
             }
         }
 
