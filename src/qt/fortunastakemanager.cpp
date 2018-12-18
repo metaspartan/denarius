@@ -296,7 +296,7 @@ void FortunastakeManager::updateNodeList()
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
-        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsActive(pindexBest) ? "Y" : "N"));
+        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsActive() ? "Y" : "N"));
         QTableWidgetItem *addressItem = new QTableWidgetItem();
         addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
@@ -342,7 +342,7 @@ void FortunastakeManager::updateNodeList()
                 found = true;
                 nalias = QString::fromStdString(mne.getAlias());
                 naddr = QString::fromStdString(mne.getIp());
-                if (mn.IsActive(pindexBest)) {
+                if (mn.IsActive()) {
                     nstatus = QString::fromStdString("Active for payment");
                 } else if (mn.status == "OK") {
                     if (mn.lastDseep > 0) {

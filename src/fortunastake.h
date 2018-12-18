@@ -81,6 +81,29 @@ public:
 
 };
 
+// For storing payData
+class CFortunaPayments
+{
+public:
+    std::vector<CFortunaStake> vStakes; // this array should be sorted
+    std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
+    
+    CFortunaPayments() {
+        // fill vStakes array with pointers to MN's from vecFortunastakes
+    }
+
+    bool add(CFortunaStake* mn)
+    {
+        // add address of pointer into the payments array
+    }
+
+    bool remove(CFortunaStake* mn)
+    {
+        // remove address of pointer from the payments array
+        
+    }
+};
+
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
@@ -160,10 +183,17 @@ public:
         }
     }
 
-    int IsActive(CBlockIndex* pindex) {
-        return ((lastDseep > (GetAdjustedTime() - FORTUNASTAKE_MIN_DSEEP_SECONDS)) &&
-                (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-                ); // dsee broadcast is more than a round old & active from dseeps
+    bool IsActive() {
+        if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
+        { // dsee broadcast is more than a round old
+            if (lastDseep > (GetAdjustedTime() - FORTUNASTAKE_EXPIRATION_SECONDS)) {
+                return true;
+            } // last dseep is within non-expired time & broadcast is a round old, this node is considered active
+            else {
+                return false; // last dseep is received, but broadcast is not new enough. status "broadcasted"
+            }
+        }
+        return false;
     }
 
     inline uint64_t SliceHash(uint256& hash, int slice)

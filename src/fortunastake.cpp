@@ -432,10 +432,10 @@ struct CompareLastPay
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
-        if (t1.second->IsActive(pindex) == t2.second->IsActive(pindex)) {
+        if (t1.second->IsActive() == t2.second->IsActive()) {
             return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
         } else {
-            if (t1.second->IsActive(pindex) < t2.second->IsActive(pindex)) return true; //always put actives before non-actives
+            return (t1.second->IsActive() < t2.second->IsActive()); //always put actives before non-actives
         }
         return false;
     }
