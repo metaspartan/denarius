@@ -28,10 +28,22 @@ namespace GUIUtil
     boost::filesystem::path qstringToBoostPath(const QString &path);
      /* Convert OS specific boost path to QString through UTF-8 */
     QString boostPathToQString(const boost::filesystem::path &path);
-	
+
     // Create human-readable string from date
     QString dateTimeStr(const QDateTime &datetime);
     QString dateTimeStr(qint64 nTime);
+
+    /* Convert seconds into a QString with days, hours, mins, secs */
+    QString formatDurationStr(int secs);
+
+    /* Format CNodeStats.nServices bitmask into a user-readable string */
+    QString formatServicesStr(quint64 mask);
+
+    /* Format a CNodeCombinedStats.dPingTime into a user-readable string or display N/A, if 0*/
+    QString formatPingTime(double dPingTime);
+
+    /* Format a CNodeCombinedStats.nTimeOffset into a user-readable string. */
+    QString formatTimeOffset(int64_t nTimeOffset);
 
     // Render Bitcoin addresses in monospace font
     QFont bitcoinAddressFont();
@@ -83,7 +95,7 @@ namespace GUIUtil
 
     // Open debug.log
     void openDebugLogfile();
-	
+
 	// Open denarius.conf
     void openConfigfile();
 

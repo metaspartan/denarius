@@ -1,6 +1,7 @@
 #include "clientmodel.h"
 #include "guiconstants.h"
 #include "optionsmodel.h"
+#include "peertablemodel.h"
 #include "addresstablemodel.h"
 #include "transactiontablemodel.h"
 
@@ -17,6 +18,8 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), optionsModel(optionsModel),
     cachedNumBlocks(0), cachedNumBlocksOfPeers(0), pollTimer(0)
 {
+    peerTableModel = new PeerTableModel(this);
+
     numBlocksAtStartup = -1;
 
     pollTimer = new QTimer(this);
@@ -63,7 +66,7 @@ QDateTime ClientModel::getLastBlockDate() const
     if (pindexBest)
         return QDateTime::fromTime_t(pindexBest->GetBlockTime());
     else
-        return QDateTime::fromTime_t(1393221600); // Genesis block's time
+        return QDateTime::fromTime_t(1497476511); // D e n a r i u s - Genesis block's time
 }
 
 void ClientModel::updateTimer()
@@ -158,6 +161,11 @@ OptionsModel *ClientModel::getOptionsModel()
     return optionsModel;
 }
 
+PeerTableModel *ClientModel::getPeerTableModel()
+{
+    return peerTableModel;
+}
+
 QString ClientModel::formatFullVersion() const
 {
     return QString::fromStdString(FormatFullVersion());
@@ -186,8 +194,6 @@ static void NotifyBlocksChanged(ClientModel *clientmodel, int nHeight, int newNu
     QMetaObject::invokeMethod(clientmodel, "updateNumBlocks", Qt::QueuedConnection, Q_ARG(int, nHeight), Q_ARG(int, newNumBlocksOfPeers));
 
 }
-
-
 
 static void NotifyNumConnectionsChanged(ClientModel *clientmodel, int newNumConnections)
 {

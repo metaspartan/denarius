@@ -265,7 +265,11 @@ bool AbortNode(const std::string &strMessage, const std::string &userMessage) {
     return false;
 }
 
-
+bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats)
+{
+    // TODO:
+    return false;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //
