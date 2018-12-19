@@ -65,6 +65,45 @@ int CountFortunastakesAboveProtocol(int protocolVersion);
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
+// For storing payData
+class CFortunaPayData
+{
+public:
+    int height;
+    uint256 hash;
+    int64_t amount;
+
+    CFortunaPayData() {
+        height = 0;
+        hash = 0;
+        amount = 0;
+    }
+
+};
+
+// For storing payData
+class CFortunaPayments
+{
+public:
+    std::vector<CFortunaStake> vStakes; // this array should be sorted
+    std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
+    
+    CFortunaPayments() {
+        // fill vStakes array with pointers to MN's from vecFortunastakes
+    }
+
+    bool add(CFortunaStake* mn)
+    {
+        // add address of pointer into the payments array
+    }
+
+    bool remove(CFortunaStake* mn)
+    {
+        // remove address of pointer from the payments array
+        
+    }
+};
+
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
@@ -79,7 +118,7 @@ public:
     CPubKey pubkey;
     CPubKey pubkey2;
     std::vector<unsigned char> sig;
-    std::vector<pair<int, int64_t> > payData;
+    std::vector<CFortunaPayData> payData;
     pair<int, int64_t> payInfo;
     int64_t payRate;
     int payCount;
@@ -96,7 +135,6 @@ public:
     int64_t lastTimeChecked;
     int nBlockLastPaid;
     int64_t nTimeLastChecked;
-    int64_t nTimeLastPaid;
     int64_t nTimeRegistered;
     int nRank;
 
@@ -123,7 +161,6 @@ public:
         lastTimeChecked = 0;
         nBlockLastPaid = 0;
         nTimeLastChecked = 0;
-        nTimeLastPaid = 0;
         nTimeRegistered = newNow;
         nRank = 0;
     }
@@ -146,10 +183,17 @@ public:
         }
     }
 
-    int IsActive(CBlockIndex* pindex) {
-        return ((lastDseep > (GetAdjustedTime() - FORTUNASTAKE_MIN_DSEEP_SECONDS)) &&
-                (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-                ); // dsee broadcast is more than a round old & active from dseeps
+    bool IsActive() {
+        if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
+        { // dsee broadcast is more than a round old
+            if (lastDseep > (GetAdjustedTime() - FORTUNASTAKE_EXPIRATION_SECONDS)) {
+                return true;
+            } // last dseep is within non-expired time & broadcast is a round old, this node is considered active
+            else {
+                return false; // last dseep is received, but broadcast is not new enough. status "broadcasted"
+            }
+        }
+        return false;
     }
 
     inline uint64_t SliceHash(uint256& hash, int slice)

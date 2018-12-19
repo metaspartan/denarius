@@ -533,7 +533,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     } else {
         if(pindexPrev->nHeight+1 >= BLOCK_START_FORTUNASTAKE_PAYMENTS) bFortunastakePayments = true;
     }
-	if(fDebug) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
+    if(fDebug && fDebugFS) { printf("GetBlockTemplate(): Fortunastake Payments : %i\n", bFortunastakePayments); }
 
     if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
         //no fortunastake detected
@@ -563,7 +563,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
                     payee = GetScriptForDestination(burnAddr.Get());
                 }
     }
-    printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
+    if (fDebug && fDebugNet) printf("getblock : payee = %i, bFortunastake = %i\n",payee != CScript(),bFortunastakePayments);
     if(payee != CScript()){
 		CTxDestination address1;
 		ExtractDestination(payee, address1);

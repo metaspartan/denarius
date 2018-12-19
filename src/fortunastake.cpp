@@ -432,10 +432,10 @@ struct CompareLastPay
     bool operator()(const pair<int, CFortunaStake*>& t1,
                     const pair<int, CFortunaStake*>& t2) const
     {
-        if (t1.second->IsActive(pindex) == t2.second->IsActive(pindex)) {
+        if (t1.second->IsActive() == t2.second->IsActive()) {
             return (t1.second->payValue == t2.second->payValue ? t1.second->CalculateScore(1, pindex->nHeight) > t2.second->CalculateScore(1, pindex->nHeight) : t1.second->payValue > t2.second->payValue);
         } else {
-            if (t1.second->IsActive(pindex) < t2.second->IsActive(pindex)) return true; //always put actives before non-actives
+            return (t1.second->IsActive() < t2.second->IsActive()); //always put actives before non-actives
         }
         return false;
     }
@@ -529,13 +529,16 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
-    if (!pindex || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
+    int64_t nStartTime = GetTimeMillis();
+    if (fDebug) printf("GetFortunastakeRanks: ");
+    if (!pindex || pindex == NULL || pindex->pprev == NULL || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
 
-    vecFortunastakeScores.clear();
     int i = 0;
-    if (vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
+    vecFortunastakeScores.clear();
+    if (vecFortunastakeScoresListHash.size() > 0 && vecFortunastakeScoresListHash == pindex->GetBlockHash()) {
         // if ScoresList was calculated for the current pindex hash, then just use that list
         // TODO: make a vector of these somehow
+        if (fDebug) printf(" STARTCOPY (%"PRId64"ms)", GetTimeMillis() - nStartTime);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
         {
             i++;
@@ -544,6 +547,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     } else {
         vecFortunastakeScoresList.clear();
 
+        if (fDebug) printf(" STARTLOOP (%"PRId64"ms)", GetTimeMillis() - nStartTime);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
 
             mn.Check();
@@ -567,15 +571,17 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     // TODO: Store the whole Scores vector in a caching hash map, maybe need hashPrev as well to make sure it re calculates any different chains with the same end block?
     //vecFortunastakeScoresCache.insert(make_pair(pindex->GetBlockHash(), vecFortunastakeScoresList));
 
+    if (fDebug) printf(" SORT (%"PRId64"ms)", GetTimeMillis() - nStartTime);
     sort(vecFortunastakeScores.rbegin(), vecFortunastakeScores.rend(), CompareLastPay(pindex)); // sort requires current pindex for modulus as pindexBest is different between clients
 
+    i = 0;
     // set ranks
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
     {
         i++;
         s.second->nRank = i;
     }
-
+    if (fDebug) printf(" DONE (%"PRId64"ms)\n", GetTimeMillis() - nStartTime);
     return true;
 }
 
@@ -702,10 +708,10 @@ int CFortunaStake::SetPayRate(int nHeight)
          // printf(" (payInfo:%d@%f)...", payCount, payRate);
          int64_t amount = 0;
          int matches = 0;
-         BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
+         BOOST_FOREACH(CFortunaPayData &item, payData)
          {
-             if (item.first > nHeight - scanBack) { // find payments in last scanrange
-                amount += item.second;
+             if (item.height > nHeight - scanBack && mapBlockIndex.count(item.hash)) { // find payments in last scanrange
+                amount += item.amount;
                 matches++;
              }
          }
@@ -734,10 +740,10 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
         //printf("(payInfo:%d@%f)...", payCount, payRate);
         int64_t amount = 0;
         int matches = 0;
-        BOOST_FOREACH(PAIRTYPE(int, int64_t) &item, payData)
+        BOOST_FOREACH(CFortunaPayData &item, payData)
         {
-            if (item.first > pindex->nHeight - nMaxBlocksToScanBack) { // find payments in last scanrange
-               amount += item.second;
+            if (item.height > pindex->nHeight - nMaxBlocksToScanBack && mapBlockIndex.count(item.hash)) { // find payments in last scanrange
+               amount += item.amount;
                matches++;
             }
         }
@@ -792,20 +798,31 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
 
     //if (now > pindex->GetBlockTime()) return 0; // don't update paid amounts for nodes before the block they broadcasted on
     if (payData.size()) {
-        // when operating on cache, prune old entries to keep this at exactly the last 600 blocks.
+        // when operating on cache, prune old entries to keep this at exactly the last 600 blocks. (note: don't do this)
         // if a node doesn't get any reorgs, it won't clear old payments here and the average amount will increase
         // then they will approve high rates, leading to other nodes who DID reorg seeing the average lower and rejecting it.
-
-        std::vector<pair<int, int64_t> >::iterator it = payData.begin();
-        while(it != payData.end()){
-            if ((*it).first > pindex->nHeight - scanBack) { // find payments in last scanrange
-               rewardValue += (*it).second;
-               rewardCount++;
-               ++it;
-            } else {
-                // remove it from payData
-                if (fDebug) { printf("Removing old payData for FS %s at height %d\n",addr.ToString().c_str(),(*it).first); }
-                it = payData.erase(it);
+        /*
+                std::vector<pair<int, int64_t> >::iterator it = payData.begin();
+                while(it != payData.end()){
+                    if ((*it).first > pindex->nHeight - scanBack) { // find payments in last scanrange
+                       rewardValue += (*it).second;
+                       rewardCount++;
+                       ++it;
+                    } else {
+                        // remove it from payData
+                        if (fDebug) { printf("Removing old payData for FS %s at height %d\n",addr.ToString().c_str(),(*it).first); }
+                        it = payData.erase(it);
+                    }
+                }
+        */
+        // all of that doesn't matter if we pay attention to the hash of the payment!
+        BOOST_FOREACH(CFortunaPayData &item, payData)
+        {
+            if (mapBlockIndex.count(item.hash)) {
+                if (item.height > pindex->nHeight - nMaxBlocksToScanBack) { // find payments in last scanrange
+                rewardValue += item.amount;
+                rewardCount++;
+                }
             }
         }
 
@@ -841,21 +858,28 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
             {
                 BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
                 {
+
                     if(mnpayee == txout.scriptPubKey) {
                         int height = BlockReading->nHeight;
-                        if (rewardCount == 0) {
-                            nBlockLastPaid = height;
-                            nTimeLastPaid = BlockReading->nTime;
-                        }
-                        // values
-                        val = txout.nValue;
+                        int64_t amount = txout.nValue;
+                        uint256 hash = BlockReading->GetBlockHash();
+                        CFortunaPayData data;
 
-                        // add this profit & the reward itself
-                        rewardValue += val;
+                        data.height = height;
+                        data.amount = amount;
+                        data.hash = hash;
+
+                        // first match is the last! ;)
+                        if (nBlockLastPaid == 0) {
+                            nBlockLastPaid = height;
+                        }
+
+                        // add this profit & the reward itself so we can update the node
+                        rewardValue += amount;
                         rewardCount++;
 
                         // make a note in the node for later lookup
-                        payData.push_back(make_pair(height, val));
+                        payData.push_back(data);
                     }
                 }
             }
@@ -919,7 +943,6 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
                 BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
                     if(mnpayee == txout.scriptPubKey) {
                         nBlockLastPaid = BlockReading->nHeight;
-                        nTimeLastPaid = BlockReading->nTime;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         int value = txout.nValue;
                         // TODO HERE: Check the nValue for the fortunastake payment amount
@@ -931,8 +954,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
                 // TODO HERE: Scan the block for fortunastake payment amount
                 BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
-                        nBlockLastPaid = BlockReading->nHeight;
-                        nTimeLastPaid = BlockReading->nTime;
+                        nBlockLastPaid = BlockReading->nHeight;\
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         int value = txout.nValue;
                         // TODO HERE: Check the nValue for the fortunastake payment amount

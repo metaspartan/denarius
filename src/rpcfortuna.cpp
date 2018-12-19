@@ -230,7 +230,7 @@ Value fortunastake(const Array& params, bool fHelp)
             mn.Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive(pindexBest)));
+                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive()));
             } else if (strCommand == "txid") {
                 obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
@@ -262,7 +262,7 @@ Value fortunastake(const Array& params, bool fHelp)
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsActive(pindexBest)));
+                list.push_back(Pair("active",        (int)mn.IsActive()));
                 list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
                 list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
 
@@ -584,8 +584,8 @@ Value fortunastake(const Array& params, bool fHelp)
                         address = address2.ToString();
                         localObj.push_back(Pair("payment_address", address));
                         //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
-                        localObj.push_back(Pair("network_status", mn.IsActive(pindexBest) ? "active" : "registered"));
-                        if (mn.IsActive(pindexBest)) {
+                        localObj.push_back(Pair("network_status", mn.IsActive() ? "active" : "registered"));
+                        if (mn.IsActive()) {
                           localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
 
                         }
