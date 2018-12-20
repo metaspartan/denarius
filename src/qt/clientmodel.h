@@ -51,6 +51,17 @@ public:
     QString formatBuildDate() const;
     QString clientName() const;
     QString formatClientStartupTime() const;
+#ifdef USE_NATIVE_I2P
+    QString formatI2PNativeFullVersion() const;
+    int getNumI2PConnections() const;
+
+    QString getPublicI2PKey() const;
+    QString getPrivateI2PKey() const;
+    bool isI2PAddressGenerated() const;
+    bool isI2POnly() const;
+    QString getB32Address(const QString& destination) const;
+    void generateI2PDestination(QString& pub, QString& priv) const;
+#endif
 
 private:
     OptionsModel *optionsModel;
@@ -67,6 +78,9 @@ private:
     void unsubscribeFromCoreSignals();
 signals:
     void numConnectionsChanged(int count);
+#ifdef USE_NATIVE_I2P
+    void numI2PConnectionsChanged(int count);
+#endif
     void numBlocksChanged(int count, int countOfPeers);
     void bytesChanged(quint64 totalBytesIn, quint64 totalBytesOut);
 
@@ -78,6 +92,9 @@ public slots:
     void updateNumConnections(int numConnections);
     void updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers);
     void updateAlert(const QString &hash, int status);
+#ifdef USE_NATIVE_I2P
+    void updateNumI2PConnections(int numI2PConnections);
+#endif
 };
 
 #endif // CLIENTMODEL_H

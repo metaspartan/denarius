@@ -96,6 +96,11 @@ public:
      * @note called with lock cs_mapAlerts held.
      */
     boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
+#ifdef USE_NATIVE_I2P
+   boost::signals2::signal<void (const std::string& caption, const std::string& pub, const std::string& priv, const std::string& b32, const std::string& configFileName)> ThreadSafeShowGeneratedI2PAddress;
+
+   boost::signals2::signal<void (int newNumI2PConnections)> NotifyNumI2PConnectionsChanged;
+#endif
 };
 
 extern CClientUIInterface uiInterface;

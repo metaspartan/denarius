@@ -2,6 +2,9 @@
 #define OPTIONSDIALOG_H
 
 #include <QDialog>
+#ifdef USE_NATIVE_I2P
+#include "i2poptionswidget.h"
+#endif
 
 namespace Ui {
 class OptionsDialog;
@@ -9,6 +12,9 @@ class OptionsDialog;
 class OptionsModel;
 class MonitoredDataMapper;
 class QValidatedLineEdit;
+#ifdef USE_NATIVE_I2P
+class ClientModel;
+#endif
 
 /** Preferences dialog. */
 class OptionsDialog : public QDialog
@@ -18,6 +24,9 @@ class OptionsDialog : public QDialog
 public:
     explicit OptionsDialog(QWidget *parent = 0);
     ~OptionsDialog();
+#ifdef USE_NATIVE_I2P
+    void setClientModel(ClientModel* clientModel);
+#endif
 
     void setModel(OptionsModel *model);
     void setMapper();
@@ -39,6 +48,9 @@ private slots:
     void on_okButton_clicked();
     void on_cancelButton_clicked();
     void on_applyButton_clicked();
+#ifdef USE_NATIVE_I2P
+    void showRestartWarning_I2P();
+#endif
 
     void showRestartWarning_Proxy();
     void showRestartWarning_Lang();
@@ -55,6 +67,10 @@ private:
     bool fRestartWarningDisplayed_Proxy;
     bool fRestartWarningDisplayed_Lang;
     bool fProxyIpValid;
+#ifdef USE_NATIVE_I2P
+    bool fRestartWarningDisplayed_I2P;
+    I2POptionsWidget* tabI2P;
+#endif
 };
 
 #endif // OPTIONSDIALOG_H

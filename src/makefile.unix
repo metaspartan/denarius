@@ -308,6 +308,10 @@ OBJS= \
 	  obj/eccryptoverify.o \
     obj/ringsig.o
 
+ifdef USE_NATIVE_I2P
+	OBJS += obj/i2p.o
+	OBJS += obj/i2psam.o
+endif
 
 all: denariusd
 

@@ -241,7 +241,9 @@ std::string FormatSubVersion(const std::string& name, int nClientVersion, const 
 void AddTimeData(const CNetAddr& ip, int64_t nTime);
 void runCommand(std::string strCommand);
 
-
+#ifdef USE_NATIVE_I2P
+std::string FormatI2PNativeFullVersion();
+#endif
 
 
 

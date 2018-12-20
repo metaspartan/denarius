@@ -158,7 +158,7 @@ contains(USE_LEVELDB, -) {
 
 	DEFINES += USE_LEVELDB
 
-    INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+  INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 	SOURCES += src/txdb-leveldb.cpp \
 		src/bloom.cpp \
@@ -218,7 +218,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
-	src/qt/intro.h \
+	  src/qt/intro.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/peertablemodel.h \
@@ -231,12 +231,12 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/aboutdialog.h \
     src/qt/editaddressdialog.h \
     src/qt/bitcoinaddressvalidator.h \
-	src/kernelrecord.h \
-	src/qt/mintingfilterproxy.h \
+	  src/kernelrecord.h \
+	  src/qt/mintingfilterproxy.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
     src/qt/proofofimage.h \
-	src/qt/multisigaddressentry.h \
+	  src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
     src/alert.h \
@@ -312,26 +312,26 @@ HEADERS += src/qt/bitcoingui.h \
     src/ui_interface.h \
     src/qt/rpcconsole.h \
     src/qt/trafficgraphwidget.h \
-	src/qt/blockbrowser.h \
-	src/qt/statisticspage.h \
-	src/qt/marketbrowser.h \
-	src/qt/qcustomplot.h \
-	src/qt/fortunastakemanager.h \
+	  src/qt/blockbrowser.h \
+	  src/qt/statisticspage.h \
+	  src/qt/marketbrowser.h \
+	  src/qt/qcustomplot.h \
+	  src/qt/fortunastakemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
     src/qt/termsofuse.h \
     src/version.h \
-	src/bloom.h \
+	  src/bloom.h \
     src/netbase.h \
     src/clientversion.h \
-	src/hash.h \
+	  src/hash.h \
     src/hashblock.h \
-	src/sph_echo.h \
-	src/sph_keccak.h \
-	src/sph_jh.h \
+	  src/sph_echo.h \
+	  src/sph_keccak.h \
+	  src/sph_jh.h \
     src/sph_types.h \
     src/threadsafety.h \
-	src/eccryptoverify.h \
+	  src/eccryptoverify.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/qt/sendmessagesdialog.h \
@@ -340,7 +340,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/qvalidatedtextedit.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-	src/qt/intro.cpp \
+	  src/qt/intro.cpp \
     src/qt/transactiontablemodel.cpp \
     src/qt/addresstablemodel.cpp \
     src/qt/peertablemodel.cpp \
@@ -353,11 +353,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
-	src/qt/statisticspage.cpp \
-	src/qt/blockbrowser.cpp \
-	src/qt/marketbrowser.cpp \
-	src/kernelrecord.cpp \
-	src/qt/mintingfilterproxy.cpp \
+	  src/qt/statisticspage.cpp \
+	  src/qt/blockbrowser.cpp \
+	  src/qt/marketbrowser.cpp \
+	  src/kernelrecord.cpp \
+	  src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
 	  src/qt/multisigaddressentry.cpp \
@@ -383,7 +383,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
-	src/eccryptoverify.cpp \
+	  src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
@@ -404,7 +404,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
-	src/rpcfortuna.cpp \
+	  src/rpcfortuna.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -423,12 +423,12 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
-	src/qt/qcustomplot.cpp \
+	  src/qt/qcustomplot.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/fortunastakemanager.cpp \
+	  src/qt/fortunastakemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
@@ -439,11 +439,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
-	src/fortuna.cpp \
-	src/activefortunastake.cpp \
-	src/fortunastake.cpp \
-	src/fortunastakeconfig.cpp \
-	src/spork.cpp
+	  src/fortuna.cpp \
+	  src/activefortunastake.cpp \
+	  src/fortunastake.cpp \
+	  src/fortunastakeconfig.cpp \
+	  src/spork.cpp
 
 #### D e n a r i u s sources
 
@@ -615,7 +615,7 @@ RESOURCES += \
     src/qt/res/themes/qdarkstyle/style.qrc
 
 FORMS += \
-	src/qt/forms/intro.ui \
+	  src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
@@ -648,6 +648,22 @@ contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
 SOURCES += src/qt/qrcodedialog.cpp
 FORMS += src/qt/forms/qrcodedialog.ui
+}
+
+contains(DEFINES, USE_NATIVE_I2P) {
+message(Building Denarius with Native I2P support)
+HEADERS += src/i2p.h \
+	src/i2psam.h \
+	src/qt/showi2paddresses.h \
+	src/qt/i2poptionswidget.h
+
+SOURCES += src/i2p.cpp \
+	src/i2psam.cpp \
+	src/qt/showi2paddresses.cpp \
+	src/qt/i2poptionswidget.cpp
+
+FORMS += src/qt/forms/showi2paddresses.ui \
+	src/qt/forms/i2poptionswidget.ui
 }
 
 CODECFORTR = UTF-8

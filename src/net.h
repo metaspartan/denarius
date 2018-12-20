@@ -61,6 +61,14 @@ CNodeSignals& GetNodeSignals();
 
 typedef int NodeId;
 
+#ifdef USE_NATIVE_I2P
+bool BindListenNativeI2P();
+bool BindListenNativeI2P(SOCKET& hSocket);
+bool IsI2POnly();
+
+extern int nI2PNodeCount;
+#endif
+
 enum
 {
     LOCAL_NONE,   // unknown
@@ -323,8 +331,8 @@ public:
     CBlockIndex* pindexLastGetBlocksBegin;
     uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
-	bool fStartSync;
-	int nMisbehavior;
+	  bool fStartSync;
+	  int nMisbehavior;
 
     // flood relay
     std::vector<CAddress> vAddrToSend;
@@ -352,7 +360,14 @@ public:
     bool fPingQueued;
 
     CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000)
+#ifdef USE_NATIVE_I2P
+    , nSendStreamType(SER_NETWORK | (((addrIn.nServices & NODE_I2P) || addrIn.IsNativeI2P()) ? 0 : SER_IPADDRONLY))
+    , nRecvStreamType(SER_NETWORK | (((addrIn.nServices & NODE_I2P) || addrIn.IsNativeI2P()) ? 0 : SER_IPADDRONLY))
+#endif
     {
+#ifdef USE_NATIVE_I2P
+        ssSend.SetType(nSendStreamType);
+#endif
         nServices = 0;
         hSocket = hSocketIn;
         nRecvVersion = INIT_PROTO_VERSION;
@@ -416,6 +431,39 @@ private:
     static CCriticalSection cs_totalBytesSent;
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
+#ifdef USE_NATIVE_I2P
+private:
+    int nSendStreamType;
+    int nRecvStreamType;
+public:
+    void SetSendStreamType(int nType)
+    {
+        nSendStreamType = nType;
+        ssSend.SetType(nSendStreamType);
+    }
+
+    void SetRecvStreamType(int nType)
+    {
+        nRecvStreamType = nType;
+        for (std::deque<CNetMessage>::iterator it = vRecvMsg.begin(), end = vRecvMsg.end(); it != end; ++it)
+        {
+            it->hdrbuf.SetType(nRecvStreamType);
+            it->vRecv.SetType(nRecvStreamType);
+        }
+    }
+
+    int GetSendStreamType() const
+    {
+        return nSendStreamType;
+    }
+
+    int GetRecvStreamType() const
+    {
+        return nRecvStreamType;
+    }
+
+#endif
+
 public:
 	NodeId GetId() const {
       return id;
@@ -471,6 +519,10 @@ public:
         // SendMessages will filter it again for knowns that were added
         // after addresses were pushed.
         if (addr.IsValid() && !setAddrKnown.count(addr))
+#ifdef USE_NATIVE_I2P
+            // if receiver doesn't support i2p-address we don't send it
+            if ((this->nServices & NODE_I2P) || !addr.IsNativeI2P())
+#endif
             vAddrToSend.push_back(addr);
     }
 
