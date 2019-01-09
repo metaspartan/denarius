@@ -102,6 +102,8 @@ public:
         // remove address of pointer from the payments array
         
     }
+
+    void update(const CBlockIndex *pindex);
 };
 
 //
@@ -163,6 +165,9 @@ public:
         nTimeLastChecked = 0;
         nTimeRegistered = newNow;
         nRank = 0;
+        payValue = 0;
+        payRate = 0;
+        payCount = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
