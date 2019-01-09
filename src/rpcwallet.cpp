@@ -607,6 +607,7 @@ Value fetchbalance(const Array& params, bool fHelp)
             "Returns an object containing various wallet balance info.");
     Object obj, watchonly;
     obj.push_back(Pair("totalbalance",  ValueFromAmount(pwalletMain->GetBalance())));
+    obj.push_back(Pair("anonbalance",   ValueFromAmount(pwalletMain->GetAnonBalance())));
     obj.push_back(Pair("locked",        ValueFromAmount(pwalletMain->GetLockedBalance())));
     obj.push_back(Pair("unlocked",      ValueFromAmount(pwalletMain->GetUnlockedBalance())));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));

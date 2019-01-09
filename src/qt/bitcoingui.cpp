@@ -460,6 +460,8 @@ void BitcoinGUI::createActions()
     openInfoAction->setStatusTip(tr("Show diagnostic information"));
     openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
     openGraphAction->setStatusTip(tr("Show network monitor"));
+    openPeerAction = new QAction(QIcon(":/icons/connect_4"), tr("&Peers"), this);
+    openPeerAction->setStatusTip(tr("Show Denarius network peers"));
     openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
     openConfEditorAction->setStatusTip(tr("Open configuration file"));
     openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Fortunastake Configuration File"), this);
@@ -482,6 +484,7 @@ void BitcoinGUI::createActions()
     connect(openInfoAction, SIGNAL(triggered()), this, SLOT(showInfo()));
     connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showConsole()));
     connect(openGraphAction, SIGNAL(triggered()), this, SLOT(showGraph()));
+    connect(openPeerAction, SIGNAL(triggered()), this, SLOT(showPeer()));
 
     // Open configs from menu
     connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
@@ -521,6 +524,7 @@ void BitcoinGUI::createMenuBar()
   	tools->addAction(openInfoAction);
   	tools->addAction(openRPCConsoleAction);
   	tools->addAction(openGraphAction);
+    tools->addAction(openPeerAction);
   	tools->addSeparator();
   	tools->addAction(openConfEditorAction);
     tools->addAction(openMNConfEditorAction);
@@ -1058,6 +1062,12 @@ void BitcoinGUI::showGraph()
     showDebugWindow();
 }
 
+void BitcoinGUI::showPeer()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_PEER);
+    showDebugWindow();
+}
+
 void BitcoinGUI::showConfEditor()
 {
     boost::filesystem::path pathConfig = GetConfigFile();
@@ -1450,7 +1460,7 @@ void BitcoinGUI::updateStakingIcon()
 {
     updateWeight();
 
-    if (nWeight && GetBoolArg("-staking", true))
+    if (nWeight && GetBoolArg("-staking", true) && !pwalletMain->IsLocked() && !vNodes.empty() && !IsInitialBlockDownload())
     {
         uint64_t nNetworkWeight = GetPoSKernelPS();
         unsigned nEstimateTime = (10 * nTargetSpacing) * nNetworkWeight / nWeight;

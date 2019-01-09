@@ -93,14 +93,14 @@ private:
     QStackedWidget *centralWidget;
 
     OverviewPage *overviewPage;
-	StatisticsPage *statisticsPage;
-	BlockBrowser *blockBrowser;
-	MarketBrowser *marketBrowser;
+	  StatisticsPage *statisticsPage;
+	  BlockBrowser *blockBrowser;
+	  MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
-	QWidget *mintingPage;
-	MultisigDialog *multisigPage;
-	ProofOfImage *proofOfImagePage;
-	FortunastakeManager *fortunastakeManagerPage;
+	  QWidget *mintingPage;
+	  MultisigDialog *multisigPage;
+	  ProofOfImage *proofOfImagePage;
+	  FortunastakeManager *fortunastakeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -120,14 +120,14 @@ private:
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;
-	QAction *statisticsAction;
-	QAction *blockAction;
-	QAction *marketAction;
+	  QAction *statisticsAction;
+	  QAction *blockAction;
+	  QAction *marketAction;
     QAction *historyAction;
-	QAction *mintingAction;
-	QAction *multisigAction;
-	QAction *proofOfImageAction;
-	QAction *fortunastakeManagerAction;
+	  QAction *mintingAction;
+	  QAction *multisigAction;
+    QAction *proofOfImageAction;
+	  QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -147,15 +147,16 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
-	QAction *openInfoAction;
+	  QAction *openInfoAction;
     QAction *openGraphAction;
+    QAction *openPeerAction;
     QAction *openConfEditorAction;
     QAction *openMNConfEditorAction;
 
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
-	MintingView *mintingView;
+	  MintingView *mintingView;
     RPCConsole *rpcConsole;
 
     QMovie *syncIconMovie;
@@ -247,6 +248,7 @@ private slots:
     void showInfo();
     void showConsole();
     void showGraph();
+    void showPeer();
 
     /** Open external (default) editor with denarius.conf */
     void showConfEditor();
