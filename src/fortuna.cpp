@@ -36,7 +36,6 @@ std::vector<CTxIn> vecFortunastakesUsed;
 map<uint256, CFortunaBroadcastTx> mapFortunaBroadcastTxes;
 //
 CActiveFortunastake activeFortunastake;
-
 // count peers we've requested the list from
 int RequestedFortunaStakeList = 0;
 
@@ -1018,11 +1017,8 @@ void ThreadCheckForTunaPool(void* parg)
             //let's connect to a random fortunastake every minute!
             int fs = rand() % vecFortunastakes.size();
             CService addr = vecFortunastakes[fs].addr;
-            if(ConnectNode((CAddress)addr, NULL, true)){
-                if (fDebug) printf("successfully connected to fortunastake at %s\n",addr.ToStringIPPort().c_str());
-            } else {
-                printf("error connecting to fortunastake at %s\n",addr.ToStringIPPort().c_str());
-            }
+            AddOneShot(addr.ToStringIPPort());
+            if (fDebug) printf("added fortunastake at %s to connection attempts\n",addr.ToStringIPPort().c_str());
 
 
             //if we're low on peers, let's connect to some random ipv4 fortunastakes. ipv6 probably won't route anyway
@@ -1032,13 +1028,8 @@ void ThreadCheckForTunaPool(void* parg)
                     int fs = rand() % vecFortunastakes.size();
                     CService addr = vecFortunastakes[fs].addr;
                     if (addr.IsIPv4() && !addr.IsLocal()) {
-                        if(ConnectNode((CAddress)addr, NULL, true)){
-                            if (fDebug) printf("successfully connected to fortunastake at %s\n",addr.ToStringIPPort().c_str());
-                        } else {
-                            printf("error connecting to fortunastake at %s\n",addr.ToStringIPPort().c_str());
-                        }
+                        AddOneShot(addr.ToStringIPPort());
                     }
-                    //MilliSleep(250); // 250 msecs * 50 nodes = 42.5sec, just in time to run this again if needed!
                 }
 
             }
