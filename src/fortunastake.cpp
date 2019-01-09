@@ -533,6 +533,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool GetFortunastakeRanks(CBlockIndex* pindex)
 {
+    LOCK(cs_fortunastakes);
     int64_t nStartTime = GetTimeMillis();
     if (fDebug) printf("GetFortunastakeRanks: ");
     if (!pindex || pindex == NULL || pindex->pprev == NULL || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
@@ -588,6 +589,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
     {
         i++;
+        s.first = i;
         s.second->nRank = i;
     }
     if (fDebug) printf(" DONE (%"PRId64"ms)\n", GetTimeMillis() - nStartTime);
