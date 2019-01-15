@@ -87,7 +87,8 @@ class CFortunaPayments
 public:
     std::vector<CFortunaStake> vStakes; // this array should be sorted
     std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
-    
+    std::vector<CTxIn> vCollaterals;
+
     CFortunaPayments() {
         // fill vStakes array with pointers to MN's from vecFortunastakes
     }
@@ -104,6 +105,8 @@ public:
     }
 
     void update(const CBlockIndex *pindex);
+
+    bool initialize(const CBlockIndex* pindex);
 };
 
 //
@@ -190,13 +193,8 @@ public:
 
     bool IsActive() {
         if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-        { // dsee broadcast is more than a round old
-            if (lastDseep > (GetAdjustedTime() - FORTUNASTAKE_EXPIRATION_SECONDS)) {
+        { // dsee broadcast is more than a round old, let's consider it active
                 return true;
-            } // last dseep is within non-expired time & broadcast is a round old, this node is considered active
-            else {
-                return false; // last dseep is received, but broadcast is not new enough. status "broadcasted"
-            }
         }
         return false;
     }
@@ -251,6 +249,7 @@ int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 extern int64_t nAverageFSIncome;
+bool FindFSPayment(CScript& payee, CBlockIndex* pindex=pindexBest);
 
 // for storing the winning payments
 class CFortunastakePaymentWinner

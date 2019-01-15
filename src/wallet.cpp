@@ -1561,6 +1561,7 @@ int64_t CWallet::GetImmatureWatchOnlyBalance() const
     }
     return nTotal;
 }
+
 // populate vCoins with vector of spendable COutputs
 void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
 {
