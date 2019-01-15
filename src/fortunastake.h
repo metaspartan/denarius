@@ -87,7 +87,8 @@ class CFortunaPayments
 public:
     std::vector<CFortunaStake> vStakes; // this array should be sorted
     std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
-    
+    std::vector<CTxIn> vCollaterals;
+
     CFortunaPayments() {
         // fill vStakes array with pointers to MN's from vecFortunastakes
     }
@@ -104,6 +105,8 @@ public:
     }
 
     void update(const CBlockIndex *pindex);
+
+    bool initialize(const CBlockIndex* pindex);
 };
 
 //
@@ -251,6 +254,7 @@ int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 extern int64_t nAverageFSIncome;
+bool FindFSPayment(CScript& payee, CBlockIndex* pindex=pindexBest);
 
 // for storing the winning payments
 class CFortunastakePaymentWinner
