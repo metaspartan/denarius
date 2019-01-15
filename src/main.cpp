@@ -2590,6 +2590,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         break;
                                     }
                                 }
+                                // if payee not found in mn list, check if the pubkey holds a 5K transaction
+                                if (!foundPayee) {
+                                    if (FindFSPayment(payee, pindex)) {
+                                        if (fDebug) printf("CheckBlock-POS() : WARNING: Payee was not found in MN list, but confirmed to hold collateral.\n");
+                                        foundPayee = true;
+                                    }
+                                }
                             }
                         }
                     }
@@ -2705,6 +2712,14 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     break;
                                 } else if (payee == burnPayee) {
                                     printf("CheckBlock-POW() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                    foundPayee = true;
+                                }
+                            }
+
+                            // if payee not found in mn list, check if the pubkey holds a 5K transaction
+                            if (!foundPayee) {
+                                if (FindFSPayment(payee, pindex)) {
+                                    if (fDebug) printf("CheckBlock-POW() : WARNING: Payee was not found in MN list, but confirmed to hold collateral.\n");
                                     foundPayee = true;
                                 }
                             }
