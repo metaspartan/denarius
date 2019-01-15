@@ -321,6 +321,8 @@ public:
     CCriticalSection cs_mapRequests;
     uint256 hashContinue;
     CBlockIndex* pindexLastGetBlocksBegin;
+    std::vector<CBlockIndex*> getBlocksIndex;
+    std::vector<uint256> getBlocksHash;
     uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
 	bool fStartSync;

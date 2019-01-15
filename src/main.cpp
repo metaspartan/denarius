@@ -5172,6 +5172,19 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
 
         //
+        // Message: getblocks
+        //
+
+        int n = pto->getBlocksIndex.size();
+        for (int i = 0; i < n; i++)
+        {
+            if (fDebug) printf("Pushing getblocks %s to %s\n\n",pto->getBlocksIndex[i]->ToString().c_str(),pto->getBlocksHash[i].ToString().c_str());
+            pto->PushGetBlocks(pto->getBlocksIndex[i], pto->getBlocksHash[i]);
+        }
+        pto->getBlocksIndex.clear();
+        pto->getBlocksHash.clear();
+
+        //
         // Message: inventory
         //
         vector<CInv> vInv;
