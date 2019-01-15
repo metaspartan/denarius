@@ -193,13 +193,8 @@ public:
 
     bool IsActive() {
         if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-        { // dsee broadcast is more than a round old
-            if (lastDseep > (GetAdjustedTime() - FORTUNASTAKE_EXPIRATION_SECONDS)) {
+        { // dsee broadcast is more than a round old, let's consider it active
                 return true;
-            } // last dseep is within non-expired time & broadcast is a round old, this node is considered active
-            else {
-                return false; // last dseep is received, but broadcast is not new enough. status "broadcasted"
-            }
         }
         return false;
     }
