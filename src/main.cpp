@@ -4574,7 +4574,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // Send the rest of the chain
         if (pindex)
             pindex = pindex->pnext;
-        int nLimit = 500;
+        int nLimit = 1000;
         if (fDebugNet) printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
@@ -5178,8 +5178,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         int n = pto->getBlocksIndex.size();
         for (int i = 0; i < n; i++)
         {
-            if (fDebug) printf("Pushing getblocks %s to %s\n\n",pto->getBlocksIndex[i]->ToString().c_str(),pto->getBlocksHash[i].ToString().c_str());
-            pto->PushGetBlocks(pto->getBlocksIndex[i], pto->getBlocksHash[i]);
+            if (fDebugNet) printf("Pushing getblocks %s to %s\n\n",pto->getBlocksIndex[i]->ToString().c_str(),pto->getBlocksHash[i].ToString().c_str());
+            pto->PushMessage("getblocks", CBlockLocator(pto->getBlocksIndex[i]), pto->getBlocksHash[i]);
         }
         pto->getBlocksIndex.clear();
         pto->getBlocksHash.clear();
