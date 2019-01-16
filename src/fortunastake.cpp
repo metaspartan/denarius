@@ -612,11 +612,12 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 }
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
-    if (mn.nBlockLastPaid == 0) return true;
+    if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
     nAverageFSIncome = avg2(vecFortunastakeScoresList);
+    if (nAverageFSIncome < 1 * COIN) return true; // if we can't calculate a decent average, then let the payment through
     int64_t max = nAverageFSIncome * 10 / 8;
     if (value > max) {
         return false;
@@ -629,6 +630,8 @@ int64_t avg2(std::vector<CFortunaStake> const& v) {
     for (int i = 0; i < v.size(); i++) {
         int64_t x = v[i].payValue;
         int64_t delta = x - mean;
+        //TODO: implement in mandatory update, will reduce average & lead to rejections
+        //if (v[i].payValue > 2*COIN) { continue; } // don't consider payees above 2.00000000D (pos only / lucky payees)
         if (v[i].payValue < 1*COIN) { continue; } // don't consider payees below 1.00000000D (pos only / new payees)
         mean += delta/++n;
     }
