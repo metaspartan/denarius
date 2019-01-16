@@ -120,7 +120,7 @@ public:
         
     }
 
-    void update(const CBlockIndex *pindex);
+    void update(const CBlockIndex *pindex, bool force = false);
 
     bool initialize(const CBlockIndex* pindex);
 };
