@@ -552,6 +552,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
     } else {
         vecFortunastakeScoresList.clear();
         // now we've put the data in, let's recalculate the ranks.
+        if (GetBoolArg("-newranksystem",false)) ranks.initialize(pindex);
         ranks.update(pindex);
 
         // now we build the list for sorting
@@ -1430,7 +1431,7 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
     const CBlockIndex *BlockReading = pindex;
     int blocksFound = 0;
     int nHeight = 0;
-    for (int i = 0; BlockReading && BlockReading->nHeight > MN_ENFORCEMENT_ACTIVE_HEIGHT; i++) {
+    for (int i = 0; BlockReading && BlockReading->nHeight > BLOCK_START_FORTUNASTAKE_PAYMENTS; i++) {
             CBlock block;
             if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
                 continue;
@@ -1443,27 +1444,41 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
                     int n = 0;
                     BOOST_FOREACH(const CTxOut& txout, tx.vout)
                     {
-                        n++;
                         if(txout.nValue == GetMNCollateral() * COIN) {
-                            if (fDebug) printf("Found FS payment at height %d - TX %s\n TXOut %s\n",nHeight,tx.ToString().c_str(),txout.ToString().c_str());
-                            // TODO: check spent with fetch inputs?
-                            CTransaction txCollateral;
                             COutPoint cout = COutPoint(tx.GetHash(),n);
-                            CTxOut vout = CTxOut((GetMNCollateral() - 1)* COIN, txout.scriptPubKey);
                             CTxIn vin = CTxIn(cout, txout.scriptPubKey);
+                            CTxOut vout = CTxOut(1 * COIN, txout.scriptPubKey);
+                            CScript mnpayee = GetScriptForDestination(txout.scriptPubKey.GetID());
+                            CTransaction txCollateral;
                             txCollateral.vin.push_back(vin);
                             txCollateral.vout.push_back(vout);
+
+                            CFortunaCollateral data;
+                            data.vin = vin;
+                            data.blockHash = block.GetHash();
+                            data.height = nHeight;
+                            data.scriptPubKey = txout.scriptPubKey;
+
+                            // if data is already in the vector for this script, let's just skip
+                            if (std::find(vScripts.begin(), vScripts.end(), mnpayee) != vScripts.end()) { continue; }
+
+                            //if (fDebug) printf("Found FS payment at height %d - TX %s\n TXOut %s\n",nHeight,tx.ToString().c_str(),txout.ToString().c_str());
+                            // TODO: check spent with fetch inputs?
                             bool* pfMissingInputs;
                             //if(fDebug) printf("CForTunaPool::IsCollateralValid - Testing TX %s\n",txCollateral.ToString().c_str());
-                            if(!AcceptableInputs(mempool, txCollateral, true, pfMissingInputs)){
+                            if(!AcceptableInputs(mempool, txCollateral, false, pfMissingInputs)){
                                 //if(fDebug) printf("CForTunaPool::IsCollateralValid - didn't pass IsAcceptable\n");
                                 continue;
                             } else {
                                 // show addy?
                                 if(fDebug) printf("CForTunaPool::IsCollateralValid - Valid FS Collateral found for outpoint %s\n",vin.ToString().c_str());
-                                vCollaterals.push_back(vin);
+
+                                vCollaterals.push_back(data);
+                                vScripts.push_back(mnpayee);
+
                             }
                         }
+                        n++;
                     }
                 }
             }
@@ -1475,9 +1490,12 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
 
     if (fDebug){
         printf("finished at height %d\n-----------%d collaterals------------",nHeight,vCollaterals.size());
-        BOOST_FOREACH(const CTxIn& vin, vCollaterals)
+        BOOST_FOREACH(CFortunaCollateral& rec, vCollaterals)
         {
-            printf("%s\n",vin.ToString().c_str());
+            CTxDestination address1;
+            ExtractDestination(rec.scriptPubKey, address1);
+            CBitcoinAddress address2(address1);
+            printf("Height %d: MN Address %s secured by collateral %s\n",rec.height,address2.ToString().c_str(),rec.vin.ToString().c_str());
         }
     }
 
@@ -1502,6 +1520,7 @@ bool FindFSPayment(CScript& payee, CBlockIndex* pindex)
             {
                 bool found = false;
                 BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                    if (tx.IsCoinBase()) continue;
                     int n = 0;
                     BOOST_FOREACH(const CTxOut& txout, tx.vout)
                     {
@@ -1510,11 +1529,11 @@ bool FindFSPayment(CScript& payee, CBlockIndex* pindex)
                             // TODO: check spent with fetch inputs?
                             CTransaction txCollateral;
                             COutPoint cout = COutPoint(tx.GetHash(),n);
-                            CTxOut vout = CTxOut((GetMNCollateral() - 1)* COIN, txout.scriptPubKey);
+                            CTxOut vout = CTxOut(1 * COIN, txout.scriptPubKey);
                             CTxIn vin = CTxIn(cout, txout.scriptPubKey);
                             txCollateral.vin.push_back(vin);
                             txCollateral.vout.push_back(vout);
-                            if(fDebug) printf("CForTunaPool::IsCollateralValid - Testing TX %s\n",txCollateral.ToString().c_str());
+                            //if(fDebug) printf("CForTunaPool::IsCollateralValid - Testing TX %s\n",txCollateral.ToString().c_str());
                             bool* pfMissingInputs;
                             if(!AcceptableInputs(mempool, txCollateral, false, pfMissingInputs)){
                                 if(fDebug) printf("CForTunaPool::IsCollateralValid - didn't pass IsAcceptable\n");
@@ -1561,7 +1580,7 @@ bool FindFSPayments(CScript& payee, CBlockIndex* pindex)
                     BOOST_FOREACH(const CTxOut& txout, tx.vout)
                     {
                         if(payee == txout.scriptPubKey && txout.nValue == GetMNCollateral() * COIN) {
-                            if (fDebug) printf("Found FS payment at height %d - to %s",nHeight,txout.ToString().c_str());
+                            if (fDebug) printf("Found FS payment at height %d - to %s\n",nHeight,txout.ToString().c_str());
                             // TODO: check spent with fetch inputs?
                             CTransaction txCollateral;
                             CTxOut vout = CTxOut((GetMNCollateral() - 1)* COIN, forTunaPool.collateralPubKey);
