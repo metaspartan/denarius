@@ -1517,7 +1517,7 @@ bool FindFSPayment(CScript& payee, CBlockIndex* pindex)
     const CBlockIndex *BlockReading = pindex;
     int blocksFound = 0;
     int nHeight = 0;
-    for (int i = 0; BlockReading && BlockReading->nHeight > MN_ENFORCEMENT_ACTIVE_HEIGHT; i++) {
+    for (int i = 0; BlockReading && BlockReading->nHeight > 1; i++) {
             CBlock block;
             if(!block.ReadFromDisk(BlockReading, true)) // shouldn't really happen
                 continue;
