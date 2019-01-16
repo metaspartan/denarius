@@ -81,13 +81,29 @@ public:
 
 };
 
+class CFortunaCollateral
+{
+public:
+    CTxIn vin;
+    CScript scriptPubKey;
+    int height;
+    uint256 blockHash;
+
+    CFortunaCollateral() {
+        height = 0;
+        blockHash = 0;
+    }
+};
+
 // For storing payData
 class CFortunaPayments
 {
 public:
     std::vector<CFortunaStake> vStakes; // this array should be sorted
     std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
-    std::vector<CTxIn> vCollaterals;
+    //std::vector<CTxIn> vCollaterals;
+    std::vector<CFortunaCollateral> vCollaterals;
+    std::vector<CScript> vScripts;
 
     CFortunaPayments() {
         // fill vStakes array with pointers to MN's from vecFortunastakes
@@ -104,7 +120,7 @@ public:
         
     }
 
-    void update(const CBlockIndex *pindex);
+    void update(const CBlockIndex *pindex, bool force = false);
 
     bool initialize(const CBlockIndex* pindex);
 };
