@@ -253,6 +253,7 @@ static QString seconds_to_DHMS(quint32 duration)
 uint256 lastNodeUpdateHash;
 void FortunastakeManager::updateNodeList()
 {
+    if (pindexBest == NULL) return;
     if (pindexBest->GetBlockHash() == lastNodeUpdateHash) return;
     lastNodeUpdateHash = pindexBest->GetBlockHash();
 
