@@ -2885,7 +2885,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
 
-    FortunaReorgBlock = true;
     // Find the fork
     CBlockIndex* pfork = pindexBest;
     CBlockIndex* plonger = pindexNew;
@@ -2982,7 +2981,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
-    FortunaReorgBlock = false;
+    FortunaReorgBlock = true;
     printf("REORGANIZE: done\n");
 
     return true;
