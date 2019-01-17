@@ -3079,8 +3079,8 @@ bool CWallet::SendStealthMoneyToDestination(CStealthAddress& sxAddress, int64_t 
 
 bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNarr)
 {
-    if (fDebug)
-        printf("FindStealthTransactions() tx: %s\n", tx.GetHash().GetHex().c_str());
+    //if (fDebug)
+        //printf("FindStealthTransactions() tx: %s\n", tx.GetHash().GetHex().c_str());
 
     mapNarr.clear();
 
