@@ -775,7 +775,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         };
 
         mapValue_t mapNarr;
-        FindStealthTransactions(tx, mapNarr);
+        if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(tx, mapNarr);
 
         bool fIsMine = false;
         if (tx.nVersion == ANON_TXN_VERSION)
@@ -1232,9 +1232,32 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
     CBlockIndex* pindex = pindexStart;
     {
-        LOCK2(cs_main, cs_wallet);
-        while (pindex)
+
+        int dProgressTop;
         {
+            LOCK(cs_main);
+            dProgressTop = pindexBest->nHeight;
+        }
+
+        int dProgressStart = pindex ? pindex->nHeight : 0;
+        int dProgressCurrent = dProgressStart;
+        int dProgressTotal =  dProgressTop - dProgressStart;
+        double dProgressShow = 0;
+        double dProgressShowPrev = 0;
+
+        while (pindex && !fShutdown)
+        {
+            if (dProgressCurrent > 0)
+                dProgressShow = ((static_cast<double>(dProgressCurrent) / dProgressTop) * 100.0);
+
+            if ((pindex->nHeight % 100 == 0) && (dProgressTotal > 0))
+            {
+                if (dProgressShowPrev != dProgressShow)
+                {
+                    dProgressShowPrev = dProgressShow;
+                    uiInterface.InitMessage(strprintf("%s %d/%d %s... (%.2f%%)",_("Rescanning").c_str(), dProgressCurrent , dProgressTop,_("blocks").c_str(),dProgressShow));
+                }
+            }
             // no need to read and scan block, if block was created before
             // our wallet birthday (as adjusted for block time variability)
             if (nTimeFirstKey && (pindex->nTime < (nTimeFirstKey - 7200))) {
@@ -1246,11 +1269,18 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             block.ReadFromDisk(pindex, true);
             BOOST_FOREACH(CTransaction& tx, block.vtx)
             {
+                LOCK(cs_wallet);
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
                     ret++;
             }
             pindex = pindex->pnext;
+
+            // Update current height for progress
+            if (pindex) dProgressCurrent = pindex->nHeight;
+
         }
+
+        uiInterface.InitMessage(_("Rescanning complete."));
     }
     return ret;
 }
@@ -3689,7 +3719,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
     };
 
     mapValue_t mapNarr;
-    FindStealthTransactions(wtxNew, mapNarr);
+    if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(wtxNew, mapNarr);
 
     bool fIsMine = false;
     if (wtxNew.nVersion == ANON_TXN_VERSION)

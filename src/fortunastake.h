@@ -112,12 +112,13 @@ public:
     bool add(CFortunaStake* mn)
     {
         // add address of pointer into the payments array
+        return true;
     }
 
     bool remove(CFortunaStake* mn)
     {
         // remove address of pointer from the payments array
-        
+        return true;
     }
 
     void update(const CBlockIndex *pindex, bool force = false);

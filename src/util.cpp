@@ -81,6 +81,7 @@ bool fDebugFS = false;
 bool fDebugChain = false;
 bool fDebugRingSig = false;
 bool fNoSmsg = false;
+bool fDisableStealth = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugger = false;
 bool fRequestShutdown = false;

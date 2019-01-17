@@ -611,6 +611,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
         if (s.second->vin == tmn.vin)
             return i;
     }
+    return 0;
 }
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
@@ -624,6 +625,7 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (value > max) {
         return false;
     }
+    return true;
 }
 
 int64_t avg2(std::vector<CFortunaStake> const& v) {
@@ -653,6 +655,7 @@ int GetFortunastakeByRank(int findRank, int64_t nBlockHeight, int minProtocol)
         if (i == findRank)
             return s.first;
     }
+    return 0;
 }
 
 //Get the last hash that matches the modulus given. Processed in reverse order
@@ -701,6 +704,7 @@ bool CFortunaStake::GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValu
     actualRate = actualPayments / requiredRate;
     // TODO: stop payment if fortunastake vin age is under mnCount*30 old
     if (actualRate > 0) return true;
+    return false;
 }
 
 float CFortunaStake::GetPaymentRate(const CBlockIndex *pindex)
