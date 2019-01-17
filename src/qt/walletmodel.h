@@ -172,6 +172,7 @@ private:
     int cachedTxLocks;
     EncryptionStatus cachedEncryptionStatus;
     int cachedNumBlocks;
+    bool fForceBalanceCheck;
 
     QTimer *pollTimer;
 

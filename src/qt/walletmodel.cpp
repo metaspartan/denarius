@@ -127,7 +127,7 @@ void WalletModel::pollBalanceChanged()
     if(!lockWallet)
         return;
 
-    if(nBestHeight != cachedNumBlocks)
+    if(fForceBalanceCheck && nBestHeight != cachedNumBlocks)
     {
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
@@ -136,6 +136,8 @@ void WalletModel::pollBalanceChanged()
         //if(transactionTableModel)
             //transactionTableModel->updateConfirmations();
     }
+
+    fForceBalanceCheck = false;
 }
 
 void WalletModel::checkBalanceChanged()
@@ -175,6 +177,7 @@ void WalletModel::updateTransaction(const QString &hash, int status)
     // Balance and number of transactions might have changed
     // checkBalanceChanged();
 
+    fForceBalanceCheck = true;
     int newNumTransactions = getNumTransactions();
     if(cachedNumTransactions != newNumTransactions)
     {
