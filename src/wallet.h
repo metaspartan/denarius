@@ -1131,6 +1131,12 @@ public:
         // Quick answer in most cases
         if (!IsFinal())
             return false;
+        // Coins newer than our current chain can't be trusted
+        if (nTime > pindexBest->GetBlockTime())
+            return false;
+        // Coins whose block is not in our chain can't be trusted
+        if (!mapBlockIndex.count(hashBlock))
+            return false;
         int nDepth = GetDepthInMainChain();
         if (nDepth >= 1)
             return true;
