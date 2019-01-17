@@ -150,6 +150,7 @@ extern bool fDebugFS;
 extern bool fDebugChain;
 extern bool fDebugRingSig;
 extern bool fNoSmsg;
+extern bool fDisableStealth;
 extern bool fPrintToConsole;
 extern bool fPrintToDebugger;
 extern bool fRequestShutdown;

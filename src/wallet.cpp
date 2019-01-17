@@ -775,7 +775,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         };
 
         mapValue_t mapNarr;
-        FindStealthTransactions(tx, mapNarr);
+        if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(tx, mapNarr);
 
         bool fIsMine = false;
         if (tx.nVersion == ANON_TXN_VERSION)
@@ -3689,7 +3689,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
     };
 
     mapValue_t mapNarr;
-    FindStealthTransactions(wtxNew, mapNarr);
+    if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(wtxNew, mapNarr);
 
     bool fIsMine = false;
     if (wtxNew.nVersion == ANON_TXN_VERSION)

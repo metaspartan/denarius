@@ -586,6 +586,7 @@ bool AppInit2()
     fDebugRingSig = GetBoolArg("-debugringsig");
 
     fNoSmsg = GetBoolArg("-nosmsg");
+    fDisableStealth = GetBoolArg("-disablestealth"); // force-disable stealth transaction scanning
 
     bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
