@@ -43,14 +43,14 @@ extern int MIN_MN_PROTO_VERSION;
 
 // nTime field added to CAddress, starting with this version;
 // if possible, avoid requesting addresses nodes older than this
-static const int CADDR_TIME_VERSION = 31005;
+static const int CADDR_TIME_VERSION = 33500; // start sharing node timeinfo with this proto version 33500
 
 // only request blocks from nodes outside this range of versions
 static const int NOBLKS_VERSION_START = 70002;
 static const int NOBLKS_VERSION_END = 70006;
 
 // BIP 0031, pong message, is enabled for all versions AFTER this one
-static const int BIP0031_VERSION = 21212;
+static const int BIP0031_VERSION = 21212; // changed to 21212 from 60000 - start sending nonces to all clients.
 
 // "mempool" command, enhanced "getdata" behavior starts with this version:
 static const int MEMPOOL_GD_VERSION = 60002;
