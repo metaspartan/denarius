@@ -12,10 +12,10 @@
 
 using namespace json_spirit;
 
-const QString kBaseUrl = "https://denarius.io/dnrusd.php";
-const QString kBaseUrl1 = "https://denarius.io/dbitcoin.php";
-const QString kBaseUrl2 = "https://denarius.io/dnrmc.php";
-const QString kBaseUrl3 = "https://denarius.io/dnrbtc.php";
+const QString kBaseUrl = "http://denarius.io/dnrusd.php";
+const QString kBaseUrl1 = "http://denarius.io/dbitcoin.php";
+const QString kBaseUrl2 = "http://denarius.io/dnrmc.php";
+const QString kBaseUrl3 = "http://denarius.io/dnrbtc.php";
 
 QString bitcoinp = "";
 QString denariusp = "";
