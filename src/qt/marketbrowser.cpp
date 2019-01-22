@@ -12,10 +12,10 @@
 
 using namespace json_spirit;
 
-const QString kBaseUrl = "http://denarius.io/dnrusd.php";
-const QString kBaseUrl1 = "http://blockchain.info/tobtc?currency=USD&value=1";
-const QString kBaseUrl2 = "http://denarius.io/dnrmc.php";
-const QString kBaseUrl3 = "http://denarius.io/dnrbtc.php";
+const QString kBaseUrl = "https://denarius.io/dnrusd.php";
+const QString kBaseUrl1 = "https://denarius.io/dbitcoin.php";
+const QString kBaseUrl2 = "https://denarius.io/dnrmc.php";
+const QString kBaseUrl3 = "https://denarius.io/dnrbtc.php";
 
 QString bitcoinp = "";
 QString denariusp = "";
@@ -26,6 +26,7 @@ double denarius2;
 double dnrmc2;
 double dnrbtc2;
 QString bitcoing;
+QString dnrnewsfeed;
 QString dnrmarket;
 QString dollarg;
 int mode=1;
@@ -110,7 +111,7 @@ if (what == kBaseUrl1) // Bitcoin Price
 
     // QNetworkReply is a QIODevice. So we read from it just like it was a file
     QString bitcoin = finished->readAll();
-    bitcoin2 = (1 / bitcoin.toDouble());
+    bitcoin2 = (bitcoin.toDouble());
     bitcoin = QString::number(bitcoin2, 'f', 2);
     if(bitcoin > bitcoinp)
     {
