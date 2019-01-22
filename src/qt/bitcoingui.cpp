@@ -143,8 +143,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     resize(1300, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
 #ifndef Q_OS_MAC
-    qApp->setWindowIcon(QIcon(":icons/denarius"));
-    setWindowIcon(QIcon(":icons/denarius"));
+    qApp->setWindowIcon(QIcon(":icons/denarius128"));
+    setWindowIcon(QIcon(":icons/denarius128"));
 #else
     setUnifiedTitleAndToolBarOnMac(true);
     QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
