@@ -158,6 +158,15 @@ extern NodeId nLastNodeId;
 extern CCriticalSection cs_nLastNodeId;
 
 
+class CNodeStateStats
+{
+public:
+    int nMisbehavior;
+    int nSyncHeight;
+    int nCommonHeight;
+    std::vector<int> vHeightInFlight;
+};
+
 class CNodeStats
 {
 public:
@@ -168,14 +177,18 @@ public:
     uint64_t nSendBytes;
     uint64_t nRecvBytes;
     int64_t nTimeConnected;
+    int64_t nTimeOffset;
     std::string addrName;
     int nVersion;
+    int nTypeInd;
     std::string strSubVer;
     bool fInbound;
     int nStartingHeight;
     int nMisbehavior;
+    bool fSyncNode;
     double dPingTime;
     double dPingWait;
+    std::string addrLocal;
 };
 
 
@@ -308,6 +321,8 @@ public:
     CCriticalSection cs_mapRequests;
     uint256 hashContinue;
     CBlockIndex* pindexLastGetBlocksBegin;
+    std::vector<CBlockIndex*> getBlocksIndex;
+    std::vector<uint256> getBlocksHash;
     uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
 	bool fStartSync;

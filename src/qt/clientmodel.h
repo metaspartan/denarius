@@ -4,6 +4,7 @@
 #include <QObject>
 
 class OptionsModel;
+class PeerTableModel;
 class AddressTableModel;
 class TransactionTableModel;
 class CWallet;
@@ -22,6 +23,7 @@ public:
     ~ClientModel();
 
     OptionsModel *getOptionsModel();
+    PeerTableModel *getPeerTableModel();
 
     int getNumConnections() const;
     int getNumBlocks() const;
@@ -37,7 +39,7 @@ public:
 
     //! Return true if client connected to Tor
     bool isNativeTor() const;
-    
+
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;
     //! Return conservative estimate of total number of blocks, or 0 if unknown
@@ -52,6 +54,7 @@ public:
 
 private:
     OptionsModel *optionsModel;
+    PeerTableModel *peerTableModel;
 
     int cachedNumBlocks;
     int cachedNumBlocksOfPeers;

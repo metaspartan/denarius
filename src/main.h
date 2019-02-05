@@ -208,7 +208,8 @@ int64_t GetFortunastakePayment(int nHeight, int64_t blockValue);
 bool IsStandardTx(const CTransaction& tx, std::string& reason);
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64_t nBlockTime = 0);
 
-
+/** Get statistics from node state */
+bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
 

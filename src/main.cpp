@@ -48,11 +48,11 @@ unsigned int nTargetSpacing     = 30;               // 30 seconds, FAST
 unsigned int nStakeMinAge       = 8 * 60 * 60;      // 8 hour min stake age
 unsigned int nStakeMaxAge       = -1;               // unlimited
 unsigned int nModifierInterval  = 10 * 60;          // time to elapse before new modifier is computed
-int64_t nLastCoinStakeSearchTime = 0;
+int64_t nLastCoinStakeSearchTime = GetAdjustedTime();
 int nCoinbaseMaturity = 20; //30 on Mainnet D e n a r i u s, 20 for testnet
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
-bool FortunaReorgBlock;
+bool FortunaReorgBlock = true;
 uint256 nBestChainTrust = 0;
 uint256 nBestInvalidTrust = 0;
 
@@ -265,7 +265,11 @@ bool AbortNode(const std::string &strMessage, const std::string &userMessage) {
     return false;
 }
 
-
+bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats)
+{
+    // TODO:
+    return false;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -948,7 +952,12 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         if (!tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
             if (fInvalid)
-                return error("CTxMemPool::accept() : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+            {
+                if (fDebug)
+                    return error("CTxMemPool::accept() : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+                else return false;
+            }
+
             if (pfMissingInputs)
                 *pfMissingInputs = true;
             return false;
@@ -1108,7 +1117,8 @@ bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree
         if (!tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
             if (fInvalid)
-                return error("AcceptableInputs : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+                if (fDebugNet) return error("AcceptableInputs : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+                return false;
             if (pfMissingInputs)
                 *pfMissingInputs = true;
             return false;
@@ -1689,7 +1699,11 @@ bool IsInitialBlockDownload()
             pindexBest->GetBlockTime() < (GetTime() - 300)); // last block is more than 5 minutes old
 
     if (state)
+    {
         lockIBDState = true;
+        // do stuff required at end of sync
+        GetFortunastakeRanks(pindexBest);
+    }
     return state;
 }
 
@@ -1864,7 +1878,10 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
             // Revisit this if/when transaction replacement is implemented and allows
             // adding inputs:
             fInvalid = true;
-            return DoS(100, error("FetchInputs() : %s prevout.n out of range %d %"PRIszu" %"PRIszu" prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.n, txPrev.vout.size(), txindex.vSpent.size(), prevout.hash.ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
+            if (fDebugNet)
+                return DoS(100, error("FetchInputs() : %s prevout.n out of range %d %"PRIszu" %"PRIszu" prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.n, txPrev.vout.size(), txindex.vSpent.size(), prevout.hash.ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
+            return DoS(100, false);
+
         }
     }
 
@@ -2493,7 +2510,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
     }
 
-    if(!FortunaReorgBlock && !fJustCheck && pindex->GetBlockTime() > GetTime() - 20*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
+    if(!fJustCheck && pindex->GetBlockTime() > GetTime() - 20*nCoinbaseMaturity && (pindex->nHeight < pindexBest->nHeight+5) && !IsInitialBlockDownload() && FortunastakePayments == true)
     {
         LOCK2(cs_main, mempool.cs);
 
@@ -2505,6 +2522,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if(IsProofOfStake() && pindexBest != NULL){
             if(pindexBest->GetBlockHash() == hashPrevBlock){
 
+                // make sure the ranks are updated to prev block
+                GetFortunastakeRanks(pindexBest);
                 // Calculate Coin Age for Fortunastake Reward Calculation
                 uint64_t nCoinAge;
                 if (!vtx[1].GetCoinAge(txdb, nCoinAge))
@@ -2556,21 +2575,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (vtx[1].vout[i].scriptPubKey == pubScript)
                                     {
                                         int64_t value = vtx[1].vout[i].nValue;
-                                        int lastPaid = mn.nBlockLastPaid;
-                                        int vinAge = mn.GetFortunastakeInputAge(pindex);
-                                        int rank = (GetFortunastakeRank(mn, pindex));
-                                        int maxrank = mnCount-(mnCount/10);
-                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, vinAge, rank);
-
-                                        if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
-                                        {
-                                            if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                                return error("CheckBlock-POS() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
-                                            } else {
-                                                if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
-                                            }
-                                            break;
-                                        }
+                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%"PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mn.nRank, mn.nBlockLastPaid);
 
                                         if (!fIsInitialDownload) {
                                             if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
@@ -2589,11 +2594,22 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         }
                                         // add mn payment data
                                         mn.nBlockLastPaid = pindex->nHeight;
-                                        mn.payData.push_back(make_pair(pindex->nHeight, value));
+                                        CFortunaPayData data;
+                                        data.height = pindex->nHeight;
+                                        data.amount = value;
+                                        data.hash = pindex->GetBlockHash();
+                                        mn.payData.push_back(data);
                                         mn.SetPayRate(pindex->nHeight);
                                         foundPayee = true;
                                         paymentOK = true;
                                         break;
+                                    }
+                                }
+                                // if payee not found in mn list, check if the pubkey holds a 5K transaction
+                                if (!foundPayee) {
+                                    if (FindFSPayment(payee, pindex)) {
+                                        if (fDebug) printf("CheckBlock-POS() : WARNING: Payee was not found in MN list, but confirmed to hold collateral.\n");
+                                        foundPayee = true;
                                     }
                                 }
                             }
@@ -2643,6 +2659,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             }
         }else if(IsProofOfWork() && pindexBest != NULL){
             if(pindexBest->GetBlockHash() == hashPrevBlock){
+
+                // make sure the ranks are updated
+                GetFortunastakeRanks(pindexBest);
+
                 int64_t fortunastakePaymentAmount = GetFortunastakePayment(pindex->nHeight, vtx[0].GetValueOut());
 
                 // If we don't already have its previous block, skip fortunastake payment step
@@ -2681,29 +2701,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                                 if (payee == pubScript)
                                 {
-                                    int lastPaid = mn.nBlockLastPaid;
-                                    int vinAge = mn.GetFortunastakeInputAge(pindex);
-                                    int rank = (GetFortunastakeRank(mn, pindex));
-                                    int maxrank = mnCount - (mnCount/10);
-
-                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%d age: %d, rank %d\n", pindex->nHeight+1, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), vinAge, rank);
-
-                                    if(vinAge < (nBestHeight > BLOCK_START_FORTUNASTAKE_DELAYPAY ? FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY : FORTUNASTAKE_MIN_CONFIRMATIONS)) // if MN is too new
-                                    {
-                                        if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) {
-                                            return error("CheckBlock-POW() : Fortunastake has only %d confirmations (requires %d) - rejecting block.", vinAge, FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY);
-                                        } else {
-                                            if (fDebug) printf("WARNING: Fortunastake has only %d confirmations (requires %d) and will not be accepted after block %d\n", vinAge ,FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY, MN_ENFORCEMENT_ACTIVE_HEIGHT);
-                                        }
-                                        break;
-                                    }
-
+                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%"PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), mn.nRank, mn.nBlockLastPaid);
                                     if (!fIsInitialDownload) {
                                         if (!CheckFSPayment(pindex, vtx[0].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
-                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d payRate:%d",rank,FormatMoney(mn.payRate).c_str());
+                                                return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s",mn.nRank,FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn.payRate).c_str());
                                             } else
                                             {
                                                 if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
@@ -2716,13 +2720,25 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     }
 
                                     mn.nBlockLastPaid = pindex->nHeight;
-                                    mn.payData.push_back(make_pair(pindex->nHeight, vtx[0].vout[i].nValue));
+                                    CFortunaPayData data;
+                                    data.height = pindex->nHeight;
+                                    data.amount = vtx[0].vout[i].nValue;
+                                    data.hash = pindex->GetBlockHash();
+                                    mn.payData.push_back(data);
                                     mn.SetPayRate(pindex->nHeight);
                                     foundPayee = true;
                                     paymentOK = true;
                                     break;
                                 } else if (payee == burnPayee) {
                                     printf("CheckBlock-POW() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                    foundPayee = true;
+                                }
+                            }
+
+                            // if payee not found in mn list, check if the pubkey holds a 5K transaction
+                            if (!foundPayee) {
+                                if (FindFSPayment(payee, pindex)) {
+                                    if (fDebug) printf("CheckBlock-POW() : WARNING: Payee was not found in MN list, but confirmed to hold collateral.\n");
                                     foundPayee = true;
                                 }
                             }
@@ -2869,7 +2885,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
     printf("REORGANIZE\n");
 
-    FortunaReorgBlock = true;
     // Find the fork
     CBlockIndex* pfork = pindexBest;
     CBlockIndex* plonger = pindexNew;
@@ -2966,13 +2981,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) // now clear the ranks because we need to reorganize the payments in case extras got in
-    {
-        mn.payData.clear();
-    }
-    if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
-
-    FortunaReorgBlock = false;
+    FortunaReorgBlock = true;
     printf("REORGANIZE: done\n");
 
     return true;
@@ -3481,6 +3490,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
     AssertLockHeld(cs_main);
 
+    int64_t nStartTime = GetTimeMillis();
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
@@ -3602,7 +3612,11 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         mapOrphanBlocksByPrev.erase(hashPrev);
     }
 
-    if (fDebug) printf("ProcessBlock: ACCEPTED\n");
+    if (fDebug && GetBoolArg("-showtimers", false)) {
+        printf("ProcessBlock: ACCEPTED (%"PRId64"ms)\n", GetTimeMillis() - nStartTime);
+    } else {
+        if (fDebug) printf("ProcessBlock: ACCEPTED\n");
+    }
 
     //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
     if(nBestHeight >= 1500000) {
@@ -3629,18 +3643,23 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
     if (IsProofOfStake())
         return true;
 
-    nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
+    // nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
+    // nLastCoinStakeSearchTime = pindexBest->GetBlockTime(); // time of the last block in our index
 
     CKey key;
-    CTransaction txCoinStake;
+    CTransaction txCoinStake; // make a new transaction.
     int64_t nSearchTime = txCoinStake.nTime; // search to current time
 
+    if (fDebug && GetBoolArg("-printcoinstake")) printf ("searchtime %ld to %ld \n",nSearchTime,nLastCoinStakeSearchTime);
     if (nSearchTime > nLastCoinStakeSearchTime)
     {
+        if (fDebug && GetBoolArg("-printcoinstake")) printf ("nSearchTime %ld > nLastCoinStakeSearchTime %ld\n",nSearchTime,nLastCoinStakeSearchTime);
         if (wallet.CreateCoinStake(wallet, nBits, nSearchTime-nLastCoinStakeSearchTime, nFees, txCoinStake, key))
         {
+            if (fDebug && GetBoolArg("-printcoinstake")) printf ("CreateCoinStake succeeded \n");
             if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->GetBlockTime())))
             {
+                if (fDebug && GetBoolArg("-printcoinstake")) printf ("txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->GetBlockTime()))");
                 // make sure coinstake would meet timestamp protocol
                 //    as it would be the same as the block timestamp
                 vtx[0].nTime = nTime = txCoinStake.nTime;
@@ -3661,6 +3680,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
         }
         nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
         nLastCoinStakeSearchTime = nSearchTime;
+        if (fDebug && GetBoolArg("-printcoinstake")) printf ("CreateCoinStake failed at %ld. Try again in %ld\n",nLastCoinStakeSearchTime,nLastCoinStakeSearchInterval);
     }
 
     return false;
@@ -4568,7 +4588,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // Send the rest of the chain
         if (pindex)
             pindex = pindex->pnext;
-        int nLimit = 500;
+        int nLimit = 1000;
         if (fDebugNet) printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
@@ -4855,6 +4875,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                     if (pingUsecTime > 0) {
                         // Successful ping time measurement, replace previous
                         pfrom->nPingUsecTime = pingUsecTime;
+                        if (fDebug) { printf("Ping time for peer %s: %d msec\n", pfrom->addr.ToString().c_str(), (((double)pfrom->nPingUsecTime) / 1e6)); }
                     } else {
                         // This should never happen
                         sProblem = "Timing mishap";
@@ -5164,6 +5185,19 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                 pto->PushMessage("addr", vAddr);
         }
 
+
+        //
+        // Message: getblocks
+        //
+
+        int n = pto->getBlocksIndex.size();
+        for (int i = 0; i < n; i++)
+        {
+            if (fDebugNet) printf("Pushing getblocks %s to %s\n\n",pto->getBlocksIndex[i]->ToString().c_str(),pto->getBlocksHash[i].ToString().c_str());
+            pto->PushMessage("getblocks", CBlockLocator(pto->getBlocksIndex[i]), pto->getBlocksHash[i]);
+        }
+        pto->getBlocksIndex.clear();
+        pto->getBlocksHash.clear();
 
         //
         // Message: inventory

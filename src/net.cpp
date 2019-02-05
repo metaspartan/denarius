@@ -110,7 +110,10 @@ void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
     pindexLastGetBlocksBegin = pindexBegin;
     hashLastGetBlocksEnd = hashEnd;
 
-    PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
+    getBlocksIndex.push_back(pindexBegin);
+    getBlocksHash.push_back(hashEnd);
+
+    //PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
 }
 
 
@@ -1810,7 +1813,10 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 
 // for now, use a very simple selection metric: the node from which we received
 // most recently
+// patch: use pingtime, e.g. 200ms * -1 = -200, so 10ms *-1 = -10 would win.
 static int64_t NodeSyncScore(const CNode *pnode) {
+    if (pnode->nPingUsecTime > 0)
+        return pnode->nPingUsecTime * -1;
     return pnode->nLastRecv;
 }
 
@@ -1883,7 +1889,7 @@ void ThreadMessageHandler2(void* parg)
             vNodesCopy = vNodes;
 			BOOST_FOREACH(CNode* pnode, vNodesCopy) {
                 pnode->AddRef();
-                if (pnode == pnodeSync)
+                if (pnode == pnodeSync && pnode->nLastRecv > GetTime() - 5) // only accept a node who has replied in last 5 secs, if they stop then swap nodes
                     fHaveSyncNode = true;
             }
         }

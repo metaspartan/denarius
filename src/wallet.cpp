@@ -775,7 +775,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         };
 
         mapValue_t mapNarr;
-        FindStealthTransactions(tx, mapNarr);
+        if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(tx, mapNarr);
 
         bool fIsMine = false;
         if (tx.nVersion == ANON_TXN_VERSION)
@@ -1232,9 +1232,32 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
     CBlockIndex* pindex = pindexStart;
     {
-        LOCK2(cs_main, cs_wallet);
-        while (pindex)
+
+        int dProgressTop;
         {
+            LOCK(cs_main);
+            dProgressTop = pindexBest->nHeight;
+        }
+
+        int dProgressStart = pindex ? pindex->nHeight : 0;
+        int dProgressCurrent = dProgressStart;
+        int dProgressTotal =  dProgressTop - dProgressStart;
+        double dProgressShow = 0;
+        double dProgressShowPrev = 0;
+
+        while (pindex && !fShutdown)
+        {
+            if (dProgressCurrent > 0)
+                dProgressShow = ((static_cast<double>(dProgressCurrent) / dProgressTop) * 100.0);
+
+            if ((pindex->nHeight % 100 == 0) && (dProgressTotal > 0))
+            {
+                if (dProgressShowPrev != dProgressShow)
+                {
+                    dProgressShowPrev = dProgressShow;
+                    uiInterface.InitMessage(strprintf("%s %d/%d %s... (%.2f%%)",_("Rescanning").c_str(), dProgressCurrent , dProgressTop,_("blocks").c_str(),dProgressShow));
+                }
+            }
             // no need to read and scan block, if block was created before
             // our wallet birthday (as adjusted for block time variability)
             if (nTimeFirstKey && (pindex->nTime < (nTimeFirstKey - 7200))) {
@@ -1246,11 +1269,18 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             block.ReadFromDisk(pindex, true);
             BOOST_FOREACH(CTransaction& tx, block.vtx)
             {
+                LOCK(cs_wallet);
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
                     ret++;
             }
             pindex = pindex->pnext;
+
+            // Update current height for progress
+            if (pindex) dProgressCurrent = pindex->nHeight;
+
         }
+
+        uiInterface.InitMessage(_("Rescanning complete."));
     }
     return ret;
 }
@@ -1561,6 +1591,7 @@ int64_t CWallet::GetImmatureWatchOnlyBalance() const
     }
     return nTotal;
 }
+
 // populate vCoins with vector of spendable COutputs
 void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
 {
@@ -3078,8 +3109,8 @@ bool CWallet::SendStealthMoneyToDestination(CStealthAddress& sxAddress, int64_t 
 
 bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNarr)
 {
-    if (fDebug)
-        printf("FindStealthTransactions() tx: %s\n", tx.GetHash().GetHex().c_str());
+    //if (fDebug)
+        //printf("FindStealthTransactions() tx: %s\n", tx.GetHash().GetHex().c_str());
 
     mapNarr.clear();
 
@@ -3403,7 +3434,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     // Select coins with suitable depth
     if (!SelectCoinsForStaking(nBalance - nReserveBalance, txNew.nTime, setCoins, nValueIn))
+    {
+        if (fDebug && GetBoolArg("-printcoinstakedebug"))
+            printf("CreateCoinStake() : valid staking coins not found\n");
         return false;
+    }
 
     if (setCoins.empty())
         return false;
@@ -3428,13 +3463,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 continue;
         }
 
-        static int nMaxStakeSearchInterval = 60;
+        static int nMaxStakeSearchInterval = 30;
         if (block.GetBlockTime() + nStakeMinAge > txNew.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
         bool fKernelFound = false;
         for (unsigned int n=0; n<min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound && !fShutdown && pindexPrev == pindexBest; n++)
         {
+            if (fDebug && GetBoolArg("-printcoinstakedebug"))
+                printf("CreateCoinStake() : searching backward in time from %ld for %d seconds to %d\n",txNew.nTime,nSearchInterval,nMaxStakeSearchInterval);
             // Search backward in time from the given txNew timestamp
             // Search nSearchInterval seconds back up to nMaxStakeSearchInterval
             uint256 hashProofOfStake = 0, targetProofOfStake = 0;
@@ -3511,6 +3548,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (fKernelFound || fShutdown)
             break; // if kernel is found stop searching
     }
+
+
 
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
         return false;
@@ -3680,7 +3719,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
     };
 
     mapValue_t mapNarr;
-    FindStealthTransactions(wtxNew, mapNarr);
+    if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(wtxNew, mapNarr);
 
     bool fIsMine = false;
     if (wtxNew.nVersion == ANON_TXN_VERSION)

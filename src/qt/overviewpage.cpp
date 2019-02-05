@@ -22,6 +22,7 @@
 
 const QString BaseURL = "http://denarius.io/dnrusd.php";
 const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
+const QString BaseURL3 = "http://denarius.io/newsfeed.php";
 double denariusx;
 double dnrbtcx;
 
@@ -112,7 +113,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-	//PriceRequest();
+	PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
 
@@ -136,6 +137,7 @@ void OverviewPage::PriceRequest()
 {
 	getRequest(BaseURL);
 	getRequest(BaseURL2);
+	getRequest(BaseURL3);
 	updateDisplayUnit(); //Maybe not?
 }
 
@@ -178,6 +180,16 @@ if (what == BaseURL2) // Denarius BTC Price
     dnrbtc = QString::number(dnrbtcx, 'f', 8);
 
 	bitcoing = dnrbtc;
+}
+if (what == BaseURL3) // Denarius News Feed
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString dnewsfeed = finished->readAll();
+    //dnewsfeedx = (dnewsfeed.toDouble());
+    //dnewsfeed = QString::number(dnewsfeedx, 'f', 8);
+
+	dnrnewsfeed = dnewsfeed;
 }
 finished->deleteLater();
 }
@@ -232,6 +244,10 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
     ui->labelTradeLink->setTextFormat(Qt::RichText);
     ui->labelTradeLink->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->labelTradeLink->setOpenExternalLinks(true);
+	
+	QString news;
+	news = dnrnewsfeed;
+	ui->labelNewsFeed->setText(news);
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users

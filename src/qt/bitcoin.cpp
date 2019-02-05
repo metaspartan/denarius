@@ -228,8 +228,13 @@ int main(int argc, char *argv[])
                 // Put this in a block, so that the Model objects are cleaned up before
                 // calling Shutdown().
 
-                if (splashref)
-                    splash.finish(&window);
+                QString finishMessage = QString::fromStdString(_("Done loading"));
+                while (splashref->message() != finishMessage)
+                {
+                    MilliSleep(200);
+                }
+
+                splashref->finish(&window);
 
                 //make sure user has agreed to TOU
                 window.checkTOU();

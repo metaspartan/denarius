@@ -65,6 +65,67 @@ int CountFortunastakesAboveProtocol(int protocolVersion);
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 bool CheckFortunastakeVin(CTxIn& vin, std::string& errorMessage, CBlockIndex *pindex);
 
+// For storing payData
+class CFortunaPayData
+{
+public:
+    int height;
+    uint256 hash;
+    int64_t amount;
+
+    CFortunaPayData() {
+        height = 0;
+        hash = 0;
+        amount = 0;
+    }
+
+};
+
+class CFortunaCollateral
+{
+public:
+    CTxIn vin;
+    CScript scriptPubKey;
+    int height;
+    uint256 blockHash;
+
+    CFortunaCollateral() {
+        height = 0;
+        blockHash = 0;
+    }
+};
+
+// For storing payData
+class CFortunaPayments
+{
+public:
+    std::vector<CFortunaStake> vStakes; // this array should be sorted
+    std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
+    //std::vector<CTxIn> vCollaterals;
+    std::vector<CFortunaCollateral> vCollaterals;
+    std::vector<CScript> vScripts;
+
+    CFortunaPayments() {
+        // fill vStakes array with pointers to MN's from vecFortunastakes
+    }
+
+    bool add(CFortunaStake* mn)
+    {
+        // add address of pointer into the payments array
+        return true;
+    }
+
+    bool remove(CFortunaStake* mn)
+    {
+        // remove address of pointer from the payments array
+        return true;
+    }
+
+    void update(const CBlockIndex *pindex, bool force = false);
+
+    bool initialize(const CBlockIndex* pindex);
+};
+
 //
 // The Fortunastake Class. For managing the fortuna process. It contains the input of the 5000 D, signature to prove
 // it's the one who own that ip address and code for calculating the payment election.
@@ -79,7 +140,7 @@ public:
     CPubKey pubkey;
     CPubKey pubkey2;
     std::vector<unsigned char> sig;
-    std::vector<pair<int, int64_t> > payData;
+    std::vector<CFortunaPayData> payData;
     pair<int, int64_t> payInfo;
     int64_t payRate;
     int payCount;
@@ -96,7 +157,6 @@ public:
     int64_t lastTimeChecked;
     int nBlockLastPaid;
     int64_t nTimeLastChecked;
-    int64_t nTimeLastPaid;
     int64_t nTimeRegistered;
     int nRank;
 
@@ -123,9 +183,11 @@ public:
         lastTimeChecked = 0;
         nBlockLastPaid = 0;
         nTimeLastChecked = 0;
-        nTimeLastPaid = 0;
         nTimeRegistered = newNow;
         nRank = 0;
+        payValue = 0;
+        payRate = 0;
+        payCount = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
@@ -146,10 +208,12 @@ public:
         }
     }
 
-    int IsActive(CBlockIndex* pindex) {
-        return ((lastDseep > (GetAdjustedTime() - FORTUNASTAKE_MIN_DSEEP_SECONDS)) &&
-                (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-                ); // dsee broadcast is more than a round old & active from dseeps
+    bool IsActive() {
+        if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
+        { // dsee broadcast is more than a round old, let's consider it active
+                return true;
+        }
+        return false;
     }
 
     inline uint64_t SliceHash(uint256& hash, int slice)
@@ -202,6 +266,7 @@ int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 extern int64_t nAverageFSIncome;
+bool FindFSPayment(CScript& payee, CBlockIndex* pindex=pindexBest);
 
 // for storing the winning payments
 class CFortunastakePaymentWinner

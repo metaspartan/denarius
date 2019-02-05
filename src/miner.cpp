@@ -187,7 +187,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 				bFortunaStakePayment = true;
 			}
 		}
-        if(fDebug) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
+        if(fDebug && fDebugFS) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
 	}
 
     // Fee-per-kilobyte amount considered the same as "free"
@@ -226,7 +226,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 }
                 }
                 if (found) {
-                    printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true).c_str());
+                    if (fDebug && fDebugFS) printf("CreateNewBlock: Found a fortunastake to pay: %s\n",payee.ToString(true).c_str());
                 } else {
                     printf("CreateNewBlock: Failed to detect fortunastake to pay\n");
                     // pay the burn address if it can't detect
@@ -242,7 +242,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 
             if(hasPayment){
                 payments = txNew.vout.size() + 1;
-                printf("CreateNewBlock(): Payment Size: %i\n", payments);
+                if (fDebug && fDebugNet) printf("CreateNewBlock(): Payment Size: %i\n", payments);
                 pblock->vtx[0].vout.resize(payments);
 
                 pblock->vtx[0].vout[payments-1].scriptPubKey = payee;
@@ -252,7 +252,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 ExtractDestination(payee, address1);
                 CBitcoinAddress address2(address1);
 
-                printf("CreateNewBlock(): Fortunastake payment to %s\n", address2.ToString().c_str());
+                if (fDebug && fDebugFS) printf("CreateNewBlock(): Fortunastake payment to %s\n", address2.ToString().c_str());
             }
         }
 
@@ -696,8 +696,10 @@ void StakeMiner(CWallet *pwallet)
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
+                if (fDebug  && GetBoolArg("-printcoinstake"))
+                    printf("StakeMiner() vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers()\n");
                 vnThreadsRunning[THREAD_STAKE_MINER]--;
-                MilliSleep(60000);
+                MilliSleep(5000);
                 vnThreadsRunning[THREAD_STAKE_MINER]++;
 				if (fShutdown)
                     return;
@@ -714,14 +716,15 @@ void StakeMiner(CWallet *pwallet)
 
         if (nMinStakeInterval > 0 && nTimeLastStake + (int64_t)nMinStakeInterval > GetTime())
         {
-            if (fDebug)
+            if (fDebug && GetBoolArg("-printcoinstake"))
                 printf("StakeMiner() Rate limited to 1 / %d seconds.\n", nMinStakeInterval);
-            MilliSleep(nMinStakeInterval * 500); // nMinStakeInterval / 2 seconds
+            MilliSleep(nMinStakeInterval * 1000); // nMinStakeInterval / 2 seconds
             continue;
         };
 
-        if (vecFortunastakes.size() == 0 || (mnCount > 0 && vecFortunastakes.size() < mnCount))
+        if (vecFortunastakes.size() == 0)
         {
+            if (fDebug && GetBoolArg("-printcoinstake")) printf("StakeMiner() waiting for FS list.");
             vnThreadsRunning[THREAD_STAKE_MINER]--;
             MilliSleep(10000);
             vnThreadsRunning[THREAD_STAKE_MINER]++;
@@ -732,24 +735,33 @@ void StakeMiner(CWallet *pwallet)
         // Create new block
         //
         int64_t nFees;
+        if (fDebug && GetBoolArg("-printcoinstake")) printf ("creating block. ");
         auto_ptr<CBlock> pblock(CreateNewBlock(pwallet, true, &nFees));
         if (!pblock.get())
             return;
 
+        if (fDebug && GetBoolArg("-printcoinstake")) printf ("signing block. ");
         // Trying to sign a block
         if (pblock->SignBlock(*pwallet, nFees))
         {
+            if (fDebug && GetBoolArg("-printcoinstake")) printf ("checking stake. ");
             bool staked;
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
             staked = CheckStake(pblock.get(), *pwallet);
+            if (staked && fDebug && GetBoolArg("-printcoinstake")) printf ("stake is good. \n");
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
 			if (fShutdown)
                 return;
             MilliSleep(nMinerSleep);
-            if (staked) MilliSleep(nMinerSleep*10); // sleep for a while after successfully staking
+            if (staked) {
+                nTimeLastStake = GetAdjustedTime();
+                MilliSleep(nMinerSleep*3); // sleep for a while after successfully staking
+            }
+            else if (fDebug && GetBoolArg("-printcoinstake")) printf ("stake is bad. \n");
         }
         else
         {
+            if (fDebug && GetBoolArg("-printcoinstake")) printf ("failed to sign.\n");
 			if (fShutdown)
                 return;
             MilliSleep(nMinerSleep);

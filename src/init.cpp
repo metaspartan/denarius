@@ -465,8 +465,8 @@ bool AppInit2()
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
-    nMinStakeInterval = GetArg("-minstakeinterval", 30);
-    nMinerSleep = GetArg("-minersleep", 30000); //500
+    nMinStakeInterval = GetArg("-minstakeinterval", 60); // 2 blocks, don't make pos chains!
+    nMinerSleep = GetArg("-minersleep", 10000); //default 10seconds, higher=more cpu usage
 
     // Largest block you're willing to create.
     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
@@ -586,6 +586,7 @@ bool AppInit2()
     fDebugRingSig = GetBoolArg("-debugringsig");
 
     fNoSmsg = GetBoolArg("-nosmsg");
+    fDisableStealth = GetBoolArg("-disablestealth"); // force-disable stealth transaction scanning
 
     bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
