@@ -364,7 +364,7 @@
              <enum>Qt::LeftToRight</enum>
             </property>
             <property name="text">
-             <string>Refresh Totals</string>
+             <string>          Refresh          </string>
             </property>
             <property name="icon">
              <iconset resource="../bitcoin.qrc">
@@ -545,7 +545,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="text">
-             <string>&lt;div style=&quot;color: #fff;&quot;&gt;(&lt;a href=&quot;https://www.cryptopia.co.nz/Exchange/?market=D_BTC&quot; style=&quot;color: #fff;&quot;&gt;Trade D&lt;/a&gt;)&lt;/div&gt;</string>
+             <string>&lt;div style=&quot;color: #fff;&quot;&gt;(&lt;a href=&quot;https://www.coinexchange.io/market/D/BTC&quot; style=&quot;color: #fff;&quot;&gt;Trade D&lt;/a&gt;)&lt;/div&gt;</string>
             </property>
             <property name="openExternalLinks">
              <bool>true</bool>
