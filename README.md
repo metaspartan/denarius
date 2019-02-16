@@ -61,6 +61,20 @@ ASCII CAST TUTORIALS
 [![asciicast](https://asciinema.org/a/179362.png)](https://asciinema.org/a/179362)
 [![asciicast](https://asciinema.org/a/179355.png)](https://asciinema.org/a/179355)
 
+denariusqtubuntu.sh by Buzzkillb
+===========================
+Compile the latest Denarius QT (Graphical Wallet) Ubuntu 16.04 or Ubuntu 18.04.1
+
+Credits to Buzzkillb for the creation of this bash script, original repository: https://github.com/buzzkillb/denarius-qt/
+
+Compiles Denarius QT Ubuntu 16.04 or 18.04, Grabs latest chaindata, and populates denarius.conf with addnodes or can update a previous compile to the latest master branch.  
+```bash -c "$(wget -O - https://raw.githubusercontent.com/carsenk/denarius/master/denariusqtubuntu.sh)"```  
+
+To turn on nativetor in denarius.conf  
+```nativetor=1```  
+
+![Denarius Installer Menu](https://raw.githubusercontent.com/buzzkillb/denarius-qt/master/compile-menu.PNG)  
+
 Development process
 ===========================
 
