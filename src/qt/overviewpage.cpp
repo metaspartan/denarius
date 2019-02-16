@@ -113,7 +113,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-	PriceRequest();
+    PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
 
@@ -138,7 +138,7 @@ void OverviewPage::PriceRequest()
 	getRequest(BaseURL);
 	getRequest(BaseURL2);
 	getRequest(BaseURL3);
-	updateDisplayUnit(); //Maybe not?
+    //updateDisplayUnit(); //Segfault Fix
 }
 
 void OverviewPage::getRequest( const QString &urlString )

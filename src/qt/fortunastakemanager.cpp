@@ -221,7 +221,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
-    SortedWidgetItem *payrateItem = new QTableWidgetItem(payrate);
+    SortedWidgetItem *payrateItem = new SortedWidgetItem();
 
     rankItem->setData(Qt::UserRole, rank ? rank : 2000);
     rankItem->setData(Qt::DisplayRole, rank > 0 && rank < 500000 ? QString::number(rank) : "");
@@ -396,7 +396,7 @@ void FortunastakeManager::updateNodeList()
             QTableWidgetItem *statusItem = new QTableWidgetItem(nstatus);
             QTableWidgetItem *collateralItem = new QTableWidgetItem(ncollateral);
             SortedWidgetItem *nrankItem = new SortedWidgetItem();
-            SortedWidgetItem *payrateItem = new QTableWidgetItem(npayrate);
+            SortedWidgetItem *payrateItem = new SortedWidgetItem();
 
             nrankItem->setData(Qt::UserRole, mnRank ? mnRank : 2000);
             nrankItem->setData(Qt::DisplayRole, mnRank > 0 && mnRank < 500000 ? QString::number(mnRank) : "");

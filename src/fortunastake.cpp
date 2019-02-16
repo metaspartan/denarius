@@ -1358,7 +1358,7 @@ struct MatchPubkey
 
 void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
 {
-    if (!pindex || IsInitialBlockDownload()) return 0;
+    if (!pindex || IsInitialBlockDownload()) return; //return 0 should not return value
     const CBlockIndex *BlockReading = pindex;
     int rewardCount = 0;
     int64_t rewardValue = 0;
@@ -1436,7 +1436,7 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
 
 bool CFortunaPayments::initialize(const CBlockIndex *pindex)
 {
-    if (vCollaterals.size() > 0) return;
+    if (vCollaterals.size() > 0) return 0; //return should return value here
     printf("Setting up FS payment validation...\n");
     CTxDB txdb("r");
     const CBlockIndex *BlockReading = pindex;

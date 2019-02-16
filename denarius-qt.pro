@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.6.0
+VERSION = 3.3.7.0
 INCLUDEPATH += src src/json src/qt src/tor src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -16,6 +16,10 @@ QMAKE_CFLAGS += -std=c99
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets printsupport
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
+}
+
+linux {
+    QMAKE_CFLAGS += -std=gnu99
 }
 
 win32 {
@@ -730,10 +734,11 @@ macx:ICON = src/qt/res/icons/denarius.icns
 macx:TARGET = "Denarius"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
-macx:QMAKE_MAC_SDK = macosx10.11
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
+macx:QMAKE_MAC_SDK = macosx10.14
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
 macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
+macx:QMAKE_CXXFLAGS += -stdlib=libc++
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
