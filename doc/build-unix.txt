@@ -29,6 +29,7 @@ Dependencies
  libboost     Boost             C++ Library
  miniupnpc    UPnP Support      Optional firewall-jumping support
  libqrencode  QRCode generation Optional QRCode generation
+ obfs4proxy   obfs4 Support     pluggable transport proxy for Tor
 
 Note that libexecinfo should be installed, if you building under *BSD systems.
 This library provides backtrace facility.
@@ -58,6 +59,7 @@ Versions used in this release:
  Berkeley DB   5.3.28.NC
  Boost         1.55.0
  miniupnpc     1.9.20140401
+ obfs4proxy    0.0.6-2
 
 Dependency Build Instructions: Ubuntu & Debian
 ----------------------------------------------
@@ -68,6 +70,7 @@ sudo apt-get install libboost-all-dev
 sudo apt-get install libminiupnpc-dev
 sudo apt-get install libqrencode-dev
 sudo apt-get install libevent-dev
+sudo apt-get install obfs4proxy
 
 If using Boost 1.37, append -mt to the boost libraries in the makefile.
 
