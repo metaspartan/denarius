@@ -2149,7 +2149,7 @@ static void run_tor() {
       struct stat sb;
 
       if ((stat("obfs4proxy", &sb) == 0 && sb.st_mode & S_IXUSR) || !std::system("which obfs4proxy")) {
-          clientTransportPlugin = "obfs4 exec obfs4proxy";
+          clientTransportPlugin = "obfs4 exec /usr/bin/obfs4proxy";
       } else if (stat("obfs4proxy.exe", &sb) == 0 && sb.st_mode & S_IXUSR) {
           clientTransportPlugin = "obfs4 exec obfs4proxy.exe";
       }
@@ -2162,9 +2162,9 @@ static void run_tor() {
             "--SocksPort", "9089",
             "--ClientTransportPlugin", clientTransportPlugin,
             "--UseBridges", "1",
-            "--Bridge", "obfs4 144.217.20.138:40927 FB70B257C162BF1038CA669D568D76F5B7F0BABB cert=vYIV5MgrghGQvZPIi1tJwnzorMgqgmlKaB77Y3Z9Q/v94wZBOAXkW+fdx4aSxLVnKO+xNw iat-mode=0",
+            "--Bridge", "38.229.33.135:443 8CF38F8AC7CA1ACF6051CACE5C84F3E5B3832CD1",
             "--Bridge", "obfs4 94.242.249.2:44939 E53EEA7DE6E170328F0A2C4338EE4E4DC2398218 cert=VpistQqdnS5zgkARR3he8rt03OrKhk2oobUUhLmFWAWK27pYMvjrBi6zAn1ebIcPH2xbcQ iat-mode=0",
-            "--Bridge", "obfs4 192.237.202.171:9443 5A8906F2661C5022D01D2480CAC60F977B8C2373 cert=yNYPKGK6muwdpby94ShTFU45dgCOcLZKveijCNcibdWYV3FkOX4JBVvuvwABgSNq/VatQQ iat-mode=0",
+            "--Bridge", "178.63.238.40:456 8E9B0C1B87837FF6CA730CDFB2A59DAB2D85DF08",
             "--ignore-missing-torrc",
             "-f", rc_c,
           };
