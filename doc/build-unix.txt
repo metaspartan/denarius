@@ -1,4 +1,4 @@
-Copyright (c) 2009-2012 Bitcoin Developers
+Copyright (c) 2017-2019 Denarius Developers
 Distributed under the MIT/X11 software license, see the accompanying
 file license.txt or http://www.opensource.org/licenses/mit-license.php.
 This product includes software developed by the OpenSSL Project for use in
@@ -14,7 +14,7 @@ To Build
 --------
 
 cd src/
-make -f makefile.unix            # Headless denarius
+make -f makefile.unix            # Headless Denarius
 
 See readme-qt.rst for instructions on building Denarius QT,
 the graphical denarius.
@@ -29,7 +29,8 @@ Dependencies
  libboost     Boost             C++ Library
  miniupnpc    UPnP Support      Optional firewall-jumping support
  libqrencode  QRCode generation Optional QRCode generation
- obfs4proxy   obfs4 Support     pluggable transport proxy for Tor
+ libevent-dev Libevent Support  Optional Libevent Library required for building with USE_NATIVETOR=1
+ obfs4proxy   obfs4 Support     Optional pluggable transport proxy for Native Tor
 
 Note that libexecinfo should be installed, if you building under *BSD systems.
 This library provides backtrace facility.
@@ -46,19 +47,26 @@ from http://fukuchi.org/works/qrencode/index.html.en, or installed via
 your package manager. Set USE_QRCODE to control this:
  USE_QRCODE=0   (the default) No QRCode support - libqrcode not required
  USE_QRCODE=1   QRCode support enabled
+ 
+The included Tor C Library may be used to build with Denarius for Native Tor support
+USE_NATIVETOR=- Build with no Native Tor Support
+USE_NATIVETOR=1 Build with Native Tor Support
+(e.g. make "USE_NATIVETOR=-" -f makefile.unix) To build without Tor support
 
 Licenses of statically linked libraries:
  Berkeley DB   New BSD license with additional requirement that linked
                software must be free open source
  Boost         MIT-like license
  miniupnpc     New (3-clause) BSD license
+ Tor           MIT License
 
 Versions used in this release:
  GCC           4.9.0
- OpenSSL       1.0.1g
+ OpenSSL       1.0.1j
  Berkeley DB   5.3.28.NC
  Boost         1.55.0
  miniupnpc     1.9.20140401
+ libevent	   2.1.8 Stable
  obfs4proxy    0.0.6-2
 
 Dependency Build Instructions: Ubuntu & Debian
@@ -69,6 +77,12 @@ sudo apt-get install libdb++-dev
 sudo apt-get install libboost-all-dev
 sudo apt-get install libminiupnpc-dev
 sudo apt-get install libqrencode-dev
+sudo apt-get install libevent-dev
+sudo apt-get install obfs4proxy
+
+
+Libevent-dev and obfs4proxy is only required if you are building with USE_NATIVETOR=1 support
+----------------------------------------------
 sudo apt-get install libevent-dev
 sudo apt-get install obfs4proxy
 

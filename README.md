@@ -42,6 +42,7 @@ Technology
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
+* BIP39 Support (Coin Type 114)
 * Proof of Data (Image/Data Timestamping)
 * Fast 30 Second Block Times
 * New/First Tribus PoW Algorithm comprising of 3 NIST5 algorithms
