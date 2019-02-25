@@ -28,9 +28,11 @@ using namespace boost;
 
 namespace fs = boost::filesystem;
 
+#if USE_NATIVETOR
 extern "C" {
     int tor_main(int argc, char *argv[]);
 }
+#endif
 
 static const int MAX_OUTBOUND_CONNECTIONS = 16;
 
@@ -1329,6 +1331,7 @@ static const char *strTestNetOnionSeed[][1] = {
     {NULL}
 };
 
+#if USE_NATIVETOR
 void ThreadOnionSeed(void* parg)
 {
     if(fNativeTor)
@@ -1357,7 +1360,7 @@ void ThreadOnionSeed(void* parg)
         printf("%d addresses found from .onion seeds\n", found);
     }
 };
-
+#endif
 
 
 
@@ -2129,6 +2132,7 @@ static char *convert_str(const std::string &s) {
     return pc;
 }
 
+#if USE_NATIVETOR
 // Start Tor Threads
 static void run_tor() {
   if(fNativeTor)
@@ -2196,6 +2200,7 @@ void StartTor(void* parg)
       printf("Onion thread exited.");
   }
 }
+#endif
 
 void StartNode(void* parg)
 {
@@ -2226,12 +2231,14 @@ void StartNode(void* parg)
                 printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
     } else
     {
+#if USE_NATIVETOR
         // start the onion seeder
         if (!GetBoolArg("-onionseed", true))
             printf(".onion seeding disabled\n");
         else
             if (!NewThread(ThreadOnionSeed, NULL))
 				printf("Error: could not start .onion seeding\n");
+#endif
     };
 
     // Map ports with UPnP

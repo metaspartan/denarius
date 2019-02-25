@@ -1,16 +1,18 @@
 # Copyright (c) 2009-2010 Satoshi Nakamoto
+# Copyright (c) 2017-2019 D e n a r i u s [D]
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 USE_LEVELDB:=1
 USE_UPNP:=1
+USE_NATIVETOR=1
 
 LINK:=$(CXX)
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
-DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(CURDIR)/tor $(CURDIR)/json $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
+DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(CURDIR)/json $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
 
 DEFS += -DIS_ARCH_64
@@ -35,6 +37,13 @@ LIBS += \
    -l ssl \
    -l crypto \
    -l event
+   
+ifndef USE_NATIVETOR
+	override USE_NATIVETOR = -
+endif
+ifneq (${USE_NATIVETOR}, -)
+	DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)	
+endif
 
 ifndef USE_UPNP
     override USE_UPNP = -
@@ -102,7 +111,10 @@ xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wno
 # adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
-OBJS= \
+# Tor C Library Sources
+ifeq (${USE_NATIVETOR}, 1)
+	@echo "Building with Native Tor Support ...";
+	OBJS= \
 		obj/address.o \
 		obj/addressmap.o \
 		obj/aes.o \
@@ -256,11 +268,14 @@ OBJS= \
 		obj/util_bug.o \
 		obj/util_format.o \
 		obj/util_process.o \
-		obj/workqueue.o \
+		obj/workqueue.o 
+endif
+
+OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	  obj/alert.o \
+	obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -275,7 +290,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	  obj/core.o \
+	obj/core.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
@@ -299,13 +314,13 @@ OBJS= \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
     obj/stealth.o \
-	  obj/activefortunastake.o \
-	  obj/fortunastakeconfig.o \
+	obj/activefortunastake.o \
+	obj/fortunastakeconfig.o \
     obj/fortunastake.o \
     obj/rpcfortuna.o \
     obj/spork.o \
     obj/fortuna.o \
-	  obj/eccryptoverify.o \
+	obj/eccryptoverify.o \
     obj/ringsig.o
 
 
@@ -365,19 +380,21 @@ obj/%.o: json/%.cpp
 	-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	rm -f $(@:%.o=%.d)
 
-obj/%.o: tor/%.c
-	$(CC) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	rm -f $(@:%.o=%.d)
+ifeq (${USE_NATIVETOR}, 1)
+	obj/%.o: tor/%.c
+		$(CC) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+		@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+		-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+		rm -f $(@:%.o=%.d)
 
-obj/anonymize.o: tor/anonymize.cpp
-	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	rm -f $(@:%.o=%.d)
+	obj/anonymize.o: tor/anonymize.cpp
+		$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+		@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+		-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+		rm -f $(@:%.o=%.d)
+endif
 
 denariusd: $(OBJS:obj/%=obj/%)
 	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
