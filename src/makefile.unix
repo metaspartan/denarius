@@ -5,7 +5,7 @@
 
 USE_LEVELDB:=1
 USE_UPNP:=1
-USE_NATIVETOR=1
+USE_NATIVETOR:=1
 
 LINK:=$(CXX)
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')

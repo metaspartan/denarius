@@ -2283,7 +2283,7 @@ bool CWallet::SelectCoinsCollateral(std::vector<CTxIn>& setCoinsRet, int64_t& nV
 
     BOOST_FOREACH(const COutput& out, vCoins)
     {
-        // collateral inputs will always be a multiple of DARSEND_COLLATERAL, up to five
+        // collateral inputs will always be a multiple of FORTUNA_COLLATERAL, up to five
         if(IsCollateralAmount(out.tx->vout[out.i].nValue))
         {
             CTxIn vin = CTxIn(out.tx->GetHash(),out.i);
@@ -2345,11 +2345,7 @@ bool CWallet::HasCollateralInputs() const
 
 bool CWallet::IsCollateralAmount(int64_t nInputAmount) const
 {
-    return  nInputAmount == (FORTUNA_COLLATERAL * 5)+FORTUNA_FEE ||
-            nInputAmount == (FORTUNA_COLLATERAL * 4)+FORTUNA_FEE ||
-            nInputAmount == (FORTUNA_COLLATERAL * 3)+FORTUNA_FEE ||
-            nInputAmount == (FORTUNA_COLLATERAL * 2)+FORTUNA_FEE ||
-            nInputAmount == (FORTUNA_COLLATERAL * 1)+FORTUNA_FEE;
+	return nInputAmount != 0 && nInputAmount % FORTUNA_COLLATERAL == 0 && nInputAmount < FORTUNA_COLLATERAL * 5 && nInputAmount > FORTUNA_COLLATERAL;
 }
 
 bool CWallet::CreateCollateralTransaction(CTransaction& txCollateral, std::string strReason)
