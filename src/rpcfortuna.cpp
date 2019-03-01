@@ -654,7 +654,7 @@ Value fortunastake(const Array& params, bool fHelp)
                 remoteObj.push_back(Pair("alias", mne.getAlias()));
                 remoteObj.push_back(Pair("ipaddr", address));
 				
-				if(pwalletMain->IsLocked()) {
+				if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
 					remoteObj.push_back(Pair("collateral", "Wallet is Locked"));
 				} else {
 					remoteObj.push_back(Pair("collateral", address2.ToString()));

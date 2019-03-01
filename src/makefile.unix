@@ -113,7 +113,7 @@ xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 # Tor C Library Sources
 ifeq (${USE_NATIVETOR}, 1)
-  @echo "Building with Native Tor Support ...";
+	@echo "Building with Native Tor Support ...";
   OBJS= \
     obj/address.o \
     obj/addressmap.o \
