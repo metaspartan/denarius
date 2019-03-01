@@ -21,9 +21,7 @@
 #include "ringsig.h"
 
 #ifdef USE_NATIVETOR
-#if USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
-#endif
 #endif
 
 #include <boost/filesystem.hpp>
@@ -865,7 +863,7 @@ bool AppInit2()
         };
     };
 	
-#if USE_NATIVETOR
+#ifdef USE_NATIVETOR
     // Native Tor Integration Continued - D e n a r i u s v3
     if(fNativeTor)
     {

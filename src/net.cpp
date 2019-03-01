@@ -28,7 +28,7 @@ using namespace boost;
 
 namespace fs = boost::filesystem;
 
-#if USE_NATIVETOR
+#ifdef USE_NATIVETOR
 extern "C" {
     int tor_main(int argc, char *argv[]);
 }
@@ -1331,7 +1331,7 @@ static const char *strTestNetOnionSeed[][1] = {
     {NULL}
 };
 
-#if USE_NATIVETOR
+#ifdef USE_NATIVETOR
 void ThreadOnionSeed(void* parg)
 {
     if(fNativeTor)
@@ -2132,7 +2132,7 @@ static char *convert_str(const std::string &s) {
     return pc;
 }
 
-#if USE_NATIVETOR
+#ifdef USE_NATIVETOR
 // Start Tor Threads
 static void run_tor() {
   if(fNativeTor)
@@ -2231,7 +2231,7 @@ void StartNode(void* parg)
                 printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
     } else
     {
-#if USE_NATIVETOR
+#ifdef USE_NATIVETOR
         // start the onion seeder
         if (!GetBoolArg("-onionseed", true))
             printf(".onion seeding disabled\n");
