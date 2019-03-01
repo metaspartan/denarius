@@ -42,7 +42,8 @@ ifndef USE_NATIVETOR
   override USE_NATIVETOR = -
 endif
 ifneq (${USE_NATIVETOR}, -)
-  DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)
+DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)
+  	@echo "Building with Native Tor Support ...";
 endif
 
 ifndef USE_UPNP
@@ -113,7 +114,6 @@ xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 # Tor C Library Sources
 ifeq (${USE_NATIVETOR}, 1)
-	@echo "Building with Native Tor Support ...";
   OBJS= \
     obj/address.o \
     obj/addressmap.o \
