@@ -67,7 +67,7 @@ public:
     OptionsModel *getOptionsModel();
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
-	  MintingTableModel *getMintingTableModel();
+	MintingTableModel *getMintingTableModel();
 
     qint64 getBalance() const;
     qint64 getLockedBalance() const;
