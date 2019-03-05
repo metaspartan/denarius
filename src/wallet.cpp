@@ -626,13 +626,13 @@ void CWallet::MarkDirty()
     }
 }
 
-bool CWallet::AddToWallet(const CWalletTx& wtxIn)
+bool CWallet::AddToWallet(const CWalletTx& wtxIn, const uint256& hashIn)
 {
-    uint256 hash = wtxIn.GetHash();
+    //uint256 hash = wtxIn.GetHash();
     {
         LOCK(cs_wallet);
         // Inserts only if not already there, returns tx inserted or tx found
-        pair<map<uint256, CWalletTx>::iterator, bool> ret = mapWallet.insert(make_pair(hash, wtxIn));
+        pair<map<uint256, CWalletTx>::iterator, bool> ret = mapWallet.insert(make_pair(hashIn, wtxIn));
         CWalletTx& wtx = (*ret.first).second;
         wtx.BindWallet(this);
         bool fInsertedNew = ret.second;
@@ -683,7 +683,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
                 }
                 else
                     printf("AddToWallet() : found %s in block %s not in index\n",
-                           wtxIn.GetHash().ToString().substr(0,10).c_str(),
+                           hashIn.ToString().substr(0,10).c_str(),
                            wtxIn.hashBlock.ToString().c_str());
             }
         }
@@ -741,9 +741,46 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
         WalletUpdateSpent(wtx, (wtxIn.hashBlock != 0));
 
         // Notify UI of new or updated transaction
-        NotifyTransactionChanged(this, hash, fInsertedNew ? CT_NEW : CT_UPDATED);
+        NotifyTransactionChanged(this, hashIn, fInsertedNew ? CT_NEW : CT_UPDATED);
 
-		vMintingWalletUpdated.push_back(hash);
+		vMintingWalletUpdated.push_back(hashIn);
+		
+		//Add unspent outputs to bloom filters 
+		if (fInsertedNew == CT_NEW)
+        {
+            uint32_t nAdded = 0;
+
+            // -- add unspent outputs to bloom filters
+            BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+            {
+                if (wtx.nVersion == ANON_TXN_VERSION
+                    && txin.IsAnonInput())
+                    continue;
+
+                WalletTxMap::iterator mi = mapWallet.find(txin.prevout.hash);
+                if (mi == mapWallet.end())
+                    continue;
+
+                CWalletTx& wtxPrev = (*mi).second;
+
+                if (txin.prevout.n >= wtxPrev.vout.size())
+                {
+                    printf("AddToWallet(): bad wtx %s\n", wtxPrev.GetHash().ToString().c_str());
+                } else
+                if (!wtxPrev.IsSpent(txin.prevout.n) && IsMine(wtxPrev.vout[txin.prevout.n]))
+                {
+
+                    CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
+                    stream << txin.prevout;
+                    std::vector<unsigned char> vData(stream.begin(), stream.end());
+                    //AddDataToMerkleFilters(vData);
+                    nAdded++;
+                };
+            };
+
+            if (fDebug)
+                printf("AddToWallet() Added %u outputs to bloom filters.\n", nAdded);
+        }
 
         // notify an external script when a wallet transaction comes in or is updated
         std::string strCmd = GetArg("-walletnotify", "");
@@ -818,7 +855,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
             if (pcblock)
                 wtx.SetMerkleBranch(pcblock);
 
-            return AddToWallet(wtx); //AddToWallet(wtx, hash);
+            return AddToWallet(wtx, hash); //AddToWallet(wtx);
         } else
         {
             WalletUpdateSpent(tx);
@@ -3778,7 +3815,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
 
 // Call after CreateTransaction unless you want to abort
-bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
+bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
 {
 
     if (!wtxNew.CheckTransaction())
@@ -3800,7 +3837,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
         walletdb.TxnBegin();
         txdb.TxnBegin();
         std::vector<std::map<uint256, CWalletTx>::iterator> vUpdatedTxns;
-        if (!ProcessAnonTransaction(&walletdb, &txdb, wtxNew, wtxNew.hashBlock, fIsMine, mapNarr, vUpdatedTxns))
+        if (!ProcessAnonTransaction(&walletdb, &txdb, wtxNew, wtxNew.hashBlock, fIsMine, mapNarr, vUpdatedTxns, mapPubStealth))
         {
             printf("CommitTransaction: ProcessAnonTransaction() failed %s\n", wtxNew.GetHash().ToString().c_str());
             walletdb.TxnAbort();
@@ -3832,11 +3869,12 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
             CWalletDB* pwalletdb = fFileBacked ? new CWalletDB(strWalletFile,"r") : NULL;
 
             // Take key pair from key pool so it won't be used again
-            reservekey.KeepKey();
+            //reservekey.KeepKey();
 
             // Add tx to wallet, because if it has change it's also ours,
             // otherwise just for transaction history.
-            AddToWallet(wtxNew);
+			uint256 hash = wtxNew.GetHash();
+            AddToWallet(wtxNew, hash);
 
             // Mark old coins as spent
             set<CWalletTx*> setCoins;
@@ -3868,6 +3906,21 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
             return false;
         }
         wtxNew.RelayWalletTransaction();
+		
+		// - look for new change addresses
+        BOOST_FOREACH(CTxOut txout, wtxNew.vout)
+        {
+            if (wtxNew.nVersion == ANON_TXN_VERSION
+                && txout.IsAnonOutput())
+                continue;
+
+            if (IsChange(txout))
+            {
+                CTxDestination txoutAddr;
+                if (!ExtractDestination(txout.scriptPubKey, txoutAddr))
+                    continue;
+            };
+        };
     }
     return true;
 }
@@ -4704,7 +4757,7 @@ bool CWallet::UpdateAnonTransaction(CTxDB* ptxdb, const CTransaction& tx, const 
 };
 
 
-bool CWallet::UndoAnonTransaction(const CTransaction& tx)
+bool CWallet::UndoAnonTransaction(const CTransaction& tx, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
 {
     if (fDebugRingSig)
         printf("UndoAnonTransaction() tx: %s\n", tx.GetHash().GetHex().c_str());
@@ -4716,6 +4769,14 @@ bool CWallet::UndoAnonTransaction(const CTransaction& tx)
 
     CWalletDB walletdb(strWalletFile, "cr+");
     CTxDB txdb("cr+");
+	
+	// Remove all pub to stealth key mappings
+    if (mapPubStealth != NULL)
+    {
+        for (auto& element : *mapPubStealth) {
+            DelAddressBookName(element.first);
+        }
+    }
 
     for (unsigned int i = 0; i < tx.vin.size(); ++i)
     {
@@ -4860,22 +4921,31 @@ bool CWallet::UndoAnonTransaction(const CTransaction& tx)
     return true;
 };
 
-bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash, bool& fIsMine, mapValue_t& mapNarr, std::vector<std::map<uint256, CWalletTx>::iterator>& vUpdatedTxns)
+bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash, bool& fIsMine, mapValue_t& mapNarr, std::vector<std::map<uint256, CWalletTx>::iterator>& vUpdatedTxns, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
 {
     uint256 txnHash = tx.GetHash();
 
     if (fDebugRingSig)
+	{
         printf("ProcessAnonTransaction() tx: %s\n", txnHash.GetHex().c_str());
+		AssertLockHeld(cs_main);
+        AssertLockHeld(cs_wallet);
+	};
 
-    // -- must hold cs_main and cs_wallet lock
     //    txdb and walletdb must be in a transaction (no commit if fail)
+	
+	bool fHasNonAnonInputs = false;
+    bool fHasNonAnonOutputs = false;
+    bool fDebitAnonFromMe = false;
 
     for (uint32_t i = 0; i < tx.vin.size(); ++i)
     {
         const CTxIn& txin = tx.vin[i];
 
-        if (!txin.IsAnonInput())
+        if (!txin.IsAnonInput()) {
+            fHasNonAnonInputs = true;
             continue;
+        }
 
         const CScript &s = txin.scriptSig;
 
@@ -4913,6 +4983,10 @@ bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTrans
         COwnedAnonOutput oao;
         if (pwdb->ReadOwnedAnonOutput(vchImage, oao))
         {
+			
+			// remember that this transaction debits from me
+            fDebitAnonFromMe = true;
+			
             if (fDebugRingSig)
                 printf("ProcessAnonTransaction(): input %d keyimage %s found in wallet (owned).\n", i, HexStr(vchImage).c_str());
 
@@ -4971,6 +5045,7 @@ bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTrans
         CPubKey pkRingCoin;
         CAnonOutput ao;
         CTxIndex txindex;
+		
         const unsigned char* pPubkeys = &s[2];
         for (uint32_t ri = 0; ri < (uint32_t)nRingSize; ++ri)
         {
@@ -5109,8 +5184,14 @@ bool CWallet::ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTrans
             break;
         };
 
-        if (!fOwnOutput)
+        if (!fOwnOutput) {
+			if (mapPubStealth && mapPubStealth->count(ckCoinId)) {
+                // if we have stealth address for the non owned pubkey, add the mapping to the addressbook
+                SetAddressBookName(ckCoinId, mapPubStealth->at(ckCoinId).Encoded());
+            }
+            //fNotAllOutputsOwned = true; // remember that at least one output is not owned
             continue;
+		}
 
         if (fDebugRingSig)
             printf("anon output match tx, no %s, %u\n", txnHash.GetHex().c_str(), i);
@@ -5392,7 +5473,7 @@ bool CWallet::CreateStealthOutput(CStealthAddress* sxAddress, int64_t nValue, st
     return true;
 };
 
-bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std::string& sNarr, std::vector<std::pair<CScript, int64_t> >& vecSend, CScript& scriptNarration)
+bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std::string& sNarr, std::vector<std::pair<CScript, int64_t> >& vecSend, CScript& scriptNarration, std::map<CKeyID, CStealthAddress>* const mapPubStealth)
 {
     if (fDebugRingSig)
         printf("CreateAnonOutputs()\n");
@@ -5401,8 +5482,6 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
     ec_secret scShared;
     ec_point  pkSendTo;
     ec_point  pkEphem;
-
-    CPubKey   cpkTo;
 
     // -- output scripts OP_RETURN ANON_TOKEN pkTo R enarr
     //    Each outputs split from the amount must go to a unique pk, or the key image would be the same
@@ -5418,6 +5497,8 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
 
     for (uint32_t i = 0; i < vOutAmounts.size(); ++i)
     {
+		CPubKey   cpkTo;
+
         if (GenerateRandomSecret(scEphem) != 0)
         {
             printf("GenerateRandomSecret failed.\n");
@@ -5444,6 +5525,10 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
                 printf("Could not generate ephem public key.\n");
                 return false;
             };
+			
+			if (mapPubStealth)
+                // save which stealth address was used for creating this key
+                (*mapPubStealth)[cpkTo.GetID()] = *sxAddress;
         };
 
         CScript scriptSendTo;
@@ -6370,13 +6455,13 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
 
     if (IsLocked())
     {
-        sError = _("Error: Wallet locked, unable to create transaction.");
+        sError = _("Error: Wallet is locked, unable to create transaction.");
         return false;
     };
 
     if (fWalletUnlockStakingOnly)
     {
-        sError = _("Error: Wallet unlocked for staking, unable to create transaction.");
+        sError = _("Error: Wallet is unlocked for staking only, unable to create transaction.");
         return false;
     };
 
@@ -6411,8 +6496,9 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
     CScript scriptNarration; // needed to match output id of narr
     std::vector<std::pair<CScript, int64_t> > vecSend;
     CReserveKey reservekey(this);
+	std::map<CKeyID, CStealthAddress> mapPubStealth;
 
-    if (!CreateAnonOutputs(&sxAddress, nValue, sNarr, vecSend, scriptNarration))
+    if (!CreateAnonOutputs(&sxAddress, nValue, sNarr, vecSend, scriptNarration, &mapPubStealth))
     {
         sError = "CreateAnonOutputs() failed.";
         return false;
@@ -6460,10 +6546,10 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
     };
 
 
-    if (!CommitTransaction(wtxNew, reservekey))
+    if (!CommitTransaction(wtxNew, reservekey, &mapPubStealth))
     {
         sError = "Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.";
-        UndoAnonTransaction(wtxNew);
+        UndoAnonTransaction(wtxNew, &mapPubStealth);
         return false;
     };
 
@@ -6518,9 +6604,10 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
     CScript scriptNarration; // needed to match output id of narr
     std::vector<std::pair<CScript, int64_t> > vecSend;
     std::vector<std::pair<CScript, int64_t> > vecChange;
+    std::map<CKeyID, CStealthAddress> mapPubStealth;
+	CReserveKey reservekey(this);
 
-
-    if (!CreateAnonOutputs(&sxAddress, nValue, sNarr, vecSend, scriptNarration))
+    if (!CreateAnonOutputs(&sxAddress, nValue, sNarr, vecSend, scriptNarration, &mapPubStealth))
     {
         sError = "CreateAnonOutputs() failed.";
         return false;
@@ -6528,7 +6615,6 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
 
     // -- shuffle outputs (any point?)
     //std::random_shuffle(vecSend.begin(), vecSend.end());
-    CReserveKey reservekey(this);
     int64_t nFeeRequired;
     std::string sError2;
 
@@ -6557,10 +6643,10 @@ bool CWallet::SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRi
         };
     };
 
-    if (!CommitTransaction(wtxNew, reservekey))
+    if (!CommitTransaction(wtxNew, reservekey, &mapPubStealth))
     {
         sError = "Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.";
-        UndoAnonTransaction(wtxNew);
+        UndoAnonTransaction(wtxNew, &mapPubStealth);
         return false;
     };
 
@@ -6608,17 +6694,37 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
         sError = "Insufficient Anonymous D Funds";
         return false;
     };
+	
+	std::ostringstream ssThrow;
+    if (nRingSize < MIN_RING_SIZE || nRingSize > MAX_RING_SIZE)
+    {
+        sError = tfm::format("Ring size must be >= %d and <= %d.", MIN_RING_SIZE, MAX_RING_SIZE);
+        return false;
+    }
 
     wtxNew.nVersion = ANON_TXN_VERSION;
 
     std::vector<std::pair<CScript, int64_t> > vecSend;
     std::vector<std::pair<CScript, int64_t> > vecChange;
     std::map<int, std::string> mapStealthNarr;
-    if (!CreateStealthOutput(&sxAddress, nValue, sNarr, vecSend, mapStealthNarr, sError))
+	CScript scriptNarration;
+	std::string sError2;
+	
+    if (!CreateStealthOutput(&sxAddress, nValue, sNarr, vecSend, mapStealthNarr, sError2))
     {
-        printf("SendCoinsAnon() CreateStealthOutput failed %s.\n", sError.c_str());
+        printf("SendAnonToD() CreateStealthOutput failed %s.\n", sError2.c_str());
+		sError = "CreateStealthOutput() failed : " + sError2;
         return false;
     };
+	
+	if (!SaveNarrationOutput(wtxNew, scriptNarration, sNarr, sError2))
+    {
+        printf("SendAnonToD() SaveNarrationOutput failed %s.\n", sError2.c_str());
+        sError = "SaveNarrationOutput() failed : " + sError2;
+        return false;
+    }
+	
+	/*
     std::map<int, std::string>::iterator itN;
     for (itN = mapStealthNarr.begin(); itN != mapStealthNarr.end(); ++itN)
     {
@@ -6631,11 +6737,12 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
         };
         wtxNew.mapValue[key] = itN->second;
     };
+	*/
 
     // -- get anon inputs
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
-    std::string sError2;
+	
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
         printf("SendAnonToD() AddAnonInputs failed %s.\n", sError2.c_str());
@@ -6652,6 +6759,27 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
 
     return true;
 };
+
+bool CWallet::SaveNarrationOutput(CWalletTx& wtxNew, const CScript& scriptNarration, const std::string& sNarr, std::string& sError)
+{
+    if (scriptNarration.size() > 0)
+    {
+        for (uint32_t k = 0; k < wtxNew.vout.size(); ++k)
+        {
+            if (wtxNew.vout[k].scriptPubKey != scriptNarration)
+                continue;
+            char key[64];
+            if (snprintf(key, sizeof(key), "n_%u", k) < 1)
+            {
+                sError = "Error creating narration key.";
+                return false;
+            };
+            wtxNew.mapValue[key] = sNarr;
+            break;
+        }
+    }
+    return true;
+}
 
 bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError)
 {
