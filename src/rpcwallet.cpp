@@ -2329,6 +2329,9 @@ Value senddtoanon(const Array& params, bool fHelp)
     std::string sNarr;
     if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
         sNarr = params[2].get_str();
+	
+	if (sNarr.length() == 0)
+        throw std::runtime_error("Narration is required.");
 
     if (sNarr.length() > 24)
         throw std::runtime_error("Narration must be 24 characters or less.");

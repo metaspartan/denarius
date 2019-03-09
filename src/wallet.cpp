@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2017-2019 Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +16,7 @@
 #include "fortuna.h"
 #include "fortunastake.h"
 #include "bloom.h"
+
 #include <random>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm.hpp>
@@ -2836,7 +2838,7 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
     std::set<CStealthAddress>::iterator it;
     for (it = stealthAddresses.begin(); it != stealthAddresses.end(); ++it)
     {
-        if (it->scan_secret.size() < 32)
+        if (it->scan_secret.size() < EC_SECRET_SIZE)
             continue; // stealth address is not owned
 
         // -- CStealthAddress are only sorted on spend_pubkey
@@ -2847,15 +2849,15 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
 
         CSecret vchSecret;
         uint256 iv = Hash(sxAddr.spend_pubkey.begin(), sxAddr.spend_pubkey.end());
-        if(!DecryptSecret(vMasterKeyIn, sxAddr.spend_secret, iv, vchSecret)
-            || vchSecret.size() != 32)
+        if (!DecryptSecret(vMasterKeyIn, sxAddr.spend_secret, iv, vchSecret)
+            || vchSecret.size() != EC_SECRET_SIZE)
         {
             printf("Error: Failed decrypting stealth key %s\n", sxAddr.Encoded().c_str());
             continue;
         };
 
         ec_secret testSecret;
-        memcpy(&testSecret.e[0], &vchSecret[0], 32);
+        memcpy(&testSecret.e[0], &vchSecret[0], EC_SECRET_SIZE);
         ec_point pkSpendTest;
 
         if (SecretToPublicKey(testSecret, pkSpendTest) != 0
@@ -2865,8 +2867,8 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
             continue;
         };
 
-        sxAddr.spend_secret.resize(32);
-        memcpy(&sxAddr.spend_secret[0], &vchSecret[0], 32);
+        sxAddr.spend_secret.resize(EC_SECRET_SIZE);
+        memcpy(&sxAddr.spend_secret[0], &vchSecret[0], EC_SECRET_SIZE);
     };
 
     CryptedKeyMap::iterator mi = mapCryptedKeys.begin();
@@ -2883,14 +2885,16 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
         StealthKeyMetaMap::iterator mi = mapStealthKeyMeta.find(ckid);
         if (mi == mapStealthKeyMeta.end())
         {
-            printf("Error: No metadata found to add secret for %s\n", addr.ToString().c_str());
+            // -- could be an anon output
+            if (fDebug)
+                printf("Warning: No metadata found to add secret for %s\n", addr.ToString().c_str());
             continue;
         };
 
         CStealthKeyMetadata& sxKeyMeta = mi->second;
 
         CStealthAddress sxFind;
-        sxFind.scan_pubkey = sxKeyMeta.pkScan.Raw();
+        sxFind.SetScanPubKey(sxKeyMeta.pkScan);
 
         std::set<CStealthAddress>::iterator si = stealthAddresses.find(sxFind);
         if (si == stealthAddresses.end())
@@ -2906,61 +2910,33 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
         ec_secret sSpend;
         ec_secret sScan;
 
-        if (si->spend_secret.size() != ec_secret_size
-            || si->scan_secret.size() != ec_secret_size)
+        if (si->spend_secret.size() != EC_SECRET_SIZE
+            || si->scan_secret.size() != EC_SECRET_SIZE)
         {
             printf("Stealth address has no secret key for %s\n", addr.ToString().c_str());
             continue;
-        }
-        memcpy(&sScan.e[0], &si->scan_secret[0], ec_secret_size);
-        memcpy(&sSpend.e[0], &si->spend_secret[0], ec_secret_size);
+        };
+        memcpy(&sScan.e[0], &si->scan_secret[0], EC_SECRET_SIZE);
+        memcpy(&sSpend.e[0], &si->spend_secret[0], EC_SECRET_SIZE);
 
-        ec_point pkEphem = sxKeyMeta.pkEphem.Raw();
+        ec_point pkEphem;;
+        pkEphem.resize(sxKeyMeta.pkEphem.size());
+        memcpy(&pkEphem[0], sxKeyMeta.pkEphem.begin(), sxKeyMeta.pkEphem.size());
+
         if (StealthSecretSpend(sScan, pkEphem, sSpend, sSpendR) != 0)
         {
             printf("StealthSecretSpend() failed.\n");
             continue;
         };
 
-        ec_point pkTestSpendR;
-        if (SecretToPublicKey(sSpendR, pkTestSpendR) != 0)
-        {
-            printf("SecretToPublicKey() failed.\n");
-            continue;
-        };
+        //CKey ckey;
+        //ckey.Set(&sSpendR.e[0], true);
+		
+		CKey ckey;
+		CSecret vchSecret;
+		vchSecret.resize(ec_secret_size);
 
-        CSecret vchSecret;
-        vchSecret.resize(ec_secret_size);
-
-        memcpy(&vchSecret[0], &sSpendR.e[0], ec_secret_size);
-        CKey ckey;
-
-        try {
-            ckey.Set(vchSecret.begin(), vchSecret.end(), true);
-            //ckey.SetSecret(vchSecret, true);
-        } catch (std::exception& e) {
-            printf("ckey.SetSecret() threw: %s.\n", e.what());
-            continue;
-        };
-
-        CPubKey cpkT = ckey.GetPubKey();
-
-        if (!cpkT.IsValid())
-        {
-            printf("cpkT is invalid.\n");
-            continue;
-        };
-
-        if (cpkT != pubKey)
-        {
-            printf("Error: Generated secret does not match.\n");
-            if (fDebug)
-            {
-                printf("cpkT   %s\n", HexStr(cpkT.Raw()).c_str());
-                printf("pubKey %s\n", HexStr(pubKey.Raw()).c_str());
-            };
-            continue;
-        };
+		ckey.Set(&vchSecret[0], &sSpendR.e[0], true);
 
         if (!ckey.IsValid())
         {
@@ -2968,16 +2944,35 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
             continue;
         };
 
+        CPubKey cpkT = ckey.GetPubKey();
+
+        if (!cpkT.IsValid())
+        {
+            printf("%s: cpkT is invalid.\n", __func__);
+            continue;
+        };
+
+        if (cpkT != pubKey)
+        {
+            printf("%s: Error: Generated secret does not match.\n", __func__);
+            if (fDebug)
+            {
+                printf("cpkT   %s\n", HexStr(cpkT).c_str());
+                printf("pubKey %s\n", HexStr(pubKey).c_str());
+            };
+            continue;
+        };
+
         if (fDebug)
         {
             CKeyID keyID = cpkT.GetID();
             CBitcoinAddress coinAddress(keyID);
-            printf("Adding secret to key %s.\n", coinAddress.ToString().c_str());
+            printf("%s: Adding secret to key %s.\n", __func__, coinAddress.ToString().c_str());
         };
 
-        if (!AddKey(ckey))
+        if (!AddKeyPubKey(ckey, cpkT))
         {
-            printf("AddKey failed.\n");
+            printf("%s: AddKeyPubKey failed.\n", __func__);
             continue;
         };
 
@@ -6935,6 +6930,7 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
     std::vector<std::pair<CScript, int64_t> > vecSend;
     CReserveKey reservekey(this);
 	std::map<CKeyID, CStealthAddress> mapPubStealth;
+	
 
     if (!CreateAnonOutputs(&sxAddress, nValue, sNarr, vecSend, scriptNarration, &mapPubStealth))
     {
@@ -6944,11 +6940,11 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
 
 
 	// -- shuffle outputs
-	// Removed with c++17, see https://en.cppreference.com/w/cpp/algorithm/random_shuffle
-	//    std::random_shuffle(vecSend.begin(), vecSend.end());
-    std::random_device rng;
-    std::mt19937 urng(rng());
-    std::shuffle(vecSend.begin(), vecSend.end(), urng);
+	// Remove with c++17, see https://en.cppreference.com/w/cpp/algorithm/random_shuffle
+	std::random_shuffle(vecSend.begin(), vecSend.end());
+    //std::random_device rng;
+    //std::mt19937 urng(rng());
+    //std::shuffle(vecSend.begin(), vecSend.end(), urng);
 	
 
     int64_t nFeeRequired;
@@ -7278,7 +7274,7 @@ bool CWallet::ExpandLockedAnonOutput(CWalletDB *pwdb, CKeyID &ckeyId, CLockedAno
     };
 
     CStealthAddress sxFind;
-    //sxFind.SetScanPubKey(lao.pkScan);
+    sxFind.SetScanPubKey(lao.pkScan);
 
     bool fFound = false;
     ec_secret sSpendR;
@@ -7356,7 +7352,12 @@ bool CWallet::ExpandLockedAnonOutput(CWalletDB *pwdb, CKeyID &ckeyId, CLockedAno
         return error("%s: SecretToPublicKey() failed.", __func__);
 
 
-    CKey key;
+    //CKey key;
+	CKey key;
+	CSecret vchSecret;
+	vchSecret.resize(ec_secret_size);
+	
+	key.Set(&vchSecret[0], &sSpendR.e[0], true);
     if (!key.IsValid())
         return error("%s: Reconstructed key is invalid.", __func__);
 
