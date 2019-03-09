@@ -15,6 +15,7 @@
 #include "fortuna.h"
 #include "fortunastake.h"
 #include "bloom.h"
+#include <random>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -4843,9 +4844,6 @@ bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::v
 
     if (fTestOnly)
         return true;
-        
-    CWalletDB walletdb(strWalletFile, "cr+");
-    CTxDB txdb("cr+");
 
     uint256 preimage;
     if (GetTxnPreImage(wtxNew, preimage) != 0)
@@ -6945,8 +6943,13 @@ bool CWallet::SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::strin
     };
 
 
-    // -- shuffle outputs
-    std::random_shuffle(vecSend.begin(), vecSend.end());
+	// -- shuffle outputs
+	// Removed with c++17, see https://en.cppreference.com/w/cpp/algorithm/random_shuffle
+	//    std::random_shuffle(vecSend.begin(), vecSend.end());
+    std::random_device rng;
+    std::mt19937 urng(rng());
+    std::shuffle(vecSend.begin(), vecSend.end(), urng);
+	
 
     int64_t nFeeRequired;
     if (!CreateTransaction(scriptNarration, nValue, sNarr, wtxNew, reservekey, nFeeRequired))

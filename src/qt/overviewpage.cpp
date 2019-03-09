@@ -17,8 +17,8 @@
 #include <QScrollArea>
 //#include <QScroller>
 
-#define DECORATION_SIZE 64
-#define NUM_ITEMS 3
+#define DECORATION_SIZE 34
+#define NUM_ITEMS 7
 
 const QString BaseURL = "http://denarius.io/dnrusd.php";
 const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
