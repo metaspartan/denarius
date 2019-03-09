@@ -4847,13 +4847,6 @@ bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::v
     CWalletDB walletdb(strWalletFile, "cr+");
     CTxDB txdb("cr+");
 
-    // Remove all pub to stealth key mappings
-    if (mapPubStealth != NULL)
-    {
-        //for (auto& element : *mapPubStealth) {
-            //DelAddressBookName(element.first);
-        //} //TODO
-    }
     uint256 preimage;
     if (GetTxnPreImage(wtxNew, preimage) != 0)
     {
