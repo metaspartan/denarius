@@ -744,8 +744,8 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, const uint256& hashIn)
         NotifyTransactionChanged(this, hashIn, fInsertedNew ? CT_NEW : CT_UPDATED);
 
 		vMintingWalletUpdated.push_back(hashIn);
-		
-		//Add unspent outputs to bloom filters 
+
+		//Add unspent outputs to bloom filters
 		if (fInsertedNew == CT_NEW)
         {
             uint32_t nAdded = 0;
@@ -1087,7 +1087,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         int64_t nValueOut = GetValueOut();
         nFee = nDebit - nValueOut;
     };
-	
+
 	// Sent/received.
     for (unsigned int i = 0; i < vout.size(); ++i)
     {
@@ -1101,7 +1101,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
             bool fIsMine = pwallet->HaveKey(ckidD);
 
             CTxDestination address = ckidD;
-			
+
 			COutputEntry output = {address, txout.nValue, (int)i};
 
             // If we are debited by the transaction, add the output as a "sent" entry
@@ -1114,7 +1114,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
 
             continue;
         };
-		
+
 		// Skip special stake out
         if (txout.scriptPubKey.empty())
             continue;
@@ -1148,7 +1148,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
                 this->GetHash().ToString().c_str());
             address = CNoDestination();
         };
-		
+
 		COutputEntry output = {address, txout.nValue, (int)i};
 
         // If we are debited by the transaction, add the output as a "sent" entry
@@ -1189,8 +1189,8 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         else if (!(fIsMine = pwallet->IsMine(txout)))
             continue;
 
-		
-		
+
+
     // Sent/received.
     for (unsigned int i = 0; i < vout.size(); ++i)
     {
@@ -3028,7 +3028,7 @@ bool CWallet::UpdateStealthAddress(std::string &addr, std::string &label, bool a
         it->label = label; // update in .stealthAddresses
 
         if (sxFound.scan_secret.size() == ec_secret_size)
-        {			
+        {
 			// -- read from db to keep encryption
             CStealthAddress sxOwned;
 
@@ -3912,7 +3912,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, cons
             return false;
         }
         wtxNew.RelayWalletTransaction();
-		
+
 		// - look for new change addresses
         BOOST_FOREACH(CTxOut txout, wtxNew.vout)
         {
@@ -4670,7 +4670,7 @@ bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::v
 {
     if (fDebugRingSig)
         printf("AddAnonInputs() %d, %d, rsType:%d\n", nTotalOut, nRingSize, rsType);
-	
+
 	if (nRingSize < (int)MIN_RING_SIZE
             ||nRingSize > (nBestHeight ? (int)MAX_RING_SIZE : (int)MAX_RING_SIZE_OLD))
     {
@@ -4843,7 +4843,17 @@ bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::v
 
     if (fTestOnly)
         return true;
+        
+    CWalletDB walletdb(strWalletFile, "cr+");
+    CTxDB txdb("cr+");
 
+    // Remove all pub to stealth key mappings
+    if (mapPubStealth != NULL)
+    {
+        //for (auto& element : *mapPubStealth) {
+            //DelAddressBookName(element.first);
+        //} //TODO
+    }
     uint256 preimage;
     if (GetTxnPreImage(wtxNew, preimage) != 0)
     {
@@ -5089,7 +5099,7 @@ bool CWallet::UndoAnonTransaction(const CTransaction& tx, const std::map<CKeyID,
 
     CWalletDB walletdb(strWalletFile, "cr+");
     CTxDB txdb("cr+");
-	
+
 	// Remove all pub to stealth key mappings
     if (mapPubStealth != NULL)
     {
@@ -5603,11 +5613,11 @@ bool CWallet::ProcessAnonTransaction(CWalletDB *pwdb, CTxDB *ptxdb, const CTrans
 
             //CKey ckey;
             //ckey.Set(&sSpendR.e[0], true); D E N A R I U S ProcessAnonTransaction()
-			
+
 			CKey ckey;
 			CSecret vchSecret;
             vchSecret.resize(ec_secret_size);
-			
+
 			ckey.Set(&vchSecret[0], &sSpendR.e[0], true);
 
             if (!ckey.IsValid())
@@ -5870,7 +5880,7 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
                 printf("Could not generate ephem public key.\n");
                 return false;
             };
-			
+
 			if (mapPubStealth)
                 // save which stealth address was used for creating this key
                 (*mapPubStealth)[cpkTo.GetID()] = *sxAddress;
@@ -7131,7 +7141,7 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
         sError = "Insufficient Anonymous D Funds";
         return false;
     };
-	
+
 	std::ostringstream ssThrow;
     if (nRingSize < MIN_RING_SIZE || nRingSize > MAX_RING_SIZE)
     {
@@ -7146,21 +7156,21 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
     std::map<int, std::string> mapStealthNarr;
 	CScript scriptNarration;
 	std::string sError2;
-	
+
     if (!CreateStealthOutput(&sxAddress, nValue, sNarr, vecSend, mapStealthNarr, sError2))
     {
         printf("SendAnonToD() CreateStealthOutput failed %s.\n", sError2.c_str());
 		sError = "CreateStealthOutput() failed : " + sError2;
         return false;
     };
-	
+
 	if (!SaveNarrationOutput(wtxNew, scriptNarration, sNarr, sError2))
     {
         printf("SendAnonToD() SaveNarrationOutput failed %s.\n", sError2.c_str());
         sError = "SaveNarrationOutput() failed : " + sError2;
         return false;
     }
-	
+
 	/*
     std::map<int, std::string>::iterator itN;
     for (itN = mapStealthNarr.begin(); itN != mapStealthNarr.end(); ++itN)
@@ -7179,7 +7189,7 @@ bool CWallet::SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingS
     // -- get anon inputs
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
-	
+
     if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, false, sError2))
     {
         printf("SendAnonToD() AddAnonInputs failed %s.\n", sError2.c_str());
@@ -7248,7 +7258,7 @@ bool CWallet::EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr,
         return false;
     };
 
-    int64_t nFeeRequired;	
+    int64_t nFeeRequired;
 	if (!AddAnonInputs(nRingSize == 1 ? RING_SIG_1 : RING_SIG_2, nValue, nRingSize, vecSend, vecChange, wtxNew, nFeeRequired, true, sError))
     {
         printf("EstimateAnonFee() AddAnonInputs failed %s.\n", sError.c_str());
