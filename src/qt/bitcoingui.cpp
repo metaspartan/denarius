@@ -70,6 +70,7 @@
 #include <QStyleFactory>
 #include <QTextStream>
 #include <QTextDocument>
+#include <QGraphicsScene>
 
 #include <iostream>
 #include <fstream>
@@ -140,7 +141,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     nBlocksInLastPeriod(0),
     nLastBlocks(0)
 {
-    resize(1300, 400);
+    resize(600, 400);
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/denarius"));
@@ -549,14 +550,14 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(sendCoinsAction);
     mainToolbar->addAction(receiveCoinsAction);
     mainToolbar->addAction(historyAction);
-    mainToolbar->addAction(mintingAction);
     mainToolbar->addAction(addressBookAction);
-    mainToolbar->addAction(messageAction);
     mainToolbar->addAction(statisticsAction);
+	mainToolbar->addAction(fortunastakeManagerAction);
+	mainToolbar->addAction(proofOfImageAction);
+	mainToolbar->addAction(marketAction);
     mainToolbar->addAction(blockAction);
-    mainToolbar->addAction(fortunastakeManagerAction);
-    mainToolbar->addAction(marketAction);
-    mainToolbar->addAction(proofOfImageAction);
+	mainToolbar->addAction(messageAction);
+	mainToolbar->addAction(mintingAction);
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);

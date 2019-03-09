@@ -1013,6 +1013,6 @@ TINYFORMAT_WRAP_FORMAT_N(16, returnType, funcName, funcDeclSuffix, bodyPrefix, s
 
 } // namespace tinyformat
 
-#define strprintf tfm::format
+#define tfstrprintf tfm::format
 
 #endif // TINYFORMAT_H_INCLUDED

@@ -7,7 +7,7 @@
 
 #include <string>
 #include <vector>
-
+#include <regex>
 #include <stdlib.h>
 
 
@@ -33,6 +33,34 @@ class CScript;
 typedef std::map<CKeyID, CStealthKeyMetadata> StealthKeyMetaMap;
 typedef std::map<std::string, std::string> mapValue_t;
 typedef std::map<uint256, CWalletTx> WalletTxMap;
+
+static const std::string sAnonPrefix = "ao ";
+static const std::string sStealthPrefix = "sa ";
+static const std::regex reAnonMapping("ao\\s(\\w{16})\\.{3}");
+static const std::regex reAnonOrStealthMapping("(ao|sa)\\s(\\w{16})\\.{3}");
+
+/*
+static bool IsAnonMappingLabel(const std::string& address)
+{
+    return regex_match(address, reAnonMapping);
+}
+
+static bool IsAnonOrStealthMappingLabel(const std::string& address)
+{
+    return regex_match(address, reAnonOrStealthMapping);
+}
+
+static bool IsStealthAddressMappingLabel(const std::string& address, const bool& quickStealthTest = true)
+{
+    return IsAnonOrStealthMappingLabel(address) || (quickStealthTest ? address.length() == 102 : IsStealthAddress(address));
+}
+*/
+
+enum Currency
+{
+    D,
+    ANON
+};
 
 /** (client) version numbers for particular wallet features */
 enum WalletFeature
@@ -142,6 +170,7 @@ public:
 	bool SelectCoinsCollateral(std::vector<CTxIn>& setCoinsRet, int64_t& nValueRet) const ;
     bool SelectCoinsWithoutDenomination(int64_t nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
 	
+	// Anon
 	bool SaveNarrationOutput(CWalletTx& wtxNew, const CScript& scriptNarration, const std::string& sNarr, std::string& sError);
 
 	std::string Denominate();
@@ -348,6 +377,7 @@ public:
     int CountAnonOutputs(std::map<int64_t, int>& mOutputCounts, bool fMatureOnly);
     int CountAllAnonOutputs(std::list<CAnonOutputCount>& lOutputCounts, bool fMatureOnly);
     int CountOwnedAnonOutputs(std::map<int64_t, int>& mOwnedOutputCounts, bool fMatureOnly);
+    int CountLockedAnonOutputs();
 
     bool EraseAllAnonData();
 

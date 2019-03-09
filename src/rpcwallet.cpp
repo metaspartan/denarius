@@ -2613,7 +2613,7 @@ Value anonoutputs(const Array& params, bool fHelp)
 Value anoninfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "anoninfo [recalculate]\n"
             "list outputs in system.");
 
@@ -2635,7 +2635,7 @@ Value anoninfo(const Array& params, bool fHelp)
     if (fRecalculate)
     {
         if (pwalletMain->CountAllAnonOutputs(lOutputCounts, fMatureOnly) != 0)
-            throw runtime_error("CountAllAnonOutputs() failed.");
+            throw std::runtime_error("CountAllAnonOutputs() failed.");
     } else
     {
         // TODO: make mapAnonOutputStats a vector preinitialised with all possible coin values?
@@ -2656,29 +2656,32 @@ Value anoninfo(const Array& params, bool fHelp)
             if (!fProcessed)
                 lOutputCounts.push_back(aoc);
         };
-    }
+    };
 
-    result.push_back(Pair("No. Exists, No. Spends, Least Depth", "value"));
+    result.push_back(Pair("No. Exists, No. Spends, No. Compromised, Least Depth", "value"));
 
 
     // -- lOutputCounts is ordered by value
     char cbuf[256];
     int64_t nTotalIn = 0;
     int64_t nTotalOut = 0;
+    int64_t nTotalCompromised = 0;
     int64_t nTotalCoins = 0;
     for (std::list<CAnonOutputCount>::iterator it = lOutputCounts.begin(); it != lOutputCounts.end(); ++it)
     {
-        snprintf(cbuf, sizeof(cbuf), "%05d, %05d, %05d", it->nExists, it->nSpends, it->nLeastDepth);
+        snprintf(cbuf, sizeof(cbuf), "%5d, %5d, %7d, %3d", it->nExists, it->nSpends, it->nCompromised, it->nLeastDepth);
         result.push_back(Pair(cbuf, ValueFromAmount(it->nValue)));
 
 
         nTotalIn += it->nValue * it->nExists;
         nTotalOut += it->nValue * it->nSpends;
+        nTotalCompromised += it->nValue * it->nCompromised;
         nTotalCoins += it->nExists;
     };
 
     result.push_back(Pair("total anon value in", ValueFromAmount(nTotalIn)));
     result.push_back(Pair("total anon value out", ValueFromAmount(nTotalOut)));
+    result.push_back(Pair("total anon value compromised", ValueFromAmount(nTotalCompromised)));
     result.push_back(Pair("total anon outputs", nTotalCoins));
 
     return result;

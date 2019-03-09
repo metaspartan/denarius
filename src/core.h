@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2018 The Denarius developers
+// Copyright (c) 2017-2019 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef D_CORE_H
@@ -327,24 +327,27 @@ public:
         nSpends = 0;
         nOwned = 0;
         nLeastDepth = 0;
+        nCompromised = 0;
     }
 
-    CAnonOutputCount(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_)
+    CAnonOutputCount(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_, int nCompromised_)
     {
         nValue = nValue_;
         nExists = nExists_;
         nSpends = nSpends_;
         nOwned = nOwned_;
         nLeastDepth = nLeastDepth_;
+        nCompromised = nCompromised_;
     }
 
-    void set(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_)
+    void set(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_, int nCompromised_)
     {
         nValue = nValue_;
         nExists = nExists_;
         nSpends = nSpends_;
         nOwned = nOwned_;
         nLeastDepth = nLeastDepth_;
+        nCompromised = nCompromised_;
     }
 
     void addCoin(int nCoinDepth, int64_t nCoinValue)
@@ -393,6 +396,7 @@ public:
     int nSpends;
     int nOwned; // todo
     int nLeastDepth;
+    int nCompromised;
 
 };
 
