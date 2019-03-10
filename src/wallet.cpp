@@ -3454,7 +3454,180 @@ bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNar
     return true;
 };
 
+static int GetBlockHeightFromHash(const uint256& blockHash)
+{
+    if (blockHash == 0)
+        return 0;
 
+    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(blockHash);
+    if (mi == mapBlockIndex.end())
+        return 0;
+    return mi->second->nHeight;
+
+    return 0;
+}
+
+static int IsAnonCoinCompromised(CTxDB *txdb, CPubKey &pubKey, CAnonOutput &ao, ec_point &vchSpentImage)
+{
+    // check if its been compromised (signer known)
+    CKeyImageSpent kis;
+    ec_point pkImage;
+    bool fInMempool;
+
+    getOldKeyImage(pubKey, pkImage);
+
+    if (vchSpentImage == pkImage || GetKeyImage(txdb, pkImage, kis, fInMempool))
+    {
+        ao.nCompromised = 1;
+        txdb->WriteAnonOutput(pubKey, ao);
+        if(fDebugRingSig)
+            printf("Spent key image, mark as compromised: %s\n", pubKey.GetID().ToString().c_str());
+        return 1;
+    }
+    return 0;
+}
+
+static bool checkCombinations(int64_t nReq, int m, std::vector<COwnedAnonOutput*>& vData, std::vector<int>& v)
+{
+    // -- m of n combinations, check smallest coins first
+
+    if (fDebugRingSig)
+        printf("checkCombinations() %d, %" PRIszu "\n", m, vData.size());
+
+    int n = vData.size();
+
+    try { v.resize(m); } catch (std::exception& e)
+    {
+        printf("Error: checkCombinations() v.resize(%d) threw: %s.\n", m, e.what());
+        return false;
+    };
+
+
+    int64_t nCount = 0;
+
+    if (m > n) // ERROR
+    {
+        printf("Error: checkCombinations() m > n\n");
+        return false;
+    };
+
+    int i, l, startL = 0;
+
+    // -- pick better start point
+    //    lAvailableCoins is sorted, if coin i * m < nReq, no combinations of lesser coins will be < either
+    for (l = m; l <= n; ++l)
+    {
+        if (vData[l-1]->nValue * m < nReq)
+            continue;
+        startL = l;
+        break;
+    };
+
+    if (fDebugRingSig)
+        printf("Starting at level %d\n", startL);
+
+    if (startL == 0)
+    {
+        printf("checkCombinations() No possible combinations.\n");
+        return false;
+    };
+
+
+    for (l = startL; l <= n; ++l)
+    {
+        for (i = 0; i < m; ++i)
+            v[i] = (m - i)-1;
+        v[0] = l-1;
+
+        // -- m must be > 2 to use coarse seeking
+        bool fSeekFine = m > 2 ? false : true;
+
+        // -- coarse
+        while(!fSeekFine && v[1] < v[0]-1)
+        {
+            for (i = 1; i < m; ++i)
+                v[i] = v[i]+1;
+
+            int64_t nTotal = 0;
+
+            for (i = 0; i < m; ++i)
+                nTotal += vData[v[i]]->nValue;
+
+            nCount++;
+
+            if (nTotal == nReq)
+            {
+                if (fDebugRingSig)
+                {
+                    printf("Found match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
+                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
+                };
+                return true;
+            };
+            if (nTotal > nReq)
+            {
+                for (i = 1; i < m; ++i) // rewind
+                    v[i] = v[i]-1;
+
+                if (fDebugRingSig)
+                {
+                    printf("Found coarse match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
+                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
+                };
+                fSeekFine = true;
+            };
+        };
+
+        if (!fSeekFine)
+            continue;
+
+        // -- fine
+        i = m-1;
+        for (;;)
+        {
+            if (v[0] == l-1) // otherwise get duplicate combinations
+            {
+                int64_t nTotal = 0;
+
+                for (i = 0; i < m; ++i)
+                    nTotal += vData[v[i]]->nValue;
+
+                nCount++;
+
+                if (nTotal >= nReq)
+                {
+                    if (fDebugRingSig)
+                    {
+                        printf("Found match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
+                        for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
+                    };
+                    return true;
+                };
+
+                if (fDebugRingSig && !(nCount % 500))
+                {
+                    printf("checkCombinations() nCount: %"PRId64" - l: %d, n: %d, m: %d, i: %d, nReq: %"PRId64", v[0]: %d, nTotal: %"PRId64" \n", nCount, l, n, m, i, nReq, v[0], nTotal);
+                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
+                };
+            };
+
+            for (i = 0; v[i] >= l - i;) // 0 is largest element
+            {
+                if (++i >= m)
+                    goto EndInner;
+            };
+
+            // -- fill the set with the next values
+            for (v[i]++; i; i--)
+                v[i-1] = v[i] + 1;
+        };
+        EndInner:
+        if (i+1 > n)
+            break;
+    };
+
+    return false;
+}
 
 // NovaCoin: get current stake weight
 bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight)
@@ -4662,581 +4835,6 @@ static uint8_t *GetRingSigPkStart(int rsType, int nRingSize, uint8_t *pStart)
     };
 }
 
-bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError)
-{
-    if (fDebugRingSig)
-        printf("AddAnonInputs() %d, %d, rsType:%d\n", nTotalOut, nRingSize, rsType);
-
-	if (nRingSize < (int)MIN_RING_SIZE
-            ||nRingSize > (nBestHeight ? (int)MAX_RING_SIZE : (int)MAX_RING_SIZE_OLD))
-    {
-        sError = tfm::format("Ringsize %d not in range [%d, %d]: ", nRingSize,  MIN_RING_SIZE, MAX_RING_SIZE);
-        return false;
-    }
-
-    std::list<COwnedAnonOutput> lAvailableCoins;
-    if (ListUnspentAnonOutputs(lAvailableCoins, true) != 0)
-    {
-        sError = "ListUnspentAnonOutputs() failed";
-        return false;
-    };
-
-    std::map<int64_t, int> mOutputCounts;
-    for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
-        mOutputCounts[it->nValue] = 0;
-
-    if (CountAnonOutputs(mOutputCounts, true) != 0)
-    {
-        sError = "CountAnonOutputs() failed";
-        return false;
-    };
-
-    if (fDebugRingSig)
-    {
-        for (std::map<int64_t, int>::iterator it = mOutputCounts.begin(); it != mOutputCounts.end(); ++it)
-            printf("mOutputCounts %ld %d\n", it->first, it->second);
-    };
-
-    int64_t nAmountCheck = 0;
-    // -- remove coins that don't have enough same value anonoutputs in the system for the ring size
-    std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin();
-    while (it != lAvailableCoins.end())
-    {
-        std::map<int64_t, int>::iterator mi = mOutputCounts.find(it->nValue);
-        if (mi == mOutputCounts.end()
-            || mi->second < nRingSize)
-        {
-            // -- not enough coins of same value, drop coin
-            lAvailableCoins.erase(it++);
-            continue;
-        };
-
-        nAmountCheck += it->nValue;
-        ++it;
-    };
-
-    if (fDebugRingSig)
-        printf("%u coins available with ring size %d, total %d\n", lAvailableCoins.size(), nRingSize, nAmountCheck);
-
-    // -- estimate fee
-
-    uint32_t nSizeOutputs = 0;
-    for (uint32_t i = 0; i < vecSend.size(); ++i) // need to sum due to narration
-        nSizeOutputs += GetSizeOfCompactSize(vecSend[i].first.size()) + vecSend[i].first.size() + sizeof(int64_t); // CTxOut
-
-    bool fFound = false;
-    int64_t nFee;
-    int nExpectChangeOuts = 1;
-    std::string sPickError;
-    std::vector<COwnedAnonOutput*> vPickedCoins;
-    for (int k = 0; k < 50; ++k) // safety
-    {
-        // -- nExpectChangeOuts is raised if needed (rv == 2)
-        int rv = PickAnonInputs(rsType, nTotalOut, nFee, nRingSize, wtxNew, vecSend.size(), nSizeOutputs, nExpectChangeOuts, lAvailableCoins, vPickedCoins, vecChange, false, sPickError);
-        if (rv == 0)
-            break;
-        if (rv == 3)
-        {
-            nFeeRequired = nFee; // set in PickAnonInputs()
-            sError = sPickError;
-            return false;
-        };
-        if (rv == 1)
-        {
-            fFound = true;
-            break;
-        };
-    };
-
-    if (!fFound)
-    {
-        sError = "No combination of coins matches amount and ring size.";
-        return false;
-    };
-
-    nFeeRequired = nFee; // set in PickAnonInputs()
-    int nSigSize = GetRingSigSize(rsType, nRingSize);
-
-    // -- need hash of tx without signatures
-    std::vector<int> vCoinOffsets;
-    uint32_t ii = 0;
-    wtxNew.vin.resize(vPickedCoins.size());
-    vCoinOffsets.resize(vPickedCoins.size());
-    for (std::vector<COwnedAnonOutput*>::iterator it = vPickedCoins.begin(); it != vPickedCoins.end(); ++it)
-    {
-        CTxIn& txin = wtxNew.vin[ii];
-        if (fDebugRingSig)
-            printf("pickedCoin %s %d\n", HexStr((*it)->vchImage).c_str(), (*it)->nValue);
-
-        // -- overload prevout to hold keyImage
-        memcpy(txin.prevout.hash.begin(), &(*it)->vchImage[0], EC_SECRET_SIZE);
-
-        txin.prevout.n = 0 | (((*it)->vchImage[32]) & 0xFF) | (int32_t)(((int16_t) nRingSize) << 16);
-
-        // -- size for full signature, signature is added later after hash
-        try { txin.scriptSig.resize(nSigSize); } catch (std::exception& e)
-        {
-            printf("Error: AddAnonInputs() txin.scriptSig.resize threw: %s.\n", e.what());
-            sError = "resize failed.\n";
-            return false;
-        };
-
-        txin.scriptSig[0] = OP_RETURN;
-        txin.scriptSig[1] = OP_ANON_MARKER;
-
-        if (fTestOnly)
-            continue;
-
-        int nCoinOutId = (*it)->outpoint.n;
-        WalletTxMap::iterator mi = mapWallet.find((*it)->outpoint.hash);
-        if (mi == mapWallet.end()
-            || mi->second.nVersion != ANON_TXN_VERSION
-            || (int)mi->second.vout.size() < nCoinOutId)
-        {
-            printf("Error: AddAnonInputs() picked coin not in wallet, %s version %d.\n", (*it)->outpoint.hash.ToString().c_str(), (*mi).second.nVersion);
-            sError = "picked coin not in wallet.\n";
-            return false;
-        };
-
-        CWalletTx& wtxAnonCoin = mi->second;
-
-        const CTxOut& txout = wtxAnonCoin.vout[nCoinOutId];
-        const CScript &s = txout.scriptPubKey;
-
-        if (!txout.IsAnonOutput())
-        {
-            sError = "picked coin not an anon output.\n";
-            return false;
-        };
-
-        CPubKey pkCoin = CPubKey(&s[2+1], EC_COMPRESSED_SIZE);
-
-        if (!pkCoin.IsValid())
-        {
-            sError = "pkCoin is invalid.\n";
-            return false;
-        };
-
-        vCoinOffsets[ii] = GetRand(nRingSize);
-
-        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
-
-        memcpy(pPubkeyStart + vCoinOffsets[ii] * EC_COMPRESSED_SIZE, pkCoin.begin(), EC_COMPRESSED_SIZE);
-        if (PickHidingOutputs((*it)->nValue, nRingSize, pkCoin, vCoinOffsets[ii], pPubkeyStart) != 0)
-        {
-            sError = "PickHidingOutputs() failed.\n";
-            return false;
-        };
-        ii++;
-    };
-
-    for (uint32_t i = 0; i < vecSend.size(); ++i)
-        wtxNew.vout.push_back(CTxOut(vecSend[i].second, vecSend[i].first));
-    for (uint32_t i = 0; i < vecChange.size(); ++i)
-        wtxNew.vout.push_back(CTxOut(vecChange[i].second, vecChange[i].first));
-
-    std::sort(wtxNew.vout.begin(), wtxNew.vout.end());
-
-    if (fTestOnly)
-        return true;
-
-    uint256 preimage;
-    if (GetTxnPreImage(wtxNew, preimage) != 0)
-    {
-        sError = "GetPreImage() failed.\n";
-        return false;
-    };
-
-    // TODO: Does it lower security to use the same preimage for each input?
-    //  cryptonote seems to do so too
-
-    for (uint32_t i = 0; i < wtxNew.vin.size(); ++i)
-    {
-        CTxIn& txin = wtxNew.vin[i];
-
-        // Test
-        std::vector<uint8_t> vchImageTest;
-        txin.ExtractKeyImage(vchImageTest);
-
-        int nTestRingSize = txin.ExtractRingSize();
-        if (nTestRingSize != nRingSize)
-        {
-            sError = "nRingSize embed error.";
-            return false;
-        };
-
-        if (txin.scriptSig.size() < nSigSize)
-        {
-            sError = "Error: scriptSig too small.";
-            return false;
-        };
-
-        int nSecretOffset = vCoinOffsets[i];
-
-        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
-
-        // -- get secret
-        CPubKey pkCoin = CPubKey(pPubkeyStart + EC_COMPRESSED_SIZE * nSecretOffset, EC_COMPRESSED_SIZE);
-        CKeyID pkId = pkCoin.GetID();
-
-        CKey key;
-        if (!GetKey(pkId, key))
-        {
-            sError = "Error: don't have key for output.";
-            return false;
-        };
-
-        ec_secret ecSecret;
-        if (key.size() != EC_SECRET_SIZE)
-        {
-            sError = "Error: key.size() != EC_SECRET_SIZE.";
-            return false;
-        };
-
-        memcpy(&ecSecret.e[0], key.begin(), key.size());
-
-        switch(rsType)
-        {
-            case RING_SIG_1:
-                {
-                uint8_t *pPubkeys = &txin.scriptSig[2];
-                uint8_t *pSigc    = &txin.scriptSig[2 + EC_COMPRESSED_SIZE * nRingSize];
-                uint8_t *pSigr    = &txin.scriptSig[2 + (EC_COMPRESSED_SIZE + EC_SECRET_SIZE) * nRingSize];
-                if (generateRingSignature(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigc, pSigr) != 0)
-                {
-                    sError = "Error: generateRingSignature() failed.";
-                    return false;
-                };
-                // -- test verify
-                if (verifyRingSignature(vchImageTest, preimage, nRingSize, pPubkeys, pSigc, pSigr) != 0)
-                {
-                    sError = "Error: verifyRingSignature() failed.";
-                    return false;
-                };
-                }
-                break;
-            case RING_SIG_2:
-                {
-                ec_point pSigC;
-                uint8_t *pSigS    = &txin.scriptSig[2 + EC_SECRET_SIZE];
-                uint8_t *pPubkeys = &txin.scriptSig[2 + EC_SECRET_SIZE + EC_SECRET_SIZE * nRingSize];
-                if (generateRingSignatureAB(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigC, pSigS) != 0)
-                {
-                    sError = "Error: generateRingSignatureAB() failed.";
-                    return false;
-                };
-                if (pSigC.size() == EC_SECRET_SIZE)
-                    memcpy(&txin.scriptSig[2], &pSigC[0], EC_SECRET_SIZE);
-                else
-                    printf("pSigC.size() : %d Invalid!!\n", pSigC.size());
-
-                // -- test verify
-                if (verifyRingSignatureAB(vchImageTest, preimage, nRingSize, pPubkeys, pSigC, pSigS) != 0)
-                {
-                    sError = "Error: verifyRingSignatureAB() failed.";
-                    return false;
-                };
-                }
-                break;
-            default:
-                sError = "Unknown ring signature type.";
-                return false;
-        };
-
-        memset(&ecSecret.e[0], 0, EC_SECRET_SIZE); // optimised away?
-    };
-
-    // -- check if new coins already exist (in case random is broken ?)
-    if (!AreOutputsUnique(wtxNew))
-    {
-        sError = "Error: Anon outputs are not unique - is random working!.";
-        return false;
-    };
-
-    return true;
-};
-
-static int GetBlockHeightFromHash(const uint256& blockHash)
-{
-    if (blockHash == 0)
-        return 0;
-
-    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(blockHash);
-    if (mi == mapBlockIndex.end())
-        return 0;
-    return mi->second->nHeight;
-
-    return 0;
-}
-
-static int IsAnonCoinCompromised(CTxDB *txdb, CPubKey &pubKey, CAnonOutput &ao, ec_point &vchSpentImage)
-{
-    // check if its been compromised (signer known)
-    CKeyImageSpent kis;
-    ec_point pkImage;
-    bool fInMempool;
-
-    getOldKeyImage(pubKey, pkImage);
-
-    if (vchSpentImage == pkImage || GetKeyImage(txdb, pkImage, kis, fInMempool))
-    {
-        ao.nCompromised = 1;
-        txdb->WriteAnonOutput(pubKey, ao);
-        if(fDebugRingSig)
-            printf("Spent key image, mark as compromised: %s\n", pubKey.GetID().ToString().c_str());
-        return 1;
-    }
-    return 0;
-}
-
-bool CWallet::UpdateAnonTransaction(CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash)
-{
-    uint256 txnHash = tx.GetHash();
-    if (fDebugRingSig)
-        printf("UpdateAnonTransaction() tx: %s\n", txnHash.GetHex().c_str());
-
-    // -- update txns not received in a block
-
-    //LOCK2(cs_main, cs_wallet);
-
-    int nNewHeight = GetBlockHeightFromHash(blockHash);
-
-    CKeyImageSpent spentKeyImage;
-    for (uint32_t i = 0; i < tx.vin.size(); ++i)
-    {
-        const CTxIn& txin = tx.vin[i];
-
-        if (!txin.IsAnonInput())
-            continue;
-
-        const CScript &s = txin.scriptSig;
-
-        std::vector<uint8_t> vchImage;
-        txin.ExtractKeyImage(vchImage);
-
-        // -- get nCoinValue by reading first ring element
-        CPubKey pkRingCoin;
-        CAnonOutput ao;
-        CTxIndex txindex;
-        const unsigned char* pPubkeys = &s[2];
-        pkRingCoin = CPubKey(&pPubkeys[0 * ec_compressed_size], ec_compressed_size);
-        if (!ptxdb->ReadAnonOutput(pkRingCoin, ao))
-        {
-            printf("UpdateAnonTransaction(): Error input %u AnonOutput %s not found.\n", i, HexStr(pkRingCoin.Raw()).c_str());
-            return false;
-        };
-
-        int64_t nCoinValue = ao.nValue;
-
-
-        spentKeyImage.txnHash = txnHash;
-        spentKeyImage.inputNo = i;
-        spentKeyImage.nValue = nCoinValue;
-
-        if (!ptxdb->WriteKeyImage(vchImage, spentKeyImage))
-        {
-            printf("UpdateAnonTransaction(): Error input %d WriteKeyImage failed %s .\n", i, HexStr(vchImage).c_str());
-            return false;
-        };
-
-    };
-
-    for (uint32_t i = 0; i < tx.vout.size(); ++i)
-    {
-        const CTxOut& txout = tx.vout[i];
-
-        if (!txout.IsAnonOutput())
-            continue;
-
-        const CScript &s = txout.scriptPubKey;
-
-        CPubKey pkCoin    = CPubKey(&s[2+1], ec_compressed_size);
-        CAnonOutput ao;
-        if (!ptxdb->ReadAnonOutput(pkCoin, ao))
-        {
-            printf("ReadAnonOutput %d failed.\n", i);
-            return false;
-        };
-
-        ao.nBlockHeight = nNewHeight;
-
-        if (!ptxdb->WriteAnonOutput(pkCoin, ao))
-        {
-            printf("ReadAnonOutput %d failed.\n", i);
-            return false;
-        };
-
-        mapAnonOutputStats[ao.nValue].updateDepth(nNewHeight, ao.nValue);
-    };
-
-    return true;
-};
-
-
-bool CWallet::UndoAnonTransaction(const CTransaction& tx, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
-{
-    if (fDebugRingSig)
-        printf("UndoAnonTransaction() tx: %s\n", tx.GetHash().GetHex().c_str());
-    // -- undo transaction - used if block is unlinked / txn didn't commit
-
-    LOCK2(cs_main, cs_wallet);
-
-    uint256 txnHash = tx.GetHash();
-
-    CWalletDB walletdb(strWalletFile, "cr+");
-    CTxDB txdb("cr+");
-
-	// Remove all pub to stealth key mappings
-    if (mapPubStealth != NULL)
-    {
-        for (auto& element : *mapPubStealth) {
-            DelAddressBookName(element.first);
-        }
-    }
-
-    for (unsigned int i = 0; i < tx.vin.size(); ++i)
-    {
-        const CTxIn& txin = tx.vin[i];
-
-        if (!txin.IsAnonInput())
-            continue;
-
-        ec_point vchImage;
-        txin.ExtractKeyImage(vchImage);
-
-        CKeyImageSpent spentKeyImage;
-
-        bool fInMempool;
-        if (!GetKeyImage(&txdb, vchImage, spentKeyImage, fInMempool))
-        {
-            if (fDebugRingSig)
-                printf("Error: keyImage for input %d not found.\n", i);
-            continue;
-        };
-
-        // Possible?
-        if (spentKeyImage.txnHash != txnHash)
-        {
-            printf("Error: spentKeyImage for %s does not match txn %s.\n", HexStr(vchImage).c_str(), txnHash.ToString().c_str());
-            continue;
-        };
-
-        if (!txdb.EraseKeyImage(vchImage))
-        {
-            printf("EraseKeyImage %d failed.\n", i);
-            continue;
-        };
-
-        mapAnonOutputStats[spentKeyImage.nValue].decSpends(spentKeyImage.nValue);
-
-
-        COwnedAnonOutput oao;
-        if (walletdb.ReadOwnedAnonOutput(vchImage, oao))
-        {
-            if (fDebugRingSig)
-                printf("UndoAnonTransaction(): input %d keyimage %s found in wallet (owned).\n", i, HexStr(vchImage).c_str());
-
-            std::map<uint256, CWalletTx>::iterator mi = mapWallet.find(oao.outpoint.hash);
-            if (mi == mapWallet.end())
-            {
-                printf("UndoAnonTransaction(): Error input %d prev txn not in mapwallet %s .\n", i, oao.outpoint.hash.ToString().c_str());
-                return false;
-            };
-
-            CWalletTx& inTx = (*mi).second;
-            if (oao.outpoint.n >= inTx.vout.size())
-            {
-                printf("UndoAnonTransaction(): bad wtx %s\n", oao.outpoint.hash.ToString().c_str());
-                return false;
-            } else
-            if (inTx.IsSpent(oao.outpoint.n))
-            {
-                printf("UndoAnonTransaction(): found spent coin %s\n", oao.outpoint.hash.ToString().c_str());
-
-
-                inTx.MarkUnspent(oao.outpoint.n);
-                if (!walletdb.WriteTx(oao.outpoint.hash, inTx))
-                {
-                    printf("UndoAnonTransaction(): input %d WriteTx failed %s.\n", i, HexStr(vchImage).c_str());
-                    return false;
-                };
-                inTx.MarkDirty(); // recalc balances
-                NotifyTransactionChanged(this, oao.outpoint.hash, CT_UPDATED);
-            };
-
-            oao.fSpent = false;
-            if (!walletdb.WriteOwnedAnonOutput(vchImage, oao))
-            {
-                printf("UndoAnonTransaction(): input %d WriteOwnedAnonOutput failed %s.\n", i, HexStr(vchImage).c_str());
-                return false;
-            };
-        };
-    };
-
-
-    for (uint32_t i = 0; i < tx.vout.size(); ++i)
-    {
-        const CTxOut& txout = tx.vout[i];
-
-        if (!txout.IsAnonOutput())
-            continue;
-
-        const CScript &s = txout.scriptPubKey;
-
-        CPubKey pkCoin    = CPubKey(&s[2+1], ec_compressed_size);
-        CKeyID  ckCoinId  = pkCoin.GetID();
-
-        CAnonOutput ao;
-        if (!txdb.ReadAnonOutput(pkCoin, ao)) // read only to update mapAnonOutputStats
-        {
-            printf("ReadAnonOutput(): %u failed.\n", i);
-            return false;
-        };
-
-        mapAnonOutputStats[ao.nValue].decExists(ao.nValue);
-
-        if (!txdb.EraseAnonOutput(pkCoin))
-        {
-            printf("EraseAnonOutput(): %u failed.\n", i);
-            continue;
-        };
-
-        // -- only in db if owned
-        walletdb.EraseLockedAnonOutput(ckCoinId);
-
-        std::vector<uint8_t> vchImage;
-
-        if (!walletdb.ReadOwnedAnonOutputLink(pkCoin, vchImage))
-        {
-            printf("ReadOwnedAnonOutputLink(): %u failed - output wasn't owned.\n", i);
-            continue;
-        };
-
-        if (!walletdb.EraseOwnedAnonOutput(vchImage))
-        {
-            printf("EraseOwnedAnonOutput(): %u failed.\n", i);
-            continue;
-        };
-
-        if (!walletdb.EraseOwnedAnonOutputLink(pkCoin))
-        {
-            printf("EraseOwnedAnonOutputLink(): %u failed.\n", i);
-            continue;
-        };
-    };
-
-
-    if (!walletdb.EraseTx(txnHash))
-    {
-        printf("UndoAnonTransaction() EraseTx %s failed.\n", txnHash.ToString().c_str());
-        return false;
-    };
-
-    mapWallet.erase(txnHash);
-
-    return true;
-};
-
 bool CWallet::ProcessAnonTransaction(CWalletDB *pwdb, CTxDB *ptxdb, const CTransaction& tx, const uint256& blockHash, bool& fIsMine, mapValue_t& mapNarr, std::vector<WalletTxMap::iterator>& vUpdatedTxns, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
 {
     uint256 txnHash = tx.GetHash();
@@ -5695,6 +5293,724 @@ bool CWallet::ProcessAnonTransaction(CWalletDB *pwdb, CTxDB *ptxdb, const CTrans
     return true;
 };
 
+int CWallet::PickAnonInputs(int rsType, int64_t nValue, int64_t& nFee, int nRingSize, CWalletTx& wtxNew, int nOutputs, int nSizeOutputs, int& nExpectChangeOuts, std::list<COwnedAnonOutput>& lAvailableCoins, std::vector<COwnedAnonOutput*>& vPickedCoins, std::vector<std::pair<CScript, int64_t> >& vecChange, bool fTest, std::string& sError, int feeMode)
+{
+    if (fDebugRingSig)
+        printf("PickAnonInputs(), ChangeOuts %d, FeeMode %d\n", nExpectChangeOuts, feeMode);
+    // - choose the smallest coin that can cover the amount (feeMode==1) or the amount + fee (feeMode!=1)
+    //   or least no. of smallest coins
+
+
+    int64_t nAmountCheck = 0;
+
+    std::vector<COwnedAnonOutput*> vData;
+    try { vData.resize(lAvailableCoins.size()); } catch (std::exception& e)
+    {
+        printf("Error: PickAnonInputs() vData.resize threw: %s.\n", e.what());
+        return false;
+    };
+
+    uint32_t vi = 0;
+    for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+    {
+        vData[vi++] = &(*it);
+        nAmountCheck += it->nValue;
+    };
+
+    uint32_t nByteSizePerInCoin;
+    switch(rsType)
+    {
+        case RING_SIG_1:
+            nByteSizePerInCoin = (sizeof(COutPoint) + sizeof(unsigned int)) // CTxIn
+                + GetSizeOfCompactSize(2 + (33 + 32 + 32) * nRingSize)
+                + 2 + (33 + 32 + 32) * nRingSize;
+            break;
+        case RING_SIG_2:
+            nByteSizePerInCoin = (sizeof(COutPoint) + sizeof(unsigned int)) // CTxIn
+                + GetSizeOfCompactSize(2 + 32 + (33 + 32) * nRingSize)
+                + 2 + 32 + (33 + 32) * nRingSize;
+            break;
+        default:
+            sError = "Unknown ring signature type.";
+            return false;
+    };
+
+    if (fDebugRingSig)
+        printf("nByteSizePerInCoin: %d\n", nByteSizePerInCoin);
+
+    // -- repeat until all levels are tried (1 coin, 2 coins, 3 coins etc)
+    for (uint32_t i = 0; i < lAvailableCoins.size(); ++i)
+    {
+        if (fDebugRingSig)
+            printf("Input loop %u\n", i);
+
+        uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
+            + GetSizeOfCompactSize(nOutputs + nExpectChangeOuts)
+            + nSizeOutputs
+            + (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * nExpectChangeOuts
+            + GetSizeOfCompactSize((i+1))
+            + nByteSizePerInCoin * (i+1);
+
+        nFee = wtxNew.GetMinFee(0, GMF_ANON, nTotalBytes);
+
+		int64_t nValueTest;
+		if (feeMode == 1) {
+			nValueTest = nValue;
+		}
+		else {
+			nValueTest = nValue + nFee;
+
+            int64_t nFeeDiff = nAmountCheck - nValueTest;
+			if (nFeeDiff < 0)
+			{
+				// substract fee
+				nValueTest += nFeeDiff;
+				if (fDebugRingSig)
+					printf("AmountWithFeeExceedsBalance! simulate exhaustive trx, lower amount by nFeeDiff: %d\n", nFeeDiff);
+
+				if (nExpectChangeOuts != 0) {
+					// -- set nExpectChangeOuts to 0 to simulate exhaustive payment (total+fee=totalAvailableCoins)
+					nExpectChangeOuts = 0;
+					// -- get nTotalBytes again for 0 change outputs
+					uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
+						+ GetSizeOfCompactSize(nOutputs)
+						+ nSizeOutputs
+						+ (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * vecChange.size()
+						+ GetSizeOfCompactSize((i + 1))
+						+ nByteSizePerInCoin * (i + 1);
+
+					if (fDebugRingSig)
+						printf("New nTotalBytes: %d\n", nTotalBytes);
+				}
+			}
+		}
+
+		if (fDebugRingSig)
+			printf("nValue: %d, nFee: %d, nValueTest: %d, nAmountCheck: %d, nTotalBytes: %u\n", nValue, nFee, nValueTest, nAmountCheck, nTotalBytes);
+
+        vPickedCoins.clear();
+        vecChange.clear();
+
+        std::vector<int> vecInputIndex;
+
+        if (checkCombinations(nValueTest, i+1, vData, vecInputIndex))
+        {
+            if (fDebugRingSig)
+            {
+                printf("Found combination %u, ", i+1);
+                for (int ic = vecInputIndex.size(); ic--;)
+                    printf("%d%c", vecInputIndex[ic], ic ? ' ': '\n');
+
+                printf("nTotalBytes %u\n", nTotalBytes);
+                printf("nFee %d\n", nFee);
+            };
+
+            int64_t nTotalIn = 0;
+            vPickedCoins.resize(vecInputIndex.size());
+            for (uint32_t ic = 0; ic < vecInputIndex.size(); ++ic)
+            {
+                vPickedCoins[ic] = vData[vecInputIndex[ic]];
+                nTotalIn += vPickedCoins[ic]->nValue;
+            };
+
+            int64_t nChange = nTotalIn - (nValueTest + nFee);
+
+
+            CStealthAddress sxChange;
+            if (!GetAnonChangeAddress(sxChange))
+            {
+                sError = "GetAnonChangeAddress() change failed.";
+                return 3;
+            };
+
+            std::string sNone;
+            sNone.clear();
+            CScript scriptNone;
+            if (!CreateAnonOutputs(fTest ? NULL : &sxChange, nChange, sNone, vecChange, scriptNone))
+            {
+                sError = "CreateAnonOutputs() change failed.";
+                return 3;
+            };
+
+
+            // -- get nTotalBytes again, using actual no. of change outputs
+            uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
+                + GetSizeOfCompactSize(nOutputs + vecChange.size())
+                + nSizeOutputs
+                + (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * vecChange.size()
+                + GetSizeOfCompactSize((i+1))
+                + nByteSizePerInCoin * (i+1);
+
+            int64_t nTestFee = wtxNew.GetMinFee(0, GMF_ANON, nTotalBytes);
+
+            if (nTestFee > nFee)
+            {
+                if (fDebugRingSig)
+                    printf("Try again - nTestFee > nFee %d, %d, nTotalBytes %u\n", nTestFee, nFee, nTotalBytes);
+                nExpectChangeOuts = vecChange.size();
+                return 2; // up changeOutSize
+            };
+
+            nFee = nTestFee;
+
+			if (feeMode != 1 && nValue + nFee > nAmountCheck)
+			{
+				sError = "Not enough (mature) coins with requested ring size to cover amount with fees.";
+				if (fDebugRingSig)
+					printf("Not enough (mature) coins %d with requested ring size to cover amount %d together with fees %d.\n", nAmountCheck, nValue, nFee);
+				return 3;
+			};
+
+
+            return 1; // found
+        };
+    };
+
+    return 0; // not found
+};
+
+bool CWallet::AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError)
+{
+    if (fDebugRingSig)
+        printf("AddAnonInputs() %d, %d, rsType:%d\n", nTotalOut, nRingSize, rsType);
+
+	if (nRingSize < (int)MIN_RING_SIZE
+            ||nRingSize > (nBestHeight ? (int)MAX_RING_SIZE : (int)MAX_RING_SIZE_OLD))
+    {
+        sError = tfm::format("Ringsize %d not in range [%d, %d]: ", nRingSize,  MIN_RING_SIZE, MAX_RING_SIZE);
+        return false;
+    }
+
+    std::list<COwnedAnonOutput> lAvailableCoins;
+    if (ListUnspentAnonOutputs(lAvailableCoins, true) != 0)
+    {
+        sError = "ListUnspentAnonOutputs() failed";
+        return false;
+    };
+
+    std::map<int64_t, int> mOutputCounts;
+    for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
+        mOutputCounts[it->nValue] = 0;
+
+    if (CountAnonOutputs(mOutputCounts, true) != 0)
+    {
+        sError = "CountAnonOutputs() failed";
+        return false;
+    };
+
+    if (fDebugRingSig)
+    {
+        for (std::map<int64_t, int>::iterator it = mOutputCounts.begin(); it != mOutputCounts.end(); ++it)
+            printf("mOutputCounts %ld %d\n", it->first, it->second);
+    };
+
+    int64_t nAmountCheck = 0;
+    // -- remove coins that don't have enough same value anonoutputs in the system for the ring size
+    std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin();
+    while (it != lAvailableCoins.end())
+    {
+        std::map<int64_t, int>::iterator mi = mOutputCounts.find(it->nValue);
+        if (mi == mOutputCounts.end()
+            || mi->second < nRingSize)
+        {
+            // -- not enough coins of same value, drop coin
+            lAvailableCoins.erase(it++);
+            continue;
+        };
+
+        nAmountCheck += it->nValue;
+        ++it;
+    };
+
+    if (fDebugRingSig)
+        printf("%u coins available with ring size %d, total %d\n", lAvailableCoins.size(), nRingSize, nAmountCheck);
+
+    // -- estimate fee
+
+    uint32_t nSizeOutputs = 0;
+    for (uint32_t i = 0; i < vecSend.size(); ++i) // need to sum due to narration
+        nSizeOutputs += GetSizeOfCompactSize(vecSend[i].first.size()) + vecSend[i].first.size() + sizeof(int64_t); // CTxOut
+
+    bool fFound = false;
+    int64_t nFee;
+    int nExpectChangeOuts = 1;
+    std::string sPickError;
+    std::vector<COwnedAnonOutput*> vPickedCoins;
+    for (int k = 0; k < 50; ++k) // safety
+    {
+        // -- nExpectChangeOuts is raised if needed (rv == 2)
+        int rv = PickAnonInputs(rsType, nTotalOut, nFee, nRingSize, wtxNew, vecSend.size(), nSizeOutputs, nExpectChangeOuts, lAvailableCoins, vPickedCoins, vecChange, false, sPickError);
+        if (rv == 0)
+            break;
+        if (rv == 3)
+        {
+            nFeeRequired = nFee; // set in PickAnonInputs()
+            sError = sPickError;
+            return false;
+        };
+        if (rv == 1)
+        {
+            fFound = true;
+            break;
+        };
+    };
+
+    if (!fFound)
+    {
+        sError = "No combination of coins matches amount and ring size.";
+        return false;
+    };
+
+    nFeeRequired = nFee; // set in PickAnonInputs()
+    int nSigSize = GetRingSigSize(rsType, nRingSize);
+
+    // -- need hash of tx without signatures
+    std::vector<int> vCoinOffsets;
+    uint32_t ii = 0;
+    wtxNew.vin.resize(vPickedCoins.size());
+    vCoinOffsets.resize(vPickedCoins.size());
+    for (std::vector<COwnedAnonOutput*>::iterator it = vPickedCoins.begin(); it != vPickedCoins.end(); ++it)
+    {
+        CTxIn& txin = wtxNew.vin[ii];
+        if (fDebugRingSig)
+            printf("pickedCoin %s %d\n", HexStr((*it)->vchImage).c_str(), (*it)->nValue);
+
+        // -- overload prevout to hold keyImage
+        memcpy(txin.prevout.hash.begin(), &(*it)->vchImage[0], EC_SECRET_SIZE);
+
+        txin.prevout.n = 0 | (((*it)->vchImage[32]) & 0xFF) | (int32_t)(((int16_t) nRingSize) << 16);
+
+        // -- size for full signature, signature is added later after hash
+        try { txin.scriptSig.resize(nSigSize); } catch (std::exception& e)
+        {
+            printf("Error: AddAnonInputs() txin.scriptSig.resize threw: %s.\n", e.what());
+            sError = "resize failed.\n";
+            return false;
+        };
+
+        txin.scriptSig[0] = OP_RETURN;
+        txin.scriptSig[1] = OP_ANON_MARKER;
+
+        if (fTestOnly)
+            continue;
+
+        int nCoinOutId = (*it)->outpoint.n;
+        WalletTxMap::iterator mi = mapWallet.find((*it)->outpoint.hash);
+        if (mi == mapWallet.end()
+            || mi->second.nVersion != ANON_TXN_VERSION
+            || (int)mi->second.vout.size() < nCoinOutId)
+        {
+            printf("Error: AddAnonInputs() picked coin not in wallet, %s version %d.\n", (*it)->outpoint.hash.ToString().c_str(), (*mi).second.nVersion);
+            sError = "picked coin not in wallet.\n";
+            return false;
+        };
+
+        CWalletTx& wtxAnonCoin = mi->second;
+
+        const CTxOut& txout = wtxAnonCoin.vout[nCoinOutId];
+        const CScript &s = txout.scriptPubKey;
+
+        if (!txout.IsAnonOutput())
+        {
+            sError = "picked coin not an anon output.\n";
+            return false;
+        };
+
+        CPubKey pkCoin = CPubKey(&s[2+1], EC_COMPRESSED_SIZE);
+
+        if (!pkCoin.IsValid())
+        {
+            sError = "pkCoin is invalid.\n";
+            return false;
+        };
+
+        vCoinOffsets[ii] = GetRand(nRingSize);
+
+        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
+
+        memcpy(pPubkeyStart + vCoinOffsets[ii] * EC_COMPRESSED_SIZE, pkCoin.begin(), EC_COMPRESSED_SIZE);
+        if (PickHidingOutputs((*it)->nValue, nRingSize, pkCoin, vCoinOffsets[ii], pPubkeyStart) != 0)
+        {
+            sError = "PickHidingOutputs() failed.\n";
+            return false;
+        };
+        ii++;
+    };
+
+    for (uint32_t i = 0; i < vecSend.size(); ++i)
+        wtxNew.vout.push_back(CTxOut(vecSend[i].second, vecSend[i].first));
+    for (uint32_t i = 0; i < vecChange.size(); ++i)
+        wtxNew.vout.push_back(CTxOut(vecChange[i].second, vecChange[i].first));
+
+    std::sort(wtxNew.vout.begin(), wtxNew.vout.end());
+
+    if (fTestOnly)
+        return true;
+
+    uint256 preimage;
+    if (GetTxnPreImage(wtxNew, preimage) != 0)
+    {
+        sError = "GetPreImage() failed.\n";
+        return false;
+    };
+
+    // TODO: Does it lower security to use the same preimage for each input?
+    //  cryptonote seems to do so too
+
+    for (uint32_t i = 0; i < wtxNew.vin.size(); ++i)
+    {
+        CTxIn& txin = wtxNew.vin[i];
+
+        // Test
+        std::vector<uint8_t> vchImageTest;
+        txin.ExtractKeyImage(vchImageTest);
+
+        int nTestRingSize = txin.ExtractRingSize();
+        if (nTestRingSize != nRingSize)
+        {
+            sError = "nRingSize embed error.";
+            return false;
+        };
+
+        if (txin.scriptSig.size() < nSigSize)
+        {
+            sError = "Error: scriptSig too small.";
+            return false;
+        };
+
+        int nSecretOffset = vCoinOffsets[i];
+
+        uint8_t *pPubkeyStart = GetRingSigPkStart(rsType, nRingSize, &txin.scriptSig[0]);
+
+        // -- get secret
+        CPubKey pkCoin = CPubKey(pPubkeyStart + EC_COMPRESSED_SIZE * nSecretOffset, EC_COMPRESSED_SIZE);
+        CKeyID pkId = pkCoin.GetID();
+
+        CKey key;
+        if (!GetKey(pkId, key))
+        {
+            sError = "Error: don't have key for output.";
+            return false;
+        };
+
+        ec_secret ecSecret;
+        if (key.size() != EC_SECRET_SIZE)
+        {
+            sError = "Error: key.size() != EC_SECRET_SIZE.";
+            return false;
+        };
+
+        memcpy(&ecSecret.e[0], key.begin(), key.size());
+
+        switch(rsType)
+        {
+            case RING_SIG_1:
+                {
+                uint8_t *pPubkeys = &txin.scriptSig[2];
+                uint8_t *pSigc    = &txin.scriptSig[2 + EC_COMPRESSED_SIZE * nRingSize];
+                uint8_t *pSigr    = &txin.scriptSig[2 + (EC_COMPRESSED_SIZE + EC_SECRET_SIZE) * nRingSize];
+                if (generateRingSignature(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigc, pSigr) != 0)
+                {
+                    sError = "Error: generateRingSignature() failed.";
+                    return false;
+                };
+                // -- test verify
+                if (verifyRingSignature(vchImageTest, preimage, nRingSize, pPubkeys, pSigc, pSigr) != 0)
+                {
+                    sError = "Error: verifyRingSignature() failed.";
+                    return false;
+                };
+                }
+                break;
+            case RING_SIG_2:
+                {
+                ec_point pSigC;
+                uint8_t *pSigS    = &txin.scriptSig[2 + EC_SECRET_SIZE];
+                uint8_t *pPubkeys = &txin.scriptSig[2 + EC_SECRET_SIZE + EC_SECRET_SIZE * nRingSize];
+                if (generateRingSignatureAB(vchImageTest, preimage, nRingSize, nSecretOffset, ecSecret, pPubkeys, pSigC, pSigS) != 0)
+                {
+                    sError = "Error: generateRingSignatureAB() failed.";
+                    return false;
+                };
+                if (pSigC.size() == EC_SECRET_SIZE)
+                    memcpy(&txin.scriptSig[2], &pSigC[0], EC_SECRET_SIZE);
+                else
+                    printf("pSigC.size() : %d Invalid!!\n", pSigC.size());
+
+                // -- test verify
+                if (verifyRingSignatureAB(vchImageTest, preimage, nRingSize, pPubkeys, pSigC, pSigS) != 0)
+                {
+                    sError = "Error: verifyRingSignatureAB() failed.";
+                    return false;
+                };
+                }
+                break;
+            default:
+                sError = "Unknown ring signature type.";
+                return false;
+        };
+
+        memset(&ecSecret.e[0], 0, EC_SECRET_SIZE); // optimised away?
+    };
+
+    // -- check if new coins already exist (in case random is broken ?)
+    if (!AreOutputsUnique(wtxNew))
+    {
+        sError = "Error: Anon outputs are not unique - is random working!.";
+        return false;
+    };
+
+    return true;
+};
+
+bool CWallet::UpdateAnonTransaction(CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash)
+{
+    uint256 txnHash = tx.GetHash();
+    if (fDebugRingSig)
+        printf("UpdateAnonTransaction() tx: %s\n", txnHash.GetHex().c_str());
+
+    // -- update txns not received in a block
+
+    //LOCK2(cs_main, cs_wallet);
+
+    int nNewHeight = GetBlockHeightFromHash(blockHash);
+
+    CKeyImageSpent spentKeyImage;
+    for (uint32_t i = 0; i < tx.vin.size(); ++i)
+    {
+        const CTxIn& txin = tx.vin[i];
+
+        if (!txin.IsAnonInput())
+            continue;
+
+        const CScript &s = txin.scriptSig;
+
+        std::vector<uint8_t> vchImage;
+        txin.ExtractKeyImage(vchImage);
+
+        // -- get nCoinValue by reading first ring element
+        CPubKey pkRingCoin;
+        CAnonOutput ao;
+        CTxIndex txindex;
+        const unsigned char* pPubkeys = &s[2];
+        pkRingCoin = CPubKey(&pPubkeys[0 * ec_compressed_size], ec_compressed_size);
+        if (!ptxdb->ReadAnonOutput(pkRingCoin, ao))
+        {
+            printf("UpdateAnonTransaction(): Error input %u AnonOutput %s not found.\n", i, HexStr(pkRingCoin.Raw()).c_str());
+            return false;
+        };
+
+        int64_t nCoinValue = ao.nValue;
+
+
+        spentKeyImage.txnHash = txnHash;
+        spentKeyImage.inputNo = i;
+        spentKeyImage.nValue = nCoinValue;
+
+        if (!ptxdb->WriteKeyImage(vchImage, spentKeyImage))
+        {
+            printf("UpdateAnonTransaction(): Error input %d WriteKeyImage failed %s .\n", i, HexStr(vchImage).c_str());
+            return false;
+        };
+
+    };
+
+    for (uint32_t i = 0; i < tx.vout.size(); ++i)
+    {
+        const CTxOut& txout = tx.vout[i];
+
+        if (!txout.IsAnonOutput())
+            continue;
+
+        const CScript &s = txout.scriptPubKey;
+
+        CPubKey pkCoin    = CPubKey(&s[2+1], ec_compressed_size);
+        CAnonOutput ao;
+        if (!ptxdb->ReadAnonOutput(pkCoin, ao))
+        {
+            printf("ReadAnonOutput %d failed.\n", i);
+            return false;
+        };
+
+        ao.nBlockHeight = nNewHeight;
+
+        if (!ptxdb->WriteAnonOutput(pkCoin, ao))
+        {
+            printf("ReadAnonOutput %d failed.\n", i);
+            return false;
+        };
+
+        mapAnonOutputStats[ao.nValue].updateDepth(nNewHeight, ao.nValue);
+    };
+
+    return true;
+};
+
+
+bool CWallet::UndoAnonTransaction(const CTransaction& tx, const std::map<CKeyID, CStealthAddress> * const mapPubStealth)
+{
+    if (fDebugRingSig)
+        printf("UndoAnonTransaction() tx: %s\n", tx.GetHash().GetHex().c_str());
+    // -- undo transaction - used if block is unlinked / txn didn't commit
+
+    LOCK2(cs_main, cs_wallet);
+
+    uint256 txnHash = tx.GetHash();
+
+    CWalletDB walletdb(strWalletFile, "cr+");
+    CTxDB txdb("cr+");
+
+	// Remove all pub to stealth key mappings
+    if (mapPubStealth != NULL)
+    {
+        for (auto& element : *mapPubStealth) {
+            DelAddressBookName(element.first);
+        }
+    }
+
+    for (unsigned int i = 0; i < tx.vin.size(); ++i)
+    {
+        const CTxIn& txin = tx.vin[i];
+
+        if (!txin.IsAnonInput())
+            continue;
+
+        ec_point vchImage;
+        txin.ExtractKeyImage(vchImage);
+
+        CKeyImageSpent spentKeyImage;
+
+        bool fInMempool;
+        if (!GetKeyImage(&txdb, vchImage, spentKeyImage, fInMempool))
+        {
+            if (fDebugRingSig)
+                printf("Error: keyImage for input %d not found.\n", i);
+            continue;
+        };
+
+        // Possible?
+        if (spentKeyImage.txnHash != txnHash)
+        {
+            printf("Error: spentKeyImage for %s does not match txn %s.\n", HexStr(vchImage).c_str(), txnHash.ToString().c_str());
+            continue;
+        };
+
+        if (!txdb.EraseKeyImage(vchImage))
+        {
+            printf("EraseKeyImage %d failed.\n", i);
+            continue;
+        };
+
+        mapAnonOutputStats[spentKeyImage.nValue].decSpends(spentKeyImage.nValue);
+
+
+        COwnedAnonOutput oao;
+        if (walletdb.ReadOwnedAnonOutput(vchImage, oao))
+        {
+            if (fDebugRingSig)
+                printf("UndoAnonTransaction(): input %d keyimage %s found in wallet (owned).\n", i, HexStr(vchImage).c_str());
+
+            std::map<uint256, CWalletTx>::iterator mi = mapWallet.find(oao.outpoint.hash);
+            if (mi == mapWallet.end())
+            {
+                printf("UndoAnonTransaction(): Error input %d prev txn not in mapwallet %s .\n", i, oao.outpoint.hash.ToString().c_str());
+                return false;
+            };
+
+            CWalletTx& inTx = (*mi).second;
+            if (oao.outpoint.n >= inTx.vout.size())
+            {
+                printf("UndoAnonTransaction(): bad wtx %s\n", oao.outpoint.hash.ToString().c_str());
+                return false;
+            } else
+            if (inTx.IsSpent(oao.outpoint.n))
+            {
+                printf("UndoAnonTransaction(): found spent coin %s\n", oao.outpoint.hash.ToString().c_str());
+
+
+                inTx.MarkUnspent(oao.outpoint.n);
+                if (!walletdb.WriteTx(oao.outpoint.hash, inTx))
+                {
+                    printf("UndoAnonTransaction(): input %d WriteTx failed %s.\n", i, HexStr(vchImage).c_str());
+                    return false;
+                };
+                inTx.MarkDirty(); // recalc balances
+                NotifyTransactionChanged(this, oao.outpoint.hash, CT_UPDATED);
+            };
+
+            oao.fSpent = false;
+            if (!walletdb.WriteOwnedAnonOutput(vchImage, oao))
+            {
+                printf("UndoAnonTransaction(): input %d WriteOwnedAnonOutput failed %s.\n", i, HexStr(vchImage).c_str());
+                return false;
+            };
+        };
+    };
+
+
+    for (uint32_t i = 0; i < tx.vout.size(); ++i)
+    {
+        const CTxOut& txout = tx.vout[i];
+
+        if (!txout.IsAnonOutput())
+            continue;
+
+        const CScript &s = txout.scriptPubKey;
+
+        CPubKey pkCoin    = CPubKey(&s[2+1], ec_compressed_size);
+        CKeyID  ckCoinId  = pkCoin.GetID();
+
+        CAnonOutput ao;
+        if (!txdb.ReadAnonOutput(pkCoin, ao)) // read only to update mapAnonOutputStats
+        {
+            printf("ReadAnonOutput(): %u failed.\n", i);
+            return false;
+        };
+
+        mapAnonOutputStats[ao.nValue].decExists(ao.nValue);
+
+        if (!txdb.EraseAnonOutput(pkCoin))
+        {
+            printf("EraseAnonOutput(): %u failed.\n", i);
+            continue;
+        };
+
+        // -- only in db if owned
+        walletdb.EraseLockedAnonOutput(ckCoinId);
+
+        std::vector<uint8_t> vchImage;
+
+        if (!walletdb.ReadOwnedAnonOutputLink(pkCoin, vchImage))
+        {
+            printf("ReadOwnedAnonOutputLink(): %u failed - output wasn't owned.\n", i);
+            continue;
+        };
+
+        if (!walletdb.EraseOwnedAnonOutput(vchImage))
+        {
+            printf("EraseOwnedAnonOutput(): %u failed.\n", i);
+            continue;
+        };
+
+        if (!walletdb.EraseOwnedAnonOutputLink(pkCoin))
+        {
+            printf("EraseOwnedAnonOutputLink(): %u failed.\n", i);
+            continue;
+        };
+    };
+
+
+    if (!walletdb.EraseTx(txnHash))
+    {
+        printf("UndoAnonTransaction() EraseTx %s failed.\n", txnHash.ToString().c_str());
+        return false;
+    };
+
+    mapWallet.erase(txnHash);
+
+    return true;
+};
+
 bool CWallet::GetAnonChangeAddress(CStealthAddress& sxAddress)
 {
     // return owned stealth address to send anon change to.
@@ -5921,323 +6237,6 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
     return true;
 };
 
-static bool checkCombinations(int64_t nReq, int m, std::vector<COwnedAnonOutput*>& vData, std::vector<int>& v)
-{
-    // -- m of n combinations, check smallest coins first
-
-    if (fDebugRingSig)
-        printf("checkCombinations() %d, %" PRIszu "\n", m, vData.size());
-
-    int n = vData.size();
-
-    try { v.resize(m); } catch (std::exception& e)
-    {
-        printf("Error: checkCombinations() v.resize(%d) threw: %s.\n", m, e.what());
-        return false;
-    };
-
-
-    int64_t nCount = 0;
-
-    if (m > n) // ERROR
-    {
-        printf("Error: checkCombinations() m > n\n");
-        return false;
-    };
-
-    int i, l, startL = 0;
-
-    // -- pick better start point
-    //    lAvailableCoins is sorted, if coin i * m < nReq, no combinations of lesser coins will be < either
-    for (l = m; l <= n; ++l)
-    {
-        if (vData[l-1]->nValue * m < nReq)
-            continue;
-        startL = l;
-        break;
-    };
-
-    if (fDebugRingSig)
-        printf("Starting at level %d\n", startL);
-
-    if (startL == 0)
-    {
-        printf("checkCombinations() No possible combinations.\n");
-        return false;
-    };
-
-
-    for (l = startL; l <= n; ++l)
-    {
-        for (i = 0; i < m; ++i)
-            v[i] = (m - i)-1;
-        v[0] = l-1;
-
-        // -- m must be > 2 to use coarse seeking
-        bool fSeekFine = m > 2 ? false : true;
-
-        // -- coarse
-        while(!fSeekFine && v[1] < v[0]-1)
-        {
-            for (i = 1; i < m; ++i)
-                v[i] = v[i]+1;
-
-            int64_t nTotal = 0;
-
-            for (i = 0; i < m; ++i)
-                nTotal += vData[v[i]]->nValue;
-
-            nCount++;
-
-            if (nTotal == nReq)
-            {
-                if (fDebugRingSig)
-                {
-                    printf("Found match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
-                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
-                };
-                return true;
-            };
-            if (nTotal > nReq)
-            {
-                for (i = 1; i < m; ++i) // rewind
-                    v[i] = v[i]-1;
-
-                if (fDebugRingSig)
-                {
-                    printf("Found coarse match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
-                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
-                };
-                fSeekFine = true;
-            };
-        };
-
-        if (!fSeekFine)
-            continue;
-
-        // -- fine
-        i = m-1;
-        for (;;)
-        {
-            if (v[0] == l-1) // otherwise get duplicate combinations
-            {
-                int64_t nTotal = 0;
-
-                for (i = 0; i < m; ++i)
-                    nTotal += vData[v[i]]->nValue;
-
-                nCount++;
-
-                if (nTotal >= nReq)
-                {
-                    if (fDebugRingSig)
-                    {
-                        printf("Found match of total %" PRId64 ", in %" PRId64 " tries\n", nTotal, nCount);
-                        for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
-                    };
-                    return true;
-                };
-
-                if (fDebugRingSig && !(nCount % 500))
-                {
-                    printf("checkCombinations() nCount: %"PRId64" - l: %d, n: %d, m: %d, i: %d, nReq: %"PRId64", v[0]: %d, nTotal: %"PRId64" \n", nCount, l, n, m, i, nReq, v[0], nTotal);
-                    for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
-                };
-            };
-
-            for (i = 0; v[i] >= l - i;) // 0 is largest element
-            {
-                if (++i >= m)
-                    goto EndInner;
-            };
-
-            // -- fill the set with the next values
-            for (v[i]++; i; i--)
-                v[i-1] = v[i] + 1;
-        };
-        EndInner:
-        if (i+1 > n)
-            break;
-    };
-
-    return false;
-}
-
-int CWallet::PickAnonInputs(int rsType, int64_t nValue, int64_t& nFee, int nRingSize, CWalletTx& wtxNew, int nOutputs, int nSizeOutputs, int& nExpectChangeOuts, std::list<COwnedAnonOutput>& lAvailableCoins, std::vector<COwnedAnonOutput*>& vPickedCoins, std::vector<std::pair<CScript, int64_t> >& vecChange, bool fTest, std::string& sError, int feeMode)
-{
-    if (fDebugRingSig)
-        printf("PickAnonInputs(), ChangeOuts %d, FeeMode %d\n", nExpectChangeOuts, feeMode);
-    // - choose the smallest coin that can cover the amount (feeMode==1) or the amount + fee (feeMode!=1)
-    //   or least no. of smallest coins
-
-
-    int64_t nAmountCheck = 0;
-
-    std::vector<COwnedAnonOutput*> vData;
-    try { vData.resize(lAvailableCoins.size()); } catch (std::exception& e)
-    {
-        printf("Error: PickAnonInputs() vData.resize threw: %s.\n", e.what());
-        return false;
-    };
-
-    uint32_t vi = 0;
-    for (std::list<COwnedAnonOutput>::iterator it = lAvailableCoins.begin(); it != lAvailableCoins.end(); ++it)
-    {
-        vData[vi++] = &(*it);
-        nAmountCheck += it->nValue;
-    };
-
-    uint32_t nByteSizePerInCoin;
-    switch(rsType)
-    {
-        case RING_SIG_1:
-            nByteSizePerInCoin = (sizeof(COutPoint) + sizeof(unsigned int)) // CTxIn
-                + GetSizeOfCompactSize(2 + (33 + 32 + 32) * nRingSize)
-                + 2 + (33 + 32 + 32) * nRingSize;
-            break;
-        case RING_SIG_2:
-            nByteSizePerInCoin = (sizeof(COutPoint) + sizeof(unsigned int)) // CTxIn
-                + GetSizeOfCompactSize(2 + 32 + (33 + 32) * nRingSize)
-                + 2 + 32 + (33 + 32) * nRingSize;
-            break;
-        default:
-            sError = "Unknown ring signature type.";
-            return false;
-    };
-
-    if (fDebugRingSig)
-        printf("nByteSizePerInCoin: %d\n", nByteSizePerInCoin);
-
-    // -- repeat until all levels are tried (1 coin, 2 coins, 3 coins etc)
-    for (uint32_t i = 0; i < lAvailableCoins.size(); ++i)
-    {
-        if (fDebugRingSig)
-            printf("Input loop %u\n", i);
-
-        uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
-            + GetSizeOfCompactSize(nOutputs + nExpectChangeOuts)
-            + nSizeOutputs
-            + (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * nExpectChangeOuts
-            + GetSizeOfCompactSize((i+1))
-            + nByteSizePerInCoin * (i+1);
-
-        nFee = wtxNew.GetMinFee(0, GMF_ANON, nTotalBytes);
-
-		int64_t nValueTest;
-		if (feeMode == 1) {
-			nValueTest = nValue;
-		}
-		else {
-			nValueTest = nValue + nFee;
-
-            int64_t nFeeDiff = nAmountCheck - nValueTest;
-			if (nFeeDiff < 0)
-			{
-				// substract fee
-				nValueTest += nFeeDiff;
-				if (fDebugRingSig)
-					printf("AmountWithFeeExceedsBalance! simulate exhaustive trx, lower amount by nFeeDiff: %d\n", nFeeDiff);
-
-				if (nExpectChangeOuts != 0) {
-					// -- set nExpectChangeOuts to 0 to simulate exhaustive payment (total+fee=totalAvailableCoins)
-					nExpectChangeOuts = 0;
-					// -- get nTotalBytes again for 0 change outputs
-					uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
-						+ GetSizeOfCompactSize(nOutputs)
-						+ nSizeOutputs
-						+ (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * vecChange.size()
-						+ GetSizeOfCompactSize((i + 1))
-						+ nByteSizePerInCoin * (i + 1);
-
-					if (fDebugRingSig)
-						printf("New nTotalBytes: %d\n", nTotalBytes);
-				}
-			}
-		}
-
-		if (fDebugRingSig)
-			printf("nValue: %d, nFee: %d, nValueTest: %d, nAmountCheck: %d, nTotalBytes: %u\n", nValue, nFee, nValueTest, nAmountCheck, nTotalBytes);
-
-        vPickedCoins.clear();
-        vecChange.clear();
-
-        std::vector<int> vecInputIndex;
-
-        if (checkCombinations(nValueTest, i+1, vData, vecInputIndex))
-        {
-            if (fDebugRingSig)
-            {
-                printf("Found combination %u, ", i+1);
-                for (int ic = vecInputIndex.size(); ic--;)
-                    printf("%d%c", vecInputIndex[ic], ic ? ' ': '\n');
-
-                printf("nTotalBytes %u\n", nTotalBytes);
-                printf("nFee %d\n", nFee);
-            };
-
-            int64_t nTotalIn = 0;
-            vPickedCoins.resize(vecInputIndex.size());
-            for (uint32_t ic = 0; ic < vecInputIndex.size(); ++ic)
-            {
-                vPickedCoins[ic] = vData[vecInputIndex[ic]];
-                nTotalIn += vPickedCoins[ic]->nValue;
-            };
-
-            int64_t nChange = nTotalIn - (nValueTest + nFee);
-
-
-            CStealthAddress sxChange;
-            if (!GetAnonChangeAddress(sxChange))
-            {
-                sError = "GetAnonChangeAddress() change failed.";
-                return 3;
-            };
-
-            std::string sNone;
-            sNone.clear();
-            CScript scriptNone;
-            if (!CreateAnonOutputs(fTest ? NULL : &sxChange, nChange, sNone, vecChange, scriptNone))
-            {
-                sError = "CreateAnonOutputs() change failed.";
-                return 3;
-            };
-
-
-            // -- get nTotalBytes again, using actual no. of change outputs
-            uint32_t nTotalBytes = (4 + 4 + 4) // Ctx: nVersion, nTime, nLockTime
-                + GetSizeOfCompactSize(nOutputs + vecChange.size())
-                + nSizeOutputs
-                + (GetSizeOfCompactSize(MIN_ANON_OUT_SIZE) + MIN_ANON_OUT_SIZE + sizeof(int64_t)) * vecChange.size()
-                + GetSizeOfCompactSize((i+1))
-                + nByteSizePerInCoin * (i+1);
-
-            int64_t nTestFee = wtxNew.GetMinFee(0, GMF_ANON, nTotalBytes);
-
-            if (nTestFee > nFee)
-            {
-                if (fDebugRingSig)
-                    printf("Try again - nTestFee > nFee %d, %d, nTotalBytes %u\n", nTestFee, nFee, nTotalBytes);
-                nExpectChangeOuts = vecChange.size();
-                return 2; // up changeOutSize
-            };
-
-            nFee = nTestFee;
-
-			if (feeMode != 1 && nValue + nFee > nAmountCheck)
-			{
-				sError = "Not enough (mature) coins with requested ring size to cover amount with fees.";
-				if (fDebugRingSig)
-					printf("Not enough (mature) coins %d with requested ring size to cover amount %d together with fees %d.\n", nAmountCheck, nValue, nFee);
-				return 3;
-			};
-
-
-            return 1; // found
-        };
-    };
-
-    return 0; // not found
-};
 
 int CWallet::GetTxnPreImage(CTransaction& txn, uint256& hash)
 {

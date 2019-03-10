@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>666</width>
-    <height>435</height>
+    <height>440</height>
    </rect>
   </property>
   <property name="palette">
@@ -180,6 +180,11 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+         </font>
         </property>
         <property name="styleSheet">
          <string notr="true">QListView { background: transparent; }</string>
