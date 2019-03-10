@@ -134,7 +134,7 @@
          <widget class="QLabel" name="label_4">
           <property name="font">
            <font>
-            <pointsize>11</pointsize>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="text">
@@ -228,7 +228,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>11</pointsize>
+            <pointsize>12</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -339,7 +339,7 @@
            <widget class="QLabel" name="label_5">
             <property name="font">
              <font>
-              <pointsize>11</pointsize>
+              <pointsize>12</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -573,7 +573,7 @@
            <widget class="QLabel" name="labelBalance">
             <property name="font">
              <font>
-              <pointsize>10</pointsize>
+              <pointsize>8</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -646,7 +646,7 @@
            <widget class="QLabel" name="labelUSDTotal">
             <property name="font">
              <font>
-              <pointsize>10</pointsize>
+              <pointsize>8</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -803,6 +803,7 @@
             <pointsize>20</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <underline>false</underline>
            </font>
           </property>
           <property name="cursor">
