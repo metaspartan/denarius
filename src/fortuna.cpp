@@ -985,8 +985,8 @@ void ThreadCheckForTunaPool(void* parg)
 
         //try to sync the fortunastake list and payment list every 30 seconds from at least 2 nodes until we have them all
         if(vNodes.size() > 1 && c % mnRefresh == 0 && (mnCount == 0 || vecFortunastakes.size() < mnCount)) {
-            //bool fIsInitialDownload = IsInitialBlockDownload();
-            //if(!fIsInitialDownload) {
+            bool fIsInitialDownload = IsInitialBlockDownload();
+            if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
@@ -1005,7 +1005,7 @@ void ThreadCheckForTunaPool(void* parg)
                         }
                     }
                 }
-            //}
+            }
         }
 
         if(c % FORTUNASTAKE_PING_SECONDS == 0){

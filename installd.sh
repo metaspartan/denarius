@@ -56,7 +56,7 @@ cd ~/denarius/src
 echo "Updating linux packages"
 sudo apt-get update -y && apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy
+sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy libssl-dev
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
