@@ -1815,7 +1815,7 @@ void CWallet::AvailableCoinsMN(vector<COutput>& vCoins, bool fOnlyConfirmed, boo
     }
 }
 
-void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSpendTime) const
+void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSpendTime, int nWatchonlyConfig) const
 {
     vCoins.clear();
 
@@ -1841,10 +1841,25 @@ void CWallet::AvailableCoinsForStaking(vector<COutput>& vCoins, unsigned int nSp
                 if (pcoin->nVersion == ANON_TXN_VERSION
                     && pcoin->vout[i].IsAnonOutput())
                     continue;
+					
+				isminetype mine = IsMine(pcoin->vout[i]);
+				if (mine == ISMINE_NO)
+					continue;
+
+				if (mine == ISMINE_SPENDABLE && nWatchonlyConfig == 2)
+					continue;
+
+				if (mine == ISMINE_WATCH_ONLY && nWatchonlyConfig == 1)
+					continue;
+				
+				bool fIsSpendable = false;
+                if ((mine & ISMINE_SPENDABLE) != ISMINE_NO)
+                    fIsSpendable = true;
+				
                 if (!(pcoin->IsSpent(i)) && IsMine(pcoin->vout[i]) && pcoin->vout[i].nValue >= nMinimumInputValue
                         && !IsLockedCoin((*it).first, i) // ignore outputs that are locked for MNs
                         )
-					          vCoins.push_back(COutput(pcoin, i, nDepth, true));
+					          vCoins.push_back(COutput(pcoin, i, nDepth, fIsSpendable));
             };
         };
     }
