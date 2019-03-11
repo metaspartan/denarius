@@ -6,11 +6,9 @@ case $choice in
 1) echo 1 "Compiling Denarius QT Ubuntu 16.04"
 
 echo "Updating linux packages"
-sudo apt-get update -y && apt-get upgrade -y
+sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
-
-sudo apt-get --assume-yes install qt5-default
+sudo apt-get --assume-yes install git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
 
 echo "Installing Denarius Wallet"
 git clone https://github.com/carsenk/denarius
@@ -55,18 +53,17 @@ cd ~/denarius/src
                 ;;
 3) echo 3 "Compile Denarius QT Ubuntu 18.04"
 echo "Updating linux packages"
-sudo apt-get update -y && apt-get upgrade -y
+sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
-
-sudo apt-get --assume-yes install qt5-default
+sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
 wget https://www.openssl.org/source/openssl-1.0.1j.tar.gz
 tar -xzvf openssl-1.0.1j.tar.gz
 cd openssl-1.0.1j
-sudo ./config
+./config
+make depend
 sudo make install
 sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
 cd ~
