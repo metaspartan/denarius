@@ -1684,7 +1684,7 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate() || nBestHeight < (GetNumBlocksOfPeers() - nCoinbaseMaturity*2))
+    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
         return true;
     static int64_t nLastUpdate;
     static CBlockIndex* pindexLastBest;
@@ -1707,6 +1707,7 @@ bool IsInitialBlockDownload()
         GetFortunastakeRanks(pindexBest);
     }
     return state;
+	
 }
 
 void static InvalidChainFound(CBlockIndex* pindexNew)

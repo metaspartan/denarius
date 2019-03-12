@@ -797,6 +797,8 @@ int CForTunaPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
 }
 
 bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
+	bool fIsInitialDownload = IsInitialBlockDownload();
+    if(fIsInitialDownload) return;
     CScript payee2;
     payee2= GetScriptForDestination(pubkey.GetID());
 
