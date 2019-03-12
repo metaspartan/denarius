@@ -8,7 +8,7 @@ case $choice in
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
+sudo apt-get install -y git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
 
 echo "Installing Denarius Wallet"
 git clone https://github.com/carsenk/denarius
@@ -31,11 +31,11 @@ cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.6/chaindata1612994.zip
-unzip chaindata1612994.zip
-rm chaindata1612994.zip
-Echo "Back to Compiled QT Binary Folder"
-cd ~/denarius/src
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
+unzip chaindata1701122.zip
+rm chaindata1701122.zip
+echo "Back to Compiled QT Binary Folder"
+cd ~/denarius
                 ;;
 2) echo 2 "Update Denarius QT"
 echo "Updating Denarius Wallet"
@@ -48,14 +48,14 @@ git pull
 
 qmake "USE_QRCODE=1" "USE_UPNP=1" denarius-qt.pro
 make
-Echo "Back to Compiled QT Binary Folder"
-cd ~/denarius/src
+echo "Back to Compiled QT Binary Folder"
+cd ~/denarius
                 ;;
 3) echo 3 "Compile Denarius QT Ubuntu 18.04"
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
+sudo apt-get install -y git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
@@ -90,11 +90,11 @@ cd ~/.denarius
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.6/chaindata1612994.zip
-unzip chaindata1612994.zip
-chaindata1612994.zip
-Echo "Back to Compiled QT Binary Folder"
-cd ~/denarius/src
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
+unzip chaindata1701122.zip
+rm chaindata1701122.zip
+echo "Back to Compiled QT Binary Folder"
+cd ~/denarius
                 ;;
 4) echo 4 "Update Denarius QT 18.04"
 echo "Updating Denarius Wallet"
@@ -107,8 +107,8 @@ git pull
 
 qmake "USE_UPNP=1" "USE_QRCODE=1" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
 make
-Echo "Back to Compiled QT Binary Folder"
-cd ~/denarius/src
+echo "Back to Compiled QT Binary Folder"
+cd ~/denarius
                 ;;
 esac
 echo Selected $choice
