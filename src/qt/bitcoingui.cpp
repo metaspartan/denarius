@@ -258,14 +258,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     {
         QTimer *timerStakingIcon = new QTimer(labelStakingIcon);
         connect(timerStakingIcon, SIGNAL(timeout()), this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(1000, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(2500, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(5000, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(7500, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(10000, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(12500, this, SLOT(updateStakingIcon()));
-        QTimer::singleShot(15000, this, SLOT(updateStakingIcon()));
-        timerStakingIcon->start(30 * 1000);
+        timerStakingIcon->start();
         updateStakingIcon();
     }
 
