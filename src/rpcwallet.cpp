@@ -1210,7 +1210,7 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
 				}
 				
 				// PoS Reward and Amount
-                if (wtx.IsCoinStake() && nFee !=0)
+                if (wtx.IsCoinStake() && nFee != 0)
                 {
 					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
 					entry.push_back(Pair("reward", ValueFromAmount(-nFee)));
