@@ -1,5 +1,8 @@
-langauge: cpp
+language: cpp
 dist: xenial
+env:
+  global:
+    - MAKEFLAGS="-j 2"
 addons:
   apt:
     packages:
