@@ -305,7 +305,7 @@ public:
         @return multimap of ordered transactions and accounting entries
         @warning Returned pointers are *only* valid within the scope of passed acentries
      */
-    TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "");
+    TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "", bool fShowCoinstake = true);
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx& wtxIn, const uint256& hashIn);
