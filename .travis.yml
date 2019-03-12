@@ -1,0 +1,26 @@
+langauge: cpp
+dist: xenial
+addons:
+  apt:
+    sources:
+      - ppa:bitcoin/bitcoin
+    packages:
+    - software-properties-common
+    - build-essential
+    - libdb4.8-dev
+    - libdb4.8++-dev
+    - libminiupnpc-dev
+    - libboost-all-dev
+    - libssl-dev
+    - git
+    - libevent-dev
+    - obfs4proxy
+    - libqrencode-dev
+# whitelist
+branches:
+  only:
+    - master
+    - v3.4
+before_script: cd src
+script:
+    - make -f makefile.unix
