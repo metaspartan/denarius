@@ -118,6 +118,11 @@ OverviewPage::OverviewPage(QWidget *parent) :
     PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
+	
+	//Refresh the Est. Balances and News automatically
+	refreshbtnTimer = new QTimer(this);
+    connect(refreshbtnTimer, SIGNAL(timeout()), this, SLOT( PriceRequest()));
+    refreshbtnTimer->start(MODEL_UPDATE_DELAY);
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);

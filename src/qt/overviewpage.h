@@ -42,6 +42,7 @@ signals:
 
 private:
     QTimer *timer;
+	QTimer *refreshbtnTimer;
     Ui::OverviewPage *ui;
     WalletModel *model;
     qint64 currentBalance;

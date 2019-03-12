@@ -54,18 +54,6 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     ui->tableWidget_2->sortByColumn(0, Qt::AscendingOrder);
 
     subscribeToCoreSignals();
-
-    timer = new QTimer(this);
-    //connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList(pindexBest)));
-    //if(!GetBoolArg("-reindexaddr", false))
-    //    timer->start(30000);
-
-	/* Old Timer
-    QTimer::singleShot(1000, this, SLOT(updateNodeList()));
-    QTimer::singleShot(5000, this, SLOT(updateNodeList()));
-    QTimer::singleShot(10000, this, SLOT(updateNodeList()));
-    QTimer::singleShot(30000, this, SLOT(updateNodeList())); // try to load the node list ASAP for the user
-	*/
 	
 	timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
