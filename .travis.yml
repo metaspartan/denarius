@@ -2,13 +2,10 @@ langauge: cpp
 dist: xenial
 addons:
   apt:
-    sources:
-      - ppa:bitcoin/bitcoin
     packages:
     - software-properties-common
     - build-essential
-    - libdb4.8-dev
-    - libdb4.8++-dev
+    - libdb++-dev
     - libminiupnpc-dev
     - libboost-all-dev
     - libssl-dev

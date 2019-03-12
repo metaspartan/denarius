@@ -9,6 +9,7 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 [![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
 
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
+[![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=v3.4)](https://travis-ci.org/carsenk/denarius)
 
 Intro
 ==========================
