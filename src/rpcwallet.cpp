@@ -1203,13 +1203,26 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                     entry.push_back(Pair("category", "receive"));
                 }
 				
-				entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+				// PoW Amount
+				if (!wtx.IsCoinStake())
+				{
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+				}
+				
+				// PoS Reward and Amount
                 if (wtx.IsCoinStake())
                 {
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
 					entry.push_back(Pair("reward", ValueFromAmount(-nFee)));
                     stop = true;
-                }
+				//FortunaStake PoS Reward - D E N A R I U S
+                } else if (wtx.IsCoinStake() && ValueFromAmount(-nFee) == 0) {
+					entry.push_back(Pair("reward", ValueFromAmount(r.amount)));
+					stop = true;
+				}
+				
 				entry.push_back(Pair("vout", r.vout));
+				
                 if (pwalletMain->mapAddressBook.count(r.destination)) {
                     entry.push_back(Pair("label", account));
                 }
