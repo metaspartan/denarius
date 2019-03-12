@@ -60,10 +60,16 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     //if(!GetBoolArg("-reindexaddr", false))
     //    timer->start(30000);
 
+	/* Old Timer
     QTimer::singleShot(1000, this, SLOT(updateNodeList()));
     QTimer::singleShot(5000, this, SLOT(updateNodeList()));
     QTimer::singleShot(10000, this, SLOT(updateNodeList()));
     QTimer::singleShot(30000, this, SLOT(updateNodeList())); // try to load the node list ASAP for the user
+	*/
+	
+	timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
+        timer->start(); // No 1000 ms to do heavy work and be snappy
 }
 
 FortunastakeManager::~FortunastakeManager()
@@ -351,9 +357,13 @@ void FortunastakeManager::updateNodeList()
                     } else {
                         nstatus = QString::fromStdString("Registered");
                     }
-                } else {
-                    nstatus = QString::fromStdString(mn.status);
-                }
+                } else if (mn.status == "Expired") {
+					nstatus = QString::fromStdString("Expired");
+                } else if (mn.status == "Inactive, expiring soon") {
+					nstatus = QString::fromStdString("Inactive, expiring soon");
+				} else {
+					nstatus = QString::fromStdString(mn.status);
+				}
                 npayrate = QString::fromStdString("");
                 if (value > 0) {
                     npayrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
