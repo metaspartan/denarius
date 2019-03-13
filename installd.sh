@@ -25,14 +25,14 @@ echo "Copied to /usr/bin for ease of use"
 
 echo "Populate denarius.conf"
 mkdir ~/.denarius
-echo -e "nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
+echo -e "daemon=1\listen=1\rpcuser=user\rpcpassword=changethispassword\nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
 
 echo "Get Chaindata"
 cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
-wget https://github.com/carsenk/denarius/releases/download/v3.3.6/chaindata1612994.zip
-unzip chaindata1612994.zip
-rm -rf chaindata1612994.zip
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
+unzip chaindata1701122.zip
+rm -rf chaindata1701122.zip
 echo "Back to Compiled denariusd Binary Folder"
 cd ~/denarius/src
                 ;;
@@ -85,14 +85,14 @@ echo "Copied to /usr/bin for ease of use"
 
 echo "Populate denarius.conf"
 mkdir ~/.denarius
-echo -e "nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
+echo -e "daemon=1\listen=1\rpcuser=user\rpcpassword=changethispassword\nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
 
 echo "Get Chaindata"
 cd ~/.denarius
 rm -rf database txleveldb smsgDB
-wget https://github.com/carsenk/denarius/releases/download/v3.3.6/chaindata1612994.zip
-unzip chaindata1612994.zip
-rm -rf chaindata1612994.zip
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
+unzip chaindata1701122.zip
+rm -rf chaindata1701122.zip
 echo "Back to Compiled denariusd Binary Folder"
 cd ~/denarius/src
                 ;;
