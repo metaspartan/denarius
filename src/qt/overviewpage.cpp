@@ -124,6 +124,11 @@ OverviewPage::OverviewPage(QWidget *parent) :
     connect(refreshbtnTimer, SIGNAL(timeout()), this, SLOT( PriceRequest()));
     refreshbtnTimer->start(160000); // 160 second timer
 	
+	//Handle refreshing updateDisplayUnit() more often instead of every tx change
+	updateDisplayTimer = new QTimer(this);
+	connect(updateDisplayTimer, SIGNAL(timeout()), this, SLOT( updateDisplayUnit()));
+	updateDisplayTimer->start(); // Multithreaded, when a thread is available refresh all overview displays
+	
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));

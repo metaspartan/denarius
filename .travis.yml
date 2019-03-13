@@ -21,6 +21,11 @@ branches:
   only:
     - master
     - v3.4
-before_script: cd src
-script:
-    - make -f makefile.unix
+jobs:
+  include:
+    - stage: denariusd Build
+      before_script: cd src
+      script: make -f makefile.unix
+    - stage: Denarius QT Build
+      before_script: qmake "USE_UPNP=1" "USE_QRCODE=1" denarius-qt.pro
+      script: make -f Makefile.Release
