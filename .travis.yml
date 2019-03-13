@@ -3,19 +3,6 @@ dist: xenial
 env:
   global:
     - MAKEFLAGS="-j 2"
-addons:
-  apt:
-    packages:
-    - software-properties-common
-    - build-essential
-    - libdb++-dev
-    - libminiupnpc-dev
-    - libboost-all-dev
-    - libssl-dev
-    - git
-    - libevent-dev
-    - obfs4proxy
-    - libqrencode-dev
 # whitelist
 branches:
   only:
@@ -24,8 +11,40 @@ branches:
 jobs:
   include:
     - stage: denariusd Build
+      addons:
+      apt:
+        packages:
+        - software-properties-common
+        - build-essential
+        - libdb++-dev
+        - libminiupnpc-dev
+        - libboost-all-dev
+        - libssl-dev
+        - git
+        - libevent-dev
+        - obfs4proxy
+        - libqrencode-dev
       before_script: cd src
       script: make -f makefile.unix
     - stage: Denarius QT Build
+      addons:
+      apt:
+        packages:
+        - software-properties-common
+        - build-essential
+        - libdb++-dev
+        - libminiupnpc-dev
+        - libboost-all-dev
+        - libssl-dev
+        - git
+        - libevent-dev
+        - obfs4proxy
+        - libqrencode-dev
+        - libqt5gui5 
+        - libqt5core5a 
+        - libqt5dbus5 
+        - qttools5-dev
+        - qttools5-dev-tools
+        - libtool
       before_script: qmake "USE_UPNP=1" "USE_QRCODE=1" denarius-qt.pro
       script: make -f Makefile.Release
