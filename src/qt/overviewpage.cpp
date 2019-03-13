@@ -123,7 +123,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	refreshbtnTimer = new QTimer(this);
     connect(refreshbtnTimer, SIGNAL(timeout()), this, SLOT( PriceRequest()));
     refreshbtnTimer->start(MODEL_UPDATE_DELAY);
-
+	
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
@@ -246,6 +246,11 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
     double dollarg2 = (dollarg.toDouble() * totalBalance / 100000000);
   	total = QString::number(dollarg2, 'f', 2);
   	ui->labelUSDTotal->setText("$" + total + " USD");
+	
+	QString eurtotal;
+	double dollarg1 = (dollarg.toDouble() * totalBalance * 0.886 / 100000000); 
+  	eurtotal = QString::number(dollarg1, 'f', 2);
+  	ui->labelEURTotal->setText("€" + eurtotal + " EUR");
 
     ui->labelBTCTotal->setText(BitcoinUnits::formatWithUnit(unitdBTC, bitcoing.toDouble() * totalBalance));
     ui->labelTradeLink->setTextFormat(Qt::RichText);
