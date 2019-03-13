@@ -122,7 +122,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 	//Refresh the Est. Balances and News automatically
 	refreshbtnTimer = new QTimer(this);
     connect(refreshbtnTimer, SIGNAL(timeout()), this, SLOT( PriceRequest()));
-    refreshbtnTimer->start(MODEL_UPDATE_DELAY);
+    refreshbtnTimer->start(160000); // 160 second timer
 	
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
