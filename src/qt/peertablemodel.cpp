@@ -124,7 +124,7 @@ PeerTableModel::PeerTableModel(ClientModel *parent) :
     // set up timer for auto refresh
     timer = new QTimer();
     connect(timer, SIGNAL(timeout()), SLOT(refresh()));
-    timer->setInterval(MODEL_UPDATE_DELAY);
+    timer->start(5000); //Just auto refresh every 5 secs by itself without waiting for rpcconsole
 
     // load initial data
     refresh();
