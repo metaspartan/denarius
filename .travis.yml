@@ -33,5 +33,5 @@ jobs:
       before_script: cd src
       script: make -f makefile.unix
     - stage: Denarius QT Build
-      before_script: qmake "USE_UPNP=1" "USE_QRCODE=1" denarius-qt.pro
+      before_script: qmake -qt=qt5 "USE_UPNP=1" "USE_QRCODE=1" denarius-qt.pro
       script: make
