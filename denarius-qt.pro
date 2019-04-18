@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.8.4
+VERSION = 3.3.8.5
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -413,12 +413,12 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/aboutdialog.h \
     src/qt/editaddressdialog.h \
     src/qt/bitcoinaddressvalidator.h \
-	src/kernelrecord.h \
-	src/qt/mintingfilterproxy.h \
+    src/kernelrecord.h \
+    src/qt/mintingfilterproxy.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
     src/qt/proofofimage.h \
-	src/qt/multisigaddressentry.h \
+    src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
     src/alert.h \
@@ -429,7 +429,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/compat.h \
     src/coincontrol.h \
     src/sync.h \
-	src/tinyformat.h \
+    src/tinyformat.h \
     src/util.h \
     src/uint256.h \
     src/kernel.h \
@@ -439,7 +439,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/strlcpy.h \
     src/smessage.h \
     src/main.h \
-	  src/core.h \
+    src/core.h \
     src/ringsig.h \
     src/miner.h \
     src/net.h \
@@ -449,11 +449,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
-	  src/fortuna.h \
-	  src/activefortunastake.h \
-	  src/fortunastake.h \
-	  src/fortunastakeconfig.h \
-	  src/spork.h \
+    src/fortuna.h \
+    src/activefortunastake.h \
+    src/fortunastake.h \
+    src/fortunastakeconfig.h \
+    src/spork.h \
     src/init.h \
     src/mruset.h \
     src/json/json_spirit_writer_template.h \
@@ -495,26 +495,26 @@ HEADERS += src/qt/bitcoingui.h \
     src/ui_interface.h \
     src/qt/rpcconsole.h \
     src/qt/trafficgraphwidget.h \
-	src/qt/blockbrowser.h \
-	src/qt/statisticspage.h \
-	src/qt/marketbrowser.h \
-	src/qt/qcustomplot.h \
-	src/qt/fortunastakemanager.h \
+    src/qt/blockbrowser.h \
+    src/qt/statisticspage.h \
+    src/qt/marketbrowser.h \
+    src/qt/qcustomplot.h \
+    src/qt/fortunastakemanager.h \
     src/qt/addeditadrenalinenode.h \
     src/qt/adrenalinenodeconfigdialog.h \
     src/qt/termsofuse.h \
     src/version.h \
-	src/bloom.h \
+    src/bloom.h \
     src/netbase.h \
     src/clientversion.h \
-	src/hash.h \
+    src/hash.h \
     src/hashblock.h \
-	src/sph_echo.h \
-	src/sph_keccak.h \
-	src/sph_jh.h \
+    src/sph_echo.h \
+    src/sph_keccak.h \
+    src/sph_jh.h \
     src/sph_types.h \
     src/threadsafety.h \
-	src/eccryptoverify.h \
+    src/eccryptoverify.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/qt/sendmessagesdialog.h \
@@ -523,7 +523,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/qvalidatedtextedit.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-	src/qt/intro.cpp \
+    src/qt/intro.cpp \
     src/qt/transactiontablemodel.cpp \
     src/qt/addresstablemodel.cpp \
     src/qt/peertablemodel.cpp \
@@ -536,20 +536,20 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
-	src/qt/statisticspage.cpp \
-	src/qt/blockbrowser.cpp \
-	src/qt/marketbrowser.cpp \
-	src/kernelrecord.cpp \
-	src/qt/mintingfilterproxy.cpp \
+    src/qt/statisticspage.cpp \
+    src/qt/blockbrowser.cpp \
+    src/qt/marketbrowser.cpp \
+    src/kernelrecord.cpp \
+    src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
-	  src/qt/multisigaddressentry.cpp \
+    src/qt/multisigaddressentry.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
     src/alert.cpp \
-	  src/base58.cpp \
+    src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
     src/smessage.cpp \
@@ -558,7 +558,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/key.cpp \
     src/script.cpp \
     src/main.cpp \
-	  src/core.cpp \
+    src/core.cpp \
     src/ringsig.cpp \
     src/miner.cpp \
     src/init.cpp \
@@ -566,7 +566,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
     src/db.cpp \
-	src/eccryptoverify.cpp \
+    src/eccryptoverify.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
@@ -587,7 +587,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
-	src/rpcfortuna.cpp \
+    src/rpcfortuna.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -606,12 +606,12 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/messagepage.cpp \
     src/qt/messagemodel.cpp \
-	src/qt/qcustomplot.cpp \
+    src/qt/qcustomplot.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/qvalidatedtextedit.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
-	src/qt/fortunastakemanager.cpp \
+    src/qt/fortunastakemanager.cpp \
     src/qt/addeditadrenalinenode.cpp \
     src/qt/adrenalinenodeconfigdialog.cpp \
     src/noui.cpp \
@@ -622,11 +622,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
-	src/fortuna.cpp \
-	src/activefortunastake.cpp \
-	src/fortunastake.cpp \
-	src/fortunastakeconfig.cpp \
-	src/spork.cpp
+    src/fortuna.cpp \
+    src/activefortunastake.cpp \
+    src/fortunastake.cpp \
+    src/fortunastakeconfig.cpp \
+    src/spork.cpp
 
 #### D e n a r i u s sources
 
@@ -635,7 +635,7 @@ RESOURCES += \
     src/qt/res/themes/qdarkstyle/style.qrc
 
 FORMS += \
-	src/qt/forms/intro.ui \
+    src/qt/forms/intro.ui \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
     src/qt/forms/addressbookpage.ui \
@@ -649,15 +649,15 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
     src/qt/forms/messagepage.ui \
-	  src/qt/forms/statisticspage.ui \
-	  src/qt/forms/blockbrowser.ui \
-	  src/qt/forms/marketbrowser.ui \
+    src/qt/forms/statisticspage.ui \
+    src/qt/forms/blockbrowser.ui \
+    src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
     src/qt/forms/termsofuse.ui \
     src/qt/forms/fortunastakemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
     src/qt/forms/adrenalinenodeconfigdialog.ui \
-	  src/qt/forms/multisigaddressentry.ui \
+    src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
@@ -765,7 +765,7 @@ LIBS += -lz -levent
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
-LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
+LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX -lboost_chrono$$BOOST_LIB_SUFFIX
 windows:LIBS += -lboost_chrono$$BOOST_LIB_SUFFIX
 
 contains(RELEASE, 1) {

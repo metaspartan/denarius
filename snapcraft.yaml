@@ -1,0 +1,70 @@
+# Denarius - Snapcraft Build - Known to build in Ubuntu 18.04+
+name: denarius
+version: '3.3.7'
+summary: Denarius
+description: |
+  An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
+icon: src/qt/res/icons/denarius_icon.png
+
+grade: stable
+confinement: classic
+
+parts:
+  denarius:
+    after: [desktop-qt5]
+    plugin: qmake
+    qt-version: qt5
+    source: https://github.com/carsenk/denarius.git
+    build-packages:
+      - g++
+      - unzip
+      - wget
+      - jq
+      - build-essential
+      - zlib1g-dev
+      - libdb++-dev
+      - libboost-all-dev
+      - libqrencode-dev
+      - libminiupnpc-dev
+      - libevent-dev
+      - libtool
+      - libqt5gui5
+      - libqt5core5a
+      - libqt5dbus5
+      - qttools5-dev
+      - qttools5-dev-tools
+      - qt5-default
+    override-build: |
+      echo "Downgrading OpenSSL to 1.0.1j"
+      wget https://www.openssl.org/source/openssl-1.0.1j.tar.gz
+      tar -xzvf openssl-1.0.1j.tar.gz
+      cd openssl-1.0.1j
+      ./config
+      make
+      make depend
+      make install
+      ln -sf /usr/local/ssl/bin/openssl `which openssl`
+      echo "Populating denarius.conf"
+      mkdir ~/.denarius
+      echo -e "nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
+      echo "Grabbing Latest Chaindata"
+      cd ~/.denarius
+      rm -rf database txleveldb smsgDB
+      wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
+      unzip chaindata1799510.zip
+      rm chaindata1799510.zip
+      echo "Back to Compiled QT Binary Folder"
+      cd ~/denarius
+      echo "Get Coinexplorer FS List"
+      wget https://www.coinexplorer.net/api/v1/D/masternode/list
+      cat list | jq '.result[0].addr' | tr -d "\""  >> fspeers.txt
+      cat list | jq '.result[1].addr' | tr -d "\""  >> fspeers.txt
+      cat list | jq '.result[2].addr' | tr -d "\""  >> fspeers.txt
+      sed 's/^/addnode=/' fspeers.txt > addnode.txt
+      cat addnode.txt >> ~/.denarius/denarius.conf
+      rm list
+      rm fspeers.txt
+      rm addnode.txt
+    override-build: |
+      qmake "USE_UPNP=1" "USE_QRCODE=1" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
+      OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
