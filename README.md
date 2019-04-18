@@ -12,9 +12,9 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 <a href="https://discord.gg/UPpQy3n"><img src="https://discordapp.com/api/guilds/334361453320732673/embed.png" alt="Discord server" /></a>
 
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
-[![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=v3.4)](https://travis-ci.org/carsenk/denarius)
+[![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=master)](https://travis-ci.org/carsenk/denarius)
 
-[![Build history](https://buildstats.info/travisci/chart/carsenk/denarius?branch=v3.4)](https://travis-ci.org/carsenk/denarius?branch=v3.4)
+[![Build history](https://buildstats.info/travisci/chart/carsenk/denarius?branch=master)](https://travis-ci.org/carsenk/denarius?branch=master)
 
 Intro
 ==========================
