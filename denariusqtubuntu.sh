@@ -31,11 +31,11 @@ cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
-unzip chaindata1701122.zip
-rm chaindata1701122.zip
-echo "Back to Compiled QT Binary Folder"
-cd ~/denarius
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
+unzip chaindata1799510.zip
+rm chaindata1799510.zip
+Echo "Back to Compiled QT Binary Folder"
+cd ~/denarius/src
                 ;;
 2) echo 2 "Update Denarius QT"
 echo "Updating Denarius Wallet"
@@ -90,11 +90,11 @@ cd ~/.denarius
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1701122.zip
-unzip chaindata1701122.zip
-rm chaindata1701122.zip
-echo "Back to Compiled QT Binary Folder"
-cd ~/denarius
+wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
+unzip chaindata1799510.zip
+rm chaindata1799510.zip
+Echo "Back to Compiled QT Binary Folder"
+cd ~/denarius/src
                 ;;
 4) echo 4 "Update Denarius QT 18.04"
 echo "Updating Denarius Wallet"
