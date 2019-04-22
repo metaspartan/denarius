@@ -3,16 +3,17 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_STEALTH_H
-#define BITCOIN_STEALTH_H
-
-#include "util.h"
-#include "serialize.h"
+#ifndef DENARIUS_STEALTH_H
+#define DENARIUS_STEALTH_H
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
 #include <inttypes.h>
+
+#include "util.h"
+#include "key.h"
+#include "serialize.h"
 #include "types.h"
 
 const uint32_t MAX_STEALTH_NARRATION_SIZE = 48;
@@ -80,6 +81,8 @@ public:
 
     bool SetEncoded(const std::string& encodedAddress);
     std::string Encoded() const;
+	
+	int SetScanPubKey(CPubKey pk);
 
     bool operator <(const CStealthAddress& y) const
     {
@@ -116,4 +119,4 @@ int StealthSharedToSecretSpend(ec_secret& sharedS, ec_secret& spendSecret, ec_se
 bool IsStealthAddress(const std::string& encodedAddress);
 
 
-#endif  // BITCOIN_STEALTH_H
+#endif  // DENARIUS_STEALTH_H

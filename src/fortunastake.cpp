@@ -65,8 +65,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
     if (strCommand == "dsee") { //ForTuna Election Entry
         //if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
-        //bool fIsInitialDownload = IsInitialBlockDownload();
-        //if(fIsInitialDownload) return;
+        bool fIsInitialDownload = IsInitialBlockDownload();
+        if(fIsInitialDownload) return;
 
         CTxIn vin;
         CService addr;
@@ -217,8 +217,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
     else if (strCommand == "dseep") { //ForTuna Election Entry Ping
         //if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
-        //bool fIsInitialDownload = IsInitialBlockDownload();
-        //if(fIsInitialDownload) return;
+        bool fIsInitialDownload = IsInitialBlockDownload();
+        if(fIsInitialDownload) return;
 
         CTxIn vin;
         vector<unsigned char> vchSig;
@@ -288,7 +288,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
     } else if (strCommand == "dseg") { //Get fortunastake list or specific entry
         bool fIsInitialDownload = IsInitialBlockDownload();
-        //if(fIsInitialDownload) return;
+        if(fIsInitialDownload) return;
 
         CTxIn vin;
         vRecv >> vin;

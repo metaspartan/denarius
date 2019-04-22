@@ -19,7 +19,10 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+
+#ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
+#endif
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -859,7 +862,8 @@ bool AppInit2()
                 return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
         };
     };
-
+	
+#ifdef USE_NATIVETOR
     // Native Tor Integration Continued - D e n a r i u s v3
     if(fNativeTor)
     {
@@ -889,6 +893,7 @@ bool AppInit2()
         file >> automatic_onion;
         AddLocal(CService(automatic_onion, GetListenPort(), fNameLookup), LOCAL_MANUAL);
     };
+#endif
 
     if (mapArgs.count("-externalip"))
     {

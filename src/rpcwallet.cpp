@@ -1162,7 +1162,10 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
             entry.push_back(Pair("category", "send"));
             entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
             entry.push_back(Pair("vout", s.vout));
-            entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+			if (!wtx.IsCoinStake())
+				entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+			else if (s.amount == 0 && s.vout == 0)
+				continue;
             if (fLong)
                 WalletTxToJSON(wtx, entry);
             ret.push_back(entry);
@@ -1175,9 +1178,10 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
         bool stop = false;
         BOOST_FOREACH(const COutputEntry& r, listReceived)
         {
-            string account;
+			std::string account;
             if (pwalletMain->mapAddressBook.count(r.destination))
                 account = pwalletMain->mapAddressBook[r.destination];
+			
             if (fAllAccounts || (account == strAccount))
             {
                 Object entry;
@@ -1198,17 +1202,31 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                 {
                     entry.push_back(Pair("category", "receive"));
                 }
-                if (!wtx.IsCoinStake())
+				
+				// PoW Amount
+				if (!wtx.IsCoinStake())
+				{
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+				}
+				
+				// PoS Reward and Amount
+                if (wtx.IsCoinStake() && nFee != 0)
                 {
-                    entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
-                    entry.push_back(Pair("vout", r.vout));
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+					entry.push_back(Pair("reward", ValueFromAmount(-nFee)));
+                    stop = true;
+				//FortunaStake PoS Reward - D E N A R I U S
+                } else if (wtx.IsCoinStake() && nFee == 0) {
+					entry.push_back(Pair("reward", ValueFromAmount(r.amount)));
+					stop = true;
+				}
+				
+				entry.push_back(Pair("vout", r.vout));
+				
+                if (pwalletMain->mapAddressBook.count(r.destination)) {
+                    entry.push_back(Pair("label", account));
                 }
-                else
-                {
-                    entry.push_back(Pair("amount", ValueFromAmount(-nFee)));
-                    //entry.push_back(Pair("vout", r.vout));
-                    stop = true; // only one coinstake output
-                }
+				
                 if (fLong)
                     WalletTxToJSON(wtx, entry);
                 ret.push_back(entry);
@@ -1238,9 +1256,9 @@ void AcentryToJSON(const CAccountingEntry& acentry, const string& strAccount, Ar
 
 Value listtransactions(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 3)
+    if (fHelp || params.size() > 5)
         throw runtime_error(
-            "listtransactions [account] [count=10] [from=0]\n"
+            "listtransactions [account] [count=10] [from=0] [watchonly=false] [show_coinstake=1]\n"
             "Returns up to [count] most recent transactions skipping the first [from] transactions for account [account].");
 
     string strAccount = "*";
@@ -1257,6 +1275,14 @@ Value listtransactions(const Array& params, bool fHelp)
     if(params.size() > 3)
         if(params[3].get_bool())
             filter = filter | ISMINE_WATCH_ONLY;
+	
+	bool fShowCoinstake = true;
+    if (params.size() > 4)
+    {
+        std::string value   = params[4].get_str();
+        if (IsStringBoolNegative(value))
+            fShowCoinstake = false;
+    };
 
     if (nCount < 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Negative count");
@@ -1266,7 +1292,7 @@ Value listtransactions(const Array& params, bool fHelp)
     Array ret;
 
     std::list<CAccountingEntry> acentries;
-    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount);
+    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount, fShowCoinstake);
 
     // iterate backwards until we have nCount items to return:
     for (CWallet::TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
@@ -2329,6 +2355,9 @@ Value senddtoanon(const Array& params, bool fHelp)
     std::string sNarr;
     if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
         sNarr = params[2].get_str();
+	
+	if (sNarr.length() == 0)
+        throw std::runtime_error("Narration is required.");
 
     if (sNarr.length() > 24)
         throw std::runtime_error("Narration must be 24 characters or less.");
@@ -2613,7 +2642,7 @@ Value anonoutputs(const Array& params, bool fHelp)
 Value anoninfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "anoninfo [recalculate]\n"
             "list outputs in system.");
 
@@ -2635,7 +2664,7 @@ Value anoninfo(const Array& params, bool fHelp)
     if (fRecalculate)
     {
         if (pwalletMain->CountAllAnonOutputs(lOutputCounts, fMatureOnly) != 0)
-            throw runtime_error("CountAllAnonOutputs() failed.");
+            throw std::runtime_error("CountAllAnonOutputs() failed.");
     } else
     {
         // TODO: make mapAnonOutputStats a vector preinitialised with all possible coin values?
@@ -2656,29 +2685,32 @@ Value anoninfo(const Array& params, bool fHelp)
             if (!fProcessed)
                 lOutputCounts.push_back(aoc);
         };
-    }
+    };
 
-    result.push_back(Pair("No. Exists, No. Spends, Least Depth", "value"));
+    result.push_back(Pair("No. Exists, No. Spends, No. Compromised, Least Depth", "value"));
 
 
     // -- lOutputCounts is ordered by value
     char cbuf[256];
     int64_t nTotalIn = 0;
     int64_t nTotalOut = 0;
+    int64_t nTotalCompromised = 0;
     int64_t nTotalCoins = 0;
     for (std::list<CAnonOutputCount>::iterator it = lOutputCounts.begin(); it != lOutputCounts.end(); ++it)
     {
-        snprintf(cbuf, sizeof(cbuf), "%05d, %05d, %05d", it->nExists, it->nSpends, it->nLeastDepth);
+        snprintf(cbuf, sizeof(cbuf), "%5d, %5d, %7d, %3d", it->nExists, it->nSpends, it->nCompromised, it->nLeastDepth);
         result.push_back(Pair(cbuf, ValueFromAmount(it->nValue)));
 
 
         nTotalIn += it->nValue * it->nExists;
         nTotalOut += it->nValue * it->nSpends;
+        nTotalCompromised += it->nValue * it->nCompromised;
         nTotalCoins += it->nExists;
     };
 
     result.push_back(Pair("total anon value in", ValueFromAmount(nTotalIn)));
     result.push_back(Pair("total anon value out", ValueFromAmount(nTotalOut)));
+    result.push_back(Pair("total anon value compromised", ValueFromAmount(nTotalCompromised)));
     result.push_back(Pair("total anon outputs", nTotalCoins));
 
     return result;

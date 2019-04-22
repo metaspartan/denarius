@@ -1118,6 +1118,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         rv = 1; goto End;
     }
 
+	
     // test bnT == 0  (bnC == bnC1)
     if (!BN_is_zero(bnT))
     {

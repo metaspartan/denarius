@@ -15,7 +15,7 @@ distribution are installed, for Debian and Ubuntu these are:
     apt-get install qt5-default qt5-qmake qtbase5-dev-tools qttools5-dev-tools \
         build-essential libboost-dev libboost-system-dev \
         libboost-filesystem-dev libboost-program-options-dev libboost-thread-dev \
-        libssl-dev libdb++-dev libminiupnpc-dev
+        libssl-dev libdb++-dev libminiupnpc-dev libqrencode-dev libevent-dev obfs4proxy
 
 then execute the following:
 
@@ -23,6 +23,12 @@ then execute the following:
 
     qmake
     make
+
+Optional qmake flags:
+"USE_UPNP=-"
+"USE_QRCODE=-"
+"USE_LEVELDB=-"
+"USE_NATIVETOR=-"
 
 Alternatively, install Qt Creator and open the `denarius-qt.pro` file.
 
@@ -65,6 +71,20 @@ Mac OS X
 
 Build configuration options
 ============================
+
+Build with Native Tor Support in Denarius
+-----------------------
+
+libevent-dev and obfs4proxy are required to be installed if you are building with the Native Tor Library
+The native Tor C Library is located in src/tor and is compiled into Denarius by default to allow the nativetor=1 flag in your denarius.conf
+Use the USE_NATIVETOR=- flag to disable building Denarius with the Tor library
+
++--------------+--------------------------------------------------------------------------+
+| USE_NATIVETOR=- | No Native Tor Support - libevent-dev and obfs4proxy are not required  |
++--------------+--------------------------------------------------------------------------+
+| USE_NATIVETOR=1 | Native Tor Library enabled to be compiled with Denarius (default)     |
++--------------+--------------------------------------------------------------------------+
+
 
 UPNnP port forwarding
 ---------------------

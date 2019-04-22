@@ -1,0 +1,37 @@
+language: cpp
+dist: xenial
+env:
+  global:
+    - MAKEFLAGS="-j 2"
+addons:
+  apt:
+    packages:
+    - software-properties-common
+    - build-essential
+    - libdb++-dev
+    - libminiupnpc-dev
+    - libboost-all-dev
+    - libssl-dev
+    - git
+    - libevent-dev
+    - obfs4proxy
+    - libqrencode-dev
+    - libqt5gui5 
+    - libqt5core5a 
+    - libqt5dbus5 
+    - qttools5-dev
+    - qttools5-dev-tools
+    - libtool
+# whitelist
+branches:
+  only:
+    - master
+    - v3.4
+jobs:
+  include:
+    - stage: denariusd Build
+      before_script: cd src
+      script: make -f makefile.unix
+    - stage: Denarius QT Build
+      before_script: qmake -qt=qt5 "USE_UPNP=1" "USE_QRCODE=1" denarius-qt.pro
+      script: make

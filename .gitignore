@@ -6,6 +6,11 @@ src/test_denarius
 src/build.h
 src/leveldb/*.a
 src/leveldb/build_config.mk
+parts
+prime
+snap
+stage
+.qmake.stash
 object_script.Denarius.Release
 object_script.Denarius.Debug
 denarius_plugin_import.cpp

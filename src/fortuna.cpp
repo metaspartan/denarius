@@ -797,27 +797,34 @@ int CForTunaPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
 }
 
 bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
+	bool fIsInitialDownload = IsInitialBlockDownload();
+    if(fIsInitialDownload) return;
+	
     CScript payee2;
     payee2= GetScriptForDestination(pubkey.GetID());
 
     CTransaction txVin;
     uint256 hash;
-    //if(GetTransaction(vin.prevout.hash, txVin, hash, true)){
+	
     if(GetTransaction(vin.prevout.hash, txVin, hash)){
-        BOOST_FOREACH(CTxOut out, txVin.vout){
-            if(out.nValue == GetMNCollateral()*COIN){
-                if(out.scriptPubKey == payee2) return true;
-            }
-        }
+        CTxOut out = txVin.vout[vin.prevout.n];
+		if ((out.nValue == GetMNCollateral()*COIN) && (out.scriptPubKey == payee2))
+		{
+			return true;
+		}
     } else {
-        printf("IsVinAssociatedWithPubKey:: GetTransaction failed for %s\n",vin.prevout.hash.ToString().c_str());
-    }
+		if (fDebug) {
+			printf("IsVinAssociatedWithPubKey:: GetTransaction failed for %s\n",vin.prevout.hash.ToString().c_str());
+		}
+	}
 
     CTxDestination address1;
     ExtractDestination(payee2, address1);
     CBitcoinAddress address2(address1);
-    printf("IsVinAssociatedWithPubKey:: vin %s is not associated with pubkey %s for address %s\n",
-           vin.ToString().c_str(), pubkey.GetHash().ToString().c_str(), address2.ToString().c_str());
+	if (fDebug) {
+		printf("IsVinAssociatedWithPubKey:: vin %s is not associated with pubkey %s for address %s\n",
+			   vin.ToString().c_str(), pubkey.GetHash().ToString().c_str(), address2.ToString().c_str());
+	}
     return false;
 }
 
@@ -985,8 +992,8 @@ void ThreadCheckForTunaPool(void* parg)
 
         //try to sync the fortunastake list and payment list every 30 seconds from at least 2 nodes until we have them all
         if(vNodes.size() > 1 && c % mnRefresh == 0 && (mnCount == 0 || vecFortunastakes.size() < mnCount)) {
-            //bool fIsInitialDownload = IsInitialBlockDownload();
-            //if(!fIsInitialDownload) {
+            bool fIsInitialDownload = IsInitialBlockDownload();
+            if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
                 {
@@ -1005,7 +1012,7 @@ void ThreadCheckForTunaPool(void* parg)
                         }
                     }
                 }
-            //}
+            }
         }
 
         if(c % FORTUNASTAKE_PING_SECONDS == 0){
