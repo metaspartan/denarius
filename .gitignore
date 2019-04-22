@@ -10,6 +10,8 @@ parts
 prime
 snap
 stage
+*.snap
+*.tar.bz2
 .qmake.stash
 object_script.Denarius.Release
 object_script.Denarius.Debug
