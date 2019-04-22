@@ -56,8 +56,21 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     subscribeToCoreSignals();
 	
 	timer = new QTimer(this);
+    //connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList(pindexBest)));
+    //if(!GetBoolArg("-reindexaddr", false))
+    //    timer->start(30000);
+
+    QTimer::singleShot(1000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(5000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(10000, this, SLOT(updateNodeList()));
+    QTimer::singleShot(30000, this, SLOT(updateNodeList())); // try to load the node list ASAP for the user
+	QTimer::singleShot(60000, this, SLOT(updateNodeList()));
+	
+	/*
+	timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
-        timer->start(); // No 1000 ms to do heavy work and be snappy
+        timer->start(1000); // 1000 ms to do heavy work and be snappy
+		*/
 }
 
 FortunastakeManager::~FortunastakeManager()
