@@ -1,4 +1,4 @@
-# Denarius - Snapcraft Build - Known to build in Ubuntu 18.04+ - WIP Currently as of Denarius v3.3.8.5
+# Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.8.5
 # https://denarius.io
 # https://github.com/carsenk/denarius
 # By Carsen Klock
@@ -35,39 +35,8 @@ parts:
       sudo make install
       echo "Linking OpenSSL to 1.0.1j"
       sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
-  datadir:
-    plugin: nil
-    build-packages:
-      - wget
-      - unzip
-      - curl
-    override-build: |
-      echo "Creating ~/denarius dir and denarius.conf"
-      sudo mkdir ~/.denarius
-      sudo chmod +x ~/.denarius
-      sudo chmod -R 777 ~/.denarius
-      echo "Populating denarius.conf"
-      sudo printf "nativetor=0\naddnode=denarius.host\naddnode=denarius.win\naddnode=denarius.pro\naddnode=triforce.black" > ~/.denarius/denarius.conf
-      echo "Grabbing Latest Chaindata"
-      cd ~/.denarius
-      sudo rm -rf database txleveldb smsgDB
-      sudo wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
-      sudo unzip chaindata1799510.zip
-      sudo rm chaindata1799510.zip
-      echo "Back to Compiled QT Binary Folder"
-      cd ~/denarius
-      sudo echo "Get Coinexplorer FS List"
-      sudo wget https://www.coinexplorer.net/api/v1/D/masternode/list
-      sudo cat list | jq '.result[0].addr' | tr -d "\""  >> fspeers.txt
-      sudo cat list | jq '.result[1].addr' | tr -d "\""  >> fspeers.txt
-      sudo cat list | jq '.result[2].addr' | tr -d "\""  >> fspeers.txt
-      sudo sed 's/^/addnode=/' fspeers.txt > addnode.txt
-      sudo cat addnode.txt >> ~/.denarius/denarius.conf
-      sudo rm list
-      sudo rm fspeers.txt
-      sudo rm addnode.txt
   denarius:
-    after: [desktop-qt5, openssl, datadir]
+    after: [desktop-qt5, openssl]
     plugin: qmake
     qt-version: qt5
     source: https://github.com/carsenk/denarius.git
