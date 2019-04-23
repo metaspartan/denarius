@@ -10,7 +10,7 @@ description: |
 icon: src/qt/res/icons/denarius_icon.png
 
 grade: devel
-confinement: classic
+confinement: strict
 
 apps:
   denarius:
@@ -67,8 +67,10 @@ parts:
       set -x
       ARCH=$(uname -m)
       MF=USE_NATIVETOR=1
-      if [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ] || [ "$ARCH" = "x86_64" ]; then
+      if [ "$ARCH" = "x86_64" ]; then
           MF="USE_NATIVETOR=1"
+      elif [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ]; then
+          MF="USE_NATIVETOR=-"
       elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
           MF="USE_NATIVETOR=-"
       elif [ "$ARCH" = *"armv8"* ] || [ "$ARCH" = "aarch64" ]; then
