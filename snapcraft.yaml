@@ -27,6 +27,7 @@ parts:
       - g++
       - unzip
       - wget
+      - curl
       - jq
       - build-essential
       - apt-transport-https
@@ -47,7 +48,7 @@ parts:
       - qtbase5-dev-tools
     override-build: |
       echo "Downgrading OpenSSL to 1.0.1j"
-      sudo wget -e use_proxy=yes -e http_proxy=http://10.10.10.1:8222 http://www.openssl.org/source/openssl-1.0.1j.tar.gz
+      sudo curl -O https://www.openssl.org/source/openssl-1.0.1j.tar.gz
       sudo tar -xzvf openssl-1.0.1j.tar.gz
       cd openssl-1.0.1j
       sudo ./config
@@ -64,7 +65,7 @@ parts:
       echo "Grabbing Latest Chaindata"
       cd ~/.denarius
       sudo rm -rf database txleveldb smsgDB
-      sudo wget -e use_proxy=yes -e http_proxy=http://10.10.10.1:8222 http://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
+      sudo curl -O https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
       sudo unzip chaindata1799510.zip
       sudo rm chaindata1799510.zip
       echo "Back to Compiled QT Binary Folder"
