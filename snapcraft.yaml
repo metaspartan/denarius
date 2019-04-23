@@ -18,16 +18,33 @@ apps:
     plugs: [network, network-bind, unity7]
 
 parts:
+  openssl:
+    plugin: nil
+    source: https://www.openssl.org/source/openssl-1.0.1j.tar.gz
+    build-packages:
+      - g++
+      - build-essential
+      - libtool
+    override-build: |
+      echo "Downgrading OpenSSL to 1.0.1j"
+      sudo ./config
+      sudo make
+      echo "Make depends OpenSSL to 1.0.1j"
+      sudo make depend
+      echo "Make install OpenSSL to 1.0.1j"
+      sudo make install
+      echo "Linking OpenSSL to 1.0.1j"
+      sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
   denarius:
-    after: [desktop-qt5]
+    after: [desktop-qt5, openssl]
     plugin: qmake
     qt-version: qt5
     source: https://github.com/carsenk/denarius.git
+    stage-packages:
+      - curl
+      - unzip
     build-packages:
       - g++
-      - unzip
-      - wget
-      - curl
       - jq
       - build-essential
       - apt-transport-https
@@ -47,15 +64,6 @@ parts:
       - qt5-default
       - qtbase5-dev-tools
     override-build: |
-      echo "Downgrading OpenSSL to 1.0.1j"
-      sudo curl -O https://www.openssl.org/source/openssl-1.0.1j.tar.gz
-      sudo tar -xzvf openssl-1.0.1j.tar.gz
-      cd openssl-1.0.1j
-      sudo ./config
-      sudo make
-      sudo make depend
-      sudo make install
-      sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
       echo "Creating ~/denarius dir and denarius.conf"
       sudo mkdir ~/.denarius
       sudo chmod +x ~/.denarius
@@ -65,9 +73,9 @@ parts:
       echo "Grabbing Latest Chaindata"
       cd ~/.denarius
       sudo rm -rf database txleveldb smsgDB
-      sudo curl -O https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
-      sudo unzip chaindata1799510.zip
-      sudo rm chaindata1799510.zip
+      sudo curl -L -o chaindata.zip https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
+      sudo unzip chaindata.zip
+      sudo rm chaindata.zip
       echo "Back to Compiled QT Binary Folder"
       cd ~/denarius
       sudo echo "Get Coinexplorer FS List"
@@ -80,5 +88,27 @@ parts:
       sudo rm list
       sudo rm fspeers.txt
       sudo rm addnode.txt
-      qmake "USE_UPNP=1" "USE_QRCODE=1" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
+      set -x
+      ARCH=$(uname -m)
+      MF=USE_NATIVETOR=1
+      if [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ] || [ "$ARCH" = "x86_64" ]; then
+          MF="USE_NATIVETOR=1"
+      elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"armv8"* ] || [ "$ARCH" = "aarch64" ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips64le"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips64"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mipsle"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [[ "$ARCH" == "ppc64le" ]]; then
+          MF="USE_NATIVETOR=-"
+      elif [[ "$ARCH" == "ppc64" ]]; then
+          MF="USE_NATIVETOR=-"
+      fi
+      qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
