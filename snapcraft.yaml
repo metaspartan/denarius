@@ -14,8 +14,9 @@ confinement: strict
 
 apps:
   denarius:
-    command: desktop-launch $SNAP/usr/local/bin/Denarius
-    plugs: [network, network-bind, unity7]
+    command: qt5-launch Denarius
+    plugs: [home, network, network-bind, unity7]
+    desktop: contrib/debian/denarius-qt.desktop
 
 parts:
   openssl:
@@ -90,7 +91,4 @@ parts:
       fi
       qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
-      sudo mkdir $SNAP/usr/local/bin
-      sudo chmod +x $SNAP/usr/local/bin
-      sudo chmod -R 777 $SNAP/usr/local/bin
-      sudo cp Denarius $SNAP/usr/local/bin/
+      sudo cp Denarius /usr/bin/
