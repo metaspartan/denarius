@@ -7,16 +7,16 @@ version: '3.3.8.5'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
-icon: src/qt/res/icons/denarius_icon.png
+icon: share/pixmaps/denarius-128.png
 
 grade: devel
 confinement: strict
 
 apps:
   denarius:
-    command: qt5-launch Denarius
+    command: Denarius
     plugs: [home, network, network-bind, unity7]
-    desktop: contrib/debian/denarius-qt.desktop
+    desktop: denarius.desktop
 
 parts:
   openssl:
@@ -92,4 +92,5 @@ parts:
       qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
       sudo cp Denarius /usr/bin/
-      sudo cp contrib/debian/denarius-qt.desktop prime/contrib/debian/
+      sudo cp contrib/debian/denarius-qt.desktop $SNAPCRAFT_PART_INSTALL/denarius.desktop
+      sudo cp share/pixmaps/denarius-128.png $SNAPCRAFT_PART_INSTALL/denarius-128.png
