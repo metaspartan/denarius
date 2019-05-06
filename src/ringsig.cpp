@@ -21,6 +21,13 @@ static BN_CTX   *bnCtx   = NULL;
 static BIGNUM   *bnOrder = NULL;
 
 
+void printBigNum(BIGNUM *b)
+{
+  char *number = BN_bn2hex(b);
+  printf("%s", number);
+  OPENSSL_free(number);
+}
+
 int initialiseRingSigs()
 {
     int rv = 0;
@@ -826,7 +833,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     }
 
     printf("\n RingDbg: secret offset : %d, Ringsize: %d, C%d is :\n", nSecretOffset, nRingSize, nSecretOffset+1);
-    BN_print_fp(stdout, bnC);
+    printBigNum(bnC);
     printf("\n");
 
     // c_{j+2} = h(P_1,...,P_n,s_{j+1}*G+c_{j+1}*P_{j+1},s_{j+1}*H(P_{j+1})+c_{j+1}*I_j)
@@ -934,7 +941,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
             goto End;
 
         printf(" \n RingDbg: Iteration %d: C%d follows\n", ib, ib+1);
-        BN_print_fp(stdout, bnC);
+        printBigNum(bnC);
         printf("\n");
 
         if (i == nSecretOffset
@@ -957,7 +964,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
                 rv = 1; goto End;
             }
             printf("\n RingDbg: So E0 = c0 = \n");
-            BN_print_fp(stdout, bnC);
+            printBigNum(bnC);
             printf("\n");
             memcpy(&sigC[0], tempData, EC_SECRET_SIZE);
         }
@@ -1045,7 +1052,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
     }
 
     printf("\n RingDbg: Starting with C0 which is\n");
-    BN_print_fp(stdout, bnC1);
+    printBigNum(bnC1);
     printf("\n");
 
     for (int i = 0; i < nRingSize; ++i)
@@ -1124,7 +1131,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
             rv = 1; goto End;
         }
         printf("\n RingDbg: Iteration %d, so C%d follows\n", i, i+1);
-        BN_print_fp(stdout, bnC);
+        printBigNum(bnC);
         printf("\n");
     }
 
@@ -1136,11 +1143,11 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
     }
 
     printf("\n RingDbg: End result, bnC:\n");
-    BN_print_fp(stdout, bnC);
+    printBigNum(bnC);
     printf("\n bnC1 old is \n");
-    BN_print_fp(stdout, bnC1);
+    printBigNum(bnC1);
     printf("\n So bnT is \n");
-    BN_print_fp(stdout, bnT);
+    printBigNum(bnT);
     printf("\n");
 
     // test bnT == 0  (bnC == bnC1)
