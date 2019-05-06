@@ -86,13 +86,6 @@ std::string CStealthAddress::Encoded() const
     return EncodeBase58(raw);
 };
 
-int CStealthAddress::SetScanPubKey(CPubKey pk)
-{
-    scan_pubkey.resize(pk.size());
-    memcpy(&scan_pubkey[0], pk.begin(), pk.size());
-    return 0;
-};
-
 uint32_t BitcoinChecksum(uint8_t* p, uint32_t nBytes)
 {
     if (!p || nBytes == 0)
