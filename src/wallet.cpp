@@ -7072,7 +7072,13 @@ bool CWallet::ExpandLockedAnonOutput(CWalletDB *pwdb, CKeyID &ckeyId, CLockedAno
         return error("%s: SecretToPublicKey() failed.", __func__);
 
 
+    //CKey key;
     CKey key;
+  	CSecret vchSecret;
+  	vchSecret.resize(ec_secret_size);
+
+   	key.Set(&vchSecret[0], &sSpendR.e[0], true);
+
     if (!key.IsValid())
         return error("%s: Reconstructed key is invalid.", __func__);
 
