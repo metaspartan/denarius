@@ -3233,9 +3233,14 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     //vchHash.resize(32);
     
     bool found = false;
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    HMAC_CTX ctx;
+    HMAC_CTX_init(&ctx);
+    #else
     HMAC_CTX *ctx;
     ctx = HMAC_CTX_new();
-    
+    #endif
+
     uint32_t nonse = 0;
     
     //CBigNum bnTarget(2);
@@ -3255,12 +3260,21 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
             memcpy(civ+i, &nonse, 4);
         
         unsigned int nBytes;
+        #if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!HMAC_Init_ex(&ctx, &civ[0], 32, EVP_sha256(), NULL)
+            || !HMAC_Update(&ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
+            || !HMAC_Update(&ctx, (unsigned char*) pPayload, nPayload)
+            || !HMAC_Update(&ctx, pPayload, nPayload)
+            || !HMAC_Final(&ctx, sha256Hash, &nBytes)
+            //|| !HMAC_Final(&ctx, &vchHash[0], &nBytes)
+        #else
         if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), NULL)
             || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
             || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
             || !HMAC_Update(ctx, pPayload, nPayload)
             || !HMAC_Final(ctx, sha256Hash, &nBytes)
             //|| !HMAC_Final(ctx, &vchHash[0], &nBytes)
+        #endif
             || nBytes != 32)
             break;
         
@@ -3295,9 +3309,14 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
         }    
         nonse++;
     };
-    
+
+
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    HMAC_CTX_cleanup(&ctx);
+    #else
     HMAC_CTX_free(ctx);
-    
+    #endif
+
     if (!fSecMsgEnabled)
     {
         if (fDebugSmsg)
