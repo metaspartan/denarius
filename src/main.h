@@ -1339,6 +1339,8 @@ public:
                 pindex = pindex->pprev;
             if (vHave.size() > 10)
                 nStep *= 2;
+            // build a shorter locator to save cpu time on large chains: LNK CR B82REZ 2G4
+            if (nStep > 1024) break;
         }
         vHave.push_back((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
     }
