@@ -26,7 +26,7 @@
  * Encode a byte sequence as a base58-encoded string.
  * pbegin and pend cannot be NULL, unless both are.
  */
-std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend);
+std::string EncodeBase58(const unsigned char *pbegin, const unsigned char *pend);
 
 // Encode a byte vector as a base58-encoded string
 std::string EncodeBase58(const std::vector<unsigned char>& vch);
@@ -74,17 +74,17 @@ public:
     std::string ToString() const;
     int CompareTo(const CBase58Data& b58) const;
 
-    bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
-    bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
-    bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
-    bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
-    bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
+    bool operator==(const CBase58Data &b58) const { return CompareTo(b58) == 0; }
+    bool operator<=(const CBase58Data &b58) const { return CompareTo(b58) <= 0; }
+    bool operator>=(const CBase58Data &b58) const { return CompareTo(b58) >= 0; }
+    bool operator< (const CBase58Data &b58) const { return CompareTo(b58) < 0; }
+    bool operator> (const CBase58Data &b58) const { return CompareTo(b58) > 0; }
 };
 
 /** base58-encoded addresses.
- * Public-key-hash-addresses have version 25 (or 111 testnet).
+ * Public-key-hash-addresses have version 30 (or 111 testnet).
  * The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
- * Script-hash-addresses have version 85 (or 196 testnet).
+ * Script-hash-addresses have version 90 (or 196 testnet).
  * The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
  */
 class CBitcoinAddress;
@@ -125,12 +125,12 @@ public:
         Set(dest);
     }
 
-    CBitcoinAddress(const std::string& strAddress)
+    CBitcoinAddress(const std::string &strAddress)
     {
         SetString(strAddress);
     }
 
-    CBitcoinAddress(const char* pszAddress)
+    CBitcoinAddress(const char *pszAddress)
     {
         SetString(pszAddress);
     }
@@ -150,15 +150,15 @@ class CBitcoinSecret : public CBase58Data
 {
 public:
 
-    void SetSecret(const CSecret& vchSecret, bool fCompressed);
+    void SetSecret(const CSecret &vchSecret, bool fCompressed);
     CSecret GetSecret(bool &fCompressedOut);
     void SetKey(const CKey& vchSecret);
     CKey GetKey();
     bool IsValid() const;
-    bool SetString(const char* pszSecret);
-    bool SetString(const std::string& strSecret);
+    bool SetString(const char *pszSecret);
+    bool SetString(const std::string &strSecret);
 
-    CBitcoinSecret(const CSecret& vchSecret, bool fCompressed)
+    CBitcoinSecret(const CSecret &vchSecret, bool fCompressed)
     {
         SetSecret(vchSecret, fCompressed);
     }

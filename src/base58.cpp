@@ -10,10 +10,10 @@
 #include "key.h"
 #include "script.h"
 
-static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+static const char *pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 // Encode a byte sequence as a base58-encoded string
-std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
+std::string EncodeBase58(const unsigned char *pbegin, const unsigned char *pend)
 {
     CAutoBN_CTX pctx;
     CBigNum bn58 = 58;
@@ -21,7 +21,7 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
 
     // Convert big endian data to little endian
     // Extra zero at the end make sure bignum will interpret as a positive number
-    std::vector<unsigned char> vchTmp(pend-pbegin+1, 0);
+    std::vector<unsigned char> vchTmp(pend - pbegin + 1, 0);
     reverse_copy(pbegin, pend, vchTmp.begin());
 
     // Convert little endian data to bignum
@@ -37,7 +37,7 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
     CBigNum rem;
     while (bn > bn0)
     {
-        if (!BN_div(dv.pbn, rem.pbn, bn.pbn, bn58.pbn, pctx))
+        if (!BN_div(dv.get(), rem.get(), bn.getc(), bn58.getc(), pctx))
             throw bignum_error("EncodeBase58 : BN_div failed");
         bn = dv;
         unsigned int c = rem.getulong();
@@ -45,7 +45,7 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
     }
 
     // Leading zeroes encoded as base58 zeros
-    for (const unsigned char* p = pbegin; p < pend && *p == 0; p++)
+    for (const unsigned char *p = pbegin; p < pend && *p == 0; p++)
         str += pszBase58[0];
 
     // Convert little endian std::string to big endian
@@ -54,14 +54,14 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
 }
 
 // Encode a byte vector as a base58-encoded string
-std::string EncodeBase58(const std::vector<unsigned char>& vch)
+std::string EncodeBase58(const std::vector<unsigned char> &vch)
 {
     return EncodeBase58(&vch[0], &vch[0] + vch.size());
 }
 
 // Decode a base58-encoded string psz into byte vector vchRet
 // returns true if decoding is successful
-bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
+bool DecodeBase58(const char* psz, std::vector<unsigned char> &vchRet)
 {
     CAutoBN_CTX pctx;
     vchRet.clear();
@@ -72,9 +72,9 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
         psz++;
 
     // Convert big endian string to bignum
-    for (const char* p = psz; *p; p++)
+    for (const char *p = psz; *p; p++)
     {
-        const char* p1 = strchr(pszBase58, *p);
+        const char *p1 = strchr(pszBase58, *p);
         if (p1 == NULL)
         {
             while (isspace(*p))
@@ -84,7 +84,7 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
             break;
         }
         bnChar.setulong(p1 - pszBase58);
-        if (!BN_mul(bn.pbn, bn.pbn, bn58.pbn, pctx))
+        if (!BN_mul(bn.get(), bn.getc(), bn58.getc(), pctx))
             throw bignum_error("DecodeBase58 : BN_mul failed");
         bn += bnChar;
     }
@@ -94,11 +94,11 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
 
     // Trim off sign byte if present
     if (vchTmp.size() >= 2 && vchTmp.end()[-1] == 0 && vchTmp.end()[-2] >= 0x80)
-        vchTmp.erase(vchTmp.end()-1);
+        vchTmp.erase(vchTmp.end() - 1);
 
     // Restore leading zeros
     int nLeadingZeros = 0;
-    for (const char* p = psz; *p == pszBase58[0]; p++)
+    for (const char *p = psz; *p == pszBase58[0]; p++)
         nLeadingZeros++;
     vchRet.assign(nLeadingZeros + vchTmp.size(), 0);
 
@@ -109,43 +109,43 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
 
 // Decode a base58-encoded string str into byte vector vchRet
 // returns true if decoding is successful
-bool DecodeBase58(const std::string& str, std::vector<unsigned char>& vchRet)
+bool DecodeBase58(const std::string &str, std::vector<unsigned char> &vchRet)
 {
     return DecodeBase58(str.c_str(), vchRet);
 }
 
 // Encode a byte vector to a base58-encoded string, including checksum
-std::string EncodeBase58Check(const std::vector<unsigned char>& vchIn)
+std::string EncodeBase58Check(const std::vector<unsigned char> &vchIn)
 {
     // add 4-byte hash check to the end
     std::vector<unsigned char> vch(vchIn);
     uint256 hash = Hash(vch.begin(), vch.end());
-    vch.insert(vch.end(), (unsigned char*)&hash, (unsigned char*)&hash + 4);
+    vch.insert(vch.end(), (unsigned char *)&hash, (unsigned char *)&hash + 4);
     return EncodeBase58(vch);
 }
 
 // Decode a base58-encoded string psz that includes a checksum, into byte vector vchRet
 // returns true if decoding is successful
-bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet)
+bool DecodeBase58Check(const char *psz, std::vector<unsigned char> &vchRet)
 {
     if (!DecodeBase58(psz, vchRet) || vchRet.size() < 4)
     {
         vchRet.clear();
         return false;
     }
-    uint256 hash = Hash(vchRet.begin(), vchRet.end()-4);
+    uint256 hash = Hash(vchRet.begin(), vchRet.end() - 4);
     if (memcmp(&hash, &vchRet.end()[-4], 4) != 0)
     {
         vchRet.clear();
         return false;
     }
-    vchRet.resize(vchRet.size()-4);
+    vchRet.resize(vchRet.size() - 4);
     return true;
 }
 
 // Decode a base58-encoded string str that includes a checksum, into byte vector vchRet
 // returns true if decoding is successful
-bool DecodeBase58Check(const std::string& str, std::vector<unsigned char>& vchRet)
+bool DecodeBase58Check(const std::string &str, std::vector<unsigned char> &vchRet)
 {
     return DecodeBase58Check(str.c_str(), vchRet);
 }
@@ -165,7 +165,7 @@ CBase58Data::~CBase58Data()
         memset(&vchData[0], 0, vchData.size());
 }
 
-void CBase58Data::SetData(int nVersionIn, const void* pdata, size_t nSize)
+void CBase58Data::SetData(int nVersionIn, const void *pdata, size_t nSize)
 {
     nVersion = nVersionIn;
     vchData.resize(nSize);
@@ -175,10 +175,10 @@ void CBase58Data::SetData(int nVersionIn, const void* pdata, size_t nSize)
 
 void CBase58Data::SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend)
 {
-    SetData(nVersionIn, (void*)pbegin, pend - pbegin);
+    SetData(nVersionIn, (void *)pbegin, pend - pbegin);
 }
 
-bool CBase58Data::SetString(const char* psz)
+bool CBase58Data::SetString(const char *psz)
 {
     std::vector<unsigned char> vchTemp;
     bool rc58 = DecodeBase58Check(psz, vchTemp);
@@ -196,7 +196,7 @@ bool CBase58Data::SetString(const char* psz)
     return true;
 }
 
-bool CBase58Data::SetString(const std::string& str)
+bool CBase58Data::SetString(const std::string &str)
 {
     return SetString(str.c_str());
 }
@@ -208,12 +208,16 @@ std::string CBase58Data::ToString() const
     return EncodeBase58Check(vch);
 }
 
-int  CBase58Data::CompareTo(const CBase58Data& b58) const
+int  CBase58Data::CompareTo(const CBase58Data &b58) const
 {
-    if (nVersion < b58.nVersion) return -1;
-    if (nVersion > b58.nVersion) return  1;
-    if (vchData < b58.vchData)   return -1;
-    if (vchData > b58.vchData)   return  1;
+    if (nVersion < b58.nVersion)
+        return -1;
+    if (nVersion > b58.nVersion)
+        return  1;
+    if (vchData < b58.vchData)
+        return -1;
+    if (vchData > b58.vchData)
+        return  1;
     return 0;
 }
 
