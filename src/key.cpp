@@ -13,13 +13,6 @@
 #include "key.h"
 #include "hash.h"
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-typedef struct ECDSA_SIG_st {
-    BIGNUM *r;
-    BIGNUM *s;
-} ECDSA_SIG;
-#endif
-
 // Order of secp256k1's generator minus 1.
 const unsigned char vchMaxModOrder[32] = {
     0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
@@ -564,11 +557,11 @@ void CECKey::GetSecretBytes(unsigned char vch[32]) const {
 }
 
 void CECKey::SetSecretBytes(const unsigned char vch[32]) {
-    BIGNUM *bn;
-    bn = BN_new();
-    assert(BN_bin2bn(vch, 32, bn));
-    assert(EC_KEY_regenerate_key(pkey, bn));
-    BN_free(bn);
+    BIGNUM bn;
+    BN_init(&bn);
+    assert(BN_bin2bn(vch, 32, &bn));
+    assert(EC_KEY_regenerate_key(pkey, &bn));
+    BN_clear_free(&bn);
 }
 
 void CECKey::GetPrivKey(CPrivKey &privkey, bool fCompressed) {
