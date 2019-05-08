@@ -41,3 +41,5 @@ PortIndex*
 dist
 *.app
 *.dmg
+.idea
+
