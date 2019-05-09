@@ -886,8 +886,11 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
         tooltip = tr("Catching up...") + QString("<br>") + tooltip;
 
-        labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-        spinnerFrame = (spinnerFrame + 1) % 36;
+        if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
+            labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+            spinnerFrame = (spinnerFrame + 1) % 36;
+            nLastUpdateTime = GetTimeMicros();
+        }
 
         overviewPage->showOutOfSyncWarning(true);
 
