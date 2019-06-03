@@ -42,6 +42,8 @@ class uint256;
 #define FORTUNASTAKE_FAIR_PAYMENT_MINIMUM         200
 #define FORTUNASTAKE_FAIR_PAYMENT_ROUNDS          3
 
+#define FORTUNASTAKE_ACTIVETIME_FIXHEIGHT         2100000
+
 using namespace std;
 
 class CFortunastakePaymentWinner;
@@ -201,7 +203,9 @@ public:
 
     void UpdateLastSeen(int64_t override=0)
     {
-        if(override == 0 || override > GetAdjustedTime()){
+        if (pindexBest->nHeight > FORTUNASTAKE_ACTIVETIME_FIXHEIGHT && (override == 0 || override > GetAdjustedTime())) {
+            lastTimeSeen = GetAdjustedTime();
+        } else if(override == 0){
             lastTimeSeen = GetAdjustedTime();
         } else {
             lastTimeSeen = override;
