@@ -327,27 +327,24 @@ public:
         nSpends = 0;
         nOwned = 0;
         nLeastDepth = 0;
-        nCompromised = 0;
     }
 
-    CAnonOutputCount(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_, int nCompromised_)
+    CAnonOutputCount(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_)
     {
         nValue = nValue_;
         nExists = nExists_;
         nSpends = nSpends_;
         nOwned = nOwned_;
         nLeastDepth = nLeastDepth_;
-        nCompromised = nCompromised_;
     }
 
-    void set(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_, int nCompromised_)
+    void set(int64_t nValue_, int nExists_, int nSpends_, int nOwned_, int nLeastDepth_)
     {
         nValue = nValue_;
         nExists = nExists_;
         nSpends = nSpends_;
         nOwned = nOwned_;
         nLeastDepth = nLeastDepth_;
-        nCompromised = nCompromised_;
     }
 
     void addCoin(int nCoinDepth, int64_t nCoinValue)
@@ -396,7 +393,6 @@ public:
     int nSpends;
     int nOwned; // todo
     int nLeastDepth;
-    int nCompromised;
 
 };
 

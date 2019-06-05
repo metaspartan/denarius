@@ -166,6 +166,7 @@ private:
     int spinnerFrame;
 
     int64_t nClientUpdateTime;
+    int64_t nLastUpdateTime;
     int nBlocksInLastPeriod;
     int nLastBlocks;
     int nBlocksPerSec;

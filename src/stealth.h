@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef DENARIUS_STEALTH_H
-#define DENARIUS_STEALTH_H
+#ifndef BITCOIN_STEALTH_H
+#define BITCOIN_STEALTH_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -79,10 +79,10 @@ public:
     data_chunk scan_secret;
     data_chunk spend_secret;
 
+    int SetScanPubKey(CPubKey pk);
+
     bool SetEncoded(const std::string& encodedAddress);
     std::string Encoded() const;
-	
-	int SetScanPubKey(CPubKey pk);
 
     bool operator <(const CStealthAddress& y) const
     {
@@ -119,4 +119,4 @@ int StealthSharedToSecretSpend(ec_secret& sharedS, ec_secret& spendSecret, ec_se
 bool IsStealthAddress(const std::string& encodedAddress);
 
 
-#endif  // DENARIUS_STEALTH_H
+#endif  // BITCOIN_STEALTH_H
