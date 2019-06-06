@@ -1070,13 +1070,6 @@ bool WildcardMatch(const string& str, const string& mask)
     return WildcardMatch(str.c_str(), mask.c_str());
 }
 
-
-
-
-
-
-
-
 static std::string FormatException(std::exception* pex, const char* pszThread)
 {
 #ifdef WIN32
@@ -1139,6 +1132,63 @@ boost::filesystem::path GetDefaultDataDir()
 #endif
 }
 
+static std::string GenerateRandomString(unsigned int len) {
+    if (len == 0){
+        len = 24;
+    }
+    srand(time(NULL) + len); //seed srand before using
+    std::vector<unsigned char> vchRandString;
+    static const unsigned char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    for (unsigned int i = 0; i < len; ++i) {
+        vchRandString.push_back(alphanum[rand() % (sizeof(alphanum) - 1)]);
+    }
+    std::string strPassword(vchRandString.begin(), vchRandString.end());
+    return strPassword;
+}
+
+static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
+{
+  srand(time(NULL) + nMax); //seed srand before using
+  return nMin + rand() % (nMax - nMin) + 1;
+}
+
+void WriteConfigFile(FILE* configFile)
+{
+    std::string sRPCpassword = "rpcpassword=" + GenerateRandomString(RandomIntegerRange(18, 24)) + "\n";
+    std::string sUserID = "rpcuser=" + GenerateRandomString(RandomIntegerRange(7, 11)) + "\n";
+    fputs (sUserID.c_str(), configFile);
+    fputs (sRPCpassword.c_str(), configFile);
+    fputs ("rpcport=32369\n", configFile);
+    fputs ("port=33369\n", configFile);
+    fputs ("daemon=1\n", configFile);
+    fputs ("listen=1\n", configFile);
+    fputs ("server=1\n", configFile);
+    fputs ("maxconnections=24\n", configFile);
+    fputs ("addnode=104.248.148.86:33369\n", configFile);
+    fputs ("addnode=124.183.249.162:33369\n", configFile);
+    fputs ("addnode=128.199.150.171:33369\n", configFile);
+    fputs ("addnode=148.122.187.2:33369\n", configFile);
+    fputs ("addnode=149.28.51.135:33369\n", configFile);
+    fputs ("addnode=168.62.175.85:33369\n", configFile);
+    fputs ("addnode=173.255.132.121:33369\n", configFile);
+    fputs ("addnode=185.153.46.15:333691\n", configFile);
+    fputs ("addnode=217.122.154.194:33369\n", configFile);
+    fputs ("addnode=222.107.38.86:33369\n", configFile);
+    fputs ("addnode=45.32.205.128:33369\n", configFile);
+    fputs ("addnode=45.76.127.137:33369\n", configFile);
+    fputs ("addnode=51.38.112.208:33369\n", configFile);
+    fputs ("addnode=67.166.241.130:33369\n", configFile);
+    fputs ("addnode=70.161.133.63:33369\n", configFile);
+    fputs ("addnode=82.51.2.218:33369\n", configFile);
+    fputs ("addnode=94.64.12.74:33369\n", configFile);
+    fclose(configFile);
+    ReadConfigFile(mapArgs, mapMultiArgs);
+}
+
 const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 {
     namespace fs = boost::filesystem;
@@ -1192,8 +1242,18 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
-    if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+    if (!streamConfig.good()){
+  // Create empty denarius.conf if it does not exist
+       FILE* configFile = fopen(GetConfigFile().string().c_str(), "a");
+       if (configFile != NULL) {
+           WriteConfigFile(configFile);
+           fclose(configFile);
+           ReadConfigFile(mapSettingsRet, mapMultiSettingsRet);
+      } else {
+        LogPrintf("denarius.conf file could not be found or can't be created");
+       return; // Nothing to read, so just return
+    }
+  }
 
     set<string> setOptions;
     setOptions.insert("*");
