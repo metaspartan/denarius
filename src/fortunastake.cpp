@@ -139,7 +139,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
                 // mn.pubkey = pubkey, IsVinAssociatedWithPubkey is validated once below,
                 //   after that they just need to match
                 if(count == -1 && mn.pubkey == pubkey && !mn.UpdatedWithin(FORTUNASTAKE_MIN_DSEE_SECONDS)){
-                    mn.UpdateLastSeen(sigTime); // update last seen with the sigTime since it's a new entry
+                    mn.UpdateLastSeen(); // update last seen without the sigTime since it's a new entry
+					
                     if(mn.now < sigTime){ //take the newest entry
                         if (fDebugFS & fDebugNet) printf("dsee - Got updated entry for %s\n", addr.ToString().c_str());
                         mn.UpdateLastSeen(); // update with current time (i.e. the time we received this 'new' dsee

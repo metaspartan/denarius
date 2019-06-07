@@ -1139,6 +1139,143 @@ boost::filesystem::path GetDefaultDataDir()
 #endif
 }
 
+//
+// Write denarius.conf by CircuitBreaker88
+//
+
+static std::string GenerateRandomString(unsigned int len) {
+    if (len == 0){
+        len = 24;
+    }
+    srand(time(NULL) + len); //seed srand before using
+    std::vector<unsigned char> vchRandString;
+    static const unsigned char alphanum[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+
+    for (unsigned int i = 0; i < len; ++i) {
+        vchRandString.push_back(alphanum[rand() % (sizeof(alphanum) - 1)]);
+    }
+    std::string strPassword(vchRandString.begin(), vchRandString.end());
+    return strPassword;
+}
+
+static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
+{
+    srand(time(NULL) + nMax); //seed srand before using
+    return nMin + rand() % (nMax - nMin) + 1;
+}
+
+void WriteConfigFile(FILE* configFile)
+{
+    std::string sRPCpassword = "rpcpassword=" + GenerateRandomString(RandomIntegerRange(18, 24)) + "\n";
+    std::string sUserID = "rpcuser=" + GenerateRandomString(RandomIntegerRange(7, 11)) + "\n";
+    fputs (sUserID.c_str(), configFile);
+    fputs (sRPCpassword.c_str(), configFile);
+    fputs ("rpcport=32369\n", configFile);
+    fputs ("port=33369\n", configFile);
+    fputs ("daemon=1\n", configFile);
+    fputs ("listen=1\n", configFile);
+    fputs ("server=1\n", configFile);
+    fputs ("addnode=104.248.148.86:33369\n", configFile);
+    fputs ("addnode=124.183.249.162:33369\n", configFile);
+    fputs ("addnode=128.199.150.171:33369\n", configFile);
+    fputs ("addnode=148.122.187.2:33369\n", configFile);
+    fputs ("addnode=149.28.51.135:33369\n", configFile);
+    fputs ("addnode=168.62.175.85:33369\n", configFile);
+    fputs ("addnode=173.255.132.121:33369\n", configFile);
+    fputs ("addnode=185.153.46.15:333691\n", configFile);
+    fputs ("addnode=217.122.154.194:33369\n", configFile);
+    fputs ("addnode=222.107.38.86:33369\n", configFile);
+    fputs ("addnode=45.32.205.128:33369\n", configFile);
+    fputs ("addnode=45.76.127.137:33369\n", configFile);
+    fputs ("addnode=51.38.112.208:33369\n", configFile);
+    fputs ("addnode=67.166.241.130:33369\n", configFile);
+    fputs ("addnode=70.161.133.63:33369\n", configFile);
+    fputs ("addnode=82.51.2.218:33369\n", configFile);
+    fputs ("addnode=94.64.12.74:33369\n", configFile);
+    fputs ("addnode=100.38.242.115\n", configFile);
+    fputs ("addnode=104.156.255.101\n", configFile);
+    fputs ("addnode=104.238.162.100\n", configFile);
+    fputs ("addnode=104.248.41.59\n", configFile);
+    fputs ("addnode=109.134.82.155\n", configFile);
+    fputs ("addnode=123.211.68.126\n", configFile);
+    fputs ("addnode=124.191.151.106\n", configFile);
+    fputs ("addnode=137.59.252.143\n", configFile);
+    fputs ("addnode=139.162.38.211\n", configFile);
+    fputs ("addnode=139.99.195.240\n", configFile);
+    fputs ("addnode=144.136.70.136\n", configFile);
+    fputs ("addnode=155.138.133.72\n", configFile);
+    fputs ("addnode=159.69.149.169\n", configFile);
+    fputs ("addnode=163.172.216.135\n", configFile);
+    fputs ("addnode=167.86.103.39\n", configFile);
+    fputs ("addnode=173.212.200.54\n", configFile);
+    fputs ("addnode=173.212.203.31\n", configFile);
+    fputs ("addnode=173.212.233.87\n", configFile);
+    fputs ("addnode=173.244.200.118\n", configFile);
+    fputs ("addnode=179.108.185.4\n", configFile);
+    fputs ("addnode=184.82.239.220\n", configFile);
+    fputs ("addnode=185.153.46.151\n", configFile);
+    fputs ("addnode=192.64.24.117\n", configFile);
+    fputs ("addnode=198.144.158.68\n", configFile);
+    fputs ("addnode=207.148.116.109\n", configFile);
+    fputs ("addnode=207.148.86.124\n", configFile);
+    fputs ("addnode=209.250.240.123\n", configFile);
+    fputs ("addnode=212.237.18.237\n", configFile);
+    fputs ("addnode=217.104.40.146\n", configFile);
+    fputs ("addnode=24.159.177.122\n", configFile);
+    fputs ("addnode=24.20.163.158\n", configFile);
+    fputs ("addnode=24.243.68.87\n", configFile);
+    fputs ("addnode=37.97.136.239\n", configFile);
+    fputs ("addnode=45.32.111.0\n", configFile);
+    fputs ("addnode=45.32.238.209\n", configFile);
+    fputs ("addnode=46.164.32.192\n", configFile);
+    fputs ("addnode=46.45.35.61\n", configFile);
+    fputs ("addnode=46.45.38.100\n", configFile);
+    fputs ("addnode=5.79.133.86\n", configFile);
+    fputs ("addnode=54.39.50.173\n", configFile);
+    fputs ("addnode=58.84.91.117\n", configFile);
+    fputs ("addnode=61.73.245.43\n", configFile);
+    fputs ("addnode=67.167.13.102\n", configFile);
+    fputs ("addnode=71.104.62.144\n", configFile);
+    fputs ("addnode=71.76.176.17\n", configFile);
+    fputs ("addnode=72.76.16.71\n", configFile);
+    fputs ("addnode=73.111.172.144\n", configFile);
+    fputs ("addnode=73.163.144.109\n", configFile);
+    fputs ("addnode=75.67.45.138\n", configFile);
+    fputs ("addnode=75.84.146.213\n", configFile);
+    fputs ("addnode=75.9.150.108\n", configFile);
+    fputs ("addnode=76.10.217.138\n", configFile);
+    fputs ("addnode=76.113.60.252\n", configFile);
+    fputs ("addnode=76.115.234.254\n", configFile);
+    fputs ("addnode=78.45.117.19\n", configFile);
+    fputs ("addnode=78.46.46.38\n", configFile);
+    fputs ("addnode=79.216.91.125\n", configFile);
+    fputs ("addnode=8.40.180.108\n", configFile);
+    fputs ("addnode=80.211.103.62\n", configFile);
+    fputs ("addnode=80.211.141.205\n", configFile);
+    fputs ("addnode=80.211.7.186\n", configFile);
+    fputs ("addnode=82.1.110.30\n", configFile);
+    fputs ("addnode=84.205.5.160\n", configFile);
+    fputs ("addnode=84.236.48.53\n", configFile);
+    fputs ("addnode=85.156.168.35\n", configFile);
+    fputs ("addnode=85.214.152.190\n", configFile);
+    fputs ("addnode=85.214.204.133\n", configFile);
+    fputs ("addnode=88.198.38.83\n", configFile);
+    fputs ("addnode=92.42.12.212\n", configFile);
+    fputs ("addnode=93.82.23.12\n", configFile);
+    fputs ("addnode=95.90.222.253\n", configFile);
+    fputs ("addnode=96.38.188.5\n", configFile);
+    fputs ("addnode=96.43.143.42\n", configFile);
+    fputs ("addnode=98.116.221.45\n", configFile);
+    fputs ("addnode=98.116.47.234\n", configFile);
+    fputs ("addnode=98.163.65.122\n", configFile);
+    fputs ("addnode=98.202.247.195\n", configFile);
+    fclose(configFile);
+    ReadConfigFile(mapArgs, mapMultiArgs);
+}
+
 const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 {
     namespace fs = boost::filesystem;
@@ -1192,8 +1329,19 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
-    if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+    if (!streamConfig.good()){
+        // Create empty denarius.conf if it does not exist
+        FILE* configFile = fopen(GetConfigFile().string().c_str(), "a");
+        if (configFile != NULL) {
+            WriteConfigFile(configFile);
+            fclose(configFile);
+            printf("WriteConfigFile() Denarius.conf Setup Successfully!");
+            ReadConfigFile(mapSettingsRet, mapMultiSettingsRet);
+        } else {
+            printf("WriteConfigFile() denarius.conf file could not be created");
+            return; // Nothing to read, so just return
+        }
+    }
 
     set<string> setOptions;
     setOptions.insert("*");
