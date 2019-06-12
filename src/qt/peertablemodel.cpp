@@ -114,7 +114,7 @@ public:
 PeerTableModel::PeerTableModel(ClientModel *parent) :
     QAbstractTableModel(parent),
     clientModel(parent),
-    timer(5)
+    timer(nullptr) // Fix QTimer error with int, needs nullptr or 0
 {
     columns << tr("Address/Hostname") << tr("User Agent") << tr("Ping Time");
     priv = new PeerTablePriv();

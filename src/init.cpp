@@ -957,7 +957,7 @@ bool AppInit2()
         printf("Shutdown requested. Exiting.\n");
         return false;
     };
-    printf(" block index %15"PRId64"ms\n", GetTimeMillis() - nStart);
+    printf(" block index %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
@@ -1056,7 +1056,7 @@ bool AppInit2()
     };
 
     printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15"PRId64"ms\n", GetTimeMillis() - nStart);
+    printf(" wallet      %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     RegisterWallet(pwalletMain);
 
@@ -1078,7 +1078,7 @@ bool AppInit2()
         printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
-        printf(" rescan      %15"PRId64"ms\n", GetTimeMillis() - nStart);
+        printf(" rescan      %15" PRId64"ms\n", GetTimeMillis() - nStart);
     };
 
     // Add wallet transactions that aren't already in a block to mapTransactions
@@ -1123,7 +1123,7 @@ bool AppInit2()
             printf("Invalid or missing peers.dat; recreating\n");
     }
 
-    printf("Loaded %i addresses from peers.dat  %"PRId64"ms\n",
+    printf("Loaded %i addresses from peers.dat  %" PRId64"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 
 
@@ -1236,16 +1236,16 @@ bool AppInit2()
         pblockAddrIndex = pblockAddrIndex->pprev;
     }
 
-    printf("Rebuilt address index of %i blocks in %"PRId64"ms\n",
+    printf("Rebuilt address index of %i blocks in %" PRId64"ms\n",
            pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
 
     //// debug print
-    printf("mapBlockIndex.size() = %"PRIszu"\n",   mapBlockIndex.size());
+    printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
     printf("nBestHeight = %d\n",            nBestHeight);
-    printf("setKeyPool.size() = %"PRIszu"\n",      pwalletMain->setKeyPool.size());
-    printf("mapWallet.size() = %"PRIszu"\n",       pwalletMain->mapWallet.size());
-    printf("mapAddressBook.size() = %"PRIszu"\n",  pwalletMain->mapAddressBook.size());
+    printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
+    printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
+    printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
 
     if(fNativeTor)
         printf("Native Tor Onion Relay Node Enabled");

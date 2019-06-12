@@ -798,7 +798,7 @@ int CForTunaPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
 
 bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
 	bool fIsInitialDownload = IsInitialBlockDownload();
-    if(fIsInitialDownload) return;
+    if(fIsInitialDownload) return nullptr; // Needs to return a value, so returns null pointer v3.3.9.1 - macOS
 	
     CScript payee2;
     payee2= GetScriptForDestination(pubkey.GetID());
