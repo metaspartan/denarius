@@ -21,6 +21,13 @@ static BN_CTX   *bnCtx   = NULL;
 static BIGNUM   *bnOrder = NULL;
 
 
+void printBigNum(BIGNUM *b)
+{
+  char *number = BN_bn2hex(b);
+  printf("%s", number);
+  OPENSSL_free(number);
+}
+
 int initialiseRingSigs()
 {
     int rv = 0;
@@ -825,6 +832,9 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
         rv = 1; goto End;
     }
 
+    printf("\n RingDbg: secret offset : %d, Ringsize: %d, C%d is :\n", nSecretOffset, nRingSize, nSecretOffset+1);
+    printBigNum(bnC);
+    printf("\n");
 
     // c_{j+2} = h(P_1,...,P_n,s_{j+1}*G+c_{j+1}*P_{j+1},s_{j+1}*H(P_{j+1})+c_{j+1}*I_j)
     for (int k = 0, ib = (nSecretOffset + 1) % nRingSize, i = (nSecretOffset + 2) % nRingSize;
@@ -930,6 +940,10 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
           && (rv = printf("%s: hash -> bnC failed.", __func__)))
             goto End;
 
+        printf(" \n RingDbg: Iteration %d: C%d follows\n", ib, ib+1);
+        printBigNum(bnC);
+        printf("\n");
+
         if (i == nSecretOffset
          &&!BN_copy(bnCj, bnC)
          && (rv = printf("%s: BN_copy failed.\n", __func__)))
@@ -949,6 +963,9 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
                 printf("%s: sigC.resize failed.\n", __func__);
                 rv = 1; goto End;
             }
+            printf("\n RingDbg: So E0 = c0 = \n");
+            printBigNum(bnC);
+            printf("\n");
             memcpy(&sigC[0], tempData, EC_SECRET_SIZE);
         }
     }
@@ -1034,6 +1051,10 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         rv = 1; goto End;
     }
 
+    printf("\n RingDbg: Starting with C0 which is\n");
+    printBigNum(bnC1);
+    printf("\n");
+
     for (int i = 0; i < nRingSize; ++i)
     {
         if (!bnS || !(BN_bin2bn(&pSigS[i * EC_SECRET_SIZE], EC_SECRET_SIZE, bnS)))
@@ -1109,6 +1130,9 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
             printf("%s: tmpHash -> bnC failed.\n", __func__);
             rv = 1; goto End;
         }
+        printf("\n RingDbg: Iteration %d, so C%d follows\n", i, i+1);
+        printBigNum(bnC);
+        printf("\n");
     }
 
     // bnT = (bnC - bnC1) % N
@@ -1118,7 +1142,14 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         rv = 1; goto End;
     }
 
-	
+    printf("\n RingDbg: End result, bnC:\n");
+    printBigNum(bnC);
+    printf("\n bnC1 old is \n");
+    printBigNum(bnC1);
+    printf("\n So bnT is \n");
+    printBigNum(bnT);
+    printf("\n");
+
     // test bnT == 0  (bnC == bnC1)
     if (!BN_is_zero(bnT))
     {

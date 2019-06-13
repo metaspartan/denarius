@@ -16,6 +16,13 @@
 const uint8_t stealth_version_byte = 0x28;
 
 
+int CStealthAddress::SetScanPubKey(CPubKey pk)
+{
+    scan_pubkey.resize(pk.size());
+    memcpy(&scan_pubkey[0], pk.begin(), pk.size());
+    return 0;
+};
+
 bool CStealthAddress::SetEncoded(const std::string& encodedAddress)
 {
     data_chunk raw;
@@ -84,13 +91,6 @@ std::string CStealthAddress::Encoded() const
     AppendChecksum(raw);
 
     return EncodeBase58(raw);
-};
-
-int CStealthAddress::SetScanPubKey(CPubKey pk)
-{
-    scan_pubkey.resize(pk.size());
-    memcpy(&scan_pubkey[0], pk.begin(), pk.size());
-    return 0;
 };
 
 uint32_t BitcoinChecksum(uint8_t* p, uint32_t nBytes)
