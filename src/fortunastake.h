@@ -342,8 +342,8 @@ private:
 public:
 
     CFortunastakePayments() {
-        strMainPubKey = "04af2b6c63d5e5937266a4ce630ab6ced73a0f6a5ff5611ef9b5cfc4f9e264e4a8a4840ab4da4d3ded243ef9f80f114d335dad9a87a50431004b35c01b2c68ea49";
-        strTestPubKey = "0406d6c9580d20c4daaacbade0f5bbe4448c511c5860f6dc27a1bf2a8c043b2ad27f3831f8e24750488f0c715100cc5a5811ffd578029f3af62633d9e1c51be384";
+        strMainPubKey = "";
+        strTestPubKey = "";
         enabled = false;
     }
 
