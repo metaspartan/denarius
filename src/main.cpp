@@ -2642,11 +2642,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) { //Update PoS FS Payments to not go out of sync
-                                                    if (fDebug) printf("CheckBlock-POS() : This payment has been determined as legitimate, and will be allowed.");
+													return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
                                                 } else {
                                                     if (fDebug) printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
-												//break;
+												//break; No more breaking out of the checks
                                             } else {
                                                 if (fDebug) printf("CheckBlock-POS() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                             }
@@ -2769,8 +2769,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT)
                                             {
                                                 return error("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s",mn.nRank,FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn.payRate).c_str());
-                                            } else
-                                            {
+                                            } else {
                                                 if (fDebug) printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                             }
                                         } else {

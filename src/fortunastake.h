@@ -203,7 +203,7 @@ public:
 
     void UpdateLastSeen(int64_t override=0)
     {
-        if (override == 0) {
+        if (override == 0 || override > GetAdjustedTime()) {
             lastTimeSeen = GetAdjustedTime();
         } else {
             lastTimeSeen = override;
