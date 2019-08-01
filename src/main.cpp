@@ -1892,57 +1892,11 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
 }
 
 // Ring Signatures - D e n a r i u s
-static bool CheckAnonInputAB(CTxDB &txdb, const CTxIn &txin, int i, int nRingSize, std::vector<uint8_t> &vchImage, uint256 &preimage, int64_t &nCoinValue)
-{
-    const CScript &s = txin.scriptSig;
-
-    CPubKey pkRingCoin;
-    CAnonOutput ao;
-    CTxIndex txindex;
-
-    ec_point pSigC;
-    pSigC.resize(ec_secret_size);
-    memcpy(&pSigC[0], &s[2], ec_secret_size);
-    const unsigned char *pSigS    = &s[2 + ec_secret_size];
-    const unsigned char *pPubkeys = &s[2 + ec_secret_size + ec_secret_size * nRingSize];
-    for (int ri = 0; ri < nRingSize; ++ri)
-    {
-        pkRingCoin = CPubKey(&pPubkeys[ri * ec_compressed_size], ec_compressed_size);
-        if (!txdb.ReadAnonOutput(pkRingCoin, ao))
-        {
-            printf("CheckAnonInputsAB(): Error input %d, element %d AnonOutput %s not found.\n", i, ri);
-            return false;
-        };
-
-        if (nCoinValue == -1)
-        {
-            nCoinValue = ao.nValue;
-        } else
-        if (nCoinValue != ao.nValue)
-        {
-            printf("CheckAnonInputsAB(): Error input %d, element %d ring amount mismatch %d, %d.\n", i, ri, nCoinValue, ao.nValue);
-            return false;
-        };
-
-        if (ao.nBlockHeight == 0
-            || nBestHeight - ao.nBlockHeight < MIN_ANON_SPEND_DEPTH)
-        {
-            printf("CheckAnonInputsAB(): Error input %d, element %d depth < MIN_ANON_SPEND_DEPTH.\n", i, ri);
-            return false;
-        };
-    };
-
-    if (verifyRingSignatureAB(vchImage, preimage, nRingSize, pPubkeys, pSigC, pSigS) != 0)
-    {
-        printf("CheckAnonInputsAB(): Error input %d verifyRingSignatureAB() failed.\n", i);
-        return false;
-    };
-
-    return true;
-};
-
 bool CTransaction::CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInvalid, bool fCheckExists)
 {
+    if (fDebugRingSig)
+        printf("CheckAnonInputs()\n");
+
     AssertLockHeld(cs_main);
     // - fCheckExists should only run for anonInputs entering this node
 
@@ -1979,14 +1933,14 @@ bool CTransaction::CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInval
             if (spentKeyImage.txnHash == txnHash)
             {
                 if (fDebugRingSig)
-                    printf("Input %d keyimage %s matches txn %s.\n", i, HexStr(vchImage).c_str(), txnHash.ToString().c_str());
+                    printf("CheckAnonInputs(): Input %d keyimage %s matches txn %s.\n", i, HexStr(vchImage).c_str(), txnHash.ToString().c_str());
             } else
             {
                 if (fCheckExists
                     && !TxnHashInSystem(&txdb, spentKeyImage.txnHash))
                 {
                     if (fDebugRingSig)
-                        printf("Input %d keyimage %s matches unknown txn %s, continuing.\n", i, HexStr(vchImage).c_str(), spentKeyImage.txnHash.ToString().c_str());
+                        printf("CheckAnonInputs(): Input %d keyimage %s matches unknown txn %s, continuing.\n", i, HexStr(vchImage).c_str(), spentKeyImage.txnHash.ToString().c_str());
 
                     // -- spentKeyImage is invalid as points to unknown txnHash
                     //    continue
@@ -2000,24 +1954,11 @@ bool CTransaction::CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInval
 
         int64_t nCoinValue = -1;
         int nRingSize = txin.ExtractRingSize();
-        if (nRingSize < 1
-          ||nRingSize > (pindexBest->nHeight ? (int)MAX_RING_SIZE : (int)MAX_RING_SIZE_OLD))
+        if (nRingSize < (int)MIN_RING_SIZE
+            || nRingSize > (int)MAX_RING_SIZE)
         {
             printf("CheckAnonInputs(): Error input %d ringsize %d not in range [%d, %d].\n", i, nRingSize, MIN_RING_SIZE, MAX_RING_SIZE);
             fInvalid = true; return false;
-        };
-
-
-        if (nRingSize > 1 && s.size() == 2 + ec_secret_size + (ec_secret_size + ec_compressed_size) * nRingSize)
-        {
-            // ringsig AB
-            if (!CheckAnonInputAB(txdb, txin, i, nRingSize, vchImage, preimage, nCoinValue))
-            {
-                fInvalid = true; return false;
-            };
-
-            nSumValue += nCoinValue;
-            continue;
         };
 
         if (s.size() < 2 + (ec_compressed_size + ec_secret_size + ec_secret_size) * nRingSize)
@@ -2025,7 +1966,6 @@ bool CTransaction::CheckAnonInputs(CTxDB& txdb, int64_t& nSumValue, bool& fInval
             printf("CheckAnonInputs(): Error input %d scriptSig too small.\n", i);
             fInvalid = true; return false;
         };
-
 
         CPubKey pkRingCoin;
         CAnonOutput ao;

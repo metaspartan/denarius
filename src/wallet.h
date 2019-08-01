@@ -220,6 +220,7 @@ public:
     // Generate a new key
     CPubKey GenerateNewKey();
     // Adds a key to the store, and saves it to disk.
+	bool AddKey(const CKey& key);
     bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);
 
     bool AddKeyInDBTxn(CWalletDB* pdb, const CKey& key);
@@ -316,7 +317,7 @@ public:
     bool SendStealthMoneyToDestination(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee=false);
     bool FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNarr);
 
-    // Ring Sigs - v3 D e n a r i u s
+    // Ring Signature Anon Wallet Functions - D e n a r i u s
     bool UpdateAnonTransaction(CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash);
     bool UndoAnonTransaction(const CTransaction& tx);
     bool ProcessAnonTransaction(CWalletDB* pwdb, CTxDB* ptxdb, const CTransaction& tx, const uint256& blockHash, bool& fIsMine, mapValue_t& mapNarr, std::vector<std::map<uint256, CWalletTx>::iterator>& vUpdatedTxns);
@@ -324,17 +325,17 @@ public:
     bool GetAnonChangeAddress(CStealthAddress& sxAddress);
     bool CreateStealthOutput(CStealthAddress* sxAddress, int64_t nValue, std::string& sNarr, std::vector<std::pair<CScript, int64_t> >& vecSend, std::map<int, std::string>& mapNarr, std::string& sError);
     bool CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std::string& sNarr, std::vector<std::pair<CScript, int64_t> >& vecSend, CScript& scriptNarration);
-    int PickAnonInputs(int rsType, int64_t nValue, int64_t& nFee, int nRingSize, CWalletTx& wtxNew, int nOutputs, int nSizeOutputs, int& nExpectChangeOuts, std::list<COwnedAnonOutput>& lAvailableCoins, std::vector<COwnedAnonOutput*>& vPickedCoins, std::vector<std::pair<CScript, int64_t> >& vecChange, bool fTest, std::string& sError);
+    int PickAnonInputs(int64_t nValue, int64_t& nFee, int nRingSize, CWalletTx& wtxNew, int nOutputs, int nSizeOutputs, int& nExpectChangeOuts, std::list<COwnedAnonOutput>& lAvailableCoins, std::vector<COwnedAnonOutput*>& vPickedCoins, std::vector<std::pair<CScript, int64_t> >& vecChange, bool fTest, std::string& sError);
     int GetTxnPreImage(CTransaction& txn, uint256& hash);
     int PickHidingOutputs(int64_t nValue, int nRingSize, CPubKey& pkCoin, int skip, uint8_t* p);
     bool AreOutputsUnique(CWalletTx& wtxNew);
 
-    bool AddAnonInputs(int rsType, int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError);
+    bool AddAnonInputs(int64_t nTotalOut, int nRingSize, std::vector<std::pair<CScript, int64_t> >&vecSend, std::vector<std::pair<CScript, int64_t> >&vecChange, CWalletTx& wtxNew, int64_t& nFeeRequired, bool fTestOnly, std::string& sError);
     bool SendDToAnon(CStealthAddress& sxAddress, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee=false);
     bool SendAnonToAnon(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee=false);
     bool SendAnonToD(CStealthAddress& sxAddress, int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, std::string& sError, bool fAskFee=false);
 
-    bool ExpandLockedAnonOutput(CWalletDB *pdb, CKeyID &ckeyId, CLockedAnonOutput &lao, std::set<uint256> &setUpdated);
+    bool ExpandLockedAnonOutput(CWalletDB *pdb, CKeyID &ckeyId, CLockedAnonOutput &lao);
     bool ProcessLockedAnonOutputs();
 
     bool EstimateAnonFee(int64_t nValue, int nRingSize, std::string& sNarr, CWalletTx& wtxNew, int64_t& nFeeRet, std::string& sError);

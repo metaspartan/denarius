@@ -727,8 +727,6 @@ bool AppInit2()
 
     // ********************************************************* Step 6: network initialization
 
-    //nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
-
     int nSocksVersion = GetArg("-socks", 5);
 
     if (nSocksVersion != 4 && nSocksVersion != 5)
