@@ -63,6 +63,11 @@
         <file alias="refresh">res/icons/refresh.png</file>
         <file alias="data">res/icons/data.png</file>
         <file alias="trade">res/icons/trade.png</file>
+        <file alias="i2pconnect_0">res/icons/i2plogo_0_16.png</file>
+        <file alias="i2pconnect_1">res/icons/i2plogo_1_16.png</file>
+        <file alias="i2pconnect_2">res/icons/i2plogo_2_16.png</file>
+        <file alias="i2pconnect_3">res/icons/i2plogo_3_16.png</file>
+        <file alias="i2pconnect_4">res/icons/i2plogo_4_16.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>

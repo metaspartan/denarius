@@ -340,7 +340,7 @@ contains(USE_LEVELDB, -) {
 
 	DEFINES += USE_LEVELDB
 
-    INCLUDEPATH += src/leveldb/include src/leveldb/helpers
+  INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 	SOURCES += src/txdb-leveldb.cpp \
 		src/bloom.cpp \
@@ -400,7 +400,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
-	src/qt/intro.h \
+	  src/qt/intro.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/peertablemodel.h \
@@ -668,6 +668,32 @@ contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
 SOURCES += src/qt/qrcodedialog.cpp
 FORMS += src/qt/forms/qrcodedialog.ui
+}
+
+# use: qmake "USE_NATIVE_I2P=1" ( enabled by default; default)
+#  or: qmake "USE_NATIVE_I2P=0" (disabled by default)
+#  or: qmake "USE_NATIVE_I2P=-" (not supported)
+# D E N A R I U S Native I2P - USE_NATIVE_I2P=- to not compile with the i2p SAM C Library
+contains(USE_NATIVE_I2P, -) {
+    message(Building without Native I2P support)
+} else {
+    message(Building with Native I2P support)
+    count(USE_USE_NATIVE_I2P, 0) {
+        USE_NATIVE_I2P=1
+    }
+    DEFINES += USE_NATIVE_I2P=$$USE_NATIVE_I2P
+    HEADERS += src/i2p.h \
+      src/i2psam.h \
+      src/qt/showi2paddresses.h \
+      src/qt/i2poptionswidget.h
+
+    SOURCES += src/i2p.cpp \
+      src/i2psam.cpp \
+      src/qt/showi2paddresses.cpp \
+      src/qt/i2poptionswidget.cpp
+
+    FORMS += src/qt/forms/showi2paddresses.ui \
+      src/qt/forms/i2poptionswidget.ui
 }
 
 CODECFORTR = UTF-8

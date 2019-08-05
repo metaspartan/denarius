@@ -37,6 +37,10 @@
 #include <signal.h>
 #endif
 
+#ifdef USE_NATIVE_I2P
+#include "i2p.h"
+#endif
+
 
 using namespace std;
 using namespace boost;
@@ -269,6 +273,15 @@ bool static InitWarning(const std::string &str)
     return true;
 }
 
+#ifdef USE_NATIVE_I2P
+bool static BindNativeI2P(/*bool fError = true*/)
+{
+    if (IsLimited(NET_NATIVE_I2P))
+        return false;
+    return BindListenNativeI2P();
+}
+#endif
+
 
 bool static Bind(const CService &addr, bool fError = true)
 {
@@ -465,6 +478,20 @@ bool AppInit2()
         return false;
 
     // ********************************************************* Step 2: parameter interactions
+
+    #ifdef USE_NATIVE_I2P
+    if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
+    {
+        const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
+        uiInterface.ThreadSafeShowGeneratedI2PAddress(
+                    "Generated I2P address",
+                    generatedDest.pub,
+                    generatedDest.priv,
+                    I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
+                    GetConfigFile().string());
+        return false;
+    }
+    #endif
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
@@ -857,6 +884,10 @@ bool AppInit2()
                     fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
                 if (!IsLimited(NET_IPV4))
                     fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
+#ifdef USE_NATIVE_I2P
+                if (!IsLimited(NET_NATIVE_I2P))
+                    fBound |= BindNativeI2P();
+#endif
             };
             if (!fBound)
                 return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));

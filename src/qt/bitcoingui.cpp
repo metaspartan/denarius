@@ -38,6 +38,10 @@
 #include "termsofuse.h"
 #include "proofofimage.h"
 
+#ifdef USE_NATIVE_I2P
+#include "showi2paddresses.h"
+#endif
+
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
 #endif
@@ -179,12 +183,12 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     // Create tabs
     overviewPage = new OverviewPage();
-	statisticsPage = new StatisticsPage(this);
-	blockBrowser = new BlockBrowser(this);
+  	statisticsPage = new StatisticsPage(this);
+  	blockBrowser = new BlockBrowser(this);
     marketBrowser = new MarketBrowser(this);
-	multisigPage = new MultisigDialog(this);
+  	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
-	//chatWindow = new ChatWindow(this);
+	  //chatWindow = new ChatWindow(this);
 
 
     transactionsPage = new QWidget(this);
@@ -193,7 +197,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     vbox->addWidget(transactionView);
     transactionsPage->setLayout(vbox);
 
-	mintingPage = new QWidget(this);
+  	mintingPage = new QWidget(this);
     QVBoxLayout *vboxMinting = new QVBoxLayout();
     mintingView = new MintingView(this);
     vboxMinting->addWidget(mintingView);
@@ -213,17 +217,17 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget = new QStackedWidget(this);
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
-	centralWidget->addWidget(mintingPage);
+	  centralWidget->addWidget(mintingPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
     centralWidget->addWidget(messagePage);
-	centralWidget->addWidget(statisticsPage);
-	centralWidget->addWidget(blockBrowser);
+	  centralWidget->addWidget(statisticsPage);
+	  centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(fortunastakeManagerPage);
-	centralWidget->addWidget(marketBrowser);
+	  centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
-	//centralWidget->addWidget(chatWindow);
+	  //centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -237,6 +241,15 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->setContentsMargins(3,0,3,0);
     frameBlocksLayout->setSpacing(3);
     labelEncryptionIcon = new ActiveLabel();
+
+#ifdef USE_NATIVE_I2P
+    labelI2PConnections = new QLabel();
+    labelI2POnly = new QLabel();
+    labelI2PGenerated = new QLabel();
+    frameBlocksLayout->addWidget(labelI2PGenerated);
+    frameBlocksLayout->addWidget(labelI2POnly);
+    frameBlocksLayout->addWidget(labelI2PConnections);
+#endif
 
     labelStakingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
@@ -252,6 +265,13 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->addWidget(labelConnectionsIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelBlocksIcon);
+    frameBlocksLayout->addStretch();
+
+    netLabel = new QLabel();
+    netLabel->setObjectName("netLabel");
+    netLabel->setStyleSheet("#netLabel { color: #efefef; }");
+    frameBlocksLayout->addWidget(netLabel);
+
     frameBlocksLayout->addStretch();
 
     if (GetBoolArg("-staking", true))
@@ -322,20 +342,20 @@ void BitcoinGUI::createActions()
 	overviewAction->setStatusTip(tr("Wallet Overview"));
     tabGroup->addAction(overviewAction);
 
-	statisticsAction = new QAction(QIcon(":/icons/statistics"), tr("&Statistics"), this);
+	  statisticsAction = new QAction(QIcon(":/icons/statistics"), tr("&Statistics"), this);
     statisticsAction->setToolTip(tr("View statistics"));
     statisticsAction->setCheckable(true);
 	statisticsAction->setStatusTip(tr("Denarius Statistics"));
     tabGroup->addAction(statisticsAction);
 
-	blockAction = new QAction(QIcon(":/icons/block"), tr("&Block Explorer"), this);
+	  blockAction = new QAction(QIcon(":/icons/block"), tr("&Block Explorer"), this);
     blockAction->setToolTip(tr("Explore the Denarius Blockchain"));
     blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
 	blockAction->setStatusTip(tr("Block Explorer"));
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 
-	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
+	  marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     marketAction->setToolTip(tr("Market Data"));
     marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
 	marketAction->setStatusTip(tr("Denarius Market Data"));
@@ -382,7 +402,7 @@ void BitcoinGUI::createActions()
     messageAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
     tabGroup->addAction(messageAction);
 
-	mintingAction = new QAction(QIcon(":/icons/stake"), tr("&Staking"), this);
+	  mintingAction = new QAction(QIcon(":/icons/stake"), tr("&Staking"), this);
     mintingAction->setToolTip(tr("Show your staking capacity"));
     mintingAction->setCheckable(true);
 	mintingAction->setStatusTip(tr("Staking Estimations"));
@@ -401,21 +421,21 @@ void BitcoinGUI::createActions()
 	proofOfImageAction->setStatusTip(tr("PoD: Timestamp files"));
     tabGroup->addAction(proofOfImageAction);
 
-	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
+  	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 	multisigAction->setStatusTip(tr("Multisig Interface"));
 
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
-	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
-	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
-	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
-	//connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
+  	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+  	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
+  	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
+  	//connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
-	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+  	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(gotoFortunastakeManagerPage()));
@@ -425,7 +445,7 @@ void BitcoinGUI::createActions()
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));
-	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+  	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
@@ -469,7 +489,7 @@ void BitcoinGUI::createActions()
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
 	openRPCConsoleAction->setStatusTip(tr("Show Debug Console"));
 
-	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
+  	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
     openInfoAction->setStatusTip(tr("Show diagnostic information"));
     openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
     openGraphAction->setStatusTip(tr("Show Network Monitor"));
@@ -611,6 +631,32 @@ void BitcoinGUI::checkTOU()
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
 {
+#ifdef USE_NATIVE_I2P
+           setNumI2PConnections(clientModel->getNumI2PConnections());
+           connect(clientModel, SIGNAL(numI2PConnectionsChanged(int)), this, SLOT(setNumI2PConnections(int)));
+if(clientModel->isI2POnly())
+{
+     netLabel->setText("I2P");
+     netLabel->setToolTip(tr("Wallet is using I2P-network only"));
+}
+else
+{
+#endif
+netLabel->setText("CLEARNET");
+#ifdef USE_NATIVE_I2P
+}
+
+      if (clientModel->isI2PAddressGenerated())
+      {
+          labelI2PGenerated->setText("DYN");
+          labelI2PGenerated->setToolTip(tr("Wallet is running with a random generated I2P-address"));
+      }
+      else
+      {
+          labelI2PGenerated->setText("STA");
+          labelI2PGenerated->setToolTip(tr("Wallet is running with a static I2P-address"));
+      }
+#endif
     this->clientModel = clientModel;
     if(clientModel)
     {
@@ -664,19 +710,19 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         // Put transaction list in tabs
         transactionView->setModel(walletModel);
 
-		mintingView->setModel(walletModel);
+		    mintingView->setModel(walletModel);
 
         overviewPage->setModel(walletModel);
         addressBookPage->setModel(walletModel->getAddressTableModel());
         receiveCoinsPage->setModel(walletModel->getAddressTableModel());
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
-		statisticsPage->setModel(clientModel);
-		blockBrowser->setModel(clientModel);
-		marketBrowser->setModel(clientModel);
+		    statisticsPage->setModel(clientModel);
+		    blockBrowser->setModel(clientModel);
+		    marketBrowser->setModel(clientModel);
         fortunastakeManagerPage->setWalletModel(walletModel);
-		multisigPage->setModel(walletModel);
-		//chatWindow->setModel(clientModel);
+		    multisigPage->setModel(walletModel);
+		    //chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
@@ -731,8 +777,8 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(sendCoinsAction);
     trayIconMenu->addAction(receiveCoinsAction);
-	trayIconMenu->addSeparator();
-	trayIconMenu->addAction(multisigAction);
+	  trayIconMenu->addSeparator();
+	  trayIconMenu->addAction(multisigAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(signMessageAction);
     trayIconMenu->addAction(verifyMessageAction);
@@ -764,6 +810,9 @@ void BitcoinGUI::optionsClicked()
         return;
     OptionsDialog dlg;
     dlg.setModel(clientModel->getOptionsModel());
+#ifdef USE_NATIVE_I2P
+    dlg.setClientModel(clientModel);
+#endif
     dlg.exec();
 }
 
@@ -773,6 +822,31 @@ void BitcoinGUI::aboutClicked()
     dlg.setModel(clientModel);
     dlg.exec();
 }
+
+#ifdef USE_NATIVE_I2P
+void BitcoinGUI::showGeneratedI2PAddr(const QString& caption, const QString& pub, const QString& priv, const QString& b32, const QString& configFileName)
+{
+    ShowI2PAddresses i2pDialog(caption, pub, priv, b32, configFileName, this);
+    i2pDialog.exec();
+}
+#endif
+
+#ifdef USE_NATIVE_I2P
+void BitcoinGUI::setNumI2PConnections(int count)
+{
+    QString i2pIcon;
+    switch(count)
+    {
+    case 0: i2pIcon = ":/icons/i2pconnect_0"; break;
+    case 1: /*case 2: case 3:*/ i2pIcon = ":/icons/i2pconnect_1"; break;
+    case 2:/*case 4: case 5: case 6:*/ i2pIcon = ":/icons/i2pconnect_2"; break;
+    case 3:/*case 7: case 8: case 9:*/ i2pIcon = ":/icons/i2pconnect_3"; break;
+    default: i2pIcon = ":/icons/i2pconnect_4"; break;
+    }
+    labelI2PConnections->setPixmap(QPixmap(i2pIcon));
+    labelI2PConnections->setToolTip(tr("%n active connection(s) to the I2P-Denarius network", "", count));
+}
+#endif
 
 void BitcoinGUI::setNumConnections(int count)
 {
