@@ -123,7 +123,7 @@ Object blockheaderToJSON(const CBlockIndex* blockindex)
 	result.push_back(Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
     result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
     result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
-    result.push_back(Pair("modifier", strprintf("%016"PRIx64, blockindex->nStakeModifier)));
+    result.push_back(Pair("modifier", strprintf("%016" PRIx64, blockindex->nStakeModifier)));
 	result.push_back(Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
     return result;
 } */
@@ -167,7 +167,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
     result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
     result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
-    result.push_back(Pair("modifier", strprintf("%016"PRIx64, blockindex->nStakeModifier)));
+    result.push_back(Pair("modifier", strprintf("%016" PRIx64, blockindex->nStakeModifier)));
     result.push_back(Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
     Array txinfo;
     BOOST_FOREACH (const CTransaction& tx, block.vtx)
@@ -539,45 +539,6 @@ Value getcheckpoint(const Array& params, bool fHelp)
         result.push_back(Pair("checkpointmaster", true));
 
     return result;
-}
-
-/*
-    Used for updating/reading spork settings on the network
-*/
-Value spork(const Array& params, bool fHelp)
-{
-    if(params.size() == 1 && params[0].get_str() == "show"){
-        std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
-
-        Object ret;
-        while(it != mapSporksActive.end()) {
-            ret.push_back(Pair(sporkManager.GetSporkNameByID(it->second.nSporkID), it->second.nValue));
-            it++;
-        }
-        return ret;
-    } else if (params.size() == 2){
-        int nSporkID = sporkManager.GetSporkIDByName(params[0].get_str());
-        if(nSporkID == -1){
-            return "Invalid spork name";
-        }
-
-        // SPORK VALUE
-        int64_t nValue = params[1].get_int();
-
-        //broadcast new spork
-        if(sporkManager.UpdateSpork(nSporkID, nValue)){
-            return "success";
-        } else {
-            return "failure";
-        }
-
-    }
-
-    throw runtime_error(
-        "spork <name> [<value>]\n"
-        "<name> is the corresponding spork name, or 'show' to show all current spork settings"
-        "<value> is a epoch datetime to enable or disable spork"
-        + HelpRequiringPassphrase());
 }
 
 Value gettxout(const Array& params, bool fHelp)

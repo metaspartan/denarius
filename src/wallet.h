@@ -131,7 +131,7 @@ public:
     ///      strWalletFile (immutable after instantiation)
     mutable CCriticalSection cs_wallet;
 	  //FortunaStakes
-	  bool SelectCoinsDark(int64_t nValueMin, int64_t nValueMax, std::vector<CTxIn>& setCoinsRet, int64_t& nValueRet, int nFortunaRoundsMin, int nFortunaRoundsMax) const;
+	  bool SelectCoinsFortuna(int64_t nValueMin, int64_t nValueMax, std::vector<CTxIn>& setCoinsRet, int64_t& nValueRet, int nFortunaRoundsMin, int nFortunaRoundsMax) const;
     bool SelectCoinsByDenominations(int nDenom, int64_t nValueMin, int64_t nValueMax, std::vector<CTxIn>& setCoinsRet, std::vector<COutput>& vCoins, int64_t& nValueRet, int nFortunaRoundsMin, int nFortunaRoundsMax);
     bool SelectCoinsDarkDenominated(int64_t nTargetValue, std::vector<CTxIn>& setCoinsRet, int64_t& nValueRet) const;
     bool SelectCoinsFortunastake(CTxIn& vin, int64_t& nValueRet, CScript& pubScript) const;
@@ -272,7 +272,7 @@ public:
         @return multimap of ordered transactions and accounting entries
         @warning Returned pointers are *only* valid within the scope of passed acentries
      */
-    TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "");
+    TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "", bool fShowCoinstake = true);
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx& wtxIn);
@@ -1130,6 +1130,12 @@ public:
     {
         // Quick answer in most cases
         if (!IsFinal())
+            return false;
+        // Coins newer than our current chain can't be trusted
+        if (nTime > pindexBest->GetBlockTime())
+            return false;
+        // Coins whose block is not in our chain can't be trusted
+        if (!mapBlockIndex.count(hashBlock))
             return false;
         int nDepth = GetDepthInMainChain();
         if (nDepth >= 1)

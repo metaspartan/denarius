@@ -67,7 +67,7 @@ public:
     OptionsModel *getOptionsModel();
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
-	  MintingTableModel *getMintingTableModel();
+	MintingTableModel *getMintingTableModel();
 
     qint64 getBalance() const;
     qint64 getLockedBalance() const;
@@ -172,6 +172,7 @@ private:
     int cachedTxLocks;
     EncryptionStatus cachedEncryptionStatus;
     int cachedNumBlocks;
+    bool fForceBalanceCheck;
 
     QTimer *pollTimer;
 

@@ -114,7 +114,7 @@ public:
 PeerTableModel::PeerTableModel(ClientModel *parent) :
     QAbstractTableModel(parent),
     clientModel(parent),
-    timer(0)
+    timer(nullptr) // Fix QTimer error with int, needs nullptr or 0
 {
     columns << tr("Address/Hostname") << tr("User Agent") << tr("Ping Time");
     priv = new PeerTablePriv();
@@ -124,7 +124,7 @@ PeerTableModel::PeerTableModel(ClientModel *parent) :
     // set up timer for auto refresh
     timer = new QTimer();
     connect(timer, SIGNAL(timeout()), SLOT(refresh()));
-    timer->setInterval(MODEL_UPDATE_DELAY);
+    timer->start(5000); //Just auto refresh every 5 secs by itself without waiting for rpcconsole
 
     // load initial data
     refresh();

@@ -42,6 +42,8 @@ class uint256;
 #define FORTUNASTAKE_FAIR_PAYMENT_MINIMUM         200
 #define FORTUNASTAKE_FAIR_PAYMENT_ROUNDS          3
 
+#define FORTUNASTAKE_ACTIVETIME_FIXHEIGHT         2200000 // Still WIP
+
 using namespace std;
 
 class CFortunastakePaymentWinner;
@@ -81,13 +83,30 @@ public:
 
 };
 
+class CFortunaCollateral
+{
+public:
+    CTxIn vin;
+    CScript scriptPubKey;
+    int height;
+    uint256 blockHash;
+
+    CFortunaCollateral() {
+        height = 0;
+        blockHash = 0;
+    }
+};
+
 // For storing payData
 class CFortunaPayments
 {
 public:
     std::vector<CFortunaStake> vStakes; // this array should be sorted
     std::vector<CFortunaPayData> vPayments; // this array just contains our scanned data
-    
+    //std::vector<CTxIn> vCollaterals;
+    std::vector<CFortunaCollateral> vCollaterals;
+    std::vector<CScript> vScripts;
+
     CFortunaPayments() {
         // fill vStakes array with pointers to MN's from vecFortunastakes
     }
@@ -95,13 +114,18 @@ public:
     bool add(CFortunaStake* mn)
     {
         // add address of pointer into the payments array
+        return true;
     }
 
     bool remove(CFortunaStake* mn)
     {
         // remove address of pointer from the payments array
-        
+        return true;
     }
+
+    void update(const CBlockIndex *pindex, bool force = false);
+
+    bool initialize(const CBlockIndex* pindex);
 };
 
 //
@@ -163,6 +187,9 @@ public:
         nTimeLastChecked = 0;
         nTimeRegistered = newNow;
         nRank = 0;
+        payValue = 0;
+        payRate = 0;
+        payCount = 0;
     }
 
     uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
@@ -176,7 +203,7 @@ public:
 
     void UpdateLastSeen(int64_t override=0)
     {
-        if(override == 0){
+        if (override == 0 || override > GetAdjustedTime()) {
             lastTimeSeen = GetAdjustedTime();
         } else {
             lastTimeSeen = override;
@@ -185,13 +212,8 @@ public:
 
     bool IsActive() {
         if (lastTimeSeen - now > (max(FORTUNASTAKE_FAIR_PAYMENT_MINIMUM, (int)mnCount) * 30))
-        { // dsee broadcast is more than a round old
-            if (lastDseep > (GetAdjustedTime() - FORTUNASTAKE_EXPIRATION_SECONDS)) {
+        { // dsee broadcast is more than a round old, let's consider it active
                 return true;
-            } // last dseep is within non-expired time & broadcast is a round old, this node is considered active
-            else {
-                return false; // last dseep is received, but broadcast is not new enough. status "broadcasted"
-            }
         }
         return false;
     }
@@ -246,6 +268,7 @@ int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
 extern int64_t nAverageFSIncome;
+bool FindFSPayment(CScript& payee, CBlockIndex* pindex=pindexBest);
 
 // for storing the winning payments
 class CFortunastakePaymentWinner
@@ -319,8 +342,8 @@ private:
 public:
 
     CFortunastakePayments() {
-        strMainPubKey = "04af2b6c63d5e5937266a4ce630ab6ced73a0f6a5ff5611ef9b5cfc4f9e264e4a8a4840ab4da4d3ded243ef9f80f114d335dad9a87a50431004b35c01b2c68ea49";
-        strTestPubKey = "0406d6c9580d20c4daaacbade0f5bbe4448c511c5860f6dc27a1bf2a8c043b2ad27f3831f8e24750488f0c715100cc5a5811ffd578029f3af62633d9e1c51be384";
+        strMainPubKey = "";
+        strTestPubKey = "";
         enabled = false;
     }
 

@@ -1,0 +1,96 @@
+# Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.8.5
+# https://denarius.io
+# https://github.com/carsenk/denarius
+# By Carsen Klock
+name: denarius
+version: '3.3.8.5'
+summary: Denarius
+description: |
+  An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
+icon: share/pixmaps/denarius-128.png
+
+grade: devel
+confinement: strict
+
+apps:
+  denarius:
+    command: Denarius
+    plugs: [home, network, network-bind, unity7]
+    desktop: denarius.desktop
+
+parts:
+  openssl:
+    plugin: nil
+    source: https://www.openssl.org/source/openssl-1.0.1j.tar.gz
+    build-packages:
+      - g++
+      - build-essential
+      - libtool
+    override-build: |
+      echo "Downgrading OpenSSL to 1.0.1j"
+      sudo ./config
+      sudo make
+      echo "Make depends OpenSSL to 1.0.1j"
+      sudo make depend
+      echo "Make install OpenSSL to 1.0.1j"
+      sudo make install
+      echo "Linking OpenSSL to 1.0.1j"
+      sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
+  denarius:
+    after: [desktop-qt5, openssl]
+    plugin: qmake
+    qt-version: qt5
+    source: https://github.com/carsenk/denarius.git
+    build-packages:
+      - g++
+      - jq
+      - wget
+      - unzip
+      - curl
+      - build-essential
+      - apt-transport-https
+      - zlib1g-dev
+      - libdb++-dev
+      - libboost-all-dev
+      - libqrencode-dev
+      - libminiupnpc-dev
+      - libevent-dev
+      - libssl-dev
+      - libtool
+      - libqt5gui5
+      - libqt5core5a
+      - libqt5dbus5
+      - qttools5-dev
+      - qttools5-dev-tools
+      - qt5-default
+      - qtbase5-dev-tools
+    override-build: |
+      set -x
+      ARCH=$(uname -m)
+      MF=USE_NATIVETOR=1
+      if [ "$ARCH" = "x86_64" ]; then
+          MF="USE_NATIVETOR=1"
+      elif [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"armv8"* ] || [ "$ARCH" = "aarch64" ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips64le"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips64"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mipsle"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [ "$ARCH" = *"mips"* ]; then
+          MF="USE_NATIVETOR=-"
+      elif [[ "$ARCH" == "ppc64le" ]]; then
+          MF="USE_NATIVETOR=-"
+      elif [[ "$ARCH" == "ppc64" ]]; then
+          MF="USE_NATIVETOR=-"
+      fi
+      qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
+      OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
+      sudo cp Denarius /usr/bin/
+      sudo cp contrib/debian/denarius-qt.desktop $SNAPCRAFT_PART_INSTALL/denarius.desktop
+      sudo cp share/pixmaps/denarius-128.png $SNAPCRAFT_PART_INSTALL/denarius-128.png

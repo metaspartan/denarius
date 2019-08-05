@@ -17,11 +17,12 @@
 #include <QScrollArea>
 //#include <QScroller>
 
-#define DECORATION_SIZE 64
-#define NUM_ITEMS 3
+#define DECORATION_SIZE 36
+#define NUM_ITEMS 7
 
 const QString BaseURL = "http://denarius.io/dnrusd.php";
 const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
+const QString BaseURL3 = "http://denarius.io/newsfeed.php";
 double denariusx;
 double dnrbtcx;
 
@@ -111,10 +112,22 @@ OverviewPage::OverviewPage(QWidget *parent) :
     filter(0)
 {
     ui->setupUi(this);
+	
+	
 
-	//PriceRequest();
+    PriceRequest();
 	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
+	
+	//Refresh the Est. Balances and News automatically
+	refreshbtnTimer = new QTimer(this);
+    connect(refreshbtnTimer, SIGNAL(timeout()), this, SLOT( PriceRequest()));
+    refreshbtnTimer->start(160000); // 160 second timer
+
+    //Handle refreshing updateDisplayUnit() more often instead of every tx change
+    updateDisplayTimer = new QTimer(this);
+    connect(updateDisplayTimer, SIGNAL(timeout()), this, SLOT( updateDisplayUnit()));
+    updateDisplayTimer->start(120000); // Multithreaded, when a thread is available refresh all overview displays
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
@@ -136,7 +149,8 @@ void OverviewPage::PriceRequest()
 {
 	getRequest(BaseURL);
 	getRequest(BaseURL2);
-	updateDisplayUnit(); //Maybe not?
+	getRequest(BaseURL3);
+    //updateDisplayUnit(); //Segfault Fix
 }
 
 void OverviewPage::getRequest( const QString &urlString )
@@ -178,6 +192,16 @@ if (what == BaseURL2) // Denarius BTC Price
     dnrbtc = QString::number(dnrbtcx, 'f', 8);
 
 	bitcoing = dnrbtc;
+}
+if (what == BaseURL3) // Denarius News Feed
+{
+
+    // QNetworkReply is a QIODevice. So we read from it just like it was a file
+    QString dnewsfeed = finished->readAll();
+    //dnewsfeedx = (dnewsfeed.toDouble());
+    //dnewsfeed = QString::number(dnewsfeedx, 'f', 8);
+
+	dnrnewsfeed = dnewsfeed;
 }
 finished->deleteLater();
 }
@@ -227,11 +251,20 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
     double dollarg2 = (dollarg.toDouble() * totalBalance / 100000000);
   	total = QString::number(dollarg2, 'f', 2);
   	ui->labelUSDTotal->setText("$" + total + " USD");
+	
+	QString eurtotal;
+	double dollarg1 = (dollarg.toDouble() * totalBalance * 0.886 / 100000000); 
+  	eurtotal = QString::number(dollarg1, 'f', 2);
+  	ui->labelEURTotal->setText("€" + eurtotal + " EUR");
 
     ui->labelBTCTotal->setText(BitcoinUnits::formatWithUnit(unitdBTC, bitcoing.toDouble() * totalBalance));
     ui->labelTradeLink->setTextFormat(Qt::RichText);
     ui->labelTradeLink->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->labelTradeLink->setOpenExternalLinks(true);
+	
+	QString news;
+	news = dnrnewsfeed;
+	ui->labelNewsFeed->setText(news);
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users

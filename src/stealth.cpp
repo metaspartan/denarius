@@ -16,6 +16,13 @@
 const uint8_t stealth_version_byte = 0x28;
 
 
+int CStealthAddress::SetScanPubKey(CPubKey pk)
+{
+    scan_pubkey.resize(pk.size());
+    memcpy(&scan_pubkey[0], pk.begin(), pk.size());
+    return 0;
+};
+
 bool CStealthAddress::SetEncoded(const std::string& encodedAddress)
 {
     data_chunk raw;

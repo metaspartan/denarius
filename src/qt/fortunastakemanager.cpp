@@ -54,8 +54,8 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     ui->tableWidget_2->sortByColumn(0, Qt::AscendingOrder);
 
     subscribeToCoreSignals();
-
-    timer = new QTimer(this);
+	
+	timer = new QTimer(this);
     //connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList(pindexBest)));
     //if(!GetBoolArg("-reindexaddr", false))
     //    timer->start(30000);
@@ -64,6 +64,13 @@ FortunastakeManager::FortunastakeManager(QWidget *parent) :
     QTimer::singleShot(5000, this, SLOT(updateNodeList()));
     QTimer::singleShot(10000, this, SLOT(updateNodeList()));
     QTimer::singleShot(30000, this, SLOT(updateNodeList())); // try to load the node list ASAP for the user
+	QTimer::singleShot(60000, this, SLOT(updateNodeList()));
+	
+	/*
+	timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
+        timer->start(1000); // 1000 ms to do heavy work and be snappy
+		*/
 }
 
 FortunastakeManager::~FortunastakeManager()
@@ -221,7 +228,7 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
     QTableWidgetItem *statusItem = new QTableWidgetItem(status);
     QTableWidgetItem *collateralItem = new QTableWidgetItem(collateral);
     SortedWidgetItem *rankItem = new SortedWidgetItem();
-    SortedWidgetItem *payrateItem = new QTableWidgetItem(payrate);
+    SortedWidgetItem *payrateItem = new SortedWidgetItem();
 
     rankItem->setData(Qt::UserRole, rank ? rank : 2000);
     rankItem->setData(Qt::DisplayRole, rank > 0 && rank < 500000 ? QString::number(rank) : "");
@@ -253,6 +260,7 @@ static QString seconds_to_DHMS(quint32 duration)
 uint256 lastNodeUpdateHash;
 void FortunastakeManager::updateNodeList()
 {
+    if (pindexBest == NULL) return;
     if (pindexBest->GetBlockHash() == lastNodeUpdateHash) return;
     lastNodeUpdateHash = pindexBest->GetBlockHash();
 
@@ -263,9 +271,10 @@ void FortunastakeManager::updateNodeList()
     ui->countLabel->setText("Updating...");
     if (mnCount == 0 || IsInitialBlockDownload()) return;
 
+    ui->tableWidget->setSortingEnabled(false);
+    ui->tableWidget->setUpdatesEnabled(false);
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
-    ui->tableWidget->setSortingEnabled(false);
 
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
     {
@@ -350,9 +359,13 @@ void FortunastakeManager::updateNodeList()
                     } else {
                         nstatus = QString::fromStdString("Registered");
                     }
-                } else {
-                    nstatus = QString::fromStdString(mn.status);
-                }
+                } else if (mn.status == "Expired") {
+					nstatus = QString::fromStdString("Expired");
+                } else if (mn.status == "Inactive, expiring soon") {
+					nstatus = QString::fromStdString("Inactive, expiring soon");
+				} else {
+					nstatus = QString::fromStdString(mn.status);
+				}
                 npayrate = QString::fromStdString("");
                 if (value > 0) {
                     npayrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
@@ -395,7 +408,7 @@ void FortunastakeManager::updateNodeList()
             QTableWidgetItem *statusItem = new QTableWidgetItem(nstatus);
             QTableWidgetItem *collateralItem = new QTableWidgetItem(ncollateral);
             SortedWidgetItem *nrankItem = new SortedWidgetItem();
-            SortedWidgetItem *payrateItem = new QTableWidgetItem(npayrate);
+            SortedWidgetItem *payrateItem = new SortedWidgetItem();
 
             nrankItem->setData(Qt::UserRole, mnRank ? mnRank : 2000);
             nrankItem->setData(Qt::DisplayRole, mnRank > 0 && mnRank < 500000 ? QString::number(mnRank) : "");
@@ -425,6 +438,7 @@ void FortunastakeManager::updateNodeList()
         ui->countLabel->setText(QString("%1 active (average income: %2/day)").arg(vecFortunastakes.size()).arg(QString::fromStdString(FormatMoney(payPer24H))));
 
     ui->tableWidget->setSortingEnabled(true);
+    ui->tableWidget->setUpdatesEnabled(true);
 
     if(pwalletMain)
     {

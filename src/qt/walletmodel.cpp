@@ -127,15 +127,17 @@ void WalletModel::pollBalanceChanged()
     if(!lockWallet)
         return;
 
-    if(nBestHeight != cachedNumBlocks)
+    if(fForceBalanceCheck && nBestHeight != cachedNumBlocks)
     {
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
 
         checkBalanceChanged();
-        if(transactionTableModel)
-            transactionTableModel->updateConfirmations();
+        //if(transactionTableModel)
+            //transactionTableModel->updateConfirmations();
     }
+
+    fForceBalanceCheck = false;
 }
 
 void WalletModel::checkBalanceChanged()
@@ -173,8 +175,9 @@ void WalletModel::updateTransaction(const QString &hash, int status)
         transactionTableModel->updateTransaction(hash, status);
 
     // Balance and number of transactions might have changed
-    checkBalanceChanged();
+    // checkBalanceChanged();
 
+    fForceBalanceCheck = true;
     int newNumTransactions = getNumTransactions();
     if(cachedNumTransactions != newNumTransactions)
     {
@@ -313,9 +316,9 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
 
                     if (fDebug)
                     {
-                        printf("Stealth send to generated pubkey %"PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
+                        printf("Stealth send to generated pubkey %" PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
                         printf("hash %s\n", addrTo.ToString().c_str());
-                        printf("ephem_pubkey %"PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
+                        printf("ephem_pubkey %" PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
                     };
 
                     CScript scriptPubKey;

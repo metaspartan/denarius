@@ -653,7 +653,14 @@ Value fortunastake(const Array& params, bool fHelp)
 
                 remoteObj.push_back(Pair("alias", mne.getAlias()));
                 remoteObj.push_back(Pair("ipaddr", address));
-                remoteObj.push_back(Pair("collateral", address2.ToString()));
+				
+				if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
+					remoteObj.push_back(Pair("collateral", "Wallet is Locked"));
+				} else {
+					remoteObj.push_back(Pair("collateral", address2.ToString()));
+				}
+                //remoteObj.push_back(Pair("collateral", address2.ToString()));
+				//remoteObj.push_back(Pair("collateral", CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString()));
 
                 bool mnfound = false;
                 BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)

@@ -28,6 +28,7 @@
 #include <openssl/ripemd.h>
 
 #include "netbase.h" // for AddTimeData
+#include "tinyformat.h" // tfm C++11 Support
 
 // to obtain PRId64 on some old systems
 #define __STDC_FORMAT_MACROS 1
@@ -115,6 +116,64 @@ inline void MilliSleep(int64_t n)
 #endif
 }
 
+bool IsLogOpen();
+/* Return true if log accepts specified category */
+bool LogAcceptCategory(const char* category);
+/* Send a string to the log output */
+int LogPrintStr(const std::string &str);
+
+#define LogPrintf(...) LogPrint(NULL, __VA_ARGS__)
+
+/* When we switch to C++11, this can be switched to variadic templates instead
+ * of this macro-based construction (see tinyformat.h).
+ */
+#define MAKE_ERROR_AND_LOG_FUNC(n)                                        \
+    /*   Print to debug.log if -debug=category switch is given OR category is NULL. */ \
+    template<TINYFORMAT_ARGTYPES(n)>                                          \
+    static inline int LogPrint(const char* category, const char* format, TINYFORMAT_VARARGS(n))  \
+    {                                                                                \
+        if(!LogAcceptCategory(category)) return 0;                                   \
+        return LogPrintStr(tfm::format(format, TINYFORMAT_PASSARGS(n)));             \
+    }                                                                                \
+    /*   Log error and return false */                                               \
+    template<TINYFORMAT_ARGTYPES(n)>                                                 \
+    static inline bool error(const char* format, TINYFORMAT_VARARGS(n))              \
+    {                                                                                \
+        LogPrintStr("ERROR: " + tfm::format(format, TINYFORMAT_PASSARGS(n)) + "\n"); \
+        return false;                                                                \
+    }                                                                                \
+    /*   Log error and return n */                                                   \
+    template<TINYFORMAT_ARGTYPES(n)>                                                 \
+    static inline int errorN(int rv, const char* format, TINYFORMAT_VARARGS(n))      \
+    {                                                                                \
+        LogPrintStr("ERROR: " + tfm::format(format, TINYFORMAT_PASSARGS(n)) + "\n"); \
+        return rv;                                                                   \
+    }
+
+TINYFORMAT_FOREACH_ARGNUM(MAKE_ERROR_AND_LOG_FUNC)
+
+/* Zero-arg versions of logging and error, these are not covered by
+ * TINYFORMAT_FOREACH_ARGNUM
+ */
+static inline int LogPrint(const char* category, const char* format)
+{
+    if(!LogAcceptCategory(category)) return 0;
+    return LogPrintStr(format);
+}
+
+/*
+static inline bool error(const char* format)
+{
+    LogPrintStr(std::string("ERROR: ") + format + "\n");
+    return false;
+}
+static inline int errorN(int n, const char* format)
+{
+    LogPrintStr(std::string("ERROR: ") + format + "\n");
+    return n;
+}
+*/
+
 /* This GNU C extension enables the compiler to check the format string against the parameters provided.
  * X is the number of the "format string" parameter, and Y is the number of the first variadic parameter.
  * Parameters count from 1.
@@ -150,6 +209,7 @@ extern bool fDebugFS;
 extern bool fDebugChain;
 extern bool fDebugRingSig;
 extern bool fNoSmsg;
+extern bool fDisableStealth;
 extern bool fPrintToConsole;
 extern bool fPrintToDebugger;
 extern bool fRequestShutdown;
@@ -224,6 +284,7 @@ boost::filesystem::path GetPidFile();
 void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
 #endif
 void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet);
+void WriteConfigFile(FILE* configFile);
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
@@ -253,7 +314,7 @@ std::string FormatI2PNativeFullVersion();
 
 inline std::string i64tostr(int64_t n)
 {
-    return strprintf("%"PRId64, n);
+    return strprintf("%d", n);
 }
 
 inline std::string itostr(int n)
@@ -328,7 +389,8 @@ std::string HexStr(const T itbegin, const T itend, bool fSpaces=false)
     return rv;
 }
 
-inline std::string HexStr(const std::vector<unsigned char>& vch, bool fSpaces=false)
+template<typename T>
+inline std::string HexStr(const T& vch, bool fSpaces=false)
 {
     return HexStr(vch.begin(), vch.end(), fSpaces);
 }

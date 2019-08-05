@@ -1,12 +1,12 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=Denarius
-Comment=Denarius P2P Cryptocurrency
+Comment=Denarius [D] Hybrid P2P Cryptocurrency
 Comment[fr]=Denarius, monnaie virtuelle cryptographique pair à pair
 Comment[tr]=Denarius, eşten eşe kriptografik sanal para birimi
 Exec=/usr/bin/Denarius
 Terminal=false
 Type=Application
-Icon=/usr/share/pixmaps/bitcoin80.xpm
+Icon=/share/pixmaps/denarius-128.png
 MimeType=x-scheme-handler/denarius;
-Categories=Office;
+Categories=Finance;

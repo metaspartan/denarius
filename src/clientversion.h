@@ -3,13 +3,14 @@
 
 //
 // client versioning
-// Codename C. V. N. T.
+// Codename C A R S E N  W A S  H E R E
+//
 
 // These need to be macros, as version.cpp's and bitcoin-qt.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR       3
 #define CLIENT_VERSION_MINOR       3
-#define CLIENT_VERSION_REVISION    4
-#define CLIENT_VERSION_BUILD       0
+#define CLIENT_VERSION_REVISION    9
+#define CLIENT_VERSION_BUILD       2
 
 #ifdef USE_NATIVE_I2P
 #define I2P_NATIVE_VERSION_MAJOR       0

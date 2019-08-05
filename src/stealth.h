@@ -6,13 +6,14 @@
 #ifndef BITCOIN_STEALTH_H
 #define BITCOIN_STEALTH_H
 
-#include "util.h"
-#include "serialize.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
 #include <inttypes.h>
+
+#include "util.h"
+#include "key.h"
+#include "serialize.h"
 #include "types.h"
 
 const uint32_t MAX_STEALTH_NARRATION_SIZE = 48;
@@ -77,6 +78,8 @@ public:
     mutable std::string label;
     data_chunk scan_secret;
     data_chunk spend_secret;
+
+    int SetScanPubKey(CPubKey pk);
 
     bool SetEncoded(const std::string& encodedAddress);
     std::string Encoded() const;

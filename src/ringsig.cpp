@@ -21,6 +21,13 @@ static BN_CTX   *bnCtx   = NULL;
 static BIGNUM   *bnOrder = NULL;
 
 
+void printBigNum(BIGNUM *b)
+{
+  char *number = BN_bn2hex(b);
+  printf("%s", number);
+  OPENSSL_free(number);
+}
+
 int initialiseRingSigs()
 {
     int rv = 0;
@@ -29,17 +36,17 @@ int initialiseRingSigs()
         printf("initialiseRingSigs()\n");
 
     if (!(ecGrp = EC_GROUP_new_by_curve_name(NID_secp256k1)))
-        return error(1, "initialiseRingSigs(): EC_GROUP_new_by_curve_name failed.");
+        printf("initialiseRingSigs(): EC_GROUP_new_by_curve_name failed.");
 
     if (!(bnCtx = BN_CTX_new()))
-        return error(1, "initialiseRingSigs(): BN_CTX_new failed.");
+        printf("initialiseRingSigs(): BN_CTX_new failed.");
 
     BN_CTX_start(bnCtx);
 
     // get order and cofactor
     bnOrder = BN_new();
     if (!EC_GROUP_get_order(ecGrp, bnOrder, bnCtx))
-        return error(1, "initialiseRingSigs(): EC_GROUP_get_order failed.");
+        printf("initialiseRingSigs(): EC_GROUP_get_order failed.");
 
     BN_CTX_end(bnCtx);
 
@@ -117,7 +124,7 @@ int getOldKeyImage(CPubKey &publicKey, ec_point &keyImage)
 {
     // - PublicKey * Hash(PublicKey)
     if (publicKey.size() != EC_COMPRESSED_SIZE)
-        return error(1, "%s: Invalid publicKey.", __func__);
+        printf("%s: Invalid publicKey.", __func__);
 
     int rv = 0;
 
@@ -129,21 +136,21 @@ int getOldKeyImage(CPubKey &publicKey, ec_point &keyImage)
 
     // Hash to BIGNUM
     if (!BN_bin2bn(pkHash.begin(), EC_SECRET_SIZE, bnTmp)
-    && (rv = error(1, "%s: BN_bin2bn failed.", __func__)))
+    && (rv = printf("%s: BN_bin2bn failed.", __func__)))
         goto End;
 
     // PublicKey point
     if (!(ptPk = EC_POINT_new(ecGrp))
-    && (rv = error(1, "%s: EC_POINT_new failed.", __func__)))
+    && (rv = printf("%s: EC_POINT_new failed.", __func__)))
         goto End;
 
     if (!EC_POINT_oct2point(ecGrp, ptPk, publicKey.begin(), EC_COMPRESSED_SIZE, bnCtx)
-    && (rv = error(1, "%s: EC_POINT_oct2point failed.", __func__)))
+    && (rv = printf("%s: EC_POINT_oct2point failed.", __func__)))
         goto End;
 
     // PublicKey * Hash(PublicKey)
     if (!EC_POINT_mul(ecGrp, ptPk, NULL, ptPk, bnTmp, bnCtx)
-    && (rv = error(1, "%s: EC_POINT_mul failed.", __func__)))
+    && (rv = printf("%s: EC_POINT_mul failed.", __func__)))
         goto End;
 
     try { keyImage.resize(EC_COMPRESSED_SIZE); } catch (std::exception& e)
@@ -156,7 +163,7 @@ int getOldKeyImage(CPubKey &publicKey, ec_point &keyImage)
     if (!(EC_POINT_point2bn(ecGrp, ptPk, POINT_CONVERSION_COMPRESSED, bnTmp, bnCtx))
      ||BN_num_bytes(bnTmp) != (int) EC_COMPRESSED_SIZE
      ||BN_bn2bin(bnTmp, &keyImage[0]) != (int) EC_COMPRESSED_SIZE)
-        rv = error(1, "%s: point -> keyImage failed.", __func__);
+        rv = printf("%s: point -> keyImage failed.", __func__);
 
     End:
     EC_POINT_free(ptPk);
@@ -174,7 +181,7 @@ static int hashToEC(const uint8_t *p, uint32_t len, BIGNUM *bnTmp, EC_POINT *ptR
     BN_one(bnOne);
 
     if (!bnTmp || !BN_bin2bn(pkHash.begin(), EC_SECRET_SIZE, bnTmp))
-        return error(1, "%s: BN_bin2bn failed.", __func__);
+        printf("%s: BN_bin2bn failed.", __func__);
 
     if (fNew)
         while(!EC_POINT_set_compressed_coordinates_GFp(ecGrp, ptRet, bnTmp, 0, bnCtx) && count < 100)
@@ -182,13 +189,13 @@ static int hashToEC(const uint8_t *p, uint32_t len, BIGNUM *bnTmp, EC_POINT *ptR
             count += 1;
 
             if (count == 100)
-                return error(1, "%s: Failed to find a valid point for public key.", __func__);
+                printf("%s: Failed to find a valid point for public key.", __func__);
 
             BN_add(bnTmp, bnTmp, bnOne);
         }
     else
         if (!EC_POINT_mul(ecGrp, ptRet, bnTmp, NULL, NULL, bnCtx))
-            return error(1, "%s: EC_POINT_mul failed.", __func__);
+            printf("%s: EC_POINT_mul failed.", __func__);
 
     return 0;
 }
@@ -199,7 +206,7 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
     // - keyImage = secret * hash(publicKey) * G
 
     if (publicKey.size() != EC_COMPRESSED_SIZE)
-        return error(1, "%s: Invalid publicKey.", __func__);
+        printf("%s: Invalid publicKey.", __func__);
 
     BN_CTX_start(bnCtx);
     int rv = 0;
@@ -208,19 +215,19 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
     EC_POINT *hG  = NULL;
 
     if (!(hG = EC_POINT_new(ecGrp))
-    && (rv = error(1, "%s: EC_POINT_new failed.", __func__)))
+    && (rv = printf("%s: EC_POINT_new failed.", __func__)))
         goto End;
 
     if (hashToEC(&publicKey[0], publicKey.size(), bnTmp, hG, true)
-    && (rv = error(1, "%s: hashToEC failed.", __func__)))
+    && (rv = printf("%s: hashToEC failed.", __func__)))
         goto End;
 
     if (!(BN_bin2bn(&secret.e[0], EC_SECRET_SIZE, bnSec))
-    && (rv = error(1, "%s: BN_bin2bn failed.", __func__)))
+    && (rv = printf("%s: BN_bin2bn failed.", __func__)))
         goto End;
 
     if (!EC_POINT_mul(ecGrp, hG, NULL, hG, bnSec, bnCtx)
-    && (rv = error(1, "%s: kimg EC_POINT_mul failed.", __func__)))
+    && (rv = printf("%s: kimg EC_POINT_mul failed.", __func__)))
         goto End;
 
     try { keyImage.resize(EC_COMPRESSED_SIZE); } catch (std::exception& e)
@@ -232,7 +239,7 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
     if ((!(EC_POINT_point2bn(ecGrp, hG, POINT_CONVERSION_COMPRESSED, bnTmp, bnCtx))
         || BN_num_bytes(bnTmp) != (int) EC_COMPRESSED_SIZE
         || BN_bn2bin(bnTmp, &keyImage[0]) != (int) EC_COMPRESSED_SIZE)
-    && (rv = error(1, "%s: point -> keyImage failed.", __func__)))
+    && (rv = printf("%s: point -> keyImage failed.", __func__)))
         goto End;
 
     if (fDebugRingSig)
@@ -285,7 +292,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     // ks = random 256 bit int mod P
     if (GenerateRandomSecret(scData1)
-    && (rv = error(1, "%s: GenerateRandomSecret failed.", __func__)))
+    && (rv = printf("%s: GenerateRandomSecret failed.", __func__)))
         goto End;
 
     if (!bnKS || !(BN_bin2bn(&scData1.e[0], EC_SECRET_SIZE, bnKS)))
@@ -315,7 +322,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     // get keyimage as point
     if (!EC_POINT_oct2point(ecGrp, ptKi, &keyImage[0], EC_COMPRESSED_SIZE, bnCtx)
-      &&(rv = error(1, "%s: extract ptKi failed.", __func__)))
+      &&(rv = printf("%s: extract ptKi failed.", __func__)))
         goto End;
 
     for (int i = 0; i < nRingSize; ++i)
@@ -558,7 +565,7 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
 
     // get keyimage as point
     if (!EC_POINT_oct2point(ecGrp, ptKi, &keyImage[0], EC_COMPRESSED_SIZE, bnCtx)
-      &&(rv = error(1, "%s: extract ptKi failed.", __func__)))
+      &&(rv = printf("%s: extract ptKi failed.", __func__)))
         goto End;
 
     for (int i = 0; i < nRingSize; ++i)
@@ -715,7 +722,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     ec_secret sAlpha;
 
     if (0 != GenerateRandomSecret(sAlpha))
-        return error(1, "%s: GenerateRandomSecret failed.", __func__);
+        printf("%s: GenerateRandomSecret failed.", __func__);
 
     CHashWriter ssPkHash(SER_GETHASH, PROTOCOL_VERSION);
     CHashWriter ssCjHash(SER_GETHASH, PROTOCOL_VERSION);
@@ -733,7 +740,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
         for (k = 0; k < 32; ++k)
         {
             if (1 != RAND_bytes(&pSigS[i * EC_SECRET_SIZE], 32))
-                return error(1, "%s: RAND_bytes ERR_get_error %u.", __func__, ERR_get_error());
+                printf("%s: RAND_bytes ERR_get_error %u.", __func__, ERR_get_error());
 
             memcpy(test.begin(), &pSigS[i * EC_SECRET_SIZE], 32);
             if (test > MIN_SECRET && test < MAX_SECRET)
@@ -741,7 +748,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
         }
 
         if (k > 31)
-            return error(1, "%s: Failed to generate a valid key.", __func__);
+            printf("%s: Failed to generate a valid key.", __func__);
     }
 
     tmpPkHash = ssPkHash.GetHash();
@@ -773,7 +780,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
 
     // get keyimage as point
     if (!EC_POINT_oct2point(ecGrp, ptKi, &keyImage[0], EC_COMPRESSED_SIZE, bnCtx)
-      &&(rv = error(1, "%s: extract ptKi failed.", __func__)))
+      &&(rv = printf("%s: extract ptKi failed.", __func__)))
         goto End;
 
     // c_{j+1} = h(P_1,...,P_n,alpha*G,alpha*H(P_j))
@@ -825,6 +832,9 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
         rv = 1; goto End;
     }
 
+    printf("\n RingDbg: secret offset : %d, Ringsize: %d, C%d is :\n", nSecretOffset, nRingSize, nSecretOffset+1);
+    printBigNum(bnC);
+    printf("\n");
 
     // c_{j+2} = h(P_1,...,P_n,s_{j+1}*G+c_{j+1}*P_{j+1},s_{j+1}*H(P_{j+1})+c_{j+1}*I_j)
     for (int k = 0, ib = (nSecretOffset + 1) % nRingSize, i = (nSecretOffset + 2) % nRingSize;
@@ -927,12 +937,16 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
         if ((!bnC
            ||!BN_bin2bn(tmpHash.begin(), EC_SECRET_SIZE, bnC) // bnC lags i by 1
            ||!BN_mod(bnC, bnC, bnOrder, bnCtx))
-          && (rv = error(1, "%s: hash -> bnC failed.", __func__)))
+          && (rv = printf("%s: hash -> bnC failed.", __func__)))
             goto End;
+
+        printf(" \n RingDbg: Iteration %d: C%d follows\n", ib, ib+1);
+        printBigNum(bnC);
+        printf("\n");
 
         if (i == nSecretOffset
          &&!BN_copy(bnCj, bnC)
-         && (rv = error(1, "%s: BN_copy failed.\n", __func__)))
+         && (rv = printf("%s: BN_copy failed.\n", __func__)))
             goto End;
 
         if (i == 0)
@@ -949,6 +963,9 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
                 printf("%s: sigC.resize failed.\n", __func__);
                 rv = 1; goto End;
             }
+            printf("\n RingDbg: So E0 = c0 = \n");
+            printBigNum(bnC);
+            printf("\n");
             memcpy(&sigC[0], tempData, EC_SECRET_SIZE);
         }
     }
@@ -975,9 +992,9 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
     // check c_{n+1}=c_1
 
     if (sigC.size() != EC_SECRET_SIZE)
-        return error(1, "%s: sigC size !=  EC_SECRET_SIZE.", __func__);
+        printf("%s: sigC size !=  EC_SECRET_SIZE.", __func__);
     if (keyImage.size() != EC_COMPRESSED_SIZE)
-        return error(1, "%s: keyImage size !=  EC_COMPRESSED_SIZE.", __func__);
+        printf("%s: keyImage size !=  EC_COMPRESSED_SIZE.", __func__);
 
     int rv = 0;
 
@@ -1019,7 +1036,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     // get keyimage as point
     if (!EC_POINT_oct2point(ecGrp, ptKi, &keyImage[0], EC_COMPRESSED_SIZE, bnCtx)
-      &&(rv = error(1, "%s: extract ptKi failed.", __func__)))
+      &&(rv = printf("%s: extract ptKi failed.", __func__)))
         goto End;
 
     if (!bnC1 || !BN_bin2bn(&sigC[0], EC_SECRET_SIZE, bnC1))
@@ -1033,6 +1050,10 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         printf("%s: BN_copy failed.\n", __func__);
         rv = 1; goto End;
     }
+
+    printf("\n RingDbg: Starting with C0 which is\n");
+    printBigNum(bnC1);
+    printf("\n");
 
     for (int i = 0; i < nRingSize; ++i)
     {
@@ -1109,6 +1130,9 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
             printf("%s: tmpHash -> bnC failed.\n", __func__);
             rv = 1; goto End;
         }
+        printf("\n RingDbg: Iteration %d, so C%d follows\n", i, i+1);
+        printBigNum(bnC);
+        printf("\n");
     }
 
     // bnT = (bnC - bnC1) % N
@@ -1117,6 +1141,14 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         printf("%s: BN_mod_sub failed.\n", __func__);
         rv = 1; goto End;
     }
+
+    printf("\n RingDbg: End result, bnC:\n");
+    printBigNum(bnC);
+    printf("\n bnC1 old is \n");
+    printBigNum(bnC1);
+    printf("\n So bnT is \n");
+    printBigNum(bnT);
+    printf("\n");
 
     // test bnT == 0  (bnC == bnC1)
     if (!BN_is_zero(bnT))

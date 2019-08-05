@@ -8,7 +8,16 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 [![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg?maxAge=2592000)](https://github.com/carsenk/denarius/releases)
 [![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
 
+[![HitCount](http://hits.dwyl.io/carsenk/denarius.svg)](http://hits.dwyl.io/carsenk/denarius)
+<a href="https://discord.gg/UPpQy3n"><img src="https://discordapp.com/api/guilds/334361453320732673/embed.png" alt="Discord server" /></a>
+
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
+
+[![Snap Status](https://build.snapcraft.io/badge/carsenk/denarius.svg)](https://build.snapcraft.io/user/carsenk/denarius)
+
+[![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=master)](https://travis-ci.org/carsenk/denarius)
+
+[![Build history](https://buildstats.info/travisci/chart/carsenk/denarius?branch=master)](https://travis-ci.org/carsenk/denarius?branch=master)
 
 Intro
 ==========================
@@ -42,6 +51,7 @@ Technology
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
+* BIP39 Support (Coin Type 114)
 * Proof of Data (Image/Data Timestamping)
 * Fast 30 Second Block Times
 * New/First Tribus PoW Algorithm comprising of 3 NIST5 algorithms
@@ -60,6 +70,20 @@ ASCII CAST TUTORIALS
 [![asciicast](https://asciinema.org/a/179356.png)](https://asciinema.org/a/179356)
 [![asciicast](https://asciinema.org/a/179362.png)](https://asciinema.org/a/179362)
 [![asciicast](https://asciinema.org/a/179355.png)](https://asciinema.org/a/179355)
+
+denariusqtubuntu.sh by Buzzkillb
+===========================
+Compile the latest Denarius QT (Graphical Wallet) Ubuntu 16.04 or Ubuntu 18.04.1
+
+Credits to Buzzkillb for the creation of this bash script, original repository: https://github.com/buzzkillb/denarius-qt/
+
+Compiles Denarius QT Ubuntu 16.04 or 18.04, Grabs latest chaindata, and populates denarius.conf with addnodes or can update a previous compile to the latest master branch.  
+```bash -c "$(wget -O - https://raw.githubusercontent.com/carsenk/denarius/master/denariusqtubuntu.sh)"```  
+
+To turn on nativetor in denarius.conf  
+```nativetor=1```  
+
+![Denarius Installer Menu](https://raw.githubusercontent.com/buzzkillb/denarius-qt/master/compile-menu.PNG)  
 
 Development process
 ===========================

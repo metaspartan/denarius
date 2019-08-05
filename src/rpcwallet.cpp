@@ -883,7 +883,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     if ((int)keys.size() < nRequired)
         throw runtime_error(
             strprintf("not enough keys supplied "
-                      "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
+                      "(got %" PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CKey> pubkeys;
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++)
@@ -1162,7 +1162,10 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
             entry.push_back(Pair("category", "send"));
             entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
             entry.push_back(Pair("vout", s.vout));
-            entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+			if (!wtx.IsCoinStake())
+				entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+			else if (s.amount == 0 && s.vout == 0)
+				continue;
             if (fLong)
                 WalletTxToJSON(wtx, entry);
             ret.push_back(entry);
@@ -1175,9 +1178,10 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
         bool stop = false;
         BOOST_FOREACH(const COutputEntry& r, listReceived)
         {
-            string account;
+			std::string account;
             if (pwalletMain->mapAddressBook.count(r.destination))
                 account = pwalletMain->mapAddressBook[r.destination];
+
             if (fAllAccounts || (account == strAccount))
             {
                 Object entry;
@@ -1198,17 +1202,31 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                 {
                     entry.push_back(Pair("category", "receive"));
                 }
-                if (!wtx.IsCoinStake())
+
+				// PoW Amount
+				if (!wtx.IsCoinStake())
+				{
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+				}
+
+				// PoS Reward and Amount
+                if (wtx.IsCoinStake() && nFee != 0)
                 {
-                    entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
-                    entry.push_back(Pair("vout", r.vout));
+					entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+					entry.push_back(Pair("reward", ValueFromAmount(-nFee)));
+                    stop = true;
+				//FortunaStake PoS Reward - D E N A R I U S
+                } else if (wtx.IsCoinStake() && nFee == 0) {
+					entry.push_back(Pair("reward", ValueFromAmount(r.amount)));
+					stop = true;
+				}
+
+				entry.push_back(Pair("vout", r.vout));
+
+                if (pwalletMain->mapAddressBook.count(r.destination)) {
+                    entry.push_back(Pair("label", account));
                 }
-                else
-                {
-                    entry.push_back(Pair("amount", ValueFromAmount(-nFee)));
-                    //entry.push_back(Pair("vout", r.vout));
-                    stop = true; // only one coinstake output
-                }
+
                 if (fLong)
                     WalletTxToJSON(wtx, entry);
                 ret.push_back(entry);
@@ -1238,9 +1256,9 @@ void AcentryToJSON(const CAccountingEntry& acentry, const string& strAccount, Ar
 
 Value listtransactions(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 3)
+    if (fHelp || params.size() > 5)
         throw runtime_error(
-            "listtransactions [account] [count=10] [from=0]\n"
+            "listtransactions [account] [count=10] [from=0] [watchonly=false] [show_coinstake=1]\n"
             "Returns up to [count] most recent transactions skipping the first [from] transactions for account [account].");
 
     string strAccount = "*";
@@ -1258,6 +1276,14 @@ Value listtransactions(const Array& params, bool fHelp)
         if(params[3].get_bool())
             filter = filter | ISMINE_WATCH_ONLY;
 
+	bool fShowCoinstake = true;
+    if (params.size() > 4)
+    {
+        std::string value   = params[4].get_str();
+        if (IsStringBoolNegative(value))
+            fShowCoinstake = false;
+    };
+
     if (nCount < 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Negative count");
     if (nFrom < 0)
@@ -1266,7 +1292,7 @@ Value listtransactions(const Array& params, bool fHelp)
     Array ret;
 
     std::list<CAccountingEntry> acentries;
-    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount);
+    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount, fShowCoinstake);
 
     // iterate backwards until we have nCount items to return:
     for (CWallet::TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
@@ -2330,6 +2356,9 @@ Value senddtoanon(const Array& params, bool fHelp)
     if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
         sNarr = params[2].get_str();
 
+	if (sNarr.length() == 0)
+        throw std::runtime_error("Narration is required.");
+
     if (sNarr.length() > 24)
         throw std::runtime_error("Narration must be 24 characters or less.");
 
@@ -2683,6 +2712,7 @@ Value anoninfo(const Array& params, bool fHelp)
 
     return result;
 }
+
 
 Value reloadanondata(const Array& params, bool fHelp)
 {

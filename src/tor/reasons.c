@@ -46,7 +46,7 @@ stream_end_reason_to_control_string(int reason)
     case END_STREAM_REASON_NET_UNREACHABLE: return "NET_UNREACHABLE";
     case END_STREAM_REASON_SOCKSPROTOCOL: return "SOCKS_PROTOCOL";
 
-    case END_STREAM_REASON_PRIVATE_ADDR: return "PRIVATE_ADDR";
+    case END_STREAM_REASON_PRIVATE_ADDR: return " PRIVATE_ADDR";
 
     default: return NULL;
   }

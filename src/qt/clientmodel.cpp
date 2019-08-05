@@ -27,9 +27,8 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     numBlocksAtStartup = -1;
 
     pollTimer = new QTimer(this);
-    pollTimer->setInterval(MODEL_UPDATE_DELAY);
-    pollTimer->start();
-    connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
+	connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
+    pollTimer->start(MODEL_UPDATE_DELAY);
 
     subscribeToCoreSignals();
 }
@@ -78,9 +77,9 @@ void ClientModel::updateTimer()
     // Get required lock upfront. This avoids the GUI from getting stuck on
     // periodical polls if the core is holding the locks for a longer time -
     // for example, during a wallet rescan.
-    TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
-        return;
+//    TRY_LOCK(cs_main, lockMain);
+//    if(!lockMain)
+//        return;
 
     // Some quantities (such as number of blocks) change so fast that we don't want to be notified for each change.
     // Periodically check and update with a timer.
@@ -103,9 +102,9 @@ void ClientModel::updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers)
     // Get required lock upfront. This avoids the GUI from getting stuck on
     // periodical polls if the core is holding the locks for a longer time -
     // for example, during a wallet rescan.
-    TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
-        return;
+//    TRY_LOCK(cs_main, lockMain);
+//    if(!lockMain)
+//        return;
 
     emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());

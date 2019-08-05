@@ -518,7 +518,6 @@ QSizeGrip {
     height: 12px;
 }
 
-
 QMainWindow::separator
 {
     background-color: #31363b;

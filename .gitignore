@@ -6,6 +6,13 @@ src/test_denarius
 src/build.h
 src/leveldb/*.a
 src/leveldb/build_config.mk
+parts
+prime
+snap
+stage
+*.snap
+*.tar.bz2
+.qmake.stash
 object_script.Denarius.Release
 object_script.Denarius.Debug
 denarius_plugin_import.cpp
@@ -34,3 +41,5 @@ PortIndex*
 dist
 *.app
 *.dmg
+.idea
+
