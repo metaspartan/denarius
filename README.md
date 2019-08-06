@@ -48,6 +48,7 @@ Technology
 * Stealth addresses
 * Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)
+* Native Optional I2P Node (-nativei2p=1)
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
