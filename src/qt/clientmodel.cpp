@@ -149,6 +149,11 @@ bool ClientModel::isNativeI2P() const
     return fNativeI2P;
 }
 
+bool ClientModel::isFSLock() const
+{
+    return fFSLock;
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();

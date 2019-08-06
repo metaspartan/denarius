@@ -43,6 +43,9 @@ public:
     //! Return true if client connected to Native I2P
     bool isNativeI2P() const;
 
+    //! Return true if client connected to Native I2P
+    bool isFSLock() const;
+
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;
     //! Return conservative estimate of total number of blocks, or 0 if unknown

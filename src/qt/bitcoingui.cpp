@@ -254,7 +254,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         frameBlocksLayout->addStretch();
         frameBlocksLayout->addWidget(labelI2PGenerated);
 #endif
-
+    fFSLock = GetBoolArg("-fsconflock");
+    fNativeTor = GetBoolArg("-nativetor");
+    fNativeI2P = GetBoolArg("-nativei2p");
     labelStakingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
@@ -655,8 +657,8 @@ if(!fNativeTor && !fNativeI2P) {
     netLabel->setText("CLEARNET");
     netLabel->setToolTip(tr("Native Tor or I2P are not running."));
 }
-if (fFSLock) {
-    labelFSLockIcon->setPixmap(QIcon(":/icons/mn").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+if (fFSLock == true) {
+    labelFSLockIcon->setPixmap(QIcon(":/icons/fs").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
     labelFSLockIcon->setToolTip(tr("FS are locked with fsconflock=1"));
 }
 #ifdef USE_NATIVE_I2P

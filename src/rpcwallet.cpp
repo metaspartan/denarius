@@ -14,6 +14,10 @@
 #include "ringsig.h"
 #include "txdb.h"
 
+#ifdef USE_NATIVE_I2P
+#include "i2p.h"
+#endif
+
 #include <sstream>
 #include <fstream>
 #include <sys/stat.h>
@@ -122,6 +126,12 @@ Value getinfo(const Array& params, bool fHelp)
         file >> automatic_onion;
         obj.push_back(Pair("tor",       (automatic_onion)));
     }
+    if (fNativeI2P)
+    {
+        //const string destination;
+        //string i2p_address = I2PSession::GenerateB32AddressFromDestination(destination.string().c_str());
+        //obj.push_back(Pair("i2p",       (i2p_address)));
+    }
     if(!fNativeTor) // && !fNativeI2P
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
@@ -130,7 +140,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("fortunastake",    fFortunaStake));
+    obj.push_back(Pair("fortunastake",  fFortunaStake));
+    obj.push_back(Pair("fslock",        fFSLock));
     obj.push_back(Pair("nativetor",     fNativeTor));
     obj.push_back(Pair("nativei2p",     fNativeI2P));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
