@@ -67,7 +67,7 @@ bool fAddrIndex = false;
 CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
 
 std::map<int64_t, CAnonOutputCount> mapAnonOutputStats;
-//map<int64_t, CAnonOutputCount> mapAnonOutputStats; // display only, not 100% accurate, height could become inaccurate due to undos
+
 map<uint256, CBlock*> mapOrphanBlocks;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
 set<pair<COutPoint, unsigned int> > setStakeSeenOrphan;
@@ -208,13 +208,6 @@ void static UpdatedTransaction(const uint256& hashTx)
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
         pwallet->UpdatedTransaction(hashTx);
 }
-/*
-// dump all wallets
-void static PrintWallets(const CBlock& block)
-{
-    BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
-        pwallet->PrintWallet(block);
-} */
 
 // notify wallets about an incoming inventory (for request counts)
 void static Inventory(const uint256& hash)
@@ -257,11 +250,6 @@ bool Finalise()
 bool AbortNode(const std::string &strMessage, const std::string &userMessage) {
     strMiscWarning = strMessage;
     printf("*** %s\n", strMessage.c_str());
-	/*
-    uiInterface.ThreadSafeMessageBox(
-        userMessage.empty() ? _("Error: A fatal internal error occured, see debug.log for details") : userMessage,
-        "", CClientUIInterface::MSG_ERROR);
-		*/
     StartShutdown();
     return false;
 }
@@ -338,12 +326,6 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
     return nEvicted;
 }
 
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // CTransaction and CTxIndex
@@ -376,54 +358,6 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
     CTxIndex txindex;
     return ReadFromDisk(txdb, prevout, txindex);
 }
-
-// bool CTransaction::IsStandard() const
-// {
-//     if (nVersion > CTransaction::CURRENT_VERSION)
-//         return false;
-
-//     BOOST_FOREACH(const CTxIn& txin, vin)
-//     {
-//         // Biggest 'standard' txin is a 3-signature 3-of-3 CHECKMULTISIG
-//         // pay-to-script-hash, which is 3 ~80-byte signatures, 3
-//         // ~65-byte public keys, plus a few script ops.
-//         if (txin.scriptSig.size() > 500)
-//             return false;
-//         if (!txin.scriptSig.IsPushOnly())
-//             return false;
-//         if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
-//             return false;
-//         }
-//     }
-
-//     unsigned int nDataOut = 0;
-//     unsigned int nTxnOut = 0;
-
-//     txnouttype whichType;
-//     BOOST_FOREACH(const CTxOut& txout, vout) {
-//         if (!::IsStandard(txout.scriptPubKey, whichType))
-//             return false;
-//         if (whichType == TX_NULL_DATA)
-//         {
-//             nDataOut++;
-//         } else
-//         {
-//             if (txout.nValue == 0)
-//                 return false;
-//             nTxnOut++;
-//         }
-//         if (fEnforceCanonical && !txout.scriptPubKey.HasCanonicalPushes()) {
-//             return false;
-//         }
-//     }
-
-//     // only one OP_RETURN txout per txn out is permitted
-//     if (nDataOut > nTxnOut) {
-//         return false;
-//     }
-
-//     return true;
-// }
 
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
@@ -731,12 +665,6 @@ int CMerkleTx::SetMerkleBranch(const CBlock* pblock)
 
     return pindexBest->nHeight - pindex->nHeight + 1;
 }
-
-
-
-
-
-
 
 bool CTransaction::CheckTransaction() const
 {
@@ -1372,7 +1300,6 @@ bool CMerkleTx::AcceptToMemoryPool()
 
 bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb)
 {
-
     {
         // Add previous supporting transactions first
         BOOST_FOREACH(CMerkleTx& tx, vtxPrev)
@@ -1739,10 +1666,6 @@ void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
     nTime = max(GetBlockTime(), GetAdjustedTime());
 }
 
-
-
-
-
 // Requires cs_main.
 void Misbehaving(NodeId pnode, int howmuch)
 {
@@ -1768,10 +1691,6 @@ void Misbehaving(NodeId pnode, int howmuch)
         }
     }
 }
-
-
-
-
 
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
@@ -1807,7 +1726,6 @@ bool CTransaction::DisconnectInputs(CTxDB& txdb)
 
     return true;
 }
-
 
 bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTestPool,
                                bool fBlock, bool fMiner, MapPrevTx& inputsRet, bool& fInvalid)
@@ -2397,17 +2315,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         return false;
 
     unsigned int flags = SCRIPT_VERIFY_NOCACHE;
-
-    /* // Currently don't need
-    if(V3(nTime))
-    {
-      flags |= SCRIPT_VERIFY_NULLDUMMY |
-               SCRIPT_VERIFY_STRICTENC |
-               SCRIPT_VERIFY_ALLOW_EMPTY_SIG |
-               SCRIPT_VERIFY_FIX_HASHTYPE |
-               SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
-    }
-    */
 
     //// issue here: it doesn't know the version
     unsigned int nTxPos;
@@ -4145,13 +4052,6 @@ string GetWarnings(string strFor)
     return "error";
 }
 
-
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Messages
@@ -4234,14 +4134,6 @@ void static ProcessGetData(CNode* pfrom)
             {
                 // Send stream from relay memory
                 bool pushed = false;
-                /*{
-                    LOCK(cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
-                    if (mi != mapRelay.end()) {
-                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
-                        pushed = true;
-                    }
-                }*/
                 if (!pushed && inv.type == MSG_TX) {
                     if(mapFortunaBroadcastTxes.count(inv.hash)){
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
@@ -4314,7 +4206,7 @@ void static ProcessGetData(CNode* pfrom)
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
-unsigned char pchMessageStart[4] = { 0xfa, 0xf2, 0xef, 0xb4 };
+unsigned char pchMessageStart[4] = { 0xfa, 0xf2, 0xef, 0xb4 }; //Magic Number
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
@@ -4354,18 +4246,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
           printf("Partner %s using obsolete version %i; DISCONNECTING\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
           pfrom->fDisconnect = true;
           if (pfrom->fForTunaMaster)
-              printf("Masternode hosting node version was obsolete. This masternode should be removed from the list\n");
+              printf("Masternode hosting node version is obsolete. This masternode should be removed from the list\n");
           return false;
         }
-
-        /*
-        if (pfrom->nVersion < PROTO_VERSION)
-        {
-            // disconnect from peers older than this proto version
-            printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
-            pfrom->fDisconnect = true;
-            return false;
-        }*/
 
         if (pfrom->nVersion == 10300)
             pfrom->nVersion = 300;
@@ -5348,8 +5231,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (fSecMsgEnabled)
             SecureMsgSendData(pto, fSendTrickle);
     }
-
-
 
     return true;
 }

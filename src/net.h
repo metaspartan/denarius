@@ -367,6 +367,7 @@ public:
     , nRecvStreamType(SER_NETWORK | (((addrIn.nServices & NODE_I2P) || addrIn.IsNativeI2P()) ? 0 : SER_IPADDRONLY))
 #endif
     {
+        // Native I2P Socket CNode structure
 #ifdef USE_NATIVE_I2P
         ssSend.SetType(nSendStreamType);
 #endif
@@ -397,7 +398,7 @@ public:
         pindexLastGetBlocksBegin = 0;
         hashLastGetBlocksEnd = 0;
         nStartingHeight = -1;
-		    fStartSync = false;
+		fStartSync = false;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
@@ -520,12 +521,16 @@ public:
         // Known checking here is only to save space from duplicates.
         // SendMessages will filter it again for knowns that were added
         // after addresses were pushed.
-        if (addr.IsValid() && !setAddrKnown.count(addr))
-#ifdef USE_NATIVE_I2P
-            // if receiver doesn't support i2p-address we don't send it
-            if ((this->nServices & NODE_I2P) || !addr.IsNativeI2P())
-#endif
-            vAddrToSend.push_back(addr);
+        if(fNativeI2P) {
+            if (addr.IsValid() && !setAddrKnown.count(addr)) {
+                // if receiver doesn't support i2p-address we don't send it
+                if ((this->nServices & NODE_I2P) || !addr.IsNativeI2P())
+                    vAddrToSend.push_back(addr);
+            }
+        } else {
+            if (addr.IsValid() && !setAddrKnown.count(addr))
+                vAddrToSend.push_back(addr);
+        }
     }
 
 

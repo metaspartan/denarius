@@ -144,6 +144,11 @@ bool ClientModel::isNativeTor() const
     return fNativeTor;
 }
 
+bool ClientModel::isNativeI2P() const
+{
+    return fNativeI2P;
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();

@@ -42,4 +42,5 @@ dist
 *.app
 *.dmg
 .idea
+*.vscode
 

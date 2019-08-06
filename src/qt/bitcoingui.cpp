@@ -246,20 +246,29 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     labelI2PConnections = new QLabel();
     labelI2POnly = new QLabel();
     labelI2PGenerated = new QLabel();
-    frameBlocksLayout->addWidget(labelI2PGenerated);
-    frameBlocksLayout->addWidget(labelI2POnly);
-    frameBlocksLayout->addWidget(labelI2PConnections);
+    if (fNativeI2P)
+        frameBlocksLayout->addStretch();
+        frameBlocksLayout->addWidget(labelI2POnly);
+        frameBlocksLayout->addStretch();
+        frameBlocksLayout->addWidget(labelI2PConnections);
+        frameBlocksLayout->addStretch();
+        frameBlocksLayout->addWidget(labelI2PGenerated);
 #endif
 
     labelStakingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
     labelConnectTypeIcon = new QLabel();
+    labelFSLockIcon = new QLabel();
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
     frameBlocksLayout->addStretch();
-    frameBlocksLayout->addWidget(labelConnectTypeIcon);
-    frameBlocksLayout->addStretch();
+    if (fNativeTor)
+        frameBlocksLayout->addWidget(labelConnectTypeIcon);
+        frameBlocksLayout->addStretch();
+    if (fFSLock)
+        frameBlocksLayout->addWidget(labelFSLockIcon);
+        frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelStakingIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelConnectionsIcon);
@@ -269,9 +278,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     netLabel = new QLabel();
     netLabel->setObjectName("netLabel");
-    netLabel->setStyleSheet("#netLabel { color: #efefef; }");
+    netLabel->setStyleSheet("#netLabel { color: #4a4a4a; }");
+    
     frameBlocksLayout->addWidget(netLabel);
-
     frameBlocksLayout->addStretch();
 
     if (GetBoolArg("-staking", true))
@@ -632,30 +641,38 @@ void BitcoinGUI::checkTOU()
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
 {
 #ifdef USE_NATIVE_I2P
+if (fNativeI2P) {
            setNumI2PConnections(clientModel->getNumI2PConnections());
            connect(clientModel, SIGNAL(numI2PConnectionsChanged(int)), this, SLOT(setNumI2PConnections(int)));
-if(clientModel->isI2POnly())
-{
-     netLabel->setText("I2P");
-     netLabel->setToolTip(tr("Wallet is using I2P-network only"));
+    if(clientModel->isI2POnly())
+    {
+        netLabel->setText("I2P");
+        netLabel->setToolTip(tr("Wallet is using I2P Denarius network only"));
+    }
 }
-else
-{
 #endif
-netLabel->setText("CLEARNET");
-#ifdef USE_NATIVE_I2P
+if(!fNativeTor && !fNativeI2P) {
+    netLabel->setText("CLEARNET");
+    netLabel->setToolTip(tr("Native Tor or I2P are not running."));
 }
-
-      if (clientModel->isI2PAddressGenerated())
-      {
-          labelI2PGenerated->setText("DYN");
-          labelI2PGenerated->setToolTip(tr("Wallet is running with a random generated I2P-address"));
+if (fFSLock) {
+    labelFSLockIcon->setPixmap(QIcon(":/icons/mn").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+    labelFSLockIcon->setToolTip(tr("FS are locked with fsconflock=1"));
+}
+#ifdef USE_NATIVE_I2P
+if (fNativeI2P) {
+      if (clientModel->isI2PAddressGenerated()) {
+          const QString puba = clientModel->getPublicI2PKey();
+          const QString base32addy = clientModel->getB32Address(puba);
+          labelI2PGenerated->setText(tr(" DYNAMIC"));
+          labelI2PGenerated->setToolTip(tr("Wallet is running with a dynamic I2P address: ") + QString(base32addy));
+      } else {
+          const QString pubs = clientModel->getPublicI2PKey();
+          const QString b32addy = clientModel->getB32Address(pubs);
+          labelI2PGenerated->setText(tr(" STATIC"));
+          labelI2PGenerated->setToolTip(tr("Wallet is running with a static I2P address: ") + QString(b32addy));
       }
-      else
-      {
-          labelI2PGenerated->setText("STA");
-          labelI2PGenerated->setToolTip(tr("Wallet is running with a static I2P-address"));
-      }
+}
 #endif
     this->clientModel = clientModel;
     if(clientModel)
@@ -811,7 +828,9 @@ void BitcoinGUI::optionsClicked()
     OptionsDialog dlg;
     dlg.setModel(clientModel->getOptionsModel());
 #ifdef USE_NATIVE_I2P
-    dlg.setClientModel(clientModel);
+    if (fNativeI2P) {
+        dlg.setClientModel(clientModel);
+    }
 #endif
     dlg.exec();
 }
@@ -834,17 +853,19 @@ void BitcoinGUI::showGeneratedI2PAddr(const QString& caption, const QString& pub
 #ifdef USE_NATIVE_I2P
 void BitcoinGUI::setNumI2PConnections(int count)
 {
-    QString i2pIcon;
-    switch(count)
-    {
-    case 0: i2pIcon = ":/icons/i2pconnect_0"; break;
-    case 1: /*case 2: case 3:*/ i2pIcon = ":/icons/i2pconnect_1"; break;
-    case 2:/*case 4: case 5: case 6:*/ i2pIcon = ":/icons/i2pconnect_2"; break;
-    case 3:/*case 7: case 8: case 9:*/ i2pIcon = ":/icons/i2pconnect_3"; break;
-    default: i2pIcon = ":/icons/i2pconnect_4"; break;
+    if(fNativeI2P) {
+        QString i2pIcon;
+        switch(count)
+        {
+        case 0: i2pIcon = ":/icons/i2pconnect_0"; break;
+        case 1: /*case 2: case 3:*/ i2pIcon = ":/icons/i2pconnect_1"; break;
+        case 2:/*case 4: case 5: case 6:*/ i2pIcon = ":/icons/i2pconnect_2"; break;
+        case 3:/*case 7: case 8: case 9:*/ i2pIcon = ":/icons/i2pconnect_3"; break;
+        default: i2pIcon = ":/icons/i2pconnect_4"; break;
+        }
+        labelI2PConnections->setPixmap(QIcon(i2pIcon).pixmap(50, 13));
+        labelI2PConnections->setToolTip(tr("%n active connection(s) to the I2P Denarius network", "", count));
     }
-    labelI2PConnections->setPixmap(QPixmap(i2pIcon));
-    labelI2PConnections->setToolTip(tr("%n active connection(s) to the I2P-Denarius network", "", count));
 }
 #endif
 
@@ -860,7 +881,7 @@ void BitcoinGUI::setNumConnections(int count)
     default: icon = ":/icons/connect_4"; break;
     }
     labelConnectionsIcon->setPixmap(QIcon(icon).pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
-    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to Denarius network", "", count));
+    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to the Denarius network", "", count));
 
     if(fNativeTor)
     {
@@ -877,9 +898,6 @@ void BitcoinGUI::setNumConnections(int count)
         QString onionauto;
         onionauto = tr("Connected via the Tor Network - ") + QString::fromStdString(automatic_onion);
         labelConnectTypeIcon->setToolTip(onionauto);
-    } else {
-        labelConnectTypeIcon->setPixmap(QIcon(":/icons/toroff").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-        labelConnectTypeIcon->setToolTip(tr("Not Connected via the Tor Network, Start Denarius with the flag nativetor=1"));
     }
 }
 
@@ -888,7 +906,13 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     // don't bother showing anything if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
-        progressBarLabel->setText(tr("Connecting to the Denarius network..."));
+        if (!fNativeI2P && !fNativeTor) {
+            progressBarLabel->setText(tr("Connecting to the Denarius network..."));
+        } else if (fNativeI2P) {
+            progressBarLabel->setText(tr("Connecting to the Denarius I2P network..."));
+        } else if (fNativeTor) {
+            progressBarLabel->setText(tr("Connecting to the Denarius Tor network..."));
+        }
         progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
         return;

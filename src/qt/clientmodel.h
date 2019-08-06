@@ -37,8 +37,11 @@ public:
     //! Return true if client connected to testnet
     bool isTestNet() const;
 
-    //! Return true if client connected to Tor
+    //! Return true if client connected to Native Tor
     bool isNativeTor() const;
+
+    //! Return true if client connected to Native I2P
+    bool isNativeI2P() const;
 
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;

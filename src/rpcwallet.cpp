@@ -122,7 +122,7 @@ Value getinfo(const Array& params, bool fHelp)
         file >> automatic_onion;
         obj.push_back(Pair("tor",       (automatic_onion)));
     }
-    if(!fNativeTor)
+    if(!fNativeTor) // && !fNativeI2P
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
@@ -132,6 +132,7 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("fortunastake",    fFortunaStake));
     obj.push_back(Pair("nativetor",     fNativeTor));
+    obj.push_back(Pair("nativei2p",     fNativeI2P));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));

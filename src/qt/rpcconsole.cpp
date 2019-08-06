@@ -300,6 +300,7 @@ void RPCConsole::setClientModel(ClientModel *model)
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
         ui->isNativeTor->setChecked(model->isNativeTor());
+        ui->isNativeI2P->setChecked(model->isNativeI2P());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }

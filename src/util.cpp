@@ -92,6 +92,8 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
+bool fNativeI2P = false;
+bool fFSLock = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -1320,7 +1322,7 @@ boost::filesystem::path GetConfigFile()
 
 boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-fsconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -1545,7 +1547,7 @@ string FormatFullVersion()
 #ifdef USE_NATIVE_I2P
 std::string FormatI2PNativeFullVersion()
 {
-    return;
+    return; //return I2P_NATIVE_BUILD;
 }
 #endif
 

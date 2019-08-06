@@ -78,7 +78,7 @@ void I2POptionsWidget::ShowCurrentI2PAddress()
         const QString b32 = clientModel->getB32Address(pub);
         const QString configFile = QString::fromStdString(GetConfigFile().string());
 
-        ShowI2PAddresses i2pCurrDialog("Your current I2P-address", pub, priv, b32, configFile, this);
+        ShowI2PAddresses i2pCurrDialog("Your current I2P address", pub, priv, b32, configFile, this);
         i2pCurrDialog.exec();
     }
 }

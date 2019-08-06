@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>549</width>
-    <height>371</height>
+    <width>449</width>
+    <height>389</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,7 +42,7 @@
         <string>http://www.i2p2.i2p/i2cp.html#options</string>
        </property>
        <property name="text">
-        <string>&lt;a href=&quot;http://www.i2p2.i2p/i2cp.html#options&quot;&gt;Help&lt;/a&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;http://www.i2p2.i2p/i2cp.html#options&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;Help&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textFormat">
         <enum>Qt::RichText</enum>
@@ -138,7 +138,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Bitcoin-client</string>
+        <string>Denarius-client</string>
        </property>
       </widget>
      </item>
@@ -147,27 +147,34 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::MinimumExpanding</enum>
+       </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>40</width>
+         <width>166</width>
          <height>20</height>
         </size>
        </property>
       </spacer>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_18">
      <item>
       <widget class="QPushButton" name="pushButtonCurrentI2PAddress">
        <property name="text">
-        <string>Current
-I2P-address...</string>
+        <string>View Current
+I2P Address</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonGenerateI2PAddress">
        <property name="text">
-        <string>Generate
-I2P-address...</string>
+        <string>Generate 
+I2P Address</string>
        </property>
       </widget>
      </item>
@@ -677,8 +684,6 @@ I2P-address...</string>
   <tabstop>lineEditSAMHost</tabstop>
   <tabstop>spinBoxSAMPort</tabstop>
   <tabstop>lineEditTunnelName</tabstop>
-  <tabstop>pushButtonCurrentI2PAddress</tabstop>
-  <tabstop>pushButtonGenerateI2PAddress</tabstop>
   <tabstop>spinBoxInboundQuantity</tabstop>
   <tabstop>spinBoxInboundLength</tabstop>
   <tabstop>spinBoxInboundLengthVariance</tabstop>

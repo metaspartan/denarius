@@ -394,8 +394,7 @@ std::string HelpMessage()
 
         "\n" + _("Fortunastake options:") + "\n" +
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
-        "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
-        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
+        "  -fsconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
         "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
@@ -479,19 +478,22 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
-    #ifdef USE_NATIVE_I2P
-    if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
-    {
-        const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
-        uiInterface.ThreadSafeShowGeneratedI2PAddress(
-                    "Generated I2P address",
-                    generatedDest.pub,
-                    generatedDest.priv,
-                    I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
-                    GetConfigFile().string());
-        return false;
-    }
-    #endif
+#ifdef USE_NATIVE_I2P
+        if(fNativeI2P)
+        {
+            if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
+            {
+                const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
+                uiInterface.ThreadSafeShowGeneratedI2PAddress(
+                            "Generated I2P address",
+                            generatedDest.pub,
+                            generatedDest.priv,
+                            I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
+                            GetConfigFile().string());
+                return false;
+            }
+        }
+#endif
 
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
@@ -540,6 +542,8 @@ bool AppInit2()
 
     fTestNet = GetBoolArg("-testnet");
     fNativeTor = GetBoolArg("-nativetor");
+    fNativeI2P = GetBoolArg("-nativei2p");
+    fFSLock = GetBoolArg("-fsconflock");
 
     //if (fTestNet)
 
@@ -708,13 +712,13 @@ bool AppInit2()
     CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
 
     if (fDaemon)
-        fprintf(stdout, "Denarius server starting\n");
+        fprintf(stdout, "Denarius (D) server starting\n");
 
     int64_t nStart;
 
     // Anonymous Ring Signatures ~ D e n a r i u s - v3.0.0.0
     if (initialiseRingSigs() != 0)
-        return InitError("initialiseRingSigs() failed.");
+        return InitError("initializeRingSigs() failed.");
 
 
     // ********************************************************* Step 5: verify database integrity
@@ -851,7 +855,7 @@ bool AppInit2()
     };
 
     // see Step 2: parameter interactions for more information about these
-    if(!fNativeTor) // Available if nativetor is disabled
+    if(!fNativeTor) // Available if nativetor and nativei2p are disabled
     {
         fNoListen = !GetBoolArg("-listen", true);
         fDiscover = GetBoolArg("-discover", true);
@@ -885,8 +889,10 @@ bool AppInit2()
                 if (!IsLimited(NET_IPV4))
                     fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
 #ifdef USE_NATIVE_I2P
-                if (!IsLimited(NET_NATIVE_I2P))
-                    fBound |= BindNativeI2P();
+                if(fNativeI2P) {
+                    if (!IsLimited(NET_NATIVE_I2P))
+                        fBound |= BindNativeI2P();
+                }
 #endif
             };
             if (!fBound)
@@ -1206,7 +1212,7 @@ bool AppInit2()
     }
 
     if (pwalletMain) {
-        if(GetBoolArg("-fsconflock", true) & GetBoolArg("-mnconflock", true)) {
+        if(GetBoolArg("-fsconflock", true)) {
             LOCK(pwalletMain->cs_wallet);
             printf("Locking Fortunastakes:\n");
             uint256 mnTxHash;
@@ -1282,6 +1288,11 @@ bool AppInit2()
         printf("Native Tor Onion Relay Node Enabled");
     else
         printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+
+    if(fNativeI2P)
+        printf("Native I2P Node Enabled");
+    else
+        printf("Native I2P Disabled, Using Regular Peers...");
 
     if (fDebug)
         printf("Debugging is Enabled.");

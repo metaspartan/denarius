@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Denarius developers
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
@@ -559,8 +560,10 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
 #ifdef USE_NATIVE_I2P
-            if (addrConnect.IsNativeI2P())
-                ++nI2PNodeCount;
+            if (fNativeI2P) {
+                if (addrConnect.IsNativeI2P())
+                    ++nI2PNodeCount;
+            }
 #endif
         }
 
@@ -730,11 +733,11 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)
         // get current incomplete message, or create a new one
         if (vRecvMsg.empty() ||
             vRecvMsg.back().complete())
-#ifdef USE_NATIVE_I2P
+        if (fNativeI2P) {
             vRecvMsg.push_back(CNetMessage(nRecvStreamType, nRecvVersion));
-#else
+        } else {
             vRecvMsg.push_back(CNetMessage(SER_NETWORK, nRecvVersion));
-#endif
+        }
 
         CNetMessage& msg = vRecvMsg.back();
 
@@ -960,8 +963,10 @@ void ThreadSocketHandler2(void* parg)
                         pnode->Release();
                     vNodesDisconnected.push_back(pnode);
 #ifdef USE_NATIVE_I2P
-                    if (pnode->addr.IsNativeI2P())
-                        --nI2PNodeCount;
+                    if (fNativeI2P) {
+                        if (pnode->addr.IsNativeI2P())
+                            --nI2PNodeCount;
+                    }
 #endif
                 }
             }
@@ -1005,11 +1010,13 @@ void ThreadSocketHandler2(void* parg)
             uiInterface.NotifyNumConnectionsChanged(vNodes.size());
         }
 #ifdef USE_NATIVE_I2P
+if (fNativeI2P) {
         if (nPrevI2PNodeCount != nI2PNodeCount)
         {
             nPrevI2PNodeCount = nI2PNodeCount;
             uiInterface.NotifyNumI2PConnectionsChanged(nI2PNodeCount);
         }
+}
 #endif
 
 
@@ -1030,13 +1037,15 @@ void ThreadSocketHandler2(void* parg)
         bool have_fds = false;
 
 #ifdef USE_NATIVE_I2P
-        BOOST_FOREACH(SOCKET hI2PListenSocket, vhI2PListenSocket) {
-            if (hI2PListenSocket != INVALID_SOCKET)
-            {
-                FD_SET(hI2PListenSocket, &fdsetRecv);
-                hSocketMax = max(hSocketMax, hI2PListenSocket);
-                have_fds = true;
-            }
+        if (fNativeI2P) {
+                BOOST_FOREACH(SOCKET hI2PListenSocket, vhI2PListenSocket) {
+                    if (hI2PListenSocket != INVALID_SOCKET)
+                    {
+                        FD_SET(hI2PListenSocket, &fdsetRecv);
+                        hSocketMax = max(hSocketMax, hI2PListenSocket);
+                        have_fds = true;
+                    }
+                }
         }
 #endif
 
@@ -1142,7 +1151,7 @@ void ThreadSocketHandler2(void* parg)
         //
         // Accept new I2P connections
         //
-
+if (fNativeI2P) {
         bool haveInvalids = false;
         for (std::vector<SOCKET>::iterator it = vhI2PListenSocket.begin(); it != vhI2PListenSocket.end(); ++it)
         {
@@ -1203,7 +1212,7 @@ void ThreadSocketHandler2(void* parg)
                 BindListenNativeI2P(hI2PListenSocket);
             }
         }
-
+}
 #endif
 
 
@@ -1820,12 +1829,14 @@ void ThreadOpenConnections2(void* parg)
                 continue;
 
             // do not allow non-default ports, unless after 50 invalid addresses selected already
-#ifdef USE_NATIVE_I2P
-            if (!addr.IsNativeI2P() && addr.GetPort() != GetDefaultPort() && nTries < 50)
-#else
-            if (addr.GetPort() != GetDefaultPort() && nTries < 50)
-#endif
-                continue;
+
+            if (fNativeI2P) {
+                if (!addr.IsNativeI2P() && addr.GetPort() != GetDefaultPort() && nTries < 50)
+                    continue;
+            } else {
+                if (addr.GetPort() != GetDefaultPort() && nTries < 50)
+                    continue;
+            }
 
             addrConnect = addr;
             break;
@@ -2424,7 +2435,7 @@ void StartNode(void* parg)
     // Start threads
     //
 
-    if(!fNativeTor)
+    if(!fNativeTor && !fNativeI2P)
     {
         if (!GetBoolArg("-dnsseed", true))
             printf("DNS seeding disabled\n");
@@ -2479,6 +2490,7 @@ bool StopNode()
 {
     printf("StopNode()\n");
     fShutdown = true;
+    //MapPort(false);
     mempool.AddTransactionsUpdated(1);
     int64_t nStart = GetTime();
     if (semOutbound)
@@ -2531,10 +2543,12 @@ public:
                 if (closesocket(hListenSocket) == SOCKET_ERROR)
                     printf("closesocket(hListenSocket) failed with error %d\n", WSAGetLastError());
 #ifdef USE_NATIVE_I2P
-        BOOST_FOREACH(SOCKET& hI2PListenSocket, vhI2PListenSocket)
-            if (hI2PListenSocket != INVALID_SOCKET)
-                if (closesocket(hI2PListenSocket) == SOCKET_ERROR)
-                    printf("closesocket(hI2PListenSocket) failed with error %d\n", WSAGetLastError());
+        if (fNativeI2P) {
+                BOOST_FOREACH(SOCKET& hI2PListenSocket, vhI2PListenSocket)
+                    if (hI2PListenSocket != INVALID_SOCKET)
+                        if (closesocket(hI2PListenSocket) == SOCKET_ERROR)
+                            printf("closesocket(hI2PListenSocket) failed with error %d\n", WSAGetLastError());
+        }
 #endif
 #ifdef WIN32
         // Shutdown Windows Sockets
@@ -2628,17 +2642,6 @@ void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::
         pnode->PushMessage("dsee", vin, addr, vchSig, nNow, pubkey, pubkey2, count, current, lastUpdated, protocolVersion);
     }
 }
-
-/*
-void RelayForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64 nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64 lastUpdated)
-{
-    LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
-    {
-        pnode->PushMessage("dsee", vin, addr, vchSig, nNow, pubkey, pubkey2, count, current, lastUpdated);
-    }
-}
-*/
 
 void SendForTunaElectionEntry(const CTxIn vin, const CService addr, const std::vector<unsigned char> vchSig, const int64_t nNow, const CPubKey pubkey, const CPubKey pubkey2, const int count, const int current, const int64_t lastUpdated, const int protocolVersion)
 {
