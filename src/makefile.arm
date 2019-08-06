@@ -327,6 +327,11 @@ OBJS= \
     obj/ringsig.o
 
 
+ifeq (${USE_NATIVE_I2P}, 1)
+	OBJS += obj/i2p.o
+	OBJS += obj/i2psam.o
+endif
+
 all: denariusd
 
 #
