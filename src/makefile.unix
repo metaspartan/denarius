@@ -6,6 +6,7 @@
 USE_LEVELDB:=1
 USE_UPNP:=1
 USE_NATIVETOR:=1
+USE_NATIVE_I2P:=1
 
 LINK:=$(CXX)
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
@@ -43,6 +44,13 @@ ifndef USE_NATIVETOR
 endif
 ifneq (${USE_NATIVETOR}, -)
   DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)
+endif
+
+ifndef USE_NATIVE_I2P
+  override USE_NATIVE_I2P = -
+endif
+ifneq (${USE_NATIVE_I2P}, -)
+  DEFS += -DUSE_NATIVE_I2P=$(USE_NATIVE_I2P)
 endif
 
 ifndef USE_UPNP

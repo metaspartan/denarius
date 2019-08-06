@@ -523,9 +523,11 @@ public:
         // after addresses were pushed.
         if(fNativeI2P) {
             if (addr.IsValid() && !setAddrKnown.count(addr)) {
+#ifdef USE_NATIVE_I2P
                 // if receiver doesn't support i2p-address we don't send it
                 if ((this->nServices & NODE_I2P) || !addr.IsNativeI2P())
                     vAddrToSend.push_back(addr);
+#endif
             }
         } else {
             if (addr.IsValid() && !setAddrKnown.count(addr))
