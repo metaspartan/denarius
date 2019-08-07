@@ -2160,6 +2160,7 @@ bool BindListenNativeI2P(SOCKET& hSocket)
         return false;
     CService addrBind(I2PSession::Instance().getMyDestination().pub, 0);
     if (addrBind.IsRoutable() && fDiscover)
+        printf("I2P: AddLocal() = %s\n", addrBind.ToString().c_str());
         AddLocal(addrBind, LOCAL_BIND);
     return true;
 }
