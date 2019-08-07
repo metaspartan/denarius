@@ -710,11 +710,15 @@ bool CNetAddr::IsIPv4() const
 
 bool CNetAddr::IsIPv6() const
 {
+#ifdef USE_NATIVE_I2P
 if (fNativeI2P) {
     return (!IsIPv4() && !IsTor() && !IsNativeI2P());
 } else {
     return (!IsIPv4() && !IsTor() && !IsI2P());
 }
+#else
+return (!IsIPv4() && !IsTor() && !IsI2P());
+#endif 
 }
 
 bool CNetAddr::IsRFC1918() const
@@ -931,29 +935,41 @@ std::string CNetAddr::ToString() const
 
 bool operator==(const CNetAddr& a, const CNetAddr& b)
 {
+#ifdef USE_NATIVE_I2P
     if (fNativeI2P) {
         return (memcmp(a.ip, b.ip, 16) == 0 && memcmp(a.i2pDest, b.i2pDest, NATIVE_I2P_DESTINATION_SIZE) == 0);
     } else {
         return (memcmp(a.ip, b.ip, 16) == 0);
     }
+#else
+return (memcmp(a.ip, b.ip, 16) == 0);
+#endif
 }
 
 bool operator!=(const CNetAddr& a, const CNetAddr& b)
 {
+#ifdef USE_NATIVE_I2P
     if (fNativeI2P) {
         return (memcmp(a.ip, b.ip, 16) != 0 || memcmp(a.i2pDest, b.i2pDest, NATIVE_I2P_DESTINATION_SIZE) != 0);
     } else {
         return (memcmp(a.ip, b.ip, 16) != 0);
     }
+#else
+return (memcmp(a.ip, b.ip, 16) != 0);
+#endif
 }
 
 bool operator<(const CNetAddr& a, const CNetAddr& b)
 {
+#ifdef USE_NATIVE_I2P
     if (fNativeI2P) {
         return (memcmp(a.ip, b.ip, 16) < 0 || (memcmp(a.ip, b.ip, 16) == 0 && memcmp(a.i2pDest, b.i2pDest, NATIVE_I2P_DESTINATION_SIZE) < 0));
     } else {
         return (memcmp(a.ip, b.ip, 16) < 0);
     }
+#else
+return (memcmp(a.ip, b.ip, 16) < 0);
+#endif
 }
 
 bool CNetAddr::GetInAddr(struct in_addr* pipv4Addr) const

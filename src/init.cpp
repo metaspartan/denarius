@@ -1283,16 +1283,18 @@ bool AppInit2()
     printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
-
+#ifdef USE_NATIVETOR
     if(fNativeTor)
         printf("Native Tor Onion Relay Node Enabled");
     else
         printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
-
+#endif
+#ifdef USE_NATIVE_I2P
     if(fNativeI2P)
         printf("Native I2P Node Enabled");
     else
         printf("Native I2P Disabled, Using Regular Peers...");
+#endif
 
     if (fDebug)
         printf("Debugging is Enabled.");

@@ -733,11 +733,15 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)
         // get current incomplete message, or create a new one
         if (vRecvMsg.empty() ||
             vRecvMsg.back().complete())
+#ifdef USE_NATIVE_I2P
         if (fNativeI2P) {
             vRecvMsg.push_back(CNetMessage(nRecvStreamType, nRecvVersion));
         } else {
             vRecvMsg.push_back(CNetMessage(SER_NETWORK, nRecvVersion));
         }
+#else
+        vRecvMsg.push_back(CNetMessage(SER_NETWORK, nRecvVersion));
+#endif
 
         CNetMessage& msg = vRecvMsg.back();
 
@@ -1829,7 +1833,7 @@ void ThreadOpenConnections2(void* parg)
                 continue;
 
             // do not allow non-default ports, unless after 50 invalid addresses selected already
-
+#ifdef USE_NATIVE_I2P
             if (fNativeI2P) {
                 if (!addr.IsNativeI2P() && addr.GetPort() != GetDefaultPort() && nTries < 50)
                     continue;
@@ -1837,6 +1841,10 @@ void ThreadOpenConnections2(void* parg)
                 if (addr.GetPort() != GetDefaultPort() && nTries < 50)
                     continue;
             }
+#else
+            if (addr.GetPort() != GetDefaultPort() && nTries < 50)
+                continue;
+#endif
 
             addrConnect = addr;
             break;
@@ -2435,7 +2443,7 @@ void StartNode(void* parg)
     // Start threads
     //
 
-    if(!fNativeTor && !fNativeI2P)
+    if(!fNativeTor)
     {
         if (!GetBoolArg("-dnsseed", true))
             printf("DNS seeding disabled\n");
