@@ -781,7 +781,7 @@ void AddIncomingConnection(SOCKET hSocket, const CAddress& addr)
     {
         int nErr = WSAGetLastError();
         if (nErr != WSAEWOULDBLOCK)
-            printf("socket error accept failed: %d\n", nErr);
+            printf("I2P socket error accept failed: %d\n", nErr);
     }
     else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
     {
@@ -793,12 +793,12 @@ void AddIncomingConnection(SOCKET hSocket, const CAddress& addr)
     }
     else if (CNode::IsBanned(addr))
     {
-        printf("connection from %s dropped (banned)\n", addr.ToString().c_str());
+        printf("I2P connection from %s dropped (banned)\n", addr.ToString().c_str());
         closesocket(hSocket);
     }
     else
     {
-        printf("accepted connection %s\n", addr.ToString().c_str());
+        printf("I2P accepted connection %s\n", addr.ToString().c_str());
         CNode* pnode = new CNode(hSocket, addr, "", true);
         pnode->AddRef();
         {
