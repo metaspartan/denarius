@@ -40,9 +40,11 @@ namespace SAM
 static void print_error(const std::string& err)
 {
 #ifdef WIN32
-    std::cout << err << "(" << WSAGetLastError() << ")" << std::endl;
+    printf("I2P SAM WIN32 Error: %s: %d.\n", err.c_str(), WSAGetLastError());
+    //std::cout << err << "(" << WSAGetLastError() << ")" << std::endl;
 #else
-    std::cout << err << "(" << errno << ")" << std::endl;
+    printf("I2P SAM Error: %s: %d.\n", err.c_str(), errno);
+    //std::cout << err << "(" << errno << ")" << std::endl;
 #endif
 }
 
@@ -160,7 +162,8 @@ void Socket::write(const std::string& msg)
         print_error("Failed to send data because socket is closed");
         return;
     }
-    std::cout << "Send: " << msg << std::endl;
+    printf("I2P SAM Send: %s\n", msg.c_str());
+    //std::cout << "Send: " << msg << std::endl;
     ssize_t sentBytes = send(socket_, msg.c_str(), msg.length(), 0);
     if (sentBytes == SAM_SOCKET_ERROR)
     {
@@ -197,7 +200,8 @@ std::string Socket::read()
         close();
         print_error("Socket was closed");
     }
-    std::cout << "Reply: " << buffer << std::endl;
+    printf("I2P SAM Reply: %d\n", buffer);
+    //std::cout << "Reply: " << buffer << std::endl;
     return std::string(buffer);
 }
 
@@ -261,7 +265,8 @@ StreamSession::StreamSession(
     , isSick_(false)
 {
     myDestination_ = createStreamSession(destination);
-    std::cout << "Created a brand new SAM session (" << sessionID_ << ")" << std::endl;
+    printf("I2P SAM Created a brand new SAM session: %d\n", sessionID_.c_str());
+    //std::cout << "Created a brand new SAM session (" << sessionID_ << ")" << std::endl;
 }
 
 StreamSession::StreamSession(StreamSession& rhs)
@@ -278,14 +283,15 @@ StreamSession::StreamSession(StreamSession& rhs)
 
     for(ForwardedStreamsContainer::const_iterator it = rhs.forwardedStreams_.begin(), end = rhs.forwardedStreams_.end(); it != end; ++it)
         forward(it->host, it->port, it->silent);
-
-    std::cout << "Created a new SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
+    printf("I2P SAM Created a new SAM session: %d from another %s\n", sessionID_.c_str(), rhs.sessionID_.c_str());
+    //std::cout << "Created a new SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
 }
 
 StreamSession::~StreamSession()
 {
     stopForwardingAll();
-    std::cout << "Closing SAM session (" << sessionID_ << ") ..." << std::endl;
+    printf("I2P SAM Closing SAM Session: %d\n", sessionID_.c_str());
+    //std::cout << "Closing SAM session (" << sessionID_ << ") ..." << std::endl;
 }
 
 /*static*/

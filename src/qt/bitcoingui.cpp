@@ -850,9 +850,7 @@ void BitcoinGUI::showGeneratedI2PAddr(const QString& caption, const QString& pub
     ShowI2PAddresses i2pDialog(caption, pub, priv, b32, configFileName, this);
     i2pDialog.exec();
 }
-#endif
 
-#ifdef USE_NATIVE_I2P
 void BitcoinGUI::setNumI2PConnections(int count)
 {
     if(fNativeI2P) {

@@ -617,7 +617,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 }
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
-    //if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+    if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -1508,7 +1508,7 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
             CTxDestination address1;
             ExtractDestination(rec.scriptPubKey, address1);
             CBitcoinAddress address2(address1);
-            printf("Height %d: MN Address %s secured by collateral %s\n",rec.height,address2.ToString().c_str(),rec.vin.ToString().c_str());
+            printf("Height %d: FS D Address %s secured by collateral %s\n",rec.height,address2.ToString().c_str(),rec.vin.ToString().c_str());
         }
     }
 

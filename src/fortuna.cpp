@@ -808,7 +808,9 @@ bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
 	
     if(GetTransaction(vin.prevout.hash, txVin, hash)){
         CTxOut out = txVin.vout[vin.prevout.n];
-		if ((out.nValue == GetMNCollateral()*COIN) && (out.scriptPubKey == payee2))
+        //for (int i = 1; i < out; i++)
+
+		if ((out.nValue == GetMNCollateral()*COIN) && (out.scriptPubKey == payee2)) //&& (i == 1) ?
 		{
 			return true;
 		}
@@ -821,6 +823,7 @@ bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
     CTxDestination address1;
     ExtractDestination(payee2, address1);
     CBitcoinAddress address2(address1);
+
 	if (fDebug) {
 		printf("IsVinAssociatedWithPubKey:: vin %s is not associated with pubkey %s for address %s\n",
 			   vin.ToString().c_str(), pubkey.GetHash().ToString().c_str(), address2.ToString().c_str());
