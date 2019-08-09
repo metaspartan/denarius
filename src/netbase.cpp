@@ -373,7 +373,7 @@ bool static ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRe
             int nRet = select(hSocket + 1, NULL, &fdset, NULL, &timeout);
             if (nRet == 0)
             {
-                printf("net", "connection to %s timeout\n", addrConnect.ToString().c_str());
+                printf("net connection to %s timeout\n", addrConnect.ToString().c_str());
                 closesocket(hSocket);
                 return false;
             }
@@ -1152,6 +1152,13 @@ int CNetAddr::GetReachabilityFrom(const CNetAddr *paddrPartner) const
         default:         return REACH_DEFAULT;
         case NET_I2P:    return REACH_PRIVATE;
         }
+#ifdef USE_NATIVE_I2P
+    case NET_NATIVE_I2P:
+        switch(ourNet) {
+        default:             return REACH_UNREACHABLE;
+        case NET_NATIVE_I2P: return REACH_PRIVATE;
+        }
+#endif
     case NET_TEREDO:
         switch(ourNet) {
         default:          return REACH_DEFAULT;
@@ -1168,7 +1175,10 @@ int CNetAddr::GetReachabilityFrom(const CNetAddr *paddrPartner) const
         case NET_IPV6:    return REACH_IPV6_WEAK;
         case NET_IPV4:    return REACH_IPV4;
         case NET_I2P:     return REACH_PRIVATE; // assume connections from unroutable addresses are
-        case NET_TOR:     return REACH_PRIVATE; // either from Tor/I2P, or don't care about our address
+        case NET_TOR:     return REACH_PRIVATE; // either from Tor, or don't care about our address
+#ifdef USE_NATIVE_I2P
+        case NET_NATIVE_I2P: return REACH_UNREACHABLE;
+#endif
         }
     }
 }

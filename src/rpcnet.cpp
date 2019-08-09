@@ -41,6 +41,145 @@ Value ping(const Array& params, bool fHelp)
     return Value::null;
 }
 
+/*
+#ifdef USE_NATIVE_I2P
+Value destination(const Array& params, bool fHelp)
+{
+   if (fHelp || params.size() > 2)
+        throw runtime_error(
+            "destination [\"match|good|attempt|connect\"] [\"b32.i2p|base64|ip:port\"]\n"
+            "\n Returns I2P destination details stored in your b32.i2p address manager lookup system.\n"
+            "\nArguments:\n"
+            "  If no arguments are provided, the command returns all the b32.i2p addresses. NOTE: Results will not include base64\n"
+            "  1st argument = \"match\" then a 2nd argument is also required.\n"
+            "  2nd argument = Any string. If a match is found in any of the address, source or base64 fields, that result will be returned.\n"
+            "  1st argument = \"good\" destinations that has been tried, connected and found to be good will be returned.\n"
+            "  1st argument = \"attempt\" destinations that have been attempted, will be returned.\n"
+            "  1st argument = \"connect\" destinations that have been connected to in the past, will be returned.\n"
+            "\nResults are returned as a json array of object(s).\n"
+            "  The 1st result pair is the total size of the address hash map.\n"
+            "  The 2nd result pair is the number of objects which follow, as matching this query.  It can be zero, if no match was found.\n"
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"tablesize\": nnn,             (numeric) The total number of destinations in the i2p address book\n"
+            "    \"matchsize\": nnn,             (numeric) The number of results returned, which matched your query\n"
+            "  }\n"
+            "  {\n"
+            "    \"address\":\"b32.i2p\",          (string)  Base32 hash of a i2p destination, a possible peer\n"
+            "    \"good\": true|false,           (boolean) Has this address been tried & found to be good\n"
+            "    \"attempt\": nnn,               (numeric) The number of times it has been attempted\n"
+            "    \"lasttry\": ttt,               (numeric) The time of a last attempted connection (memory only)\n"
+            "    \"connect\": ttt,               (numeric) The time of a last successful connection\n"
+            "    \"source\":\"b32.i2p|ip:port\",   (string)  The source of information about this address\n"
+            "    \"base64\":\"destination\",       (string)  The full Base64 Public Key of this peers b32.i2p address\n"
+            "  }\n"
+            "  ,...\n"
+            "]\n"
+            "\nNOTE: The results obtained are only a snapshot, while you are connected to the network.\n"
+            "      Peers are updating addresses & destinations all the time.\n"
+            "\nExamples: destination good|attempt|connect|match <ip> returns all I2P destinations currently known about on the system.\n"
+            "\nExamples: destination good returns the I2P destinations marked as 'good', happens if they have been tried and a successful version handshake made.\n"
+            "\nExample: destination attempt returns I2P destinations marked as having made an attempt to connect\n"
+            "\nExample: destination connect returns I2P destinations which are marked as having been connected to.\n"
+            "\nExamples: destination match <ip> returns I2P destination entries which came from the 'source' IP address 215.49.103.xxx\n"
+            "\nExamples: destination match <i2p b32> returns all I2P b32.i2p destinations which match the patter, these could be found in the 'source' or the 'address' fields.\n"
+        );
+    //! We must not have node or main processing as Addrman needs to
+    //! be considered static for the time required to process this.
+    LOCK2(cs_main, cs_vNodes);
+
+    bool fSelectedMatch = false;
+    bool fMatchStr = false;
+    bool fMatchTried = false;
+    bool fMatchAttempt = false;
+    bool fMatchConnect = false;
+    bool fUnknownCmd = false;
+    string sMatchStr;
+
+    if( params.size() > 0 ) {                                   // Lookup the address and return the one object if found
+        string sCmdStr = params[0].get_str();
+        if( sCmdStr == "match" ) {
+            if( params.size() > 1 ) {
+                sMatchStr = params[1].get_str();
+                fMatchStr = true;
+            } else
+                fUnknownCmd = true;
+        } else if( sCmdStr == "good" )
+            fMatchTried = true;
+        else if( sCmdStr == "attempt" )
+            fMatchAttempt = true;
+        else if( sCmdStr == "connect")
+            fMatchConnect = true;
+        else
+            fUnknownCmd = true;
+        fSelectedMatch = true;
+    }
+
+    Array ret;
+    // Load the vector with all the objects we have and return with
+    // the total number of addresses we have on file
+    vector<CDestinationStats> vecStats;
+    int nTableSize = addrman.CopyDestinationStats(vecStats);
+    if( !fUnknownCmd ) {       // If set, throw runtime error
+        for( int i = 0; i < 2; i++ ) {      // Loop through the data twice
+            bool fMatchFound = false;       // Assume no match
+            int nMatchSize = 0;             // the match counter
+            BOOST_FOREACH(const CDestinationStats& stats, vecStats) {
+                if( fSelectedMatch ) {
+                    if( fMatchStr ) {
+                        if( stats.sAddress.find(sMatchStr) != string::npos ||
+                            stats.sSource.find(sMatchStr) != string::npos ||
+                            stats.sBase64.find(sMatchStr) != string::npos )
+                                fMatchFound = true;
+                    } else if( fMatchTried ) {
+                        if( stats.fInTried ) fMatchFound = true;
+                    }
+                    else if( fMatchAttempt ) {
+                        if( stats.nAttempts > 0 ) fMatchFound = true;
+                    }
+                    else if( fMatchConnect ) {
+                        if( stats.nSuccessTime > 0 ) fMatchFound = true;
+                    }
+                } else          // Match everything
+                    fMatchFound = true;
+
+                if( i == 1 && fMatchFound ) {
+                    Object obj;
+                    obj.push_back(Pair("address", stats.sAddress));
+                    obj.push_back(Pair("good", stats.fInTried));
+                    obj.push_back(Pair("attempt", stats.nAttempts));
+                    obj.push_back(Pair("lasttry", stats.nLastTry));
+                    obj.push_back(Pair("connect", stats.nSuccessTime));
+                    obj.push_back(Pair("source", stats.sSource));
+                    //! Do to an RPC buffer limit of 65535 with stream output, we can not send these and ever get a result
+                    //! This should be considered a short term fix ToDo:  Allocate bigger iostream buffer for the output
+                    if( fSelectedMatch )
+                        obj.push_back(Pair("base64", stats.sBase64));
+                    ret.push_back(obj);
+                }
+                if( fMatchFound ) {
+                    nMatchSize++;
+                    fMatchFound = false;
+                }
+            }
+            // The 1st time we get a count of the matches, so we can list that first in the results,
+            // then we finally build the output objects, on the 2nd pass...and don't put this in there twice
+            if( i == 0 ) {
+                Object objSizes;
+                objSizes.push_back(Pair("tablesize", nTableSize));
+                objSizes.push_back(Pair("matchsize", nMatchSize));
+                ret.push_back(objSizes);                            // This is the 1st object put on the Array
+            }
+        }
+    } else
+        throw runtime_error( "Unknown subcommand or argument missing" );
+
+    return ret;
+}
+#endif
+*/
+
 static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 {
     vstats.clear();
@@ -52,6 +191,91 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
         pnode->copyStats(stats);
         vstats.push_back(stats);
     }
+}
+
+static Array GetNetworksInfo()
+{
+    Array networks;
+    for(int n=0; n<NET_MAX; ++n)
+    {
+        enum Network network = static_cast<enum Network>(n);
+        if(network == NET_UNROUTABLE)
+            continue;
+        proxyType proxy;
+        Object obj;
+        GetProxy(network, proxy);
+        obj.push_back(Pair("name", GetNetworkName(network)));
+        obj.push_back(Pair("limited", IsLimited(network)));
+        //obj.push_back(Pair("reachable", IsReachable(network)));
+        //obj.push_back(Pair("proxy", proxy.IsValid() ? proxy.ToStringIPPort() : string()));
+        networks.push_back(obj);
+    }
+    return networks;
+}
+
+static const string SingleAlertSubVersionsString( const std::set<std::string>& setVersions )
+{
+    std::string strSetSubVer;
+    BOOST_FOREACH(std::string str, setVersions) {
+        if(strSetSubVer.size())                 // Must be more than one
+            strSetSubVer += " or ";
+        strSetSubVer += str;
+    }
+    return strSetSubVer;
+}
+
+Value getnetworkinfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "getnetworkinfo\n"
+            " Returns an object containing various state info regarding P2P networking.\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"version\": xxxxx,            (numeric) the server version\n"
+            "  \"subver\": \"/s:n.n.n.n/\",     (string)  this clients subversion string\n"
+            "  \"protocolversion\": xxxxx,    (numeric) the protocol version\n"
+            "  \"localservices\": \"xxxx\",     (hex string) Our local service bits as a 16 char string.\n"
+            "  \"timeoffset\": xxxxx,         (numeric) the time offset\n"
+            "  \"connections\": xxxxx,        (numeric) the number of connections\n"
+            "  \"networkconnections\": [      (array)  the state of each possible network connection type\n"
+            "    \"name\": \"xxx\",             (string) network name\n"
+            "    \"limited\" : true|false,    (boolean) if service is limited\n"
+            "  ]\n"
+            "  \"localaddresses\": [          (array) list of local addresses\n"
+            "    \"address\": \"xxxx\",         (string) network address\n"
+            "    \"port\": xxx,               (numeric) network port\n"
+            "    \"score\": xxx               (numeric) relative score\n"
+            "  ]\n"
+            "}\n"
+        );
+
+    LOCK(cs_main);
+
+    Object obj;
+    obj.push_back(Pair("version",        (int)CLIENT_VERSION));
+    obj.push_back(Pair("subversion",     FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>())));
+    obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
+    obj.push_back(Pair("localservices",  strprintf("%016", PRIx64, nLocalServices)));
+    obj.push_back(Pair("timeoffset",     GetTimeOffset()));
+    obj.push_back(Pair("connections",    (int)vNodes.size()));
+    //obj.push_back(Pair("relayfee",       ValueFromAmount(minRelayTxFee.GetFeePerK())));
+    obj.push_back(Pair("networkconnections",GetNetworksInfo()));
+    Array localAddresses;
+    {
+        LOCK(cs_mapLocalHost);
+        BOOST_FOREACH(const PAIRTYPE(CNetAddr, LocalServiceInfo) &item, mapLocalHost)
+        {
+            Object rec;
+            rec.push_back(Pair("address", item.first.ToString()));
+            rec.push_back(Pair("port", item.second.nPort));
+            rec.push_back(Pair("score", item.second.nScore));
+            localAddresses.push_back(rec);
+        }
+    }
+    obj.push_back(Pair("localaddresses", localAddresses));
+
+    return obj;
 }
 
 Value getpeerinfo(const Array& params, bool fHelp)
@@ -72,10 +296,13 @@ Value getpeerinfo(const Array& params, bool fHelp)
         obj.push_back(Pair("addr", stats.addrName));
         if (!(stats.addrLocal.empty()))
             obj.push_back(Pair("addrlocal", stats.addrLocal));
-        obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
+        obj.push_back(Pair("services", strprintf("%016" PRIx64, stats.nServices)));
         obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
         obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
         obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
+        obj.push_back(Pair("pingtime", stats.dPingTime)); //return nodes ping time
+        if (stats.dPingWait > 0.0)
+            obj.push_back(Pair("pingwait", stats.dPingWait));
         obj.push_back(Pair("version", stats.nVersion));
         obj.push_back(Pair("subver", stats.strSubVer));
         obj.push_back(Pair("inbound", stats.fInbound));

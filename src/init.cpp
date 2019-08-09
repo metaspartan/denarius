@@ -691,7 +691,7 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    printf("\n");
     printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
@@ -699,14 +699,6 @@ bool AppInit2()
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
-
-    if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
-    {
-        if (!fortunastakePayments.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
-            return InitError(_("Unable to sign fortunastake payment winner, wrong key?"));
-        if (!sporkManager.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
-            return InitError(_("Unable to sign spork message, wrong key?"));
-    }
 
     //ignore fortunastakes below protocol version
     CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
@@ -788,6 +780,15 @@ bool AppInit2()
             BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"])
             {
                 enum Network net = ParseNetwork(snet);
+                if (net == NET_NATIVE_I2P)
+                {
+                // Disable upnp and IRC and listen on I2P only.
+#ifdef USE_UPNP
+                SoftSetBoolArg("-upnp", false);
+#endif
+                SoftSetBoolArg("-listen",true);
+                SoftSetBoolArg("-discover",false);
+                }
                 if (net == NET_UNROUTABLE)
                     return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
                 nets.insert(net);
@@ -835,7 +836,7 @@ bool AppInit2()
         };
 
     };
-
+#ifdef USE_NATIVETOR
     // Native Tor Onion and -tor flag integration
     if(fNativeTor)
     {
@@ -853,9 +854,21 @@ bool AppInit2()
             SetReachable(NET_TOR);
         };
     };
-
+#endif
+#ifdef USE_NATIVE_I2P
+    // -i2p can override both tor and proxy
+    if ((mapArgs.count("-i2p") && mapArgs["-i2p"] != "0") || IsI2POnly() && fNativeI2P)
+    {
+        // Disable on i2p per default
+#ifdef USE_UPNP
+        SoftSetBoolArg("-upnp", false);
+#endif
+        SoftSetBoolArg("-listen",true);
+        SetReachable(NET_NATIVE_I2P);
+    }
+#endif
     // see Step 2: parameter interactions for more information about these
-    if(!fNativeTor) // Available if nativetor are disabled
+    if(!fNativeTor && !fNativeI2P) // Available if nativetor are disabled
     {
         fNoListen = !GetBoolArg("-listen", true);
         fDiscover = GetBoolArg("-discover", true);
