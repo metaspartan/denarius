@@ -441,6 +441,11 @@ void ThreadGetMyExternalIP(void* parg)
 {
     // Make this thread recognisable as the external IP detection thread
     RenameThread("denarius-ext-ip");
+#ifdef USE_NATIVE_I2P
+
+    if (IsI2POnly() && fNativeI2P)
+        return;
+#endif
 
     CNetAddr addrLocalHost;
     if (GetMyExternalIP(addrLocalHost))

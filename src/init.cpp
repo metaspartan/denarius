@@ -474,6 +474,7 @@ bool AppInit2()
         if(fNativeI2P)
         {
             uiInterface.InitMessage(_("Creating Denarius I2P SAM session..."));
+            printf("Creating Denarius I2P SAM Session...\n");
 		    if (!I2PSession::Instance().Start() && IsI2POnly()) 
 			    return InitError("Can not start a connection to Denarius I2P SAM\n");
 
@@ -776,15 +777,17 @@ bool AppInit2()
             BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"])
             {
                 enum Network net = ParseNetwork(snet);
+#ifdef USE_NATIVE_I2P
                 if (net == NET_NATIVE_I2P)
                 {
-                // Disable upnp and IRC and listen on I2P only.
+                // Disable upnp and listen on I2P only.
 #ifdef USE_UPNP
                 SoftSetBoolArg("-upnp", false);
 #endif
                 SoftSetBoolArg("-listen",true);
                 SoftSetBoolArg("-discover",false);
                 }
+#endif
                 if (net == NET_UNROUTABLE)
                     return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
                 nets.insert(net);
@@ -853,18 +856,20 @@ bool AppInit2()
 #endif
 #ifdef USE_NATIVE_I2P
     // -i2p can override both tor and proxy
-    if ((mapArgs.count("-i2p") && mapArgs["-i2p"] != "0") || IsI2POnly() || fNativeI2P)
-    {
-        // Disable on i2p per default
+    if(fNativeI2P) {
+        if (!(mapArgs.count("-i2p") && mapArgs["-i2p"] == "0") || IsI2POnly())
+        {
+            // Disable on i2p per default
 #ifdef USE_UPNP
-        SoftSetBoolArg("-upnp", false);
+            SoftSetBoolArg("-upnp", false);
 #endif
-        SoftSetBoolArg("-listen",true);
-        SetReachable(NET_NATIVE_I2P);
+            SoftSetBoolArg("-listen",true);
+            SetReachable(NET_NATIVE_I2P);
+        }
     }
 #endif
     // see Step 2: parameter interactions for more information about these
-    if(!fNativeTor && !fNativeI2P) // Available if nativetor are disabled
+    if(!fNativeTor) // Available if nativetor are disabled
     {
         fNoListen = !GetBoolArg("-listen", true);
         fDiscover = GetBoolArg("-discover", true);
@@ -1294,24 +1299,24 @@ bool AppInit2()
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
 #ifdef USE_NATIVETOR
     if(fNativeTor)
-        printf("Native Tor Onion Relay Node Enabled");
+        printf("Native Tor Onion Relay Node Enabled\n");
     else
-        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+        printf("Native Tor Onion Relay Disabled\n");
 #endif
 #ifdef USE_NATIVE_I2P
     if(fNativeI2P)
-        printf("Native I2P Node Enabled");
+        printf("Native I2P Node Enabled\n");
     else
-        printf("Native I2P Disabled, Using Regular Peers...");
+        printf("Native I2P Disabled\n");
 #endif
 
     if (fDebug)
-        printf("Debugging is Enabled.");
+        printf("Debugging is Enabled.\n");
 	else
-        printf("Debugging is not enabled.");
+        printf("Debugging is not enabled.\n");
 
     if (!NewThread(StartNode, NULL))
-        InitError(_("Error: could not start node"));
+        InitError(_("Error: could not start node\n"));
 
     if (fServer)
         NewThread(ThreadRPCServer, NULL);

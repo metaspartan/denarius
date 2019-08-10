@@ -115,14 +115,14 @@ void Socket::init()
     socket_ = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_ == SAM_INVALID_SOCKET)
     {
-        print_error("Failed to create socket");
+        print_error("I2P SAM Socket init() Failed to create socket");
         return;
     }
 
     if (connect(socket_, (const sockaddr*)&servAddr_, sizeof(servAddr_)) == SAM_SOCKET_ERROR)
     {
         close();
-        print_error("Failed to connect to SAM");
+        print_error("I2P SAM Socket init() Failed to connect to SAM");
         return;
     }
 }
@@ -149,7 +149,7 @@ void Socket::write(const std::string& msg)
 {
     if (!isOk())
     {
-        print_error("Failed to send data because socket is closed");
+        print_error("I2P SAM Socket write() Failed to send data because socket is closed");
         return;
     }
     StreamSession::getLogStream () << "Send: " << msg << std::endl;
@@ -157,13 +157,13 @@ void Socket::write(const std::string& msg)
     if (sentBytes == SAM_SOCKET_ERROR)
     {
         close();
-        print_error("Failed to send data");
+        print_error("I2P SAM Socket write() Failed to send data");
         return;
     }
     if (sentBytes == 0)
     {
         close();
-        print_error("Socket was closed");
+        print_error("I2P SAM Socket write() Socket was closed");
         return;
     }
 }
@@ -172,7 +172,7 @@ std::string Socket::read()
 {
     if (!isOk())
     {
-        print_error("Failed to read data because socket is closed");
+        print_error("I2P SAM Socket read() Failed to read data because socket is closed");
         return std::string();
     }
     char buffer[SAM_BUFSIZE];
@@ -181,13 +181,13 @@ std::string Socket::read()
     if (recievedBytes == SAM_SOCKET_ERROR)
     {
         close();
-        print_error("Failed to receive data");
+        print_error("I2P SAM Socket read() Failed to receive data");
         return std::string();
     }
     if (recievedBytes == 0)
     {
         close();
-        print_error("Socket was closed");
+        print_error("I2P SAM Socket read() Socket was closed");
     }
     StreamSession::getLogStream () << "Reply: " << buffer << std::endl;
     return std::string(buffer);
@@ -253,7 +253,7 @@ StreamSession::StreamSession(
     , isSick_(false)
 {
     myDestination_ = createStreamSession(destination);
-    getLogStream () << "Created a brand new SAM session (" << sessionID_ << ")" << std::endl;
+    getLogStream () << "Created a brand new Denarius I2P SAM session (" << sessionID_ << ")" << std::endl;
 }
 
 StreamSession::StreamSession(StreamSession& rhs)
@@ -271,13 +271,13 @@ StreamSession::StreamSession(StreamSession& rhs)
     for(ForwardedStreamsContainer::const_iterator it = rhs.forwardedStreams_.begin(), end = rhs.forwardedStreams_.end(); it != end; ++it)
         forward(it->host, it->port, it->silent);
 
-    getLogStream () << "Created a new SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
+    getLogStream () << "Created a new Denarius I2P SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
 }
 
 StreamSession::~StreamSession()
 {
     stopForwardingAll();
-    getLogStream () << "Closing SAM session (" << sessionID_ << ") ..." << std::endl;
+    getLogStream () << "Closing Denarius I2P SAM session (" << sessionID_ << ") ..." << std::endl;
 }
 
 /*static*/
