@@ -131,12 +131,14 @@ Value getinfo(const Array& params, bool fHelp)
 #ifdef USE_NATIVE_I2P
     if (fNativeI2P)
     {
-        //const string destination;
-        //string i2p_address = I2PSession::GenerateB32AddressFromDestination(destination.string().c_str());
-        //obj.push_back(Pair("i2p",       (i2p_address)));
+        if (IsI2POnly()) {
+            obj.push_back(Pair("onlynet", ("native_i2p")));
+        }
+        std::string i2p_address = I2PSession::GenerateB32AddressFromDestination(addrSeenByPeer.GetI2PDestination()); // Not the best way yet
+        obj.push_back(Pair("i2p",       (i2p_address.c_str())));
     }
 #endif
-    if(!fNativeTor) // && !fNativeI2P
+    if(!fNativeTor && !fNativeI2P)
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
