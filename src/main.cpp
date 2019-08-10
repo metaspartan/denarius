@@ -243,7 +243,6 @@ bool Finalise()
 
     CTxDB().Close();
 
-
     return true;
 }
 

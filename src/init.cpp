@@ -112,19 +112,11 @@ void Shutdown(void* parg)
     {
         fShutdown = true;
 
+#ifdef USE_NATIVE_I2P
+        I2PSession::Instance().Stop(); //Shutdown I2P Session if enabled
+#endif
         Finalise();
-        /*
-        SecureMsgShutdown();
-
-        mempool.AddTransactionsUpdated(1);
-//        CTxDB().Close();
-        bitdb.Flush(false);
-        StopNode();
-        bitdb.Flush(true);
-        boost::filesystem::remove(GetPidFile());
-        UnregisterWallet(pwalletMain);
-        delete pwalletMain;
-        */
+        // Finalise is main.cpp
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Denarius exited\n\n");
@@ -481,6 +473,10 @@ bool AppInit2()
 #ifdef USE_NATIVE_I2P
         if(fNativeI2P)
         {
+            uiInterface.InitMessage(_("Creating Denarius I2P SAM session..."));
+		    if (!I2PSession::Instance().Start() && IsI2POnly()) 
+			    return InitError("Can not start a connection to Denarius I2P SAM\n");
+
             if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
             {
                 const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
@@ -857,7 +853,7 @@ bool AppInit2()
 #endif
 #ifdef USE_NATIVE_I2P
     // -i2p can override both tor and proxy
-    if ((mapArgs.count("-i2p") && mapArgs["-i2p"] != "0") || IsI2POnly() && fNativeI2P)
+    if ((mapArgs.count("-i2p") && mapArgs["-i2p"] != "0") || IsI2POnly() || fNativeI2P)
     {
         // Disable on i2p per default
 #ifdef USE_UPNP

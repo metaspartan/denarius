@@ -1,8 +1,8 @@
 // Copyright (c) 2012-2013 giv
+// Copyright (c) 2019 Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //--------------------------------------------------------------------------------------------------
-// see full documentation about SAM at http://www.i2p2.i2p/samv3.html
 #ifndef I2PSAM_H
 #define I2PSAM_H
 
@@ -11,19 +11,17 @@
 #include <stdint.h>
 #include <memory>
 #include <utility>
+#include <ostream>
 
 #ifdef WIN32
-////#define _WIN32_WINNT 0x0501
+//#define _WIN32_WINNT 0x0501
 #define WIN32_LEAN_AND_MEAN 1
-//#define FD_SETSIZE - Won't compile with it atm
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>     // for sockaddr_in
 #include <arpa/inet.h>      // for ntohs and htons
 #endif
-
-//#ifndef WIN32
 
 // TODO: check a possible bug about cast -1 to SOCKET
 #define SAM_INVALID_SOCKET      (-1)
@@ -236,9 +234,6 @@ public:
     const sockaddr_in& getAddress() const;
 
 private:
-    struct SocketImpl;
-    std::auto_ptr<SocketImpl> impl_;
-
     SOCKET socket_;
     sockaddr_in servAddr_;
     std::string SAMHost_;
@@ -284,7 +279,7 @@ struct RequestResult
 };
 
 template<class T>
-struct RequestResult<std::auto_ptr<T> >
+struct RequestResult<std::shared_ptr<T> >
 {
     // a class-helper for resolving a problem with conversion from temporary RequestResult to non-const RequestResult&
     struct RequestResultRef
@@ -297,12 +292,12 @@ struct RequestResult<std::auto_ptr<T> >
     };
 
     bool isOk;
-    std::auto_ptr<T> value;
+    std::shared_ptr<T> value;
 
     RequestResult()
         : isOk(false) {}
 
-    explicit RequestResult(std::auto_ptr<T>& value)
+    explicit RequestResult(std::shared_ptr<T>& value)
         : isOk(true), value(value) {}
 
 
@@ -354,8 +349,8 @@ public:
 
     static std::string generateSessionID();
 
-    RequestResult<std::auto_ptr<Socket> > accept(bool silent);
-    RequestResult<std::auto_ptr<Socket> > connect(const std::string& destination, bool silent);
+    RequestResult<std::shared_ptr<Socket> > accept(bool silent);
+    RequestResult<std::shared_ptr<Socket> > connect(const std::string& destination, bool silent);
     RequestResult<void> forward(const std::string& host, uint16_t port, bool silent);
     RequestResult<const std::string> namingLookup(const std::string& name) const;
     RequestResult<const FullDestination> destGenerate() const;
@@ -376,6 +371,11 @@ public:
     const std::string& getOptions() const;
 
     bool isSick() const;
+	bool isReady () const { return socket_.isOk() && !isSick (); };
+
+	static std::ostream& getLogStream ();
+	static void SetLogFile (const std::string& filename);
+	static void CloseLogFile ();
 
 private:
     StreamSession(const StreamSession& rhs);
@@ -401,6 +401,7 @@ private:
     const std::string i2pOptions_;
     ForwardedStreamsContainer forwardedStreams_;
     mutable bool isSick_;
+	static std::shared_ptr<std::ostream> logStream;
 
     void fallSick() const;
     FullDestination createStreamSession(const std::string &destination);

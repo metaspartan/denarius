@@ -1,19 +1,10 @@
 // Copyright (c) 2012-2013 giv
+// Copyright (c) 2019 Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //--------------------------------------------------------------------------------------------------
-#include "i2psam.h"
 
-#ifdef WIN32
-//#define _WIN32_WINNT 0x0501
-#define WIN32_LEAN_AND_MEAN 1
-#define FD_SETSIZE
-#include <winsock2.h>
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>     // for sockaddr_in
-#include <arpa/inet.h>      // for ntohs and htons
-#endif
+#include "i2psam.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -21,6 +12,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdarg.h>
+#include <fstream>
 
 #ifndef WIN32
 #include <errno.h>
@@ -32,7 +24,7 @@
 #endif
 
 #define SAM_BUFSIZE         65536
-#define I2P_DESTINATION_SIZE 516
+#define I2P_DESTINATION_SIZE 521  // actual size is 524 with trailing AAA== or AAQ==
 
 namespace SAM
 {
@@ -40,11 +32,9 @@ namespace SAM
 static void print_error(const std::string& err)
 {
 #ifdef WIN32
-    printf("I2P SAM WIN32 Error: %s: %d.\n", err.c_str(), WSAGetLastError());
-    //std::cout << err << "(" << WSAGetLastError() << ")" << std::endl;
+    StreamSession::getLogStream () << err << "(" << WSAGetLastError() << ")" << std::endl;
 #else
-    printf("I2P SAM Error: %s: %d.\n", err.c_str(), errno);
-    //std::cout << err << "(" << errno << ")" << std::endl;
+    StreamSession::getLogStream () << err << "(" << errno << ")" << std::endl;
 #endif
 }
 
@@ -162,8 +152,7 @@ void Socket::write(const std::string& msg)
         print_error("Failed to send data because socket is closed");
         return;
     }
-    printf("I2P SAM Send: %s\n", msg.c_str());
-    //std::cout << "Send: " << msg << std::endl;
+    StreamSession::getLogStream () << "Send: " << msg << std::endl;
     ssize_t sentBytes = send(socket_, msg.c_str(), msg.length(), 0);
     if (sentBytes == SAM_SOCKET_ERROR)
     {
@@ -200,8 +189,7 @@ std::string Socket::read()
         close();
         print_error("Socket was closed");
     }
-    printf("I2P SAM Reply: %d\n", buffer);
-    //std::cout << "Reply: " << buffer << std::endl;
+    StreamSession::getLogStream () << "Reply: " << buffer << std::endl;
     return std::string(buffer);
 }
 
@@ -265,8 +253,7 @@ StreamSession::StreamSession(
     , isSick_(false)
 {
     myDestination_ = createStreamSession(destination);
-    printf("I2P SAM Created a brand new SAM session: %d\n", sessionID_.c_str());
-    //std::cout << "Created a brand new SAM session (" << sessionID_ << ")" << std::endl;
+    getLogStream () << "Created a brand new SAM session (" << sessionID_ << ")" << std::endl;
 }
 
 StreamSession::StreamSession(StreamSession& rhs)
@@ -283,15 +270,14 @@ StreamSession::StreamSession(StreamSession& rhs)
 
     for(ForwardedStreamsContainer::const_iterator it = rhs.forwardedStreams_.begin(), end = rhs.forwardedStreams_.end(); it != end; ++it)
         forward(it->host, it->port, it->silent);
-    printf("I2P SAM Created a new SAM session: %d from another %s\n", sessionID_.c_str(), rhs.sessionID_.c_str());
-    //std::cout << "Created a new SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
+
+    getLogStream () << "Created a new SAM session (" << sessionID_ << ")  from another (" << rhs.sessionID_ << ")" << std::endl;
 }
 
 StreamSession::~StreamSession()
 {
     stopForwardingAll();
-    printf("I2P SAM Closing SAM Session: %d\n", sessionID_.c_str());
-    //std::cout << "Closing SAM session (" << sessionID_ << ") ..." << std::endl;
+    getLogStream () << "Closing SAM session (" << sessionID_ << ") ..." << std::endl;
 }
 
 /*static*/
@@ -314,16 +300,16 @@ std::string StreamSession::generateSessionID()
     return result;
 }
 
-RequestResult<std::auto_ptr<Socket> > StreamSession::accept(bool silent)
+RequestResult<std::shared_ptr<Socket> > StreamSession::accept(bool silent)
 {
-    typedef RequestResult<std::auto_ptr<Socket> > ResultType;
+    typedef RequestResult<std::shared_ptr<Socket> > ResultType;
 
-    std::auto_ptr<Socket> streamSocket(new Socket(socket_));
+    std::shared_ptr<Socket> streamSocket(new Socket(socket_));
     const Message::eStatus status = accept(*streamSocket, sessionID_, silent);
     switch(status)
     {
     case Message::OK:
-        return RequestResult<std::auto_ptr<Socket> >(streamSocket);
+        return std::move (RequestResult<std::shared_ptr<Socket> >(streamSocket));
     case Message::EMPTY_ANSWER:
     case Message::CLOSED_SOCKET:
     case Message::INVALID_ID:
@@ -336,11 +322,11 @@ RequestResult<std::auto_ptr<Socket> > StreamSession::accept(bool silent)
     return ResultType();
 }
 
-RequestResult<std::auto_ptr<Socket> > StreamSession::connect(const std::string& destination, bool silent)
+RequestResult<std::shared_ptr<Socket> > StreamSession::connect(const std::string& destination, bool silent)
 {
-    typedef RequestResult<std::auto_ptr<Socket> > ResultType;
+    typedef RequestResult<std::shared_ptr<Socket> > ResultType;
 
-    std::auto_ptr<Socket> streamSocket(new Socket(socket_));
+    std::shared_ptr<Socket> streamSocket(new Socket(socket_));
     const Message::eStatus status = connect(*streamSocket, sessionID_, destination, silent);
     switch(status)
     {
@@ -362,13 +348,13 @@ RequestResult<void> StreamSession::forward(const std::string& host, uint16_t por
 {
     typedef RequestResult<void> ResultType;
 
-    std::auto_ptr<Socket> newSocket(new Socket(socket_));
+    std::shared_ptr<Socket> newSocket(new Socket(socket_));
     const Message::eStatus status = forward(*newSocket, sessionID_, host, port, silent);
     switch(status)
     {
     case Message::OK:
         forwardedStreams_.push_back(ForwardedStream(newSocket.get(), host, port, silent));
-        newSocket.release();    // release after successful push_back only
+        newSocket = nullptr;    // release after successful push_back only
         return ResultType(true);
     case Message::EMPTY_ANSWER:
     case Message::CLOSED_SOCKET:
@@ -387,7 +373,7 @@ RequestResult<const std::string> StreamSession::namingLookup(const std::string& 
     typedef RequestResult<const std::string> ResultType;
     typedef Message::Answer<const std::string> AnswerType;
 
-    std::auto_ptr<Socket> newSocket(new Socket(socket_));
+    std::shared_ptr<Socket> newSocket(new Socket(socket_));
     const AnswerType answer = namingLookup(*newSocket, name);
     switch(answer.status)
     {
@@ -408,7 +394,7 @@ RequestResult<const FullDestination> StreamSession::destGenerate() const
     typedef RequestResult<const FullDestination> ResultType;
     typedef Message::Answer<const FullDestination> AnswerType;
 
-    std::auto_ptr<Socket> newSocket(new Socket(socket_));
+    std::shared_ptr<Socket> newSocket(new Socket(socket_));
     const AnswerType answer = destGenerate(*newSocket);
     switch(answer.status)
     {
@@ -434,7 +420,7 @@ FullDestination StreamSession::createStreamSession(const std::string& destinatio
         fallSick();
         return FullDestination();
     }
-    return FullDestination(answer.value.substr(0, I2P_DESTINATION_SIZE), answer.value, (destination == SAM_GENERATE_MY_DESTINATION));
+    return FullDestination(answer.value.substr(0, I2P_DESTINATION_SIZE) + "A==", answer.value, (destination == SAM_GENERATE_MY_DESTINATION));
 }
 
 void StreamSession::fallSick() const
@@ -593,6 +579,23 @@ const std::string& StreamSession::getSAMVersion() const
     return socket_.getVersion();
 }
 
+std::shared_ptr<std::ostream> StreamSession::logStream;
+
+std::ostream& StreamSession::getLogStream () 
+{
+	return logStream ? *logStream : std::cout;
+}
+
+void StreamSession::SetLogFile (const std::string& filename)
+{
+	logStream = std::make_shared<std::ofstream> (filename, std::ofstream::out | std::ofstream::trunc);
+}
+
+void StreamSession::CloseLogFile ()
+{
+	logStream = nullptr;
+}
+
 //--------------------------------------------------------------------------------------------------
 
 
@@ -656,7 +659,7 @@ std::string Message::sessionCreate(SessionStyle style, const std::string& sessio
     case sssRaw:      sessionStyle = "RAW";      break;
     }
 
-    static const char* sessionCreateFormat = "SESSION CREATE STYLE=%s ID=%s DESTINATION=%s inbound.nickname=%s %s\n";  // we add inbound.nickname option
+    static const char* sessionCreateFormat = "SESSION CREATE STYLE=%s ID=%s DESTINATION=%s inbound.nickname=%s SIGNATURE_TYPE=7 %s\n";  // we add inbound.nickname option
     return createSAMRequest(sessionCreateFormat, sessionStyle.c_str(), sessionID.c_str(), destination.c_str(), nickname.c_str(), options.c_str());
 }
 
@@ -746,7 +749,7 @@ std::string Message::destGenerate()
 //
 ///////////////////////////////////////////////////////////
 
-    static const char* destGenerateFormat = "DEST GENERATE\n";
+    static const char* destGenerateFormat = "DEST GENERATE SIGNATURE_TYPE=7\n";
     return createSAMRequest(destGenerateFormat);
 }
 

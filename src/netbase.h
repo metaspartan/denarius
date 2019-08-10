@@ -43,7 +43,7 @@ class CNetAddr
     protected:
         unsigned char ip[16]; // in network byte order
 #ifdef USE_NATIVE_I2P
-        unsigned char i2pDest[NATIVE_I2P_DESTINATION_SIZE];
+        unsigned char i2pDest[NATIVE_I2P_DESTINATION_SIZE]; // I2P Destination
 #endif
 
     public:

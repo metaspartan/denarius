@@ -632,9 +632,14 @@ if (fNativeI2P) {
     const bool isBase32Addr = (strName.size() == NATIVE_I2P_B32ADDR_SIZE) && (strName.substr(strName.size() - 8, 8) == ".b32.i2p");
     const std::string addr = isBase32Addr ? I2PSession::Instance().namingLookup(strName) : strName;
 
-    if ((addr.size() == NATIVE_I2P_DESTINATION_SIZE) && (addr.substr(addr.size() - 4, 4) == "AAAA")) { // last 4 symbols of b64-destination must be AAAA
-        memcpy(i2pDest, addr.c_str(), NATIVE_I2P_DESTINATION_SIZE);
-        return true;
+    if (addr.size() == NATIVE_I2P_DESTINATION_SIZE) {
+        auto trailer = addr.substr(addr.size() - 5, 5);
+        if ((trailer == "AAA==") || (trailer == "AAQ=="))
+        {   
+            // last 5 symbols of b64-destination must be AAA== (ElGamal) or AAQ== (ECIES)
+            memcpy(i2pDest, addr.c_str(), NATIVE_I2P_DESTINATION_SIZE);
+		    return true;
+        }
     }
 }
 #endif
@@ -788,8 +793,7 @@ bool CNetAddr::IsTor() const
 #ifdef USE_NATIVE_I2P
 bool CNetAddr::IsNativeI2P() const
 {
-    static const unsigned char pchAAAA[] = {'A','A','A','A'};
-    return (memcmp(i2pDest + NATIVE_I2P_DESTINATION_SIZE - sizeof(pchAAAA), pchAAAA, sizeof(pchAAAA)) == 0);
+    return i2pDest[0]; // nonzero
 }
 
 std::string CNetAddr::GetI2PDestination() const
@@ -1082,6 +1086,22 @@ std::vector<unsigned char> CNetAddr::GetGroup() const
     return vchRet;
 }
 
+#ifdef USE_NATIVE_I2P
+uint64_t CNetAddr::GetHash() const
+{
+    if(fNativeI2P) {
+        uint256 hash = IsNativeI2P() ? Hash(i2pDest, i2pDest + NATIVE_I2P_DESTINATION_SIZE) : Hash(&ip[0], &ip[16]);
+        uint64_t nRet;
+        memcpy(&nRet, &hash, sizeof(nRet));
+        return nRet;
+    } else {
+        uint256 hash = Hash(&ip[0], &ip[16]);
+        uint64_t nRet;
+        memcpy(&nRet, &hash, sizeof(nRet));
+        return nRet;
+    }
+}
+#else
 uint64_t CNetAddr::GetHash() const
 {
     uint256 hash = Hash(&ip[0], &ip[16]);
@@ -1089,6 +1109,7 @@ uint64_t CNetAddr::GetHash() const
     memcpy(&nRet, &hash, sizeof(nRet));
     return nRet;
 }
+#endif
 
 void CNetAddr::print() const
 {
@@ -1313,6 +1334,14 @@ bool CService::GetSockAddr(struct sockaddr* paddr, socklen_t *addrlen) const
 std::vector<unsigned char> CService::GetKey() const
 {
      std::vector<unsigned char> vKey;
+#ifdef USE_NATIVE_I2P
+     if (IsNativeI2P() && fNativeI2P)
+     {
+         vKey.resize(NATIVE_I2P_DESTINATION_SIZE);
+         memcpy(&vKey[0], i2pDest, NATIVE_I2P_DESTINATION_SIZE);
+         return vKey;
+     }
+#endif
      vKey.resize(18);
      memcpy(&vKey[0], ip, 16);
      vKey[16] = port / 0x100;
