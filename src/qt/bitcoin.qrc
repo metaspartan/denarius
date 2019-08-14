@@ -16,7 +16,6 @@
         <file alias="mark">res/icons/mark.png</file>
         <file alias="btc">res/icons/btc.png</file>
         <file alias="mn">res/icons/mn.png</file>
-        <file alias="fs">res/icons/fs.png</file>
         <file alias="denominate">res/icons/multi.png</file>
         <file alias="connect_0">res/icons/connect0_16.png</file>
         <file alias="connect_1">res/icons/connect1_16.png</file>
@@ -64,11 +63,6 @@
         <file alias="refresh">res/icons/refresh.png</file>
         <file alias="data">res/icons/data.png</file>
         <file alias="trade">res/icons/trade.png</file>
-        <file alias="i2pconnect_0">res/icons/i2plogo_0_16.png</file>
-        <file alias="i2pconnect_1">res/icons/i2plogo_1_16.png</file>
-        <file alias="i2pconnect_2">res/icons/i2plogo_2_16.png</file>
-        <file alias="i2pconnect_3">res/icons/i2plogo_3_16.png</file>
-        <file alias="i2pconnect_4">res/icons/i2plogo_4_16.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>

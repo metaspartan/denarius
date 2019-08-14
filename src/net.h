@@ -31,8 +31,8 @@ static const int PING_INTERVAL = 2 * 60;
 /** Time after which to disconnect, after waiting for a ping response (or inactivity). */
 static const int TIMEOUT_INTERVAL = 20 * 60;
 
-inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 10*1000); } // 10MB Buffer Size from 5MB 5*1000
-inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 10*1000); } // Previously 1MB 1*1000
+inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
+inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
 
 void AddOneShot(std::string strDest);
 bool RecvLine(SOCKET hSocket, std::string& strLine);
@@ -60,14 +60,6 @@ struct CNodeSignals
 CNodeSignals& GetNodeSignals();
 
 typedef int NodeId;
-
-#ifdef USE_NATIVE_I2P
-bool BindListenNativeI2P();
-bool BindListenNativeI2P(SOCKET& hSocket);
-bool IsI2POnly();
-
-extern int nI2PNodeCount;
-#endif
 
 enum
 {
@@ -165,13 +157,6 @@ extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 extern NodeId nLastNodeId;
 extern CCriticalSection cs_nLastNodeId;
 
-struct LocalServiceInfo {
-    int nScore;
-    int nPort;
-};
-
-extern CCriticalSection cs_mapLocalHost;
-extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
 class CNodeStateStats
 {
@@ -340,8 +325,8 @@ public:
     std::vector<uint256> getBlocksHash;
     uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
-	  bool fStartSync;
-	  int nMisbehavior;
+	bool fStartSync;
+	int nMisbehavior;
 
     // flood relay
     std::vector<CAddress> vAddrToSend;
@@ -369,15 +354,7 @@ public:
     bool fPingQueued;
 
     CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000)
-#ifdef USE_NATIVE_I2P
-    , nSendStreamType(SER_NETWORK | (((addrIn.nServices & NODE_I2P) || addrIn.IsNativeI2P()) ? 0 : SER_IPADDRONLY))
-    , nRecvStreamType(SER_NETWORK | (((addrIn.nServices & NODE_I2P) || addrIn.IsNativeI2P()) ? 0 : SER_IPADDRONLY))
-#endif
     {
-        // Native I2P Socket CNode structure
-#ifdef USE_NATIVE_I2P
-        ssSend.SetType(nSendStreamType);
-#endif
         nServices = 0;
         hSocket = hSocketIn;
         nRecvVersion = INIT_PROTO_VERSION;
@@ -405,7 +382,7 @@ public:
         pindexLastGetBlocksBegin = 0;
         hashLastGetBlocksEnd = 0;
         nStartingHeight = -1;
-		fStartSync = false;
+		    fStartSync = false;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
@@ -441,39 +418,6 @@ private:
     static CCriticalSection cs_totalBytesSent;
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
-#ifdef USE_NATIVE_I2P
-private:
-    int nSendStreamType;
-    int nRecvStreamType;
-public:
-    void SetSendStreamType(int nType)
-    {
-        nSendStreamType = nType;
-        ssSend.SetType(nSendStreamType);
-    }
-
-    void SetRecvStreamType(int nType)
-    {
-        nRecvStreamType = nType;
-        for (std::deque<CNetMessage>::iterator it = vRecvMsg.begin(), end = vRecvMsg.end(); it != end; ++it)
-        {
-            it->hdrbuf.SetType(nRecvStreamType);
-            it->vRecv.SetType(nRecvStreamType);
-        }
-    }
-
-    int GetSendStreamType() const
-    {
-        return nSendStreamType;
-    }
-
-    int GetRecvStreamType() const
-    {
-        return nRecvStreamType;
-    }
-
-#endif
-
 public:
 	NodeId GetId() const {
       return id;
@@ -528,21 +472,8 @@ public:
         // Known checking here is only to save space from duplicates.
         // SendMessages will filter it again for knowns that were added
         // after addresses were pushed.
-#ifdef USE_NATIVE_I2P
-        if(fNativeI2P) {
-            if (addr.IsValid() && !setAddrKnown.count(addr)) {
-                // if receiver doesn't support i2p-address we don't send it
-                if ((this->nServices & NODE_I2P) || !addr.IsNativeI2P())
-                    vAddrToSend.push_back(addr);
-            }
-        } else {
-            if (addr.IsValid() && !setAddrKnown.count(addr))
-                vAddrToSend.push_back(addr);
-        }
-#else
         if (addr.IsValid() && !setAddrKnown.count(addr))
             vAddrToSend.push_back(addr);
-#endif
     }
 
 

@@ -267,10 +267,6 @@ static const CRPCCommand vRPCCommands[] =
     { "getpeerinfo",            &getpeerinfo,            true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
-    { "getaddednodeinfo",       &getaddednodeinfo,       true,   true },
-    { "ping",                   &ping,                   true,   true },
-    { "getnettotals",           &getnettotals,           true,   false },
-    { "getnetworkinfo",         &getnetworkinfo,           true,   false },
     { "dumpbootstrap",          &dumpbootstrap,          false,  false },
     { "getdifficulty",          &getdifficulty,          true,   false },
     { "getinfo",                &getinfo,                true,   false },
@@ -1372,8 +1368,6 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
-
-    if (strMethod == "getaddednodeinfo"       && n > 0) ConvertTo<bool>(params[0]);
 
     if (strMethod == "addmultisigaddress"     && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);

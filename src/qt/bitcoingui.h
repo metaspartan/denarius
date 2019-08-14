@@ -112,19 +112,11 @@ private:
     QLabel *labelConnectionsIcon;
     QLabel *labelBlocksIcon;
     QLabel *labelConnectTypeIcon;
-    QLabel *labelFSLockIcon;
     QLabel *progressBarLabel;
     QLabel *mainIcon;
     QToolBar *mainToolbar;
     QToolBar *secondaryToolbar;
     QProgressBar *progressBar;
-    QLabel* netLabel;
-
-#ifdef USE_NATIVE_I2P
-    QLabel* labelI2PConnections;
-    QLabel* labelI2POnly;
-    QLabel* labelI2PGenerated;
-#endif
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;
@@ -191,9 +183,6 @@ private:
 public slots:
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
-#ifdef USE_NATIVE_I2P
-    void setNumI2PConnections(int count);
-#endif
     /** Set number of blocks shown in the UI */
     void setNumBlocks(int count, int nTotalBlocks);
     /** Set the encryption status as shown in the UI.
@@ -218,11 +207,7 @@ public slots:
     void mainToolbarOrientation(Qt::Orientation orientation);
     void secondaryToolbarOrientation(Qt::Orientation orientation);
 
-	  void gotoMultisigPage();
-
-#ifdef USE_NATIVE_I2P
-    void showGeneratedI2PAddr(const QString& caption, const QString& pub, const QString& priv, const QString& b32, const QString& configFileName);
-#endif
+	void gotoMultisigPage();
 
 private slots:
     /** Switch to overview (home) page */

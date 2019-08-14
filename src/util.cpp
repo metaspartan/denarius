@@ -92,8 +92,6 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
-bool fNativeI2P = false;
-bool fFSLock = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -1322,7 +1320,7 @@ boost::filesystem::path GetConfigFile()
 
 boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-fsconf", "fortunastake.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -1543,13 +1541,6 @@ string FormatFullVersion()
 {
     return CLIENT_BUILD;
 }
-
-#ifdef USE_NATIVE_I2P
-std::string FormatI2PNativeFullVersion()
-{
-    return; //return I2P_NATIVE_BUILD;
-}
-#endif
 
 // Format the subversion field according to BIP 14 spec (https://en.bitcoin.it/wiki/BIP_0014)
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments)

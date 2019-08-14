@@ -37,10 +37,6 @@
 #include <signal.h>
 #endif
 
-#ifdef USE_NATIVE_I2P
-#include "i2p.h"
-#endif
-
 
 using namespace std;
 using namespace boost;
@@ -112,11 +108,19 @@ void Shutdown(void* parg)
     {
         fShutdown = true;
 
-#ifdef USE_NATIVE_I2P
-        I2PSession::Instance().Stop(); //Shutdown I2P Session if enabled
-#endif
         Finalise();
-        // Finalise is main.cpp
+        /*
+        SecureMsgShutdown();
+
+        mempool.AddTransactionsUpdated(1);
+//        CTxDB().Close();
+        bitdb.Flush(false);
+        StopNode();
+        bitdb.Flush(true);
+        boost::filesystem::remove(GetPidFile());
+        UnregisterWallet(pwalletMain);
+        delete pwalletMain;
+        */
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Denarius exited\n\n");
@@ -265,15 +269,6 @@ bool static InitWarning(const std::string &str)
     return true;
 }
 
-#ifdef USE_NATIVE_I2P
-bool static BindNativeI2P(/*bool fError = true*/)
-{
-    if (IsLimited(NET_NATIVE_I2P))
-        return false;
-    return BindListenNativeI2P();
-}
-#endif
-
 
 bool static Bind(const CService &addr, bool fError = true)
 {
@@ -312,7 +307,7 @@ std::string HelpMessage()
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
         "  -seednode=<ip>         " + _("Connect to a node to retrieve peer addresses, and disconnect") + "\n" +
         "  -externalip=<ip>       " + _("Specify your own public address") + "\n" +
-        "  -onlynet=<net>         " + _("Only connect to nodes in network <net> (IPv4, IPv6, I2P, Native I2P or Tor)") + "\n" +
+        "  -onlynet=<net>         " + _("Only connect to nodes in network <net> (IPv4, IPv6 or Tor)") + "\n" +
         "  -discover              " + _("Discover own IP address (default: 1 when listening and no -externalip)") + "\n" +
         "  -listen                " + _("Accept connections from outside (default: 1 if no -proxy or -connect)") + "\n" +
         "  -bind=<addr>           " + _("Bind to given address. Use [host]:port notation for IPv6") + "\n" +
@@ -386,7 +381,8 @@ std::string HelpMessage()
 
         "\n" + _("Fortunastake options:") + "\n" +
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
-        "  -fsconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
+        "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
+        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
@@ -470,28 +466,6 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
-#ifdef USE_NATIVE_I2P
-        if(fNativeI2P)
-        {
-            uiInterface.InitMessage(_("Creating Denarius I2P SAM session..."));
-            printf("Creating Denarius I2P SAM Session...\n");
-		    if (!I2PSession::Instance().Start() && IsI2POnly()) 
-			    return InitError("Can not start a connection to Denarius I2P SAM\n");
-
-            if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
-            {
-                const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
-                uiInterface.ThreadSafeShowGeneratedI2PAddress(
-                            "Generated I2P address",
-                            generatedDest.pub,
-                            generatedDest.priv,
-                            I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
-                            GetConfigFile().string());
-                return false;
-            }
-        }
-#endif
-
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinStakeInterval = GetArg("-minstakeinterval", 60); // 2 blocks, don't make pos chains!
@@ -539,8 +513,6 @@ bool AppInit2()
 
     fTestNet = GetBoolArg("-testnet");
     fNativeTor = GetBoolArg("-nativetor");
-    fNativeI2P = GetBoolArg("-nativei2p");
-    fFSLock = GetBoolArg("-fsconflock");
 
     //if (fTestNet)
 
@@ -688,7 +660,7 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
-    printf("\n");
+    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
@@ -697,17 +669,25 @@ bool AppInit2()
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
 
+    if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
+    {
+        if (!fortunastakePayments.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
+            return InitError(_("Unable to sign fortunastake payment winner, wrong key?"));
+        if (!sporkManager.SetPrivKey(GetArg("-fortunastakepaymentskey", "")))
+            return InitError(_("Unable to sign spork message, wrong key?"));
+    }
+
     //ignore fortunastakes below protocol version
     CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
 
     if (fDaemon)
-        fprintf(stdout, "Denarius (D) server starting\n");
+        fprintf(stdout, "Denarius server starting\n");
 
     int64_t nStart;
 
     // Anonymous Ring Signatures ~ D e n a r i u s - v3.0.0.0
     if (initialiseRingSigs() != 0)
-        return InitError("initializeRingSigs() failed.");
+        return InitError("initialiseRingSigs() failed.");
 
 
     // ********************************************************* Step 5: verify database integrity
@@ -777,17 +757,6 @@ bool AppInit2()
             BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"])
             {
                 enum Network net = ParseNetwork(snet);
-#ifdef USE_NATIVE_I2P
-                if (net == NET_NATIVE_I2P)
-                {
-                // Disable upnp and listen on I2P only.
-#ifdef USE_UPNP
-                SoftSetBoolArg("-upnp", false);
-#endif
-                SoftSetBoolArg("-listen",true);
-                SoftSetBoolArg("-discover",false);
-                }
-#endif
                 if (net == NET_UNROUTABLE)
                     return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
                 nets.insert(net);
@@ -835,7 +804,7 @@ bool AppInit2()
         };
 
     };
-#ifdef USE_NATIVETOR
+
     // Native Tor Onion and -tor flag integration
     if(fNativeTor)
     {
@@ -853,23 +822,9 @@ bool AppInit2()
             SetReachable(NET_TOR);
         };
     };
-#endif
-#ifdef USE_NATIVE_I2P
-    // -i2p can override both tor and proxy
-    if(fNativeI2P) {
-        if (!(mapArgs.count("-i2p") && mapArgs["-i2p"] == "0") || IsI2POnly())
-        {
-            // Disable on i2p per default
-#ifdef USE_UPNP
-            SoftSetBoolArg("-upnp", false);
-#endif
-            SoftSetBoolArg("-listen",true);
-            SetReachable(NET_NATIVE_I2P);
-        }
-    }
-#endif
+
     // see Step 2: parameter interactions for more information about these
-    if(!fNativeTor) // Available if nativetor are disabled
+    if(!fNativeTor) // Available if nativetor is disabled
     {
         fNoListen = !GetBoolArg("-listen", true);
         fDiscover = GetBoolArg("-discover", true);
@@ -902,14 +857,8 @@ bool AppInit2()
                     fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
                 if (!IsLimited(NET_IPV4))
                     fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
-#ifdef USE_NATIVE_I2P
-                if(fNativeI2P) {
-                    if (!IsLimited(NET_NATIVE_I2P))
-                        fBound |= BindNativeI2P();
-                }
-#endif
             };
-            if (!fBound && !fNativeI2P)
+            if (!fBound)
                 return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
         };
     };
@@ -1226,7 +1175,7 @@ bool AppInit2()
     }
 
     if (pwalletMain) {
-        if(GetBoolArg("-fsconflock", true)) {
+        if(GetBoolArg("-fsconflock", true) & GetBoolArg("-mnconflock", true)) {
             LOCK(pwalletMain->cs_wallet);
             printf("Locking Fortunastakes:\n");
             uint256 mnTxHash;
@@ -1297,26 +1246,19 @@ bool AppInit2()
     printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
-#ifdef USE_NATIVETOR
+
     if(fNativeTor)
-        printf("Native Tor Onion Relay Node Enabled\n");
+        printf("Native Tor Onion Relay Node Enabled");
     else
-        printf("Native Tor Onion Relay Disabled\n");
-#endif
-#ifdef USE_NATIVE_I2P
-    if(fNativeI2P)
-        printf("Native I2P Node Enabled\n");
-    else
-        printf("Native I2P Disabled\n");
-#endif
+        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
 
     if (fDebug)
-        printf("Debugging is Enabled.\n");
+        printf("Debugging is Enabled.");
 	else
-        printf("Debugging is not enabled.\n");
+        printf("Debugging is not enabled.");
 
     if (!NewThread(StartNode, NULL))
-        InitError(_("Error: could not start node\n"));
+        InitError(_("Error: could not start node"));
 
     if (fServer)
         NewThread(ThreadRPCServer, NULL);

@@ -156,7 +156,7 @@ public:
 #define ADDRMAN_MIN_FAIL_DAYS 7
 
 // the maximum percentage of nodes to return in a getaddr call
-#define ADDRMAN_GETADDR_MAX_PCT 100 // Get 100% instead of 23%
+#define ADDRMAN_GETADDR_MAX_PCT 23
 
 // the maximum number of nodes to return in a getaddr call
 #define ADDRMAN_GETADDR_MAX 2500

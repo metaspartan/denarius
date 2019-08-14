@@ -14,10 +14,6 @@
 #include "ringsig.h"
 #include "txdb.h"
 
-#ifdef USE_NATIVE_I2P
-#include "i2p.h"
-#endif
-
 #include <sstream>
 #include <fstream>
 #include <sys/stat.h>
@@ -113,7 +109,6 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
-#ifdef USE_NATIVETOR
     if(fNativeTor)
     {
         string automatic_onion;
@@ -127,18 +122,7 @@ Value getinfo(const Array& params, bool fHelp)
         file >> automatic_onion;
         obj.push_back(Pair("tor",       (automatic_onion)));
     }
-#endif
-#ifdef USE_NATIVE_I2P
-    if (fNativeI2P)
-    {
-        if (IsI2POnly()) {
-            obj.push_back(Pair("onlynet", ("native_i2p")));
-        }
-        std::string i2p_address = I2PSession::GenerateB32AddressFromDestination(addrSeenByPeer.GetI2PDestination()); // Not the best way yet
-        obj.push_back(Pair("i2p",       (i2p_address.c_str())));
-    }
-#endif
-    if(!fNativeTor && !fNativeI2P)
+    if(!fNativeTor)
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
@@ -146,14 +130,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("fortunastake",  fFortunaStake));
-    obj.push_back(Pair("fslock",        fFSLock));
-#ifdef USE_NATIVETOR
+    obj.push_back(Pair("fortunastake",    fFortunaStake));
     obj.push_back(Pair("nativetor",     fNativeTor));
-#endif
-#ifdef USE_NATIVE_I2P
-    obj.push_back(Pair("nativei2p",     fNativeI2P));
-#endif
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
