@@ -4,10 +4,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //--------------------------------------------------------------------------------------------------
 #include <boost/thread/shared_mutex.hpp>
+#include <openssl/sha.h>
 #include <iostream>
 #include "i2p.h"
 #include "util.h"
+#include "uint256.h"
 #include "hash.h"
+#include "netbase.h"
+
+char I2PKeydat [1024] = {'\0'};
 
 namespace SAM
 {
@@ -128,6 +133,13 @@ void StreamSessionAdapter::Stop ()
 	StopSession ();
 }
 
+bool StreamSessionAdapter::isSick( void ) const
+{
+	SAM::StreamSession& s = sessionHolder_->getSession();
+	// ToDo: Find out why it's sick and perhaps restart the session later, more than likely the socket would not open
+	return s.isSick();
+}
+
 SAM::SOCKET StreamSessionAdapter::accept(bool silent)
 {
 	SAM::RequestResult<std::shared_ptr<SAM::Socket> > result = sessionHolder_->getSession().accept(silent);
@@ -214,9 +226,19 @@ const std::string& StreamSessionAdapter::getOptions() const
 	return sessionHolder_->getSession().getOptions();
 }
 
+const std::string& StreamSessionAdapter::getSessionID() const
+{
+	return sessionHolder_->getSession().getSessionID();
+}
+
 } // namespace SAM
 
 //--------------------------------------------------------------------------------------------------
+static std::string sSession = I2P_SESSION_NAME_DEFAULT;
+static std::string sHost = SAM_DEFAULT_ADDRESS;
+static uint16_t uPort = SAM_DEFAULT_PORT;
+static std::string sDestination = SAM_GENERATE_MY_DESTINATION;
+static std::string sOptions;
 
 I2PSession::I2PSession()
 {}
@@ -224,20 +246,158 @@ I2PSession::I2PSession()
 I2PSession::~I2PSession()
 {}
 
+void static FormatBoolI2POptionsString( std::string& I2pOptions, const std::string& I2pSamName, const std::string& confParamName )
+{
+    bool fConfigValue = GetArg( confParamName, true );
+
+    if (!I2pOptions.empty()) I2pOptions += " ";                             // seperate the parameters with <whitespace>
+    I2pOptions += I2pSamName + "=" + (fConfigValue ? "true" : "false");     // I2P router wants the words...
+}
+
+void static FormatIntI2POptionsString( std::string& I2pOptions, const std::string& I2pSamName, const std::string& confParamName )
+{
+    int64_t i64ConfigValue = GetArg( confParamName, 0 );
+
+    if (!I2pOptions.empty()) I2pOptions += " ";                     // seperate the parameters with <whitespace>
+    std::ostringstream oss;
+    oss << i64ConfigValue;                                          // One way of converting a value to a string
+    I2pOptions += I2pSamName + "=" + oss.str();                     // I2P router wants the chars....
+}
+
+void static BuildI2pOptionsString( void )
+{
+    std::string OptStr;
+
+    FormatIntI2POptionsString(OptStr, SAM_NAME_INBOUND_QUANTITY       , "-i2p.options.inbound.quantity" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_INBOUND_LENGTH         , "-i2p.options.inbound.length" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_INBOUND_LENGTHVARIANCE , "-i2p.options.inbound.lengthvariance" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_INBOUND_BACKUPQUANTITY , "-i2p.options.inbound.backupquantity" );
+    FormatBoolI2POptionsString(OptStr, SAM_NAME_INBOUND_ALLOWZEROHOP  , "-i2p.options.inbound.allowzerohop" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_INBOUND_IPRESTRICTION  , "-i2p.options.inbound.iprestriction" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_QUANTITY      , "-i2p.options.outbound.quantity" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_LENGTH        , "-i2p.options.outbound.length" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_LENGTHVARIANCE, "-i2p.options.outbound.lengthvariance" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_BACKUPQUANTITY, "-i2p.options.outbound.backupquantity" );
+    FormatBoolI2POptionsString(OptStr, SAM_NAME_OUTBOUND_ALLOWZEROHOP , "-i2p.options.outbound.allowzerohop" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_IPRESTRICTION , "-i2p.options.outbound.iprestriction" );
+    FormatIntI2POptionsString(OptStr, SAM_NAME_OUTBOUND_PRIORITY      , "-i2p.options.outbound.priority" );
+
+    std::string ExtrasStr = GetArg( "-i2p.options.extra", "");
+    if( ExtrasStr.size() ) {
+        if (!OptStr.empty()) OptStr += " ";                             // seperate the parameters with <whitespace>
+        OptStr += ExtrasStr;
+    }
+    sOptions = OptStr;                                                  // Keep this globally for use later in opening the session
+}
+
+// Initialize all the parameters with default values, if necessary.
+// These should not override any loaded from the denarius.conf file,
+// but if they are not set, then this insures that they are created with good values
+// SoftSetArg will return a bool, if you care to know if the parameter was changed or not.
+void InitializeI2pSettings( const bool fGenerated )
+{
+    if( SoftSetArg( "-i2p.options.samhost", SAM_DEFAULT_ADDRESS ) )    // Returns true if the param was undefined and setting its value was possible
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.samhost=%s\n", SAM_DEFAULT_ADDRESS );
+    if( SoftSetArg( "-i2p.options.samport", "7656" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.samport=%d\n", SAM_DEFAULT_PORT );
+    if( SoftSetArg( "-i2p.options.sessionname", I2P_SESSION_NAME_DEFAULT ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.sessionname=%s\n", I2P_SESSION_NAME_DEFAULT );
+    if( SoftSetArg( "-i2p.options.inbound.quantity", "3" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.quantity=%d\n", SAM_DEFAULT_INBOUND_QUANTITY );
+    if( SoftSetArg( "-i2p.options.inbound.length", "3" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.length=%d\n", SAM_DEFAULT_INBOUND_LENGTH );
+    if( SoftSetArg( "-i2p.options.inbound.lengthvariance", "0" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.lengthvariance=%d\n", SAM_DEFAULT_INBOUND_LENGTHVARIANCE );
+    if( SoftSetArg( "-i2p.options.inbound.backupquantity", "1" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.backupquantity=%d\n", SAM_DEFAULT_INBOUND_BACKUPQUANTITY );
+    if( SoftSetBoolArg( "-i2p.options.inbound.allowzerohop", SAM_DEFAULT_INBOUND_ALLOWZEROHOP ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.allowzerohop=%d\n", SAM_DEFAULT_OUTBOUND_ALLOWZEROHOP ? 1 : 0 );
+    if( SoftSetArg( "-i2p.options.inbound.iprestriction", "2" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.inbound.iprestriction=%d\n", SAM_DEFAULT_INBOUND_IPRESTRICTION );
+    if( SoftSetArg( "-i2p.options.outbound.quantity", "3" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.quantity=%d\n", SAM_DEFAULT_OUTBOUND_QUANTITY );
+    if( SoftSetArg( "-i2p.options.outbound.length", "3" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.length=%d\n", SAM_DEFAULT_OUTBOUND_LENGTH );
+    if( SoftSetArg( "-i2p.options.outbound.lengthvariance", "0" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.lengthvariance=%d\n", SAM_DEFAULT_OUTBOUND_LENGTHVARIANCE );
+    if( SoftSetArg( "-i2p.options.outbound.backupquantity", "1" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.backupquantity=%d\n", SAM_DEFAULT_OUTBOUND_BACKUPQUANTITY );
+    if( SoftSetBoolArg( "-i2p.options.outbound.allowzerohop", SAM_DEFAULT_OUTBOUND_ALLOWZEROHOP ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.allowzerohop=%d\n", SAM_DEFAULT_OUTBOUND_ALLOWZEROHOP ? 1 : 0 );
+    if( SoftSetArg( "-i2p.options.outbound.iprestriction", "2" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.iprestriction=%d\n", SAM_DEFAULT_OUTBOUND_IPRESTRICTION );
+    if( SoftSetArg( "-i2p.options.outbound.priority", "0" ) )
+        LogPrintf( "i2psettings() : parameter interaction: -i2p.options.enabled -> setting -i2p.options.outbound.priority=%d\n", SAM_DEFAULT_OUTBOUND_PRIORITY );
+    if( !SoftSetBoolArg("-i2p.options.static", false) )           // Returns true if the param was undefined and setting its value was possible
+        LogPrintf( "i2psettings() : PLEASE REMOVE -i2p.options.static= FROM YOUR CONFIGURATION FILE - It has moved to the [i2p.mydestination] section.\n" );
+
+    // Setup parameters required to open a new SAM session
+    uPort = (uint16_t)GetArg( "-i2p.options.samport", SAM_DEFAULT_PORT );
+    sSession = GetArg( "-i2p.options.sessionname", I2P_SESSION_NAME_DEFAULT );
+    sHost = GetArg( "-i2p.options.samhost", SAM_DEFAULT_ADDRESS );
+    // Critical to check here, if we are in dynamic destination mode, the intial session destination MUSTBE default too.
+    //  Which may not be what the user has set in the denarius.conf file.
+    // If the .static i2p destination is to be used, set it now, if not set the TRANSIENT value so the router generates it for us
+    if (!I2PKeydat[0]) { // There is an empty I2PKeydat in memory, so no file I2Pkey.dat on disk OR mydestination privatekey in denarius.conf is set
+        //LogPrintf("I2Pwrapper: we do not read from I2Pkey.dat\n"); 
+        sDestination = fGenerated ? SAM_GENERATE_MY_DESTINATION : GetArg( "-i2p.mydestination.privatekey", "" ); // either static with privatekey in denarius.conf or DYN
+    } else {
+        LogPrintf("I2Pwrapper: SAM destination generated from file i2pkey.dat\n"); 
+        sDestination = fGenerated ? SAM_GENERATE_MY_DESTINATION : I2PKeydat;
+    }
+//sDestination = fGenerated ? SAM_GENERATE_MY_DESTINATION : GetArg( "-i2p.mydestination.privatekey", "" );
+    // It's important here that sDestination be setup correctly, for soon when an initial Session object is about to be
+    // created.  When that happens, this variable is used to create the SAM session, upon which, after it's opened,
+    // the variable is updated to reflect that ACTUAL destination being used.  Whatever that value maybe,
+    // dynamically generated or statically set.  ToDo: Move sDestination into the Session class
+
+    BuildI2pOptionsString();   // Now build the I2P options string that's need to open a session
+}
+
+//Newer I2P functions for b32
+bool isValidI2pDestination( const SAM::FullDestination& DestKeys ) {
+
+    // Perhaps we're given a I2P native public address, last 4 symbols of b64-destination must be AAAA
+    bool fPublic = ((DestKeys.pub.size() == NATIVE_I2P_DESTINATION_SIZE) && isValidI2pAddress( DestKeys.pub));
+    // ToDo: Add more checking on the private key, for now this will do...
+    bool fPrivate = ((DestKeys.priv.size() > NATIVE_I2P_DESTINATION_SIZE) && isValidI2pAddress( DestKeys.priv));
+    return fPublic && fPrivate;
+}
+
+std::string GetDestinationPublicKey( const std::string& sDestinationPrivateKey )
+{
+    return( sDestinationPrivateKey.substr(0, NATIVE_I2P_DESTINATION_SIZE) );
+}
 
 /*static*/
 std::string I2PSession::GenerateB32AddressFromDestination(const std::string& destination)
 {
-	std::string canonicalDest = destination;
-	for (size_t pos = canonicalDest.find_first_of('-'); pos != std::string::npos; pos = canonicalDest.find_first_of('-', pos))
-		canonicalDest[pos] = '+';
-	for (size_t pos = canonicalDest.find_first_of('~'); pos != std::string::npos; pos = canonicalDest.find_first_of('~', pos))
-		canonicalDest[pos] = '/';
-	std::string rawHash = DecodeBase64(canonicalDest);
-	uint256 hash;
-	SHA256((const unsigned char*)rawHash.c_str(), rawHash.size(), (unsigned char*)&hash);
-	std::string result = EncodeBase32(hash.begin(), hash.end() - hash.begin()) + ".b32.i2p";
-	for (size_t pos = result.find_first_of('='); pos != std::string::npos; pos = result.find_first_of('=', pos-1))
-		result.erase(pos, 1);
-	return result;
+    return ::B32AddressFromDestination(destination);
+}
+
+std::string GenerateI2pDestinationMessage( const std::string& pub, const std::string& priv, const std::string& b32, const std::string& configFileName )
+{
+    std::string msg;
+
+    msg  = ("\nTo have a permanent I2P Destination address, you have to set options in denarius.conf:\n");
+    msg += ("Your Config file is: ");
+    msg += configFileName.c_str();
+
+    msg += ("\nYour I2P Destination Private Key denarius.conf file settings are:\n\n");
+    msg += strprintf( "[i2p.mydestination]\nstatic=1\nprivatekey=%s\n\n[i2p.options]\nenabled=1\n\n", priv.c_str() );
+    msg += ("****** Save the above text at the end of your configuration file and keep it secret.\n");
+    msg += ("       Or start with our denarius.conf.sample file, which has even more settings.\n");
+
+    msg += ("\nThis is your I2P Public Key:\n");
+    msg += pub.c_str();
+    msg += ("\n\n**** You can advertise the Public Key, all I2P Routers will know how to locate it.\n");
+
+    msg += ("\nYour personal b32.i2p Destination:\n");
+    msg += b32.c_str();
+    msg += ("\n\n** denarius peers now have built-in name resolution, once your on I2P for a few hours,\n");
+    msg += ("   most peers will likely be able to find you by this Base32 hash of the Public Key.\n");
+    msg += ("   Standard I2P network Routers are not as likely to find your destination with it.\n");
+    // msg += "\n\n";
+
+    return msg;
 }

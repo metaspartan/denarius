@@ -1,9 +1,10 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef BITCOIN_NETBASE_H
-#define BITCOIN_NETBASE_H
+#ifndef DENARIUS_NETBASE_H
+#define DENARIUS_NETBASE_H
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,9 @@
 
 extern int nConnectTimeout;
 extern bool fNameLookup;
+
+/** -timeout default */
+extern const int32_t DEFAULT_CONNECT_TIMEOUT;
 
 #ifdef WIN32
 // In MSVC, this is defined as a macro, undefine it to prevent a compile and link error
@@ -22,6 +26,7 @@ extern bool fNameLookup;
 #define NATIVE_I2P_DESTINATION_SIZE     516
 #define NATIVE_I2P_B32ADDR_SIZE         60
 #define NATIVE_I2P_NET_STRING           "native_i2p"
+#define I2P_DESTINATION_STORE 516
 #endif
 
 enum Network
@@ -36,6 +41,10 @@ enum Network
 #endif
     NET_MAX,
 };
+
+class uint256;
+//class CAddrMan;
+//extern CAddrMan addrman;
 
 /** IP address (IPv6, or IPv4 using mapped IPv6 range (::FFFF:0:0/96)) */
 class CNetAddr
@@ -87,7 +96,12 @@ class CNetAddr
 
 #ifdef USE_NATIVE_I2P
         bool IsNativeI2P() const;
+        bool CheckAndSetGarlicCat( void );
+        //bool IsI2P() const;
         std::string GetI2PDestination() const;
+        std::string GetI2pDestination() const;
+        bool SetI2pDestination( const std::string& sBase64Dest );
+        std::string ToB32String() const;
 #endif
 
         friend bool operator==(const CNetAddr& a, const CNetAddr& b);
@@ -175,7 +189,18 @@ bool ConnectSocket(const CService &addr, SOCKET& hSocketRet, int nTimeout, bool 
 bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault, int nTimeout, bool *outProxyConnectionFailed = 0);
 
 #ifdef USE_NATIVE_I2P
+/** Close socket and set hSocket to INVALID_SOCKET */
+bool CloseSocket(SOCKET& hSocket);
 bool SetSocketOptions(SOCKET& hSocket);
+/** Disable or enable blocking-mode for a socket */
+bool SetSocketNonBlocking(SOCKET& hSocket, bool fNonBlocking);
+//void AddTimeData(const CNetAddr& ip, int64_t nTime);
+bool IsMyDestinationShared();
+bool isValidI2pAddress( const std::string& I2pAddr );
+bool isValidI2pB32( const std::string& B32Address );
+bool isStringI2pDestination( const std::string & strName );
+std::string B32AddressFromDestination(const std::string& destination);
+uint256 GetI2pDestinationHash( const std::string& destination );
 #endif
 
 #endif

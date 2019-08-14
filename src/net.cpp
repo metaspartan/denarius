@@ -71,7 +71,7 @@ CAddress addrSeenByPeer(CService("0.0.0.0", 0), nLocalServices);
 uint64_t nLocalHostNonce = 0;
 boost::array<int, THREAD_MAX> vnThreadsRunning;
 static std::vector<SOCKET> vhListenSocket;
-CAddrMan addrman;
+//CAddrMan addrman; in netbase.cpp now
 
 #ifdef USE_NATIVE_I2P
 static std::vector<SOCKET> vhI2PListenSocket;
@@ -130,7 +130,11 @@ void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 // find 'best' local address for a particular peer
 bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
 {
-    if (fNoListen)
+#ifdef USE_NATIVE_I2P
+    if( !paddrPeer->IsNativeI2P() && fNoListen)
+#else
+    if( fNoListen )
+#endif
         return false;
 
     int nBestScore = -1;
@@ -250,11 +254,18 @@ bool AddLocal(const CService& addr, int nScore)
     if (!addr.IsRoutable())
         return false;
 
-    if (!fDiscover && nScore < LOCAL_MANUAL)
+#ifdef USE_NATIVE_I2P
+    if( !addr.IsI2P() && !fDiscover && nScore < LOCAL_MANUAL)
+#else
+    if (fDiscover && nScore < LOCAL_MANUAL)
+#endif
         return false;
 
     if (IsLimited(addr))
         return false;
+
+    if (fNativeI2P)
+        printf(addr.IsI2P() ? "Accepting I2P peers at: %s Score=%d\n" : "AddLocal(%s,%i)\n", addr.ToString().c_str(), nScore);
 
     printf("AddLocal(%s,%i)\n", addr.ToString().c_str(), nScore);
 
@@ -534,8 +545,15 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
     // Connect
     SOCKET hSocket;
     bool proxyConnectionFailed = false;
-    if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, GetDefaultPort(), nConnectTimeout, &proxyConnectionFailed) :
+
+#ifdef USE_NATIVE_I2P
+    int nPort = pszDest && isStringI2pDestination(string(pszDest)) ? 0 : GetDefaultPort();
+    if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, nPort, nConnectTimeout, &proxyConnectionFailed) :
                   ConnectSocket(addrConnect, hSocket, nConnectTimeout, &proxyConnectionFailed))
+#else
+    if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, GetDefaultPort(), nConnectTimeout, &proxyConnectionFailed) :
+                  ConnectSocket(addrConnect, hSocket, nConnectTimeout, &proxyConnectionFailed))    
+#endif
     {
         addrman.Attempt(addrConnect);
 
@@ -907,6 +925,53 @@ void SocketSendData(CNode *pnode)
     pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);
 }
 
+#ifdef USE_NATIVE_I2P
+static void AddIncomingI2pConnection(SOCKET hSocket, const CAddress& addr)
+{
+    int nInbound = 0;
+
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodes)
+            if (pnode->fInbound)
+                nInbound++;
+    }
+
+    if (hSocket == INVALID_SOCKET)
+    {
+        int nErr = WSAGetLastError();
+        if (nErr != WSAEWOULDBLOCK)
+            LogPrintf("I2P socket error accept failed: %d\n", nErr);
+    }
+    else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
+    {
+        {
+            LOCK(cs_setservAddNodeAddresses);
+            if (!setservAddNodeAddresses.count(addr))
+                CloseSocket(hSocket);
+        }
+    }
+    else if (CNode::IsBanned(addr))
+    {
+        LogPrintf("connection from %s dropped (banned)\n", addr.ToString().c_str());
+        CloseSocket(hSocket);
+    }
+    else
+    {
+        // At this point, the CAddress object has been correctly setup, the garlic field installed, the port zero'd out
+        // and the native i2p destination address verified.  So we can simply add a new node and know that the correct stream
+        // type and associated logic will all work correctly.
+        LogPrintf("accepted connection %s\n", addr.ToString().c_str());
+        CNode* pnode = new CNode(hSocket, addr, "", true);
+        pnode->AddRef();
+        {
+            LOCK(cs_vNodes);
+            vNodes.push_back(pnode);
+        }
+    }
+}
+#endif
+
 void ThreadSocketHandler(void* parg)
 {
     // Make this thread recognisable as the networking thread
@@ -1103,118 +1168,131 @@ if (fNativeI2P) {
         //
         // Accept new connections
         //
-        BOOST_FOREACH(SOCKET hListenSocket, vhListenSocket)
-        if (hListenSocket != INVALID_SOCKET && FD_ISSET(hListenSocket, &fdsetRecv))
-        {
-            struct sockaddr_storage sockaddr;
-            socklen_t len = sizeof(sockaddr);
-            SOCKET hSocket = accept(hListenSocket, (struct sockaddr*)&sockaddr, &len);
-            CAddress addr;
-            int nInbound = 0;
+#ifdef USE_NATIVE_I2P
+        if( !IsI2POnly() )
+#endif // Without I2P onlynet, execute the original code
+            BOOST_FOREACH(SOCKET hListenSocket, vhListenSocket)
+            if (hListenSocket != INVALID_SOCKET && FD_ISSET(hListenSocket, &fdsetRecv))
+            {
+                struct sockaddr_storage sockaddr;
+                socklen_t len = sizeof(sockaddr);
+                SOCKET hSocket = accept(hListenSocket, (struct sockaddr*)&sockaddr, &len);
+                CAddress addr;
+                int nInbound = 0;
 
-            if (hSocket != INVALID_SOCKET)
-                if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr))
-                    printf("Warning: Unknown socket family\n");
+                if (hSocket != INVALID_SOCKET)
+                    if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr))
+                        printf("Warning: Unknown socket family\n");
 
-            {
-                LOCK(cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, vNodes)
-                    if (pnode->fInbound)
-                        nInbound++;
-            }
-
-            if (hSocket == INVALID_SOCKET)
-            {
-                int nErr = WSAGetLastError();
-                if (nErr != WSAEWOULDBLOCK)
-                    printf("socket error accept failed: %d\n", nErr);
-            }
-            else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
-            {
-                closesocket(hSocket);
-            }
-            else if (CNode::IsBanned(addr))
-            {
-                printf("connection from %s dropped (banned)\n", addr.ToString().c_str());
-                closesocket(hSocket);
-            }
-            else
-            {
-                printf("accepted connection %s\n", addr.ToString().c_str());
-                CNode* pnode = new CNode(hSocket, addr, "", true);
-                pnode->AddRef();
                 {
                     LOCK(cs_vNodes);
-                    vNodes.push_back(pnode);
+                    BOOST_FOREACH(CNode* pnode, vNodes)
+                        if (pnode->fInbound)
+                            nInbound++;
+                }
+
+                if (hSocket == INVALID_SOCKET)
+                {
+                    int nErr = WSAGetLastError();
+                    if (nErr != WSAEWOULDBLOCK)
+                        printf("socket error accept failed: %d\n", nErr);
+                }
+                else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
+                {
+                    closesocket(hSocket);
+                }
+                else if (CNode::IsBanned(addr))
+                {
+                    printf("connection from %s dropped (banned)\n", addr.ToString().c_str());
+                    closesocket(hSocket);
+                }
+                else
+                {
+                    printf("accepted connection %s\n", addr.ToString().c_str());
+                    CNode* pnode = new CNode(hSocket, addr, "", true);
+                    pnode->AddRef();
+                    {
+                        LOCK(cs_vNodes);
+                        vNodes.push_back(pnode);
+                    }
                 }
             }
-        }
-
 #ifdef USE_NATIVE_I2P
         //
         // Accept new I2P connections
         //
 if (fNativeI2P) {
-        bool haveInvalids = false;
-        for (std::vector<SOCKET>::iterator it = vhI2PListenSocket.begin(); it != vhI2PListenSocket.end(); ++it)
+    std::vector<SOCKET>::iterator it = vhI2PListenSocket.begin();       // Start at the beginning of the list of listening sockets
+    // As long as the router is still up & there are some sockets to listen on, keep trying to accept new connections
+    while( !IsLimited( NET_NATIVE_I2P ) &&  it != vhI2PListenSocket.end() )
+    {
+        SOCKET& hI2PListenSocket = *it;
+        if( hI2PListenSocket == INVALID_SOCKET ) {
+            it = vhI2PListenSocket.erase(it);
+            if( !BindListenNativeI2P() )
+                break;
+            it = vhI2PListenSocket.begin();             // Start over from the beginning
+            continue;
+        }
+        // At this point we have a valid socket setup to accept inbound connections, lets see if anyone is knocking...
+        if (FD_ISSET(hI2PListenSocket, &fdsetRecv))
         {
-            SOCKET& hI2PListenSocket = *it;
-            if (hI2PListenSocket == INVALID_SOCKET)
+            const size_t bufSize = 1024;            // Same as i2pd has set on the other end
+            char pchBuf[bufSize];
+            memset(pchBuf, 0, bufSize);             // Yap someone is trying, lets find out who
+            int nBytes = recv(hI2PListenSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);
+            if (nBytes > 0)
             {
-                if (haveInvalids)
-                    it = vhI2PListenSocket.erase(it) - 1;
-                else
-                    BindListenNativeI2P(hI2PListenSocket);
-                haveInvalids = true;
-            }
-            else if (FD_ISSET(hI2PListenSocket, &fdsetRecv))
-            {
-                const size_t bufSize = NATIVE_I2P_DESTINATION_SIZE + 1;
-                char pchBuf[bufSize];
-                memset(pchBuf, 0, bufSize);
-                int nBytes = recv(hI2PListenSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);
-                if (nBytes > 0)
-                {
-                    if (nBytes == NATIVE_I2P_DESTINATION_SIZE + 1) // we're waiting for dest-hash + '\n' symbol
+                // When a '/n' return shows up we got their destination identity
+                // See this url for destination specifications https://geti2p.net/en/docs/spec/common-structures#struct_Destination
+                // Although over I2P Sam we get it as a base64 string.
+                char *pNewLine = strchr( pchBuf, '\n' );
+                if( pNewLine ) {                     // Yap the address is all here, pNewLine would be null otherwise.
+                    // Lets make sure it looks correct as a base64 i2p destination string
+                    if( strlen(pchBuf) == NATIVE_I2P_DESTINATION_SIZE + 1 ) // we're waiting for dest-hash + '\n' symbol
                     {
+                        // Fantastic if it checks out, we have another node!
+                        // The socket will be bound to that and used for message communications
                         std::string incomingAddr(pchBuf, pchBuf + NATIVE_I2P_DESTINATION_SIZE);
                         CAddress addr;
-                        if (addr.SetSpecial(incomingAddr) && addr.IsNativeI2P())
-                        {
-                            AddIncomingConnection(hI2PListenSocket, addr);
-                        }
-                        else
-                        {
-                            printf("Invalid incoming destination hash received (%s)\n", incomingAddr.c_str());
+                        if( addr.SetSpecial(incomingAddr) && addr.IsI2P() )
+                            AddIncomingI2pConnection(hI2PListenSocket, addr);
+                        else {
+                            LogPrintf("WARNING - Invalid incoming destination address, unable to setup node.  Received (%s)\n", incomingAddr.c_str());
                             closesocket(hI2PListenSocket);
                         }
-                    }
-                    else
-                    {
-                        printf("Invalid incoming destination hash size received (%d)\n", nBytes);
+                    } else {
+                        LogPrintf("WARNING - New destination addresses not yet supported, size & data received (%d) [%s]", nBytes, pchBuf);
                         closesocket(hI2PListenSocket);
                     }
-                }
-                else if (nBytes == 0)
-                {
-                    // socket closed gracefully
-                    printf("I2P listen socket closed\n");
+                } else {
+                    LogPrintf("WARNING - No eol found in destination address from router, size & data received (%d) [%s]\n", nBytes, pchBuf);
                     closesocket(hI2PListenSocket);
                 }
-                else if (nBytes < 0)
-                {
-                    // error
-                    const int nErr = WSAGetLastError();
-                    if (nErr == WSAEWOULDBLOCK || nErr == WSAEMSGSIZE || nErr == WSAEINTR || nErr == WSAEINPROGRESS)
-                        continue;
-
-                    printf("I2P listen socket recv error %d\n", nErr);
-                    closesocket(hI2PListenSocket);
-                }
-                hI2PListenSocket = INVALID_SOCKET;  // we've saved this socket in a CNode or closed it, so we can safety reset it anyway
-                BindListenNativeI2P(hI2PListenSocket);
             }
-        }
+            else if (nBytes == 0)
+            {
+                // socket closed gracefully, but why?  This shouldn't have happened
+                LogPrintf("WARNING - I2P listen socket was closed unexpectedly, with no data received.  Will attempt to open a new one.\n");
+                closesocket(hI2PListenSocket);
+            }
+            else if (nBytes < 0)
+            {
+                // error
+                const int nErr = WSAGetLastError();
+                if (nErr == WSAEWOULDBLOCK || nErr == WSAEMSGSIZE || nErr == WSAEINTR || nErr == WSAEINPROGRESS)
+                    continue;
+
+                LogPrintf("WARNING - I2P listen socket recv error %d, Will attempt to open a new one.\n", nErr);
+                closesocket(hI2PListenSocket);
+            }
+            // We now need to invalidate that socket from accepting new inbound connections,
+            // it was either closed do to an error, or hopefully a new node was added to our peers list as inbound.
+            // It will be sweep away and erased, then a new acceptor added later
+            *it++ = INVALID_SOCKET;
+        } else                                      // Just keep looking
+            it++;
+    }
 }
 #endif
 
@@ -1332,13 +1410,6 @@ if (fNativeI2P) {
         MilliSleep(10);
     }
 }
-
-
-
-
-
-
-
 
 
 #ifdef USE_UPNP
@@ -1612,6 +1683,8 @@ void ThreadDNSAddressSeed2(void* parg)
                 // Prefer I2P, if 4 is found, drop the clearnet dnsseed
                 if (found>4)
                     return;
+                if( IsI2POnly() )                                                           // Do what we normally would do on clearnet
+                    printf("Skipping Clearnet DNS seeds, Running I2P net only.\n");
             }
 #endif
             for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
@@ -1960,7 +2033,11 @@ void ThreadOpenAddedConnections2(void* parg)
         BOOST_FOREACH(string& strAddNode, lAddresses)
         {
             vector<CService> vservNode(0);
+#ifdef USE_NATIVE_I2P
+            if(Lookup(strAddNode.c_str(), vservNode, isStringI2pDestination(strAddNode) ? 0 : GetDefaultPort(), fNameLookup, 0))
+#else
             if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))
+#endif
             {
                 lservAddressesToAdd.push_back(vservNode);
                 {
@@ -2195,14 +2272,19 @@ bool BindListenNativeI2P()
 
 bool BindListenNativeI2P(SOCKET& hSocket)
 {
-    hSocket = I2PSession::Instance().accept(false);
-    if (!SetSocketOptions(hSocket) || hSocket == INVALID_SOCKET)
-        return false;
-    CService addrBind(I2PSession::Instance().getMyDestination().pub, 0);
-    if (addrBind.IsRoutable() && fDiscover)
-        printf("I2P: AddLocal() = %s\n", addrBind.ToString().c_str());
-        AddLocal(addrBind, LOCAL_BIND);
-    return true;
+    if( !IsLimited( NET_I2P ) ) {
+        hSocket = I2PSession::Instance().accept(false);
+        if (SetSocketNonBlocking(hSocket, true)) { // Set to non-blocking
+            string sDest = GetArg( "-i2p.mydestination.publickey", "" );
+            CService addrBind( sDest, 0 );
+            return AddLocal( addrBind, LOCAL_BIND );
+        } else
+            printf( "BindListenNativeI2P() ERROR - Unable to set I2P Socket options to non-blocking, after I2P accept was issued.\n" );
+    }
+    else
+        printf( "BindListenNativeI2P() ERROR - Unexpected I2P BIND request. Ignored, network access is limited.\n" );
+
+    return false;
 }
 
 bool IsI2POnly()

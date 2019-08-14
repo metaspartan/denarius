@@ -134,7 +134,9 @@ Value getinfo(const Array& params, bool fHelp)
         if (IsI2POnly()) {
             obj.push_back(Pair("onlynet", ("native_i2p")));
         }
-        std::string i2p_address = I2PSession::GenerateB32AddressFromDestination(addrSeenByPeer.GetI2PDestination()); // Not the best way yet
+        SAM::FullDestination I2pKeys;                                   // Something we can us to compare our results with
+        I2pKeys = I2PSession::Instance().getMyDestination();
+        std::string i2p_address = B32AddressFromDestination(I2pKeys.pub); // Not the best way yet
         obj.push_back(Pair("i2p",       (i2p_address.c_str())));
     }
 #endif

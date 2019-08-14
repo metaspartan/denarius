@@ -499,6 +499,24 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
 
+/** \brief
+ *
+ * \param strArg const std::string&
+ * \param strValue const std::string&
+ * \return void
+ *
+ */
+void HardSetArg(const std::string& strArg, const std::string& strValue);
+
+/** \brief HardSet functions will guarantee that the parameter name exists and is the value required
+ *
+ * \param strArg const std::string& the parameter string, should always start with a '-'something
+ * \param fValue bool the new value this parameter flag is to be set to.
+ * \return none
+ *
+ */
+void HardSetBoolArg(const std::string& strArg, bool fValue);
+
 /**
  * MWC RNG of George Marsaglia
  * This is intended to be fast. It has a period of 2^59.3, though the

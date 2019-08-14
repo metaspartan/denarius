@@ -4263,6 +4263,25 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             pfrom->addrLocal = addrMe;
             SeenLocal(addrMe);
         }
+#ifdef USE_NATIVE_I2P
+        // Any peer with a lesser version than our newest level needs special attention.
+        // Starting with Native I2P we introduce the concept of a GarlicCatagory address to
+        // the CNetAddr class private ip 16 byte array, its selected as a specific IP6
+        // formated address, one we can always identify as indicating an I2P address
+        // for backwards compatibility.  This is left out of the details received from
+        // any peer with a lesser version.  In future we'll change this again to a new
+        // protocol level, one which optimizes the storage required for new I2P Destination
+        // keys and optional certificate and go to a decoded base64 binary format.
+        if( fNativeI2P && pfrom->nVersion < PROTOCOL_VERSION ) {
+            if( addrMe.IsNativeI2P() ) addrMe.SetSpecial( addrMe.GetI2pDestination() );
+            if( addrFrom.IsNativeI2P() ) addrFrom.SetSpecial( addrFrom.GetI2pDestination() );
+        }
+
+        // Now we should have the right address data for addrMe and addrFrom
+        // if( fProtocolError ) LogPrintf( "Size of next object =%d, Remainder in buffer=%d\n", sizeof( nNonce ), vRecv.size() );
+
+        // if( fProtocolError ) LogPrintf( "Size of next object =unknown, Remainder in buffer=%d\n", vRecv.size() );
+#endif
 
         // Disconnect if we connected to ourself
         if (nNonce == nLocalHostNonce && nNonce > 1)
@@ -4275,6 +4294,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // record my external IP reported by peer
         if (addrFrom.IsRoutable() && addrMe.IsRoutable())
             addrSeenByPeer = addrMe;
+        
+#ifdef USE_NATIVE_I2P
+        // Here if the node does not seem to support that I2P service, we stripe that bit off our serialization type for sending.
+        // If it does support that I2P service, then we set this stream send type to only have that stream type bit on.
+        // ToDo: Not 100% sure, but this may need to be done, BEFORE we possibly push our version back to the node we got this message from.
+        // Also double check : SetRecvStreamType()
+        if (fNativeI2P)
+            pfrom->SetSendStreamType(pfrom->GetSendStreamType() & ( (pfrom->nServices & NODE_I2P) ? ~SER_IPADDRONLY : SER_IPADDRONLY));
+#endif
 
         // Be shy and don't send version until we hear
         if (pfrom->fInbound)
@@ -4292,7 +4320,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (!pfrom->fInbound)
         {
             // Advertise our address
-            if (!fNoListen && !IsInitialBlockDownload())
+            if(!fNoListen && !IsInitialBlockDownload())
             {
                 CAddress addr = GetLocalAddress(&pfrom->addr);
                 if (addr.IsRoutable())
@@ -4370,8 +4398,17 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else if (strCommand == "verack")
     {
+#ifdef USE_NATIVE_I2P
+        if (fNativeI2P) {
+            pfrom->SetRecvStreamType( pfrom->GetRecvStreamType() & ( (pfrom->nServices & NODE_I2P) ? ~SER_IPADDRONLY : SER_IPADDRONLY) );
+        } else {
+            pfrom->SetRecvVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
+            printf("net: received verack from peer version %d (recvVersion: %d) at %s\n", pfrom->nVersion, pfrom->nRecvVersion, pfrom->addr.ToString().c_str());
+        }
+#else
         pfrom->SetRecvVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
         printf("net: received verack from peer version %d (recvVersion: %d) at %s\n", pfrom->nVersion, pfrom->nRecvVersion, pfrom->addr.ToString().c_str());
+#endif
     }
 
 
@@ -4393,6 +4430,17 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vector<CAddress> vAddrOk;
         int64_t nNow = GetAdjustedTime();
         int64_t nSince = nNow - 10 * 60;
+
+        // Any peer addresses should be checked, if their size could include I2P destination addresses,
+        // we don't know what they are sending us, could be clearnet ip's or full i2p base64 strings.
+#ifdef USE_NATIVE_I2P
+        if (fNativeI2P) {
+            LogPrintf( "Received %d addresses from peer %s, each address serialization size is %u\n", vAddr.size(), pfrom->addr.ToString(), ::GetSerializeSize(pfrom->addr, SER_NETWORK, PROTOCOL_VERSION));
+        }
+#endif
+        // Then we've a new problem, every address MAY have to be fixed
+        // we dont know which network they may have come, but if they
+        // have a valid I2P address field, lets fix those
         BOOST_FOREACH(CAddress& addr, vAddr)
         {
             if (fShutdown)
@@ -5092,7 +5140,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                         pnode->setAddrKnown.clear();
 
                     // Rebroadcast our address
-                    if (!fNoListen)
+                    if(!fNoListen)
                     {
                         CAddress addr = GetLocalAddress(&pnode->addr);
                         if (addr.IsRoutable())

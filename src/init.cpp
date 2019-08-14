@@ -113,10 +113,12 @@ void Shutdown(void* parg)
         fShutdown = true;
 
 #ifdef USE_NATIVE_I2P
-        I2PSession::Instance().Stop(); //Shutdown I2P Session if enabled
+        if (fNativeI2P) {
+            I2PSession::Instance().stopForwardingAll(); //Shutdown I2P Session if enabled
+        }
 #endif
         Finalise();
-        // Finalise is main.cpp
+        // Finalise in main.cpp
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Denarius exited\n\n");
@@ -470,28 +472,6 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
-#ifdef USE_NATIVE_I2P
-        if(fNativeI2P)
-        {
-            uiInterface.InitMessage(_("Creating Denarius I2P SAM session..."));
-            printf("Creating Denarius I2P SAM Session...\n");
-		    if (!I2PSession::Instance().Start() && IsI2POnly()) 
-			    return InitError("Can not start a connection to Denarius I2P SAM\n");
-
-            if (GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
-            {
-                const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
-                uiInterface.ThreadSafeShowGeneratedI2PAddress(
-                            "Generated I2P address",
-                            generatedDest.pub,
-                            generatedDest.priv,
-                            I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
-                            GetConfigFile().string());
-                return false;
-            }
-        }
-#endif
-
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinStakeInterval = GetArg("-minstakeinterval", 60); // 2 blocks, don't make pos chains!
@@ -755,6 +735,7 @@ bool AppInit2()
         return InitError(strprintf(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
 
     // Native Tor Onion Relay Integration
+#ifdef USE_NATIVETOR
     if(fNativeTor)
     {
         do {
@@ -768,6 +749,21 @@ bool AppInit2()
             }
         } while (false);
     };
+#endif
+
+#ifdef USE_NATIVE_I2P
+    if (fNativeI2P && GetBoolArg(I2P_SAM_GENERATE_DESTINATION_PARAM, false))
+    {
+        const SAM::FullDestination generatedDest = I2PSession::Instance().destGenerate();
+        uiInterface.ThreadSafeShowGeneratedI2PAddress(
+                    "Generated I2P address",
+                    generatedDest.pub,
+                    generatedDest.priv,
+                    I2PSession::GenerateB32AddressFromDestination(generatedDest.pub),
+                    GetConfigFile().string());
+        return false;
+    }
+#endif
 
     if(!fNativeTor)
     {
@@ -784,8 +780,8 @@ bool AppInit2()
 #ifdef USE_UPNP
                 SoftSetBoolArg("-upnp", false);
 #endif
-                SoftSetBoolArg("-listen",true);
-                SoftSetBoolArg("-discover",false);
+                SoftSetBoolArg("-listen", false);
+                SoftSetBoolArg("-discover", false);
                 }
 #endif
                 if (net == NET_UNROUTABLE)
@@ -798,6 +794,20 @@ bool AppInit2()
                 if (!nets.count(net))
                     SetLimited(net);
             };
+#ifdef USE_NATIVE_I2P
+            // At this point, if the I2P network has been limited out, we need to override & disable the nativei2p parameter, if it was enabled.
+            if( fNativeI2P && !nets.count(NET_NATIVE_I2P) ) {
+                LogPrintf("Init() : parameter interaction: -onlynet != native_i2p while -nativei2p=1\n");
+                fNativeI2P = false;
+                HardSetBoolArg( "-nativei2p", false );
+            }
+
+            // If we made it this far, and i2p is not enabled, but the limited flag is still showing as not set, we need to make SURE that it is cleared!
+            // Really important, otherwise the software will start trying i2p addresses to connect with.  Later on, if a router session is created
+            // we set the reachability flag based on the results of trying to create that new session.
+            if(!fNativeI2P && !IsLimited( NET_NATIVE_I2P ))
+                SetLimited(NET_NATIVE_I2P);
+#endif
         };
 
         CService addrProxy;
@@ -854,20 +864,7 @@ bool AppInit2()
         };
     };
 #endif
-#ifdef USE_NATIVE_I2P
-    // -i2p can override both tor and proxy
-    if(fNativeI2P) {
-        if (!(mapArgs.count("-i2p") && mapArgs["-i2p"] == "0") || IsI2POnly())
-        {
-            // Disable on i2p per default
-#ifdef USE_UPNP
-            SoftSetBoolArg("-upnp", false);
-#endif
-            SoftSetBoolArg("-listen",true);
-            SetReachable(NET_NATIVE_I2P);
-        }
-    }
-#endif
+
     // see Step 2: parameter interactions for more information about these
     if(!fNativeTor) // Available if nativetor are disabled
     {
@@ -881,6 +878,13 @@ bool AppInit2()
 #endif
 
     bool fBound = false;
+#ifdef USE_NATIVE_I2P
+    // Regardless of users choice on binding, listening, discover or dns,
+    // if the I2P session is valid, we always try to bind our node & accept
+    // inbound peer connections to it over i2p
+    if(fNativeI2P)
+        fBound = BindListenNativeI2P();
+#endif
     if(!fNativeTor)
     {
         if (!fNoListen)
@@ -894,22 +898,22 @@ bool AppInit2()
                         return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
                     fBound |= Bind(addrBind);
                 }
-            } else
-            {
+            }
+#ifdef USE_NATIVE_I2P
+            // If the user selected any binds above, they will be done, otherwise no bind was explicitly
+            // given by the user, so the default is to bind with any ipv6 and ipv4 address the system can
+            // support, UNLESS we are already bound to I2P for listening, and don't WANT any clearnet binds
+            // then we do not execute this code.
+            else if( !IsI2POnly() ) {
+#else
+            else {
+#endif
                 struct in_addr inaddr_any;
                 inaddr_any.s_addr = INADDR_ANY;
-                if (!IsLimited(NET_IPV6))
-                    fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
-                if (!IsLimited(NET_IPV4))
-                    fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
-#ifdef USE_NATIVE_I2P
-                if(fNativeI2P) {
-                    if (!IsLimited(NET_NATIVE_I2P))
-                        fBound |= BindNativeI2P();
-                }
-#endif
-            };
-            if (!fBound && !fNativeI2P)
+                fBound |= Bind(CService(in6addr_any, GetListenPort()), false);
+                fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);
+            }
+            if (!fBound)
                 return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
         };
     };
@@ -1177,6 +1181,12 @@ bool AppInit2()
     printf("Loaded %i addresses from peers.dat  %" PRId64"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 
+#ifdef USE_NATIVE_I2P
+    if (fNativeI2P) {
+        printf("Loaded %i addresses from peers.dat in %dms and setup a %d entry address book table for b32.i2p destinations.\n",
+            addrman.size(), GetTimeMillis() - nStart, addrman.b32HashTableSize() );
+    }
+#endif
 
     // ********************************************************* Step 10.1: startup secure messaging
 

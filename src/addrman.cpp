@@ -99,8 +99,89 @@ CAddrInfo* CAddrMan::Create(const CAddress &addr, const CNetAddr &addrSource, in
     vRandom.push_back(nId);
     if (pnId)
         *pnId = nId;
+
+#ifdef USE_NATIVE_I2P
+    if( addr.IsNativeI2P() ) {
+        uint256 hash = GetI2pDestinationHash( addr.GetI2pDestination() );
+        mapI2pHashes[hash] = nId;
+    }
+#endif
     return &mapInfo[nId];
 }
+
+#ifdef USE_NATIVE_I2P
+/** \brief We sometimes have a vast reservoir of i2p destinations, b32.i2p addresses are simply the hash
+of those addresses, so we should be able to look them up here, if we already have the base64 string,
+we're done and never have to ask the router to lookup the destination.
+ *
+ * \param sB32addr const string&
+ * \return CAddrInfo*
+ *
+ */
+CAddrInfo* CAddrMan::LookupB32addr(const std::string& sB32addr)
+{
+    // Convert the string back into a hash, and look it up in the AddrMan map
+    if( isValidI2pB32(sB32addr) ) {
+        bool fValid;
+        std::vector<unsigned char> vchHash;
+        std::string sHash = sB32addr;
+        sHash.resize( sB32addr.size() - 8 );
+        vchHash = DecodeBase32( sHash.c_str(), &fValid );
+        uint256 uintHash( vchHash );        // Hate wasting time copying object, but vectors, strings and uint256 values dont always pass compiler checks otherwise
+        if( fValid ) {                      // Lookup the hash for a match, if found we have the CAddrInfo id
+            std::map<uint256, int>::iterator it = mapI2pHashes.find( uintHash );
+            if( it != mapI2pHashes.end() ) {
+                std::map<int, CAddrInfo>::iterator it2 = mapInfo.find((*it).second);
+                if (it2 != mapInfo.end())
+                    return &(*it2).second;
+            }
+        }
+    }
+    return NULL;
+}
+
+ /** \brief Simply looks up the hash, if the id is found returns a pointer to the
+            CAddrInfo(CAddress(CService(CNetAddr()))) class object where the base64 string is stored
+ *
+ * \param sB32addr const string&
+ * \return string, null if not found or the Base64 destination string of give b32.i2p address
+ *
+ */
+std::string CAddrMan::GetI2pBase64Destination(const std::string& sB32addr)
+{
+    CAddrInfo* paddr = LookupB32addr(sB32addr);
+    return  paddr && paddr->IsI2P() ? paddr->GetI2pDestination() : std::string();
+}
+
+// Returns the number of entries processed
+int CAddrMan::CopyDestinationStats( std::vector<CDestinationStats>& vStats )
+{
+    int nSize = 0;
+    vStats.clear();
+    vStats.reserve( mapI2pHashes.size() );
+    for( std::map<uint256, int>::iterator it = mapI2pHashes.begin(); it != mapI2pHashes.end(); it++) {
+        CDestinationStats stats;
+        std::map<int, CAddrInfo>::iterator it2 = mapInfo.find((*it).second);
+        if (it2 != mapInfo.end()) {
+            CAddrInfo* paddr = &(*it2).second;
+            stats.sAddress = paddr->ToString();
+            stats.fInTried = paddr->fInTried;
+            stats.uPort = paddr->GetPort();
+            stats.nServices = paddr->nServices;
+            stats.nAttempts = paddr->nAttempts;
+            stats.nLastTry = paddr->nLastTry;
+            stats.nSuccessTime = paddr->nLastSuccess;
+            stats.sSource = paddr->source.ToString();
+            stats.sBase64 = paddr->GetI2pDestination();
+            nSize++;
+            vStats.push_back( stats );
+        }
+    }
+    assert( mapI2pHashes.size() == static_cast<unsigned long>(nSize) );
+    return nSize;
+}
+
+#endif
 
 void CAddrMan::SwapRandom(unsigned int nRndPos1, unsigned int nRndPos2)
 {
@@ -164,6 +245,13 @@ int CAddrMan::ShrinkNew(int nUBucket)
                 vRandom.pop_back();
                 mapAddr.erase(info);
                 mapInfo.erase(*it);
+#ifdef USE_NATIVE_I2P
+                if(info.IsNativeI2P() && fNativeI2P) {
+                    uint256 hash = GetI2pDestinationHash( info.GetI2pDestination() );
+                    assert(mapI2pHashes.count(hash));
+                    mapI2pHashes.erase(hash);
+                }
+#endif
                 nNew--;
             }
             vNew.erase(it);
@@ -193,6 +281,13 @@ int CAddrMan::ShrinkNew(int nUBucket)
         vRandom.pop_back();
         mapAddr.erase(info);
         mapInfo.erase(nOldest);
+#ifdef USE_NATIVE_I2P
+        if(info.IsNativeI2P() && fNativeI2P) {
+            uint256 hash = GetI2pDestinationHash( info.GetI2pDestination() );
+            assert(mapI2pHashes.count(hash) ==  1);
+            mapI2pHashes.erase(hash);
+        }
+#endif
         nNew--;
     }
     vNew.erase(nOldest);

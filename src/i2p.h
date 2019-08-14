@@ -9,6 +9,8 @@
 #include "util.h"
 #include "i2psam.h"
 
+extern char I2PKeydat [1024];
+
 #define I2P_NET_NAME_PARAM              "-i2p"
 
 #define I2P_SESSION_NAME_PARAM          "-i2psessionname"
@@ -46,6 +48,7 @@ public:
     bool forward(const std::string& host, uint16_t port, bool silent);
     std::string namingLookup(const std::string& name) const;
     SAM::FullDestination destGenerate() const;
+    bool isSick( void )const;
 
     void stopForwarding(const std::string& host, uint16_t port);
     void stopForwardingAll();
@@ -60,6 +63,7 @@ public:
     const std::string& getSAMMaxVer() const;
     const std::string& getSAMVersion() const;
     const std::string& getOptions() const;
+    const std::string& getSessionID() const;
 
 private:
 
@@ -101,5 +105,34 @@ private:
     I2PSession(const I2PSession&);
     I2PSession& operator=(const I2PSession&);
 };
+
+void InitializeI2pSettings( const bool fGenerated );
+
+/**
+ * Specific functions we need to implement I2P functionality
+ */
+std::string FormatI2PNativeFullVersion();
+std::string GenerateI2pDestinationMessage( const std::string& pub, const std::string& priv, const std::string& b32, const std::string& configFileName );
+
+
+struct Identity
+{
+    uint8_t publicKey[256];
+    uint8_t signingKey[128];
+    struct
+    {
+        uint8_t type;
+        uint16_t length;
+    } certificate;
+};
+
+//New I2P functions
+bool isValidI2pDestination( const SAM::FullDestination& DestKeys );
+std::string GetDestinationPublicKey( const std::string& sDestinationPrivateKey );
+bool isValidI2pAddress( const std::string& I2pAddr );
+bool isValidI2pB32( const std::string& B32Address );
+bool isStringI2pDestination( const std::string & strName );
+std::string B32AddressFromDestination(const std::string& destination);
+//uint256 GetI2pDestinationHash( const std::string& destination );
 
 #endif // I2P_H

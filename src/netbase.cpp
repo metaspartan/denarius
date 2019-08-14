@@ -6,6 +6,9 @@
 #include "netbase.h"
 #include "util.h"
 #include "sync.h"
+#include "uint256.h"
+#include "addrman.h" 
+#include "hash.h"
 
 #ifndef WIN32
 #include <sys/fcntl.h>
@@ -17,15 +20,30 @@
 
 #include "strlcpy.h"
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
+#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
+#include <boost/thread.hpp>
+#include <openssl/sha.h>
 
 using namespace std;
+
+/** -timeout default */
+const int32_t DEFAULT_CONNECT_TIMEOUT = 20000;
+//! ToDo: Further analysis from debugging i2p connections may reveal that this setting needs more adjustment.
+//!       Connected peer table entries show ping times >13000ms  20000 sets this number's default
+//!       to 4 times what btc had (5000) .. Or possibly we need to add a new variable for I2p specifically.
 
 // Settings
 static proxyType proxyInfo[NET_MAX];
 static proxyType nameproxyInfo;
 static CCriticalSection cs_proxyInfos;
-int nConnectTimeout = 5000;
+
+//int nConnectTimeout = 5000;
+int nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;      //! See netbase.h for setting value, i2p requires setting this higher
 bool fNameLookup = false;
+
+CAddrMan addrman;               //! This must be here, not in net.cpp so that lib_common can contain CAddrman code, as well as timedata
+
+
 
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
 
@@ -485,6 +503,19 @@ bool IsProxy(const CNetAddr &addr) {
 }
 
 #ifdef USE_NATIVE_I2P
+bool CloseSocket(SOCKET& hSocket)
+{
+    if (hSocket == INVALID_SOCKET)
+        return false;
+#ifdef WIN32
+    int ret = closesocket(hSocket);
+#else
+    int ret = close(hSocket);
+#endif
+    hSocket = INVALID_SOCKET;
+    return ret != SOCKET_ERROR;
+}
+
 bool SetSocketOptions(SOCKET& hSocket)
 {
     if (hSocket == INVALID_SOCKET)
@@ -506,6 +537,35 @@ bool SetSocketOptions(SOCKET& hSocket)
         hSocket = INVALID_SOCKET;
         return false;
     }
+    return true;
+}
+
+bool SetSocketNonBlocking(SOCKET& hSocket, bool fNonBlocking)
+{
+    if (fNonBlocking) {
+#ifdef WIN32
+        u_long nOne = 1;
+        if (ioctlsocket(hSocket, FIONBIO, &nOne) == SOCKET_ERROR) {
+#else
+        int fFlags = fcntl(hSocket, F_GETFL, 0);
+        if (fcntl(hSocket, F_SETFL, fFlags | O_NONBLOCK) == SOCKET_ERROR) {
+#endif
+            CloseSocket(hSocket);
+            return false;
+        }
+    } else {
+#ifdef WIN32
+        u_long nZero = 0;
+        if (ioctlsocket(hSocket, FIONBIO, &nZero) == SOCKET_ERROR) {
+#else
+        int fFlags = fcntl(hSocket, F_GETFL, 0);
+        if (fcntl(hSocket, F_SETFL, fFlags & ~O_NONBLOCK) == SOCKET_ERROR) {
+#endif
+            CloseSocket(hSocket);
+            return false;
+        }
+    }
+
     return true;
 }
 #endif
@@ -624,6 +684,7 @@ if (fNativeI2P) {
 
 static const unsigned char pchOnionCat[] = {0xFD,0x87,0xD8,0x7E,0xEB,0x43};
 static const unsigned char pchGarliCat[] = {0xFD,0x60,0xDB,0x4D,0xDD,0xB5};
+static const unsigned char pchGarlicCat[] = {0xFD,0x60, 0xDB,0x4D, 0xDD,0xB5};        // A /48 ip6 prefix for I2P destinations clone of pchGarliCat - redudant, will be removed
 
 bool CNetAddr::SetSpecial(const std::string &strName)
 {
@@ -790,18 +851,6 @@ bool CNetAddr::IsTor() const
     return (memcmp(ip, pchOnionCat, sizeof(pchOnionCat)) == 0);
 }
 
-#ifdef USE_NATIVE_I2P
-bool CNetAddr::IsNativeI2P() const
-{
-    return i2pDest[0]; // nonzero
-}
-
-std::string CNetAddr::GetI2PDestination() const
-{
-    return std::string(i2pDest, i2pDest + NATIVE_I2P_DESTINATION_SIZE);
-}
-#endif
-
 bool CNetAddr::IsI2P() const
 {
     return (memcmp(ip, pchGarliCat, sizeof(pchGarliCat)) == 0);
@@ -909,8 +958,7 @@ std::string CNetAddr::ToStringIP() const
 {
 #ifdef USE_NATIVE_I2P
     if (fNativeI2P) {
-        if (IsNativeI2P())
-            return GetI2PDestination();
+        return IsNativeI2P() ? ToB32String() : "???.b32.i2p";
     }
 #endif
     if (IsTor())
@@ -1377,3 +1425,101 @@ void CService::SetPort(unsigned short portIn)
 {
     port = portIn;
 }
+
+#ifdef USE_NATIVE_I2P
+bool IsMyDestinationShared()
+{
+    return GetBoolArg("-i2p.mydestination.shareaddr", true); //CSlave: sharing enabled by default unless specified shareaddr=0  
+}
+
+// This test should pass for both public and private keys, as the first part of the private key is the public key.
+bool isValidI2pAddress( const std::string& I2pAddr )
+{
+    if( I2pAddr.size() < I2P_DESTINATION_STORE ) return false;
+    return (I2pAddr.substr( I2P_DESTINATION_STORE - 4, 4 ) == "AAAA");
+}
+
+bool isValidI2pB32( const std::string& B32Address )
+{
+    return (B32Address.size() == NATIVE_I2P_B32ADDR_SIZE) && (B32Address.substr(B32Address.size() - 8, 8) == ".b32.i2p");
+}
+
+bool isStringI2pDestination( const std::string & strName )
+{
+    return isValidI2pB32( strName ) || isValidI2pAddress( strName );
+}
+
+bool CNetAddr::IsNativeI2P() const
+{
+    static const unsigned char pchAAAA[] = {'A','A','A','A'};
+    // For unsigned char [] it's quicker here to just do a memory comparison .verses. conversion to a string.
+    // In order for this to work however, it's important that the memory has been cleared when this object
+    // was created.
+    // ToDo: More work could be done here to confirm it will never mistakenly see a valid native i2p address.
+    return (i2pDest[0] != 0) && (memcmp(i2pDest + I2P_DESTINATION_STORE - sizeof(pchAAAA), pchAAAA, sizeof(pchAAAA)) == 0);
+}
+
+std::string CNetAddr::GetI2pDestination() const
+{
+    return IsNativeI2P() ? std::string(i2pDest, i2pDest + I2P_DESTINATION_STORE) : std::string();
+}
+
+std::string CNetAddr::GetI2PDestination() const
+{
+    return std::string(i2pDest, i2pDest + NATIVE_I2P_DESTINATION_SIZE);
+}
+
+bool CNetAddr::CheckAndSetGarlicCat( void )
+{
+    if( IsNativeI2P() && !IsI2P() ) {               // Fix the ip address field
+        memset(ip, 0, sizeof(ip));                  // Make sure the ip is completely zeroed out
+        memcpy(ip, pchGarlicCat, sizeof(pchGarlicCat));
+        return true;
+    }
+    return false;
+}
+
+bool CNetAddr::SetI2pDestination( const std::string& sBase64Dest )
+{
+    size_t iSize = sBase64Dest.size();
+    if( iSize ) {
+        Init();
+        memcpy(ip, pchGarlicCat, sizeof(pchGarlicCat));
+    } else          // First & always if we're given some non-zero value, Make sure the whole field is zeroed out
+        memset(i2pDest, 0, I2P_DESTINATION_STORE);
+
+    // Copy what the caller wants put there, up to the max size
+    // Its not going to be valid, if the size is wrong, but do it anyway
+    if( iSize ) memcpy( i2pDest, sBase64Dest.c_str(), iSize < I2P_DESTINATION_STORE ? iSize : I2P_DESTINATION_STORE );
+    return (iSize == I2P_DESTINATION_STORE) && IsNativeI2P();
+}
+
+// Convert this netaddress objects native i2p address into a b32.i2p address
+std::string CNetAddr::ToB32String() const
+{
+    return B32AddressFromDestination( GetI2pDestination() );
+}
+
+uint256 GetI2pDestinationHash( const std::string& destination )
+{
+    std::string canonicalDest = destination;                    // Copy the string locally, so we can modify it & its not a const
+
+    for (size_t pos = canonicalDest.find_first_of('-'); pos != std::string::npos; pos = canonicalDest.find_first_of('-', pos))
+        canonicalDest[pos] = '+';
+    for (size_t pos = canonicalDest.find_first_of('~'); pos != std::string::npos; pos = canonicalDest.find_first_of('~', pos))
+        canonicalDest[pos] = '/';
+    std::string rawDest = DecodeBase64(canonicalDest);
+    uint256 b32hash;
+    SHA256((const unsigned char*)rawDest.c_str(), rawDest.size(), (unsigned char*)&b32hash);
+    return b32hash;
+}
+
+std::string B32AddressFromDestination(const std::string& destination)
+{
+    uint256 b32hash = GetI2pDestinationHash( destination );
+    std::string result = EncodeBase32(b32hash.begin(), b32hash.end() - b32hash.begin()) + ".b32.i2p";
+    for (size_t pos = result.find_first_of('='); pos != std::string::npos; pos = result.find_first_of('=', pos-1))
+        result.erase(pos, 1);
+    return result;
+}
+#endif

@@ -714,6 +714,18 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
+void HardSetArg(const std::string& strArg, const std::string& strValue)
+{
+    if( !SoftSetArg(strArg, strValue) )         // Returns true if the param was undefined and setting its value was possible
+        mapArgs[strArg] = strValue;             // The parameter already exists, just set its value in the map
+}
+
+void HardSetBoolArg(const std::string& strArg, bool fValue)
+{
+    if( !SoftSetBoolArg(strArg, fValue) )       // If it doesn't exist, create it with the correct value
+        mapArgs[strArg] = fValue ? "1" : "0";   // The parameter already exists, just set its value in the map
+}
+
 
 string EncodeBase64(const unsigned char* pch, size_t len)
 {

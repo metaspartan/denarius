@@ -15,6 +15,20 @@
 
 #include <openssl/rand.h>
 
+/** Extended statistics about our B32.I2P address table */
+class CDestinationStats
+{
+public:
+    std::string sAddress;       // CNetAddr member
+    std::string sBase64;        // CNetAddr member
+    unsigned short uPort;       // CService member
+    int64_t nLastTry;           // CAddress member
+    uint64_t nServices;         // CAddress member
+    bool fInTried;              // CAddrInfo member, Developer preference here to say <this means its good>
+    int nAttempts;              // CAddrInfo member
+    int64_t nSuccessTime;       // CAddrInfo member
+    std::string sSource;        // CAddrInfo member, from CNetAddr of source
+};
 
 /** Extended statistics about a CAddress */
 class CAddrInfo : public CAddress
@@ -195,6 +209,10 @@ private:
     // list of "new" buckets
     std::vector<std::set<int> > vvNew;
 
+#ifdef USE_NATIVE_I2P
+    std::map<uint256, int> mapI2pHashes;
+#endif
+
 protected:
 
     // Find an entry.
@@ -242,6 +260,10 @@ protected:
 
     // Mark an entry as currently-connected-to.
     void Connected_(const CService &addr, int64_t nTime);
+
+#ifdef USE_NATIVE_I2P
+    CAddrInfo* LookupB32addr(const std::string& sB32addr);
+#endif
 
 public:
 
@@ -322,6 +344,11 @@ public:
                 am->mapInfo.clear();
                 am->mapAddr.clear();
                 am->vRandom.clear();
+#ifdef USE_NATIVE_I2P
+                if (fNativeI2P) {
+                    am->mapI2pHashes.clear();
+                }
+#endif
                 am->vvTried = std::vector<std::vector<int> >(ADDRMAN_TRIED_BUCKET_COUNT, std::vector<int>(0));
                 am->vvNew = std::vector<std::set<int> >(ADDRMAN_NEW_BUCKET_COUNT, std::set<int>());
                 for (int n = 0; n < am->nNew; n++)
@@ -336,6 +363,12 @@ public:
                         am->vvNew[info.GetNewBucket(am->nKey)].insert(n);
                         info.nRefCount++;
                     }
+#ifdef USE_NATIVE_I2P
+                    if(info.IsNativeI2P() && fNativeI2P) {
+                        uint256 hash = GetI2pDestinationHash(info.GetI2pDestination());
+                        am->mapI2pHashes[hash] = n;
+                    }
+#endif
                 }
                 am->nIdCount = am->nNew;
                 int nLost = 0;
@@ -352,6 +385,12 @@ public:
                         am->mapInfo[am->nIdCount] = info;
                         am->mapAddr[info] = am->nIdCount;
                         vTried.push_back(am->nIdCount);
+#ifdef USE_NATIVE_I2P
+                        if(info.IsNativeI2P() && fNativeI2P) {
+                            uint256 hash = GetI2pDestinationHash(info.GetI2pDestination());
+                            am->mapI2pHashes[hash] = am->nIdCount;
+                        }
+#endif
                         am->nIdCount++;
                     } else {
                         nLost++;
@@ -394,6 +433,17 @@ public:
     {
         return vRandom.size();
     }
+
+#ifdef USE_NATIVE_I2P
+    // Return the number of (unique) addresses in all tables.
+    int b32HashTableSize()
+    {
+        return mapI2pHashes.size();
+    }
+
+     std::string GetI2pBase64Destination(const std::string& sB32addr);
+     int CopyDestinationStats( std::vector<CDestinationStats>& vStats );
+#endif
 
     // Consistency check
     void Check()

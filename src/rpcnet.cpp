@@ -41,7 +41,7 @@ Value ping(const Array& params, bool fHelp)
     return Value::null;
 }
 
-/*
+
 #ifdef USE_NATIVE_I2P
 Value destination(const Array& params, bool fHelp)
 {
@@ -178,7 +178,6 @@ Value destination(const Array& params, bool fHelp)
     return ret;
 }
 #endif
-*/
 
 static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 {
