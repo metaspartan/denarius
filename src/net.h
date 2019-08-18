@@ -39,6 +39,7 @@ bool RecvLine(SOCKET hSocket, std::string& strLine);
 bool GetMyExternalIP(CNetAddr& ipRet);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
+CNode* FindNode(const std::string& addrName);
 CNode* FindNode(const CService& ip);
 //CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);
 CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL, bool forTunaMaster=false);
@@ -157,6 +158,13 @@ extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 extern NodeId nLastNodeId;
 extern CCriticalSection cs_nLastNodeId;
 
+struct LocalServiceInfo {
+    int nScore;
+    int nPort;
+};
+
+extern CCriticalSection cs_mapLocalHost;
+extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
 class CNodeStateStats
 {
@@ -291,6 +299,7 @@ public:
     CService addrLocal;
     int nVersion;
     std::string strSubVer;
+    //bool fWhitelisted; // This peer can bypass DoS banning.
     bool fOneShot;
     bool fClient;
     bool fInbound;
@@ -313,6 +322,11 @@ protected:
     // Key is IP address, value is banned-until-time
     static std::map<CNetAddr, int64_t> setBanned;
     static CCriticalSection cs_setBanned;
+
+    // Whitelisted ranges. Any node connecting from these is automatically
+    // whitelisted (as well as those connecting to whitelisted binds).
+    //static std::vector<CSubNet> vWhitelistedRange;
+    //static CCriticalSection cs_vWhitelistedRange;
 
 	std::vector<std::string> vecRequestsFulfilled; //keep track of what client has asked for
 
@@ -789,6 +803,7 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
     // new code.
     static void ClearBanned(); // needed for unit testing
     static bool IsBanned(CNetAddr ip);
+    static bool Ban(const CNetAddr &ip); //new addnode ban command
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
 
