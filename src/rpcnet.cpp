@@ -145,6 +145,27 @@ Value addnode(const Array& params, bool fHelp)
     return Value::null;
 }
 
+Value disconnectnode(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+                "disconnectnode \"node\" \n"
+                "\nImmediately disconnects from the specified node.\n"
+                "\nArguments:\n"
+                "1. \"node\"     (string, required) The node (see getpeerinfo for nodes)\n"
+        );
+
+    string theNode = params[0].get_str();
+
+    CNode* pNode = FindNode(theNode);
+    if (pNode == NULL)
+        throw JSONRPCError(RPC_CLIENT_NODE_NOT_CONNECTED, "Node not found in connected nodes");
+
+    pNode->fDisconnect = true;
+
+    return Value::null;
+}
+
 static Array GetNetworksInfo()
 {
     Array networks;

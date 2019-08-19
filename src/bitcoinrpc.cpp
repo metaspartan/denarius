@@ -268,6 +268,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getaddednodeinfo",       &getaddednodeinfo,       true,   true },
     { "ping",                   &ping,                   true,   true },
     { "getnettotals",           &getnettotals,           true,   false },
+    { "disconnectnode",         &disconnectnode,         true,   false },
     { "getnetworkinfo",         &getnetworkinfo,         true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
