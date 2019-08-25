@@ -265,6 +265,11 @@ static const CRPCCommand vRPCCommands[] =
     { "getblockcount",          &getblockcount,          true,   false },
     { "getconnectioncount",     &getconnectioncount,     true,   false },
     { "getpeerinfo",            &getpeerinfo,            true,   false },
+    { "getaddednodeinfo",       &getaddednodeinfo,       true,   true },
+    { "ping",                   &ping,                   true,   true },
+    { "getnettotals",           &getnettotals,           true,   false },
+    { "disconnectnode",         &disconnectnode,         true,   false },
+    { "getnetworkinfo",         &getnetworkinfo,         true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
     { "dumpbootstrap",          &dumpbootstrap,          false,  false },
@@ -301,7 +306,7 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
-	  { "getblockheader",         &getblockheader,         false,  false },
+	{ "getblockheader",         &getblockheader,         false,  false },
     { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
@@ -359,7 +364,6 @@ static const CRPCCommand vRPCCommands[] =
 
     /* Fortunastake features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
-    { "spork",                  &spork,                  true,   false},
     { "masternode",           	&masternode,             true,   false},
     { "fortunastake",           &fortunastake,           true,   false},
 
@@ -1314,7 +1318,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
-	  if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
+	if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
@@ -1365,8 +1369,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
-	  if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
-	  if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
+	if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 

@@ -107,15 +107,18 @@ public:
 
 Value importprivkey(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "importprivkey <denariusprivkey> [label]\n"
+            "importprivkey <denariusprivkey> [label] [rescan=true]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
+	bool fRescan = true;
     string strSecret = params[0].get_str();
     string strLabel = "";
     if (params.size() > 1)
         strLabel = params[1].get_str();
+	if (params.size() > 2)
+		fRescan = params[2].get_bool();
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(strSecret);
 
@@ -141,11 +144,12 @@ Value importprivkey(const Array& params, bool fHelp)
         if (!pwalletMain->AddKey(key))
             throw JSONRPCError(RPC_WALLET_ERROR, "Error adding key to wallet");
 
-        // whenever a key is imported, we need to scan the whole chain
-        pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
-
-        pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
-        pwalletMain->ReacceptWalletTransactions();
+        // if rescan is true, we need to scan the whole chain
+		if(fRescan){
+			pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
+			pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
+			pwalletMain->ReacceptWalletTransactions();
+		}
     }
 
     return Value::null;

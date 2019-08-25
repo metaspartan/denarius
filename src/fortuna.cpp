@@ -40,12 +40,12 @@ CActiveFortunastake activeFortunastake;
 int RequestedFortunaStakeList = 0;
 
 //MIN_MN_PROTO_VERSION
-int MIN_MN_PROTO_VERSION = 31000;
+int MIN_MN_PROTO_VERSION = 33900; // D v3.3.9.2 - Proto - 33900
 
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
-    Copyright 2018, Denarius Developers
+    Copyright 2018-2019, Denarius Developers
         carsenk - admin@denarius.io
         enkayz - enkayz@denarius.io
 */

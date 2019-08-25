@@ -36,6 +36,24 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
     }
 }
 
+Value ping(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+                "ping\n"
+                "Requests that a ping be sent to all other nodes, to measure ping time.\n"
+                "Results provided in getpeerinfo, pingtime and pingwait fields are decimal seconds.\n"
+                "Ping command is handled in queue with all other commands, so it measures processing backlog, not just network ping.");
+
+    // Request that each node send a ping during next message processing pass
+    LOCK(cs_vNodes);
+    BOOST_FOREACH(CNode* pNode, vNodes) {
+        pNode->fPingQueued = true;
+    }
+
+    return Value::null;
+}
+
 Value getpeerinfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -52,10 +70,15 @@ Value getpeerinfo(const Array& params, bool fHelp)
         Object obj;
 
         obj.push_back(Pair("addr", stats.addrName));
+        if (!(stats.addrLocal.empty()))
+            obj.push_back(Pair("addrlocal", stats.addrLocal));
         obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
         obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
         obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
         obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
+        obj.push_back(Pair("pingtime", stats.dPingTime)); //return nodes ping time
+        if (stats.dPingWait > 0.0)
+            obj.push_back(Pair("pingwait", stats.dPingWait));
         obj.push_back(Pair("version", stats.nVersion));
         obj.push_back(Pair("subver", stats.strSubVer));
         obj.push_back(Pair("inbound", stats.fInbound));
@@ -74,10 +97,10 @@ Value addnode(const Array& params, bool fHelp)
     if (params.size() == 2)
         strCommand = params[1].get_str();
     if (fHelp || params.size() != 2 ||
-        (strCommand != "onetry" && strCommand != "add" && strCommand != "remove"))
+        (strCommand != "onetry" && strCommand != "add" && strCommand != "remove" && strCommand != "ban"))
         throw runtime_error(
-            "addnode <node> <add|remove|onetry>\n"
-            "Attempts add or remove <node> from the addnode list or try a connection to <node> once.");
+            "addnode <node> <add|remove|onetry|ban>\n"
+            "Attempts add or remove <node> from the addnode list or try a connection to <node> once, 'ban' to ban connected node\n");
 
     string strNode = params[0].get_str();
 
@@ -85,6 +108,17 @@ Value addnode(const Array& params, bool fHelp)
     {
         CAddress addr;
         ConnectNode(addr, strNode.c_str());
+        return Value::null;
+    }
+    else if(strCommand == "ban")
+    {
+        CNode* pnode = FindNode(strNode);
+        if(pnode) {
+            CNode::Ban(pnode->addr);
+            pnode->CloseSocketDisconnect();
+        } else {
+            throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Error: Node is not connected.");
+        }
         return Value::null;
     }
 
@@ -107,7 +141,221 @@ Value addnode(const Array& params, bool fHelp)
         vAddedNodes.erase(it);
     }
 
+
     return Value::null;
+}
+
+Value disconnectnode(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+                "disconnectnode \"node\" \n"
+                "\nImmediately disconnects from the specified node.\n"
+                "\nArguments:\n"
+                "1. \"node\"     (string, required) The node (see getpeerinfo for nodes)\n"
+        );
+
+    string theNode = params[0].get_str();
+
+    CNode* pNode = FindNode(theNode);
+    if (pNode == NULL)
+        throw JSONRPCError(RPC_CLIENT_NODE_NOT_CONNECTED, "Node not found in connected nodes");
+
+    pNode->fDisconnect = true;
+
+    return Value::null;
+}
+
+static Array GetNetworksInfo()
+{
+    Array networks;
+    for(int n=0; n<NET_MAX; ++n)
+    {
+        enum Network network = static_cast<enum Network>(n);
+        if(network == NET_UNROUTABLE)
+            continue;
+        proxyType proxy;
+        Object obj;
+        GetProxy(network, proxy);
+        obj.push_back(Pair("name", GetNetworkName(network)));
+        obj.push_back(Pair("limited", IsLimited(network)));
+        //obj.push_back(Pair("reachable", IsReachable(network)));
+        //obj.push_back(Pair("proxy", proxy.IsValid() ? proxy.ToStringIPPort() : string()));
+        networks.push_back(obj);
+    }
+    return networks;
+}
+
+static const string SingleAlertSubVersionsString( const std::set<std::string>& setVersions )
+{
+    std::string strSetSubVer;
+    BOOST_FOREACH(std::string str, setVersions) {
+        if(strSetSubVer.size())                 // Must be more than one
+            strSetSubVer += " or ";
+        strSetSubVer += str;
+    }
+    return strSetSubVer;
+}
+
+Value getnetworkinfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+                "getnetworkinfo\n"
+                " Returns an object containing various state info regarding P2P networking.\n"
+                "\nResult:\n"
+                "{\n"
+                "  \"version\": xxxxx,            (numeric) the server version\n"
+                "  \"subver\": \"/s:n.n.n.n/\",     (string)  this clients subversion string\n"
+                "  \"protocolversion\": xxxxx,    (numeric) the protocol version\n"
+                "  \"localservices\": \"xxxx\",     (hex string) Our local service bits as a 16 char string.\n"
+                "  \"timeoffset\": xxxxx,         (numeric) the time offset\n"
+                "  \"connections\": xxxxx,        (numeric) the number of connections\n"
+                "  \"networkconnections\": [      (array)  the state of each possible network connection type\n"
+                "    \"name\": \"xxx\",             (string) network name\n"
+                "    \"limited\" : true|false,    (boolean) if service is limited\n"
+                "  ]\n"
+                "  \"localaddresses\": [          (array) list of local addresses\n"
+                "    \"address\": \"xxxx\",         (string) network address\n"
+                "    \"port\": xxx,               (numeric) network port\n"
+                "    \"score\": xxx               (numeric) relative score\n"
+                "  ]\n"
+                "}\n"
+        );
+
+    LOCK(cs_main);
+
+    Object obj;
+    obj.push_back(Pair("version",        (int)CLIENT_VERSION));
+    obj.push_back(Pair("subversion",     FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>())));
+    obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
+    obj.push_back(Pair("localservices",  strprintf("%016", PRIx64, nLocalServices)));
+    obj.push_back(Pair("timeoffset",     GetTimeOffset()));
+    obj.push_back(Pair("connections",    (int)vNodes.size()));
+    //obj.push_back(Pair("relayfee",       ValueFromAmount(minRelayTxFee.GetFeePerK())));
+    obj.push_back(Pair("networkconnections",GetNetworksInfo()));
+    Array localAddresses;
+    {
+        LOCK(cs_mapLocalHost);
+        BOOST_FOREACH(const PAIRTYPE(CNetAddr, LocalServiceInfo) &item, mapLocalHost)
+        {
+            Object rec;
+            rec.push_back(Pair("address", item.first.ToString()));
+            rec.push_back(Pair("port", item.second.nPort));
+            rec.push_back(Pair("score", item.second.nScore));
+            localAddresses.push_back(rec);
+        }
+    }
+    obj.push_back(Pair("localaddresses", localAddresses));
+
+    return obj;
+}
+
+Value getaddednodeinfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+                "getaddednodeinfo <dns> [node]\n"
+                "Returns information about the given added node, or all added nodes\n"
+                "(note that onetry addnodes are not listed here)\n"
+                "If dns is false, only a list of added nodes will be provided,\n"
+                "otherwise connected information will also be available.");
+
+    bool fDns = params[0].get_bool();
+
+    list<string> laddedNodes(0);
+    if (params.size() == 1)
+    {
+        LOCK(cs_vAddedNodes);
+        BOOST_FOREACH(string& strAddNode, vAddedNodes)
+        laddedNodes.push_back(strAddNode);
+    }
+    else
+    {
+        string strNode = params[1].get_str();
+        LOCK(cs_vAddedNodes);
+        BOOST_FOREACH(string& strAddNode, vAddedNodes)
+        if (strAddNode == strNode)
+        {
+            laddedNodes.push_back(strAddNode);
+            break;
+        }
+        if (laddedNodes.size() == 0)
+            throw JSONRPCError(RPC_CLIENT_NODE_NOT_ADDED, "Error: Node has not been added.");
+    }
+
+    if (!fDns)
+    {
+        Object ret;
+        BOOST_FOREACH(string& strAddNode, laddedNodes)
+        ret.push_back(Pair("addednode", strAddNode));
+        return ret;
+    }
+
+    Array ret;
+
+    list<pair<string, vector<CService> > > laddedAddreses(0);
+    BOOST_FOREACH(string& strAddNode, laddedNodes)
+    {
+        vector<CService> vservNode(0);
+        if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))
+            laddedAddreses.push_back(make_pair(strAddNode, vservNode));
+        else
+        {
+            Object obj;
+            obj.push_back(Pair("addednode", strAddNode));
+            obj.push_back(Pair("connected", false));
+            Array addresses;
+            obj.push_back(Pair("addresses", addresses));
+        }
+    }
+
+    LOCK(cs_vNodes);
+    for (list<pair<string, vector<CService> > >::iterator it = laddedAddreses.begin(); it != laddedAddreses.end(); it++)
+    {
+        Object obj;
+        obj.push_back(Pair("addednode", it->first));
+
+        Array addresses;
+        bool fConnected = false;
+        BOOST_FOREACH(CService& addrNode, it->second)
+        {
+            bool fFound = false;
+            Object node;
+            node.push_back(Pair("address", addrNode.ToString()));
+            BOOST_FOREACH(CNode* pnode, vNodes)
+            if (pnode->addr == addrNode)
+            {
+                fFound = true;
+                fConnected = true;
+                node.push_back(Pair("connected", pnode->fInbound ? "inbound" : "outbound"));
+                break;
+            }
+            if (!fFound)
+                node.push_back(Pair("connected", "false"));
+            addresses.push_back(node);
+        }
+        obj.push_back(Pair("connected", fConnected));
+        obj.push_back(Pair("addresses", addresses));
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
+Value getnettotals(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+                "getnettotals\n"
+                "Returns information about network traffic, including bytes in, bytes out,\n"
+                "and current time.");
+
+    Object obj;
+    obj.push_back(Pair("totalbytesrecv", CNode::GetTotalBytesRecv()));
+    obj.push_back(Pair("totalbytessent", CNode::GetTotalBytesSent()));
+    obj.push_back(Pair("timemillis", GetTimeMillis()));
+    return obj;
 }
 
 Value setdebug(const Array& params, bool fHelp)

@@ -131,7 +131,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         if((fTestNet && addr.GetPort() != 19999) || (!fTestNet && addr.GetPort() != 9999)) return;
 
         //search existing fortunastake list, this is where we update existing fortunastakes with new dsee broadcasts
-	      LOCK(cs_fortunastakes);
+        LOCK(cs_fortunastakes);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
             if(mn.vin.prevout == vin.prevout) {
                 // count == -1 when it's a new entry
@@ -139,7 +139,8 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
                 // mn.pubkey = pubkey, IsVinAssociatedWithPubkey is validated once below,
                 //   after that they just need to match
                 if(count == -1 && mn.pubkey == pubkey && !mn.UpdatedWithin(FORTUNASTAKE_MIN_DSEE_SECONDS)){
-                    mn.UpdateLastSeen(); // update last seen without the sigTime since it's a new entry
+					mn.UpdateLastSeen(sigTime); // Updated UpdateLastSeen with sigTime
+                    //mn.UpdateLastSeen(); // update last seen without the sigTime since it's a new entry
 					
                     if(mn.now < sigTime){ //take the newest entry
                         if (fDebugFS & fDebugNet) printf("dsee - Got updated entry for %s\n", addr.ToString().c_str());
