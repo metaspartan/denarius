@@ -131,7 +131,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         if((fTestNet && addr.GetPort() != 19999) || (!fTestNet && addr.GetPort() != 9999)) return;
 
         //search existing fortunastake list, this is where we update existing fortunastakes with new dsee broadcasts
-	      LOCK(cs_fortunastakes);
+        LOCK(cs_fortunastakes);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
             if(mn.vin.prevout == vin.prevout) {
                 // count == -1 when it's a new entry

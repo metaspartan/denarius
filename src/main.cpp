@@ -2646,7 +2646,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                                 } else {
                                                     if (fDebug) printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
-												//break; No more breaking out of the checks
+												//break; 
                                             } else {
                                                 if (fDebug) printf("CheckBlock-POS() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                             }
@@ -3680,7 +3680,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
     //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
     if(nBestHeight >= 1500000) {
-        MIN_MN_PROTO_VERSION = 31005;
+        MIN_MN_PROTO_VERSION = 33900;
     }
 
     // ppcoin: if responsible for sync-checkpoint send it

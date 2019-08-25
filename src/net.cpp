@@ -1132,6 +1132,17 @@ void ThreadSocketHandler2(void* parg)
                                 pnode->CloseSocketDisconnect();
                             }
                         }
+                        else if (nBytes > 100000) // 100,000 Bytes
+                        {
+                            // error
+                            int nErr = WSAGetLastError();
+                            if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)
+                            {
+                                if (!pnode->fDisconnect)
+                                    printf("Closing socket, output too large %d\n", nErr);
+                                pnode->CloseSocketDisconnect();
+                            }
+                        }
                     }
                 }
             }
