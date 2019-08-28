@@ -316,7 +316,9 @@ OBJS= \
     obj/spork.o \
     obj/fortuna.o \
     obj/eccryptoverify.o \
-    obj/ringsig.o
+    obj/ringsig.o \
+    obj/namecoin.o \
+    obj/egeriadns.o
 else
 OBJS= \
     obj/echo.o \
@@ -368,7 +370,9 @@ OBJS= \
     obj/spork.o \
     obj/fortuna.o \
     obj/eccryptoverify.o \
-    obj/ringsig.o
+    obj/ringsig.o \
+    obj/namecoin.o \
+    obj/egeriadns.o
 endif
 
 

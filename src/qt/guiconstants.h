@@ -13,6 +13,10 @@ static const int MAX_PASSPHRASE_SIZE = 1024;
 /* BitcoinGUI -- Size of icons in status bar */
 static const int STATUSBAR_ICONSIZE = 16;
 
+// Should be set to MAX_VALUE_LENGTH (from namecoin.h) when it's supported by the network
+// (currently due to limitations of CScript the limit is 519 bytes)
+static const int GUI_MAX_VALUE_LENGTH = 519;
+
 /* Invalid field background style */
 #define STYLE_INVALID "background:#FF8080"
 
