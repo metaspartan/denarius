@@ -2639,12 +2639,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mn.nRank, mn.nBlockLastPaid);
 
                                         if (!fIsInitialDownload) {
-                                            if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
+                                            if (!CheckPoSFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // CheckPoSFSPayment()
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) { //Update PoS FS Payments to not go out of sync
-													return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
+													printf("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
                                                 } else {
-                                                    if (fDebug) printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                                    printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
 												//break; 
                                             } else {
