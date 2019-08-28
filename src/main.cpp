@@ -4233,7 +4233,7 @@ void static ProcessGetData(CNode* pfrom)
                 static const int nOneWeek = 7 * 24 * 60 * 60; // assume > 1 week = historical
                 if (send && CNode::OutboundTargetReached(true) && ( ((pindexBest != NULL) && (pindexBest->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek))) )
                 {
-                    LogPrint("net historical block serving limit reached, disconnected peer=%d\n", pfrom->GetId());
+                    printf("net historical block serving limit reached, disconnected peer=%d\n", pfrom->GetId());
 
                     //disconnect node
                     pfrom->fDisconnect = true;
