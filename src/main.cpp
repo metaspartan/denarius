@@ -4229,6 +4229,16 @@ void static ProcessGetData(CNode* pfrom)
                         pfrom->hashContinue = 0;
                     }
                 }
+                // disconnect node in case we have reached the outbound limit for serving historical blocks
+                static const int nOneWeek = 7 * 24 * 60 * 60; // assume > 1 week = historical
+                if (send && CNode::OutboundTargetReached(true) && ( ((pindexBest != NULL) && (pindexBest->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek))) )
+                {
+                    LogPrint("net historical block serving limit reached, disconnected peer=%d\n", pfrom->GetId());
+
+                    //disconnect node
+                    pfrom->fDisconnect = true;
+                    bool send = false;
+                }
             }
             else if (inv.IsKnownType())
             {
