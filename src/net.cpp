@@ -316,6 +316,7 @@ bool IsReachable(const CNetAddr& addr)
     return vfReachable[net] && !vfLimited[net];
 }
 
+#if 0
 bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const char* pszKeyword, CNetAddr& ipRet)
 {
     SOCKET hSocket;
@@ -368,8 +369,8 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
 bool GetMyExternalIP(CNetAddr& ipRet)
 {
     CService addrConnect;
-    const char* pszGet;
-    const char* pszKeyword;
+    const char* pszGet = NULL;
+    const char* pszKeyword = NULL;
 
     for (int nLookup = 0; nLookup <= 1; nLookup++)
     for (int nHost = 1; nHost <= 2; nHost++)
@@ -423,6 +424,26 @@ bool GetMyExternalIP(CNetAddr& ipRet)
 
     return false;
 }
+#endif
+
+/*--------------------------------------------------------------------------*/
+// from file stun.cpp
+int GetExternalIPbySTUN(uint64_t rnd, struct sockaddr_in *mapped, const char **srv);
+
+/*--------------------------------------------------------------------------*/
+bool GetMyExternalIP_STUN(CNetAddr& ipRet) {
+    struct sockaddr_in mapped;
+    uint64_t rnd = GetRand(~0LL);
+    const char *srv;
+    int rc = GetExternalIPbySTUN(rnd, &mapped, &srv);
+    if(rc > 0) {
+        ipRet = CNetAddr(mapped.sin_addr);
+        CNetAddr addrLocalHost;
+        printf("GetExternalIPbySTUN() returned %s in attempt %u; flags=%x; Server=%s\n", addrLocalHost.ToStringIP().c_str(), rc >> 8, (uint8_t)rc, srv);
+        return true;
+    }
+    return false;
+} // GetMyExternalIP_STUN
 
 void ThreadGetMyExternalIP(void* parg)
 {
@@ -430,9 +451,9 @@ void ThreadGetMyExternalIP(void* parg)
     RenameThread("denarius-ext-ip");
 
     CNetAddr addrLocalHost;
-    if (GetMyExternalIP(addrLocalHost))
+    if (GetMyExternalIP_STUN(addrLocalHost)) //GetMyExternalIP by STUN instead now
     {
-        printf("GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
+        //printf("GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
         AddLocal(addrLocalHost, LOCAL_HTTP);
     }
 }

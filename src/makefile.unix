@@ -368,7 +368,8 @@ OBJS= \
     obj/spork.o \
     obj/fortuna.o \
     obj/eccryptoverify.o \
-    obj/ringsig.o
+    obj/ringsig.o \
+    obj/stun.o
 endif
 
 
