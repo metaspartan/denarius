@@ -186,6 +186,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
 
+    fFSLock = GetBoolArg("-fsconflock");
+    fNativeTor = GetBoolArg("-nativetor");
 
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
@@ -242,11 +244,15 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
     labelConnectTypeIcon = new QLabel();
+    labelFSLockIcon = new QLabel();
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelConnectTypeIcon);
     frameBlocksLayout->addStretch();
+    if (fFSLock)
+        frameBlocksLayout->addWidget(labelFSLockIcon);
+        frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelStakingIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelConnectionsIcon);
@@ -806,6 +812,9 @@ void BitcoinGUI::setNumConnections(int count)
     } else {
         labelConnectTypeIcon->setPixmap(QIcon(":/icons/toroff").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
         labelConnectTypeIcon->setToolTip(tr("Not Connected via the Tor Network, Start Denarius with the flag nativetor=1"));
+    }
+    if (fFSLock == true) {
+        labelFSLockIcon->setPixmap(QIcon(":/icons/fs").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
     }
 }
 
