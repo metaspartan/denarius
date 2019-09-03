@@ -5239,7 +5239,12 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
 
         // Resend wallet transactions that haven't gotten in a block yet
-        ResendWalletTransactions();
+        // Except during reindex, importing and IBD, when old wallet
+        // transactions become unconfirmed and spams other nodes.
+        if (!fReindex && !IsInitialBlockDownload())
+        {
+            ResendWalletTransactions();
+        }
 
         // Address refresh broadcast
         static int64_t nLastRebroadcast;
