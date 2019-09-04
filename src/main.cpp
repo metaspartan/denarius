@@ -5052,12 +5052,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else
     {
-        MarketProcessMessage(pfrom, strCommand, vRecv);
-
         if (fSecMsgEnabled)
             SecureMsgReceiveData(pfrom, strCommand, vRecv);
 
         //ProcessMessageFortuna(pfrom, strCommand, vRecv);
+        ProcessMessageMarket(pfrom, strCommand, vRecv);
         ProcessMessageFortunastake(pfrom, strCommand, vRecv);
         //ProcessSpork(pfrom, strCommand, vRecv);
 

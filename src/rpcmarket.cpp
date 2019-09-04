@@ -56,7 +56,44 @@ Value marketlistings(const Array& params, bool fHelp)
             obj.push_back(Pair("itemId", item.GetHash().ToString()));
             obj.push_back(Pair("vendorId", CBitcoinAddress(item.listing.sellerKey.GetID()).ToString()));
             obj.push_back(Pair("price", item.listing.nPrice));
-            obj.push_back(Pair("status", item.listing.nStatus));
+            std::string statusText = "UNKNOWN";
+            switch(item.listing.nStatus)
+            {
+                case LISTED:
+                    statusText = "Listed";
+                    break;
+                case BUY_REQUESTED:
+                    statusText = "Buy Requested";
+                    break;
+                case BUY_ACCEPTED:
+                    statusText = "Accepted";
+                    break;
+                case BUY_REJECTED:
+                    statusText = "Rejected";
+                    break;
+                case ESCROW_LOCK:
+                    statusText = "Escrow Locked";
+                    break;
+                case DELIVERY_DETAILS:
+                    statusText = "Delivery Details";
+                    break;
+                case ESCROW_PAID:
+                    statusText = "Escrow Paid";
+                    break;
+                case REFUND_REQUESTED:
+                    statusText = "Refund Requested";
+                    break;
+                case REFUNDED:
+                    statusText = "Refunded";
+                    break;
+                case PAYMENT_REQUESTED:
+                    statusText = "Payment Requested";
+                    break;
+                default:
+                    statusText = "UNKNOWN";
+                    break;
+            }
+            obj.push_back(Pair("status", statusText));
             obj.push_back(Pair("urlImage1", item.listing.sImageOneUrl));
             obj.push_back(Pair("urlImage2", item.listing.sImageTwoUrl));
             obj.push_back(Pair("description", item.listing.sDescription));
@@ -119,7 +156,44 @@ Value marketsearchlistings(const Array& params, bool fHelp)
             obj.push_back(Pair("itemId", item.GetHash().ToString()));
             obj.push_back(Pair("vendorId", CBitcoinAddress(item.listing.sellerKey.GetID()).ToString()));
             obj.push_back(Pair("price", item.listing.nPrice));
-            obj.push_back(Pair("status", item.listing.nStatus));
+            std::string statusText = "UNKNOWN";
+            switch(item.listing.nStatus)
+            {
+                case LISTED:
+                    statusText = "Listed";
+                    break;
+                case BUY_REQUESTED:
+                    statusText = "Buy Requested";
+                    break;
+                case BUY_ACCEPTED:
+                    statusText = "Accepted";
+                    break;
+                case BUY_REJECTED:
+                    statusText = "Rejected";
+                    break;
+                case ESCROW_LOCK:
+                    statusText = "Escrow Locked";
+                    break;
+                case DELIVERY_DETAILS:
+                    statusText = "Delivery Details";
+                    break;
+                case ESCROW_PAID:
+                    statusText = "Escrow Paid";
+                    break;
+                case REFUND_REQUESTED:
+                    statusText = "Refund Requested";
+                    break;
+                case REFUNDED:
+                    statusText = "Refunded";
+                    break;
+                case PAYMENT_REQUESTED:
+                    statusText = "Payment Requested";
+                    break;
+                default:
+                    statusText = "UNKNOWN";
+                    break;
+            }
+            obj.push_back(Pair("status", statusText));
             obj.push_back(Pair("urlImage1", item.listing.sImageOneUrl));
             obj.push_back(Pair("urlImage2", item.listing.sImageTwoUrl));
             obj.push_back(Pair("description", item.listing.sDescription));
@@ -312,6 +386,8 @@ Value marketsell(const Array& params, bool fHelp)
     SignListing(listing, signedListing.vchListingSig);
     signedListing.BroadcastToAll();
     ReceiveListing(signedListing);
+
+    LogPrintf("marketsell RPC: Submitted new Listing Key %s", signedListing.GetHash().ToString());
 
     Object obj;
 

@@ -71,7 +71,7 @@ std::string SignMultiSigTransaction(std::string rawTxHex);
 // Initialize the market and load data from local database on wallet startup
 void MarketInit();
 // Process p2p messages received from peers
-void MarketProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv);
+void ProcessMessageMarket(CNode* pfrom, std::string strCommand, CDataStream& vRecv);
 void ReceiveListing(CSignedMarketListing listing);
 void ReceiveCancelListing(CCancelListing can);
 bool ReceiveBuyRequest(CBuyRequest request);

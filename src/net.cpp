@@ -525,8 +525,10 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
         if (pnode)
         {
 
-        if(forTunaMaster)
+            if(forTunaMaster) {
                 pnode->fForTunaMaster = true;
+            }
+
             pnode->AddRef();
 
             pnode->PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));

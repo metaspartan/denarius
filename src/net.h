@@ -410,8 +410,10 @@ public:
         nLastDseg = GetTime();
 
         // Be shy and don't send version until we hear
-        if (hSocket != INVALID_SOCKET && !fInbound)
+        if (hSocket != INVALID_SOCKET && !fInbound) {
             PushVersion();
+            PushMessage("mktinv", GetTime() - (7 * 24 * 60 * 60));
+        }
     }
 
     ~CNode()

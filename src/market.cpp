@@ -768,13 +768,15 @@ void MarketInit()
     }
 }
 
-void MarketProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv)
+void ProcessMessageMarket(CNode* pfrom, std::string strCommand, CDataStream& vRecv)
 {
     if(strCommand == "mktlst")
     {
         CSignedMarketListing listing;
         vRecv >> listing;
         pfrom->setKnown.insert(listing.GetHash());
+        if (fDebugNet)
+            LogPrintf("mktlst - Found listing %s\n", listing.GetHash().ToString());
         // check signature
         if(!CheckSignature(listing))
         {
@@ -932,6 +934,9 @@ void MarketProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRe
         int64_t nTime = 0;
         vRecv >> nTime;
         LOCK(cs_markets);
+
+        if (fDebugNet)
+            printf("ProcessMessageMarket() mktinv\n");
         // send inventory we know about since this time
         // listings
         BOOST_FOREACH(PAIRTYPE(const uint256, CSignedMarketListing)& p, mapListings)
