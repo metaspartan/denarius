@@ -279,4 +279,22 @@ extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
 
+//rpcmarket.cpp
+extern json_spirit::Value marketlistings(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketsearchlistings(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketbuy(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketsell(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketapprovebuy(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketrejectbuy(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketbuyrequests(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketmylistings(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketcancellisting(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketcancelescrow(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketrequestpayment(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketrefund(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketmybuys(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketescrowlock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketreleaseescrow(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value marketrequestrefund(const json_spirit::Array& params, bool fHelp);
+
 #endif

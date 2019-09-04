@@ -381,7 +381,23 @@ static const CRPCCommand vRPCCommands[] =
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
 
-
+    /* dMarket RPC */
+    { "marketlistings",         &marketlistings,      false,  false},
+    { "marketsearchlistings",   &marketsearchlistings,   false,  false},
+    { "marketbuy",              &marketbuy,              false,  false},
+    { "marketsell",             &marketsell,             false,  false},
+    { "marketapprovebuy",       &marketapprovebuy,       false,  false},
+    { "marketrejectbuy",        &marketrejectbuy,        false,  false},
+    { "marketbuyrequests",      &marketbuyrequests,      false,  false},
+    { "marketmylistings",       &marketmylistings,       false,  false},
+    { "marketcancellisting",    &marketcancellisting,    false,  false},
+    { "marketcancelescrow",     &marketcancelescrow,     false,  false},
+    { "marketrequestpayment",   &marketrequestpayment,   false,  false},
+    { "marketrefund",           &marketrefund,           false,  false},
+    { "marketmybuys",           &marketmybuys,           false,  false},
+    { "marketescrowlock",       &marketescrowlock,       false,  false},
+    { "marketreleaseescrow",    &marketreleaseescrow,    false,  false},
+    { "marketrequestrefund",    &marketrequestrefund,    false,  false},
 
 };
 

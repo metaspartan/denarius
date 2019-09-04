@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.9.3
+VERSION = 3.3.9.4
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -441,6 +441,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/main.h \
     src/core.h \
     src/ringsig.h \
+    src/market.h \
+    src/rpcmarket.h \
     src/miner.h \
     src/net.h \
     src/key.h \
@@ -561,6 +563,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/main.cpp \
     src/core.cpp \
     src/ringsig.cpp \
+    src/market.cpp \
+    src/rpcmarket.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \

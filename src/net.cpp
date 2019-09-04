@@ -10,6 +10,8 @@
 #include "addrman.h"
 #include "ui_interface.h"
 #include "fortuna.h"
+#include "market.h"
+
 #include <sys/stat.h>
 
 #ifdef WIN32
@@ -52,7 +54,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 //
 bool fDiscover = true;
 bool fUseUPnP = false;
-uint64_t nLocalServices = NODE_NETWORK;
+uint64_t nLocalServices = NODE_NETWORK | NODE_MARKET; //NODE_NETWORK OR NODE_MARKET
 CCriticalSection cs_mapLocalHost;
 map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};

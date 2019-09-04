@@ -19,6 +19,7 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "market.h"
 
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
@@ -1139,6 +1140,11 @@ bool AppInit2()
     // ********************************************************* Step 10.1: startup secure messaging
 
     SecureMsgStart(fNoSmsg, GetBoolArg("-smsgscanchain"));
+
+    // ********************************************************* Step 10.2: startup dMarket
+
+    MarketInit();
+    printf("Initialized dMarket - Denarius Decentralized Market\n");
 
     // ********************************************************* Step 11: start node
 

@@ -317,7 +317,9 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
-    obj/stun.o
+    obj/stun.o \
+    obj/market.o \
+    obj/rpcmarket.o
 else
 OBJS= \
     obj/echo.o \
@@ -370,7 +372,9 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
-    obj/stun.o
+    obj/stun.o \
+    obj/market.o \
+    obj/rpcmarket.o
 endif
 
 

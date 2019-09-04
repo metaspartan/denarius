@@ -16,6 +16,8 @@
 #include "fortunastake.h"
 #include "spork.h"
 #include "smessage.h"
+#include "market.h"
+
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -5050,6 +5052,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else
     {
+        MarketProcessMessage(pfrom, strCommand, vRecv);
+
         if (fSecMsgEnabled)
             SecureMsgReceiveData(pfrom, strCommand, vRecv);
 

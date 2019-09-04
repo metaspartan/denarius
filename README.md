@@ -51,6 +51,7 @@ Technology
 * Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)
 * Encrypted Messaging
+* dMarket - Decentralized Marketplace with Escrow based on Multisig/CLTV
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
 * BIP39 Support (Coin Type 114)

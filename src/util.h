@@ -43,6 +43,8 @@ static const int64_t nOneWeek = 7 * 24 * 60 * 60;
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
+static const int LISTING_DEFAULT_DURATION = 7 * 24 * 60 * 60; //one week for now.
+
 typedef int64_t CAmount;
 
 #define BEGIN(a)            ((char*)&(a))
