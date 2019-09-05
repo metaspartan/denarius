@@ -50,6 +50,22 @@ void SellsPage::on_createButton_clicked()
 
 void SellsPage::on_cancelButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to cancel.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to cancel.");
+        msg.exec();
+        return;
+    };
+
     QItemSelectionModel* selectionModel = ui->listingsTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -79,6 +95,22 @@ void SellsPage::on_cancelButton_clicked()
 
 void SellsPage::on_rejectButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to reject.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to reject.");
+        msg.exec();
+        return;
+    };
+
     QItemSelectionModel* selectionModel = ui->buysTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -112,6 +144,22 @@ void SellsPage::on_rejectButton_clicked()
 
 void SellsPage::on_requestPaymentButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to request payment.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to request payment.");
+        msg.exec();
+        return;
+    };
+
     QItemSelectionModel* selectionModel = ui->buysTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -153,6 +201,22 @@ void SellsPage::on_requestPaymentButton_clicked()
 
 void SellsPage::on_acceptButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to accept buy request.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to accept buy request.");
+        msg.exec();
+        return;
+    };
+
     QItemSelectionModel* selectionModel = ui->buysTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -212,6 +276,21 @@ void SellsPage::on_acceptButton_clicked()
 
 void SellsPage::on_refundButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to refund transaction.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to refund transaction.");
+        msg.exec();
+        return;
+    };
     QItemSelectionModel* selectionModel = ui->buysTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -298,6 +377,21 @@ void SellsPage::on_copyAddressButton_clicked()
 
 void SellsPage::on_cancelEscrowButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to cancel transaction.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to cancel transaction.");
+        msg.exec();
+        return;
+    };
     QItemSelectionModel* selectionModel = ui->buysTableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)

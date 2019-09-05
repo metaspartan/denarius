@@ -159,6 +159,22 @@ void DenariusMarket::on_tableWidget_itemSelectionChanged()
 
 void DenariusMarket::on_buyButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to create buy request.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to create buy request.");
+        msg.exec();
+        return;
+    };
+
     QItemSelectionModel* selectionModel = ui->tableWidget->selectionModel();
     QModelIndexList selected = selectionModel->selectedRows();
     if(selected.count() == 0)
@@ -175,7 +191,6 @@ void DenariusMarket::on_buyButton_clicked()
                                 QMessageBox::Yes|QMessageBox::No);
     if (reply == QMessageBox::Yes) 
     {
-        // TODO: Needs if unlocked check otherwise segfault
         CBuyRequest buyRequest;
         buyRequest.buyerKey = pwalletMain->GenerateNewKey();
         buyRequest.listingId = idHash;

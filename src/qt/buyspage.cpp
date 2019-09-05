@@ -184,6 +184,23 @@ void BuysPage::on_escrowLockButton_clicked()
 {
     // get the vendor created escrow lock tx, sign it and broadcast it
     // ask the user if they really want to pay
+
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to create transaction.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to create transaction.");
+        msg.exec();
+        return;
+    };
+
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Lock Escrow?", "Do you want to lock escrow for this item?  This will send money to the escrow address.",
                                 QMessageBox::Yes|QMessageBox::No);
@@ -222,7 +239,7 @@ void BuysPage::on_escrowLockButton_clicked()
 
     if(!accepted)
     {
-	QMessageBox msg;
+	    QMessageBox msg;
         msg.setText("The seller's escrow transaction is invalid.");
         msg.exec();
         return;
@@ -263,6 +280,22 @@ void BuysPage::on_deliveryDetailsButton_clicked()
 
 void BuysPage::on_payButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to create transaction.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to create transaction.");
+        msg.exec();
+        return;
+    };
+
     // ask the user if they really want to pay
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Pay?", "Do you want to pay for this item?  This will release the escrow funds to the vendor.",
@@ -344,6 +377,22 @@ void BuysPage::on_payButton_clicked()
 
 void BuysPage::on_refundButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to request refund transaction.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to request refund transaction.");
+        msg.exec();
+        return;
+    };
+
     // ask the user if they really want to make a refund request
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Request A Refund", "Are you sure you want to request a refund for this item?",

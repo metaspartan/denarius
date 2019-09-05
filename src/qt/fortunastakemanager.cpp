@@ -467,6 +467,22 @@ void FortunastakeManager::setWalletModel(WalletModel *model)
 
 void FortunastakeManager::on_createButton_clicked()
 {
+    if (pwalletMain->IsLocked())
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet is locked, unable to create FS.");
+        msg.exec();
+        return;
+    };
+
+    if (fWalletUnlockStakingOnly)
+    {
+        QMessageBox msg;
+        msg.setText("Error: Wallet unlocked for staking only, unable to create FS.");
+        msg.exec();
+        return;
+    };
+
     AddEditAdrenalineNode* aenode = new AddEditAdrenalineNode();
     aenode->exec();
 }
