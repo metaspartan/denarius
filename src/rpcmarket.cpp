@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpcmarket.h"
-#include "main.h"
 #include "bitcoinrpc.h"
 #include "market.h"
 #include "smessage.h"

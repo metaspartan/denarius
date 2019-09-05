@@ -441,8 +441,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/main.h \
     src/core.h \
     src/ringsig.h \
-    src/market.h \
-    src/rpcmarket.h \
     src/miner.h \
     src/net.h \
     src/key.h \
@@ -522,6 +520,14 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/sendmessagesdialog.h \
     src/qt/sendmessagesentry.h \
     src/qt/plugins/mrichtexteditor/mrichtextedit.h \
+    src/market.h \
+    src/qt/dmarket.h \
+    src/qt/buyspage.h \
+    src/qt/sellspage.h \
+    src/qt/createmarketlistingdialog.h \
+    src/qt/marketlistingdetailsdialog.h \
+    src/qt/deliverydetailsdialog.h \
+    src/rpcmarket.h \
     src/qt/qvalidatedtextedit.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
@@ -563,8 +569,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/main.cpp \
     src/core.cpp \
     src/ringsig.cpp \
-    src/market.cpp \
-    src/rpcmarket.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
@@ -631,6 +635,14 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/activefortunastake.cpp \
     src/fortunastake.cpp \
     src/fortunastakeconfig.cpp \
+    src/market.cpp \
+    src/rpcmarket.cpp \
+    src/qt/dmarket.cpp \
+    src/qt/buyspage.cpp \
+    src/qt/sellspage.cpp \
+    src/qt/createmarketlistingdialog.cpp \
+    src/qt/marketlistingdetailsdialog.cpp \
+    src/qt/deliverydetailsdialog.cpp \
     src/spork.cpp
 
 #### D e n a r i u s sources
@@ -667,6 +679,12 @@ FORMS += \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
+    src/qt/forms/dmarket.ui \
+    src/qt/forms/buyspage.ui \
+    src/qt/forms/sellspage.ui \
+    src/qt/forms/createmarketlistingdialog.ui \
+    src/qt/forms/marketlistingdetailsdialog.ui \
+    src/qt/forms/deliverydetailsdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
 
 contains(USE_QRCODE, 1) {

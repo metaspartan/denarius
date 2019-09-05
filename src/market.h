@@ -1,8 +1,8 @@
 // Copyright (c) 2019 The Denarius Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef DMARKET_H
-#define DMARKET_H
+#ifndef MARKET_H
+#define MARKET_H
 
 #include "util.h"
 #include "main.h"

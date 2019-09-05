@@ -64,6 +64,9 @@
         <file alias="fs">res/icons/fs.png</file>
         <file alias="data">res/icons/data.png</file>
         <file alias="trade">res/icons/trade.png</file>
+        <file alias="dmarket">res/icons/dmarket.png</file>
+        <file alias="sales">res/icons/sales.png</file>
+        <file alias="buys">res/icons/buys.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
@@ -71,6 +74,7 @@
         <file alias="vertical">res/images/vertical.png</file>
         <file alias="horizontal">res/images/horizontal.png</file>
         <file alias="dbg">res/images/dbg.jpg</file>
+        <file alias="dmarket">res/images/dmarketheader.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="update_spinner">res/movies/update_spinner.mng</file>

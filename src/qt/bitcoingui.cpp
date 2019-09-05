@@ -37,6 +37,9 @@
 #include "wallet.h"
 #include "termsofuse.h"
 #include "proofofimage.h"
+#include "dmarket.h"
+#include "buyspage.h"
+#include "sellspage.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -186,6 +189,10 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
 
+    dMarket = new DenariusMarket(this);
+    buysPage = new BuysPage(this);
+    sellsPage = new SellsPage(this);
+
     fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
 
@@ -225,6 +232,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(fortunastakeManagerPage);
 	centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
+    centralWidget->addWidget(dMarket);
+    centralWidget->addWidget(buysPage);
+    centralWidget->addWidget(sellsPage);
 	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -401,6 +411,21 @@ void BitcoinGUI::createActions()
 	fortunastakeManagerAction->setStatusTip(tr("Fortuna Stakes"));
     tabGroup->addAction(fortunastakeManagerAction);
 
+    dMarketAction = new QAction(QIcon(":/icons/dmarket"), tr("&dMarket"), this);
+    dMarketAction->setToolTip(tr("Browse the dMarket."));
+    dMarketAction->setCheckable(true);
+    tabGroup->addAction(dMarketAction);
+
+    buysPageAction = new QAction(QIcon(":/icons/buys"), tr("&Buys"), this);
+    buysPageAction->setToolTip(tr("Show my dMarket Buys."));
+    buysPageAction->setCheckable(true);
+    tabGroup->addAction(buysPageAction);
+
+    sellsPageAction = new QAction(QIcon(":/icons/sales"), tr("&Sales"), this);
+    sellsPageAction->setToolTip(tr("Show my dMarket Sells."));
+    sellsPageAction->setCheckable(true);
+    tabGroup->addAction(sellsPageAction);
+
     proofOfImageAction = new QAction(QIcon(":/icons/data"), tr("&Proof of Data"), this);
     proofOfImageAction ->setToolTip(tr("Timestamp Files on the Denarius blockchain."));
     proofOfImageAction ->setCheckable(true);
@@ -435,6 +460,12 @@ void BitcoinGUI::createActions()
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(dMarketAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(dMarketAction, SIGNAL(triggered()), this, SLOT(gotoDenariusMarket()));
+    connect(buysPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(buysPageAction, SIGNAL(triggered()), this, SLOT(gotoBuysPage()));
+    connect(sellsPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(sellsPageAction, SIGNAL(triggered()), this, SLOT(gotoSellsPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -571,6 +602,9 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(statisticsAction);
 	mainToolbar->addAction(fortunastakeManagerAction);
+    mainToolbar->addAction(dMarketAction);
+    mainToolbar->addAction(buysPageAction);
+    mainToolbar->addAction(sellsPageAction);
 	mainToolbar->addAction(proofOfImageAction);
 	mainToolbar->addAction(marketAction);
     mainToolbar->addAction(blockAction);
@@ -1141,6 +1175,33 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 
+}
+
+void BitcoinGUI::gotoDenariusMarket()
+{
+    dMarketAction->setChecked(true);
+    centralWidget->setCurrentWidget(dMarket);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
+void BitcoinGUI::gotoBuysPage()
+{
+    buysPageAction->setChecked(true);
+    centralWidget->setCurrentWidget(buysPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
+void BitcoinGUI::gotoSellsPage()
+{
+    sellsPageAction->setChecked(true);
+    centralWidget->setCurrentWidget(sellsPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoProofOfImagePage()
