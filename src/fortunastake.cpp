@@ -13,6 +13,7 @@
 #include "sync.h"
 #include "core.h"
 #include <boost/lexical_cast.hpp>
+#include <boost/range/algorithm/count.hpp>
 
 int CFortunaStake::minProtoVersion = MIN_MN_PROTO_VERSION;
 
@@ -998,7 +999,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
                 // TODO HERE: Scan the block for fortunastake payment amount
                 BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
-                        nBlockLastPaid = BlockReading->nHeight;\
+                        nBlockLastPaid = BlockReading->nHeight;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         int value = txout.nValue;
                         // TODO HERE: Check the nValue for the fortunastake payment amount
@@ -1481,6 +1482,15 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
                             CTransaction txCollateral;
                             txCollateral.vin.push_back(vin);
                             txCollateral.vout.push_back(vout);
+
+                            /*
+                            //Check scriptPubKey count with Boost algo count
+                            //If cnt is greater than 1, then return
+                            std::string dstr = txout.scriptPubKey;
+                            int cnt = boost::count(dstr, 'D'); //Needs a better search method
+                            if (cnt > 1)
+                                continue;
+                            */
 
                             CFortunaCollateral data;
                             data.vin = vin;

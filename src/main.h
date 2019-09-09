@@ -604,6 +604,7 @@ public:
     bool IsInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChainINTERNAL(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(CTxDB& txdb);
+    bool AcceptToMemoryPoolD(bool fLimitFree=true);
     bool AcceptToMemoryPool();
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
@@ -1540,10 +1541,13 @@ public:
 };
 
 extern CTxMemPool mempool;
-
 /** (try to) add transaction to memory pool **/
 
 bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
-                        bool* pfMissingInputs);
+                      bool* pfMissingInputs);
+
+/** (try to) add transaction to memory pool for dMarket **/
+bool AcceptToMemoryPoolD(CTxMemPool& pool, CTransaction &tx, bool fLimitFree,
+                         bool* pfMissingInputs);
 
 #endif

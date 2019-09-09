@@ -333,10 +333,12 @@ void BuysPage::on_payButton_clicked()
    CTransaction tx;
    vector<unsigned char> txData(ParseHex(rawTx));
    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
-    //ssData >> tx;
+   ssData >> tx;
 
-    //AcceptToMemoryPool(mempool, tx, false, NULL);
+   AcceptToMemoryPoolD(mempool, tx, false, NULL);
 
+   //Testing new Accept Function, may scrap, segfault atm
+/*
     // deserialize binary data stream
     try {
         ssData >> tx;
@@ -366,7 +368,8 @@ void BuysPage::on_payButton_clicked()
 
         SyncWithWallets(tx, NULL, true);
     }
-    RelayTransaction(tx, hashTx);
+    RelayTransaction(tx, hashTx)
+    */
 
    // notify the vendor
    payment.rawTx = rawTx;
