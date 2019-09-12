@@ -353,6 +353,12 @@ bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& 
 
 bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex, std::string& errorMessage) {
 
+    if (pwalletMain->IsLocked())
+    {
+        errorMessage = "Error: Your wallet is locked! Please unlock your wallet!";
+        return false;
+    }
+
     // Find possible candidates
     vector<COutput> possibleCoins = SelectCoinsFortunastake(false);
     COutput *selectedOutput;
