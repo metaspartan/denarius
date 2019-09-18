@@ -534,27 +534,52 @@ void FortunastakeManager::on_getConfigButton_clicked()
 
 void FortunastakeManager::on_startButton_clicked()
 {
-    // start the node
-    QItemSelectionModel* selectionModel = ui->tableWidget_2->selectionModel();
-    QModelIndexList selected = selectionModel->selectedRows();
-    if(selected.count() == 0)
-        return;
+    QString results;
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
 
-    QModelIndex index = selected.at(0);
-    int r = index.row();
-    std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
-    CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
+    if(!ctx.isValid())
+    {
+        results = "Wallet failed to unlock.\n";
 
-    std::string errorMessage;
-    bool result = activeFortunastake.Register(c.sAddress, c.sFortunastakePrivKey, c.sTxHash, c.sOutputIndex, errorMessage);
+    } else {
+        // start the node
+        QItemSelectionModel *selectionModel = ui->tableWidget_2->selectionModel();
+        QModelIndexList selected = selectionModel->selectedRows();
+        if (selected.count() == 0)
+            return;
+
+        int successful = 0;
+        int fail = 0;
+
+        QModelIndex index = selected.at(0);
+        int r = index.row();
+        std::string sAddress = ui->tableWidget_2->item(r, 1)->text().toStdString();
+        CAdrenalineNodeConfig c = pwalletMain->mapMyAdrenalineNodes[sAddress];
+
+        std::string errorMessage;
+        bool result = activeFortunastake.Register(c.sAddress, c.sFortunastakePrivKey, c.sTxHash, c.sOutputIndex,
+                                                  errorMessage);
+
+        if (result)
+        {
+            results += "Hybrid Fortunastake at " + QString::fromStdString(c.sAddress) + " started.";
+            successful++;
+        }
+        else
+        {
+            results += "Error: " + QString::fromStdString(errorMessage);
+            fail++;
+        }
+    }
+
+    if(ctx.isValid())
+    {
+        pwalletMain->Lock();
+    }
 
     QMessageBox msg;
     msg.setWindowTitle("Denarius Message");
-    if(result)
-        msg.setText("Hybrid Fortunastake at " + QString::fromStdString(c.sAddress) + " started.");
-    else
-        msg.setText("Error: " + QString::fromStdString(errorMessage));
-
+    msg.setText(results);
     msg.exec();
 }
 

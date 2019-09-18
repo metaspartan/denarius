@@ -1523,8 +1523,12 @@ void ThreadOnionSeed(void* parg)
 static const char *strDNSSeed[][2] = {
     {"dnsseed.hashbag.cc", "dnsseed.hashbag.cc"},
     {"seed.denarius.host", "seed.denarius.host"},
-	{"denariusseed.swarmpvp.com", "denariusseed.swarmpvp.com"}
+    {"dnsseed.denarius.guide", "dnsseed.denarius.guide"},
+    {"dnsseed.denarius.pro", "dnsseed.denarius.pro"},
+    {"mseed.denarius.guide", "mseed.denarius.guide"},
+    {"bseed.denarius.guide", "bseed.denarius.guide"}
 };
+
 
 void ThreadDNSAddressSeed(void* parg)
 {
