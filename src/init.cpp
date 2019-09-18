@@ -385,7 +385,6 @@ std::string HelpMessage()
         "\n" + _("Fortunastake options:") + "\n" +
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
-        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
@@ -515,6 +514,8 @@ bool AppInit2()
     nDerivationMethodIndex = 0;
 
     fTestNet = GetBoolArg("-testnet");
+
+    fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
 
     //if (fTestNet)
@@ -1183,7 +1184,7 @@ bool AppInit2()
     }
 
     if (pwalletMain) {
-        if(GetBoolArg("-fsconflock", true) & GetBoolArg("-mnconflock", true)) {
+        if(GetBoolArg("-fsconflock", true)) {
             LOCK(pwalletMain->cs_wallet);
             printf("Locking Fortunastakes:\n");
             uint256 mnTxHash;

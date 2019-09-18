@@ -92,6 +92,7 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
+bool fFSLock = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -1179,22 +1180,23 @@ void WriteConfigFile(FILE* configFile)
     fputs ("listen=1\n", configFile);
     fputs ("server=1\n", configFile);
     fputs ("addnode=149.28.51.135\n", configFile); //mining.cafe
-    fputs ("addnode=144.136.70.136\n", configFile); // Peers need updating after mandatory
-    fputs ("addnode=24.117.192.101\n", configFile);
-    fputs ("addnode=24.205.81.255\n", configFile);
-    fputs ("addnode=45.77.235.152\n", configFile);
-    fputs ("addnode=81.204.3.6\n", configFile);
-    fputs ("addnode=173.255.132.121:33369\n", configFile);
-    fputs ("addnode=185.153.46.15:333691\n", configFile);
-    fputs ("addnode=217.122.154.194:33369\n", configFile);
-    fputs ("addnode=222.107.38.86:33369\n", configFile);
-    fputs ("addnode=45.32.205.128:33369\n", configFile);
-    fputs ("addnode=45.76.127.137:33369\n", configFile);
-    fputs ("addnode=51.38.112.208:33369\n", configFile);
-    fputs ("addnode=67.166.241.130:33369\n", configFile);
-    fputs ("addnode=70.161.133.63:33369\n", configFile);
-    fputs ("addnode=82.51.2.218:33369\n", configFile);
-    fputs ("addnode=94.64.12.74:33369\n", configFile);
+    fputs ("addnode=144.136.70.136\n", configFile);
+    fputs ("addnode=104.238.179.184\n", configFile);
+    fputs ("addnode=116.203.60.24\n", configFile);
+    fputs ("addnode=134.3.128.167\n", configFile);
+    fputs ("addnode=140.82.60.123\n", configFile);
+    fputs ("addnode=51.38.112.208\n", configFile);
+    fputs ("addnode=144.202.108.83:33369\n", configFile);
+    fputs ("addnode=89.142.75.60:333691\n", configFile);
+    fputs ("addnode=77.165.171.219:33369\n", configFile);
+    fputs ("addnode=54.39.98.175:33369\n", configFile);
+    fputs ("addnode=51.83.83.216:33369\n", configFile);
+    fputs ("addnode=45.77.59.115:33369\n", configFile);
+    fputs ("addnode=31.220.42.242:33369\n", configFile);
+    fputs ("addnode=24.205.81.255:33369\n", configFile);
+    fputs ("addnode=207.189.31.106:33369\n", configFile);
+    fputs ("addnode=207.148.86.124:33369\n", configFile);
+    fputs ("addnode=207.180.213.175:33369\n", configFile);
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
@@ -1243,7 +1245,7 @@ boost::filesystem::path GetConfigFile()
 
 boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-fsconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }

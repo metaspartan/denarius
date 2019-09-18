@@ -1,20 +1,19 @@
-# Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.8.5
+# Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.9.3
 # https://denarius.io
 # https://github.com/carsenk/denarius
 # By Carsen Klock
 name: denarius
-version: '3.3.8.5'
+version: '3.3.9.3'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
-icon: share/pixmaps/denarius-128.png
 
 grade: devel
 confinement: strict
 
 apps:
   denarius:
-    command: Denarius
+    command: desktop-launch $SNAP/usr/local/bin/denarius
     plugs: [home, network, network-bind, unity7]
     desktop: denarius.desktop
 
@@ -93,4 +92,3 @@ parts:
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
       sudo cp Denarius /usr/bin/
       sudo cp contrib/debian/denarius-qt.desktop $SNAPCRAFT_PART_INSTALL/denarius.desktop
-      sudo cp share/pixmaps/denarius-128.png $SNAPCRAFT_PART_INSTALL/denarius-128.png

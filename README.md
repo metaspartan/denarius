@@ -15,6 +15,8 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 [![Snap Status](https://build.snapcraft.io/badge/carsenk/denarius.svg)](https://build.snapcraft.io/user/carsenk/denarius)
 
+![Code Climate](https://codeclimate.com/github/carsenk/denarius/badges/gpa.svg)
+
 [![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=master)](https://travis-ci.org/carsenk/denarius)
 
 [![Build history](https://buildstats.info/travisci/chart/carsenk/denarius?branch=master)](https://travis-ci.org/carsenk/denarius?branch=master)
@@ -26,7 +28,7 @@ Denarius is a true optional anonymous, untraceable, and secure hybrid cryptocurr
 Ticker: D
 
 Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
-10,000,000 D will be created in approx. about 3 years during the PoW phase. Denarius had a 10% Premine of 1,000,000 D for bounties, distribution, and marketing.
+10,000,000 D will be created in approx. about 3 years during the PoW phase.
 
 Specifications
 ==========================
