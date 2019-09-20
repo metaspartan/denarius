@@ -1207,89 +1207,131 @@ Value masternode(const Array& params, bool fHelp)
         mnEntries = fortunastakeConfig.getEntries();
         Object mnObj;
 
+        CScript pubkey;
+        pubkey = GetScriptForDestination(activeFortunastake.pubKeyFortunastake.GetID());
+        CTxDestination address1;
+        ExtractDestination(pubkey, address1);
+        CBitcoinAddress address2(address1);
+        if (activeFortunastake.pubKeyFortunastake.IsFullyValid()) {
             CScript pubkey;
-            pubkey = GetScriptForDestination(activeFortunastake.pubKeyFortunastake.GetID());
             CTxDestination address1;
+            std::string address = "";
+            bool found = false;
+            Object localObj;
+            localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
+            localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
+            LOCK(cs_fortunastakes);
+            BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+                if (mn.vin == activeFortunastake.vin) {
+                    //int mnRank = GetFortunastakeRank(mn, pindexBest);
+                    pubkey = GetScriptForDestination(mn.pubkey.GetID());
+                    ExtractDestination(pubkey, address1);
+                    CBitcoinAddress address2(address1);
+                    address = address2.ToString();
+                    localObj.push_back(Pair("payment_address", address));
+                    //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+                    localObj.push_back(Pair("network_status", mn.IsActive() ? "active" : "registered"));
+                    if (mn.IsActive()) {
+                        localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+
+                    }
+                    localObj.push_back(Pair("earnings", mn.payValue));
+                    found = true;
+                    break;
+                }
+            }
+            string reason;
+            if(activeFortunastake.status == FORTUNASTAKE_REMOTELY_ENABLED) reason = "fortunastake started remotely";
+            if(activeFortunastake.status == FORTUNASTAKE_INPUT_TOO_NEW) reason = "fortunastake input must have at least 15 confirmations";
+            if(activeFortunastake.status == FORTUNASTAKE_IS_CAPABLE) reason = "successfully started fortunastake";
+            if(activeFortunastake.status == FORTUNASTAKE_STOPPED) reason = "fortunastake is stopped";
+            if(activeFortunastake.status == FORTUNASTAKE_NOT_CAPABLE) reason = "not capable fortunastake: " + activeFortunastake.notCapableReason;
+            if(activeFortunastake.status == FORTUNASTAKE_SYNC_IN_PROCESS) reason = "sync in process. Must wait until client is synced to start.";
+
+            if (!found) {
+                localObj.push_back(Pair("network_status", "unregistered"));
+                if (activeFortunastake.status != 9 && activeFortunastake.status != 7)
+                {
+                    localObj.push_back(Pair("notCapableReason", reason));
+                }
+            } else {
+                localObj.push_back(Pair("local_status", reason));
+            }
+
+
+            //localObj.push_back(Pair("address", address2.ToString().c_str()));
+
+            mnObj.push_back(Pair("local",localObj));
+        } else {
+            Object localObj;
+            localObj.push_back(Pair("status", "unconfigured"));
+            mnObj.push_back(Pair("local",localObj));
+        }
+
+        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry& mne, fortunastakeConfig.getEntries()) {
+            Object remoteObj;
+            std::string address = mne.getIp();
+
+            CTxIn vin;
+            CTxDestination address1;
+            CActiveFortunastake amn;
+            CPubKey pubKeyCollateralAddress;
+            CKey keyCollateralAddress;
+            CPubKey pubKeyFortunastake;
+            CKey keyFortunastake;
+            std::string errorMessage;
+            std::string forTunaError;
+            std::string vinError;
+
+            if(!forTunaSigner.SetKey(mne.getPrivKey(), forTunaError, keyFortunastake, pubKeyFortunastake))
+            {
+                errorMessage = forTunaError;
+            }
+
+            if (!amn.GetFortunaStakeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, mne.getTxHash(), mne.getOutputIndex(), vinError))
+            {
+                errorMessage = vinError;
+            }
+
+            CScript pubkey = GetScriptForDestination(pubKeyCollateralAddress.GetID());
             ExtractDestination(pubkey, address1);
             CBitcoinAddress address2(address1);
-            if (activeFortunastake.pubKeyFortunastake.IsFullyValid()) {
-                CScript pubkey;
-                pubkey = GetScriptForDestination(activeFortunastake.pubKeyFortunastake.GetID());
-                CTxDestination address1;
-                ExtractDestination(pubkey, address1);
-                if (pubkey.IsPayToScriptHash())
-                CBitcoinAddress address2(address1);
 
-                Object localObj;
-                localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
-                localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
-                localObj.push_back(Pair("status", activeFortunastake.status));
-                localObj.push_back(Pair("address", address2.ToString().c_str()));
-                localObj.push_back(Pair("notCapableReason", activeFortunastake.notCapableReason.c_str()));
-                mnObj.push_back(Pair("local",localObj));
+            remoteObj.push_back(Pair("alias", mne.getAlias()));
+            remoteObj.push_back(Pair("ipaddr", address));
+
+            if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
+                remoteObj.push_back(Pair("collateral", "Wallet is Locked"));
             } else {
-                Object localObj;
-                localObj.push_back(Pair("status", "unconfigured"));
-                mnObj.push_back(Pair("local",localObj));
-            }
-
-            BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry& mne, fortunastakeConfig.getEntries()) {
-                Object remoteObj;
-                std::string address = mne.getIp();
-
-                CTxIn vin;
-                CTxDestination address1;
-                CActiveFortunastake amn;
-                CPubKey pubKeyCollateralAddress;
-                CKey keyCollateralAddress;
-                CPubKey pubKeyFortunastake;
-                CKey keyFortunastake;
-                std::string errorMessage;
-                std::string forTunaError;
-                std::string vinError;
-
-                if(!forTunaSigner.SetKey(mne.getPrivKey(), forTunaError, keyFortunastake, pubKeyFortunastake))
-                {
-                    errorMessage = forTunaError;
-                }
-
-                if (!amn.GetFortunaStakeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, mne.getTxHash(), mne.getOutputIndex(), vinError))
-                {
-                    errorMessage = vinError;
-                }
-
-                CScript pubkey = GetScriptForDestination(pubKeyCollateralAddress.GetID());
-                ExtractDestination(pubkey, address1);
-                CBitcoinAddress address2(address1);
-
-                remoteObj.push_back(Pair("alias", mne.getAlias()));
-                remoteObj.push_back(Pair("ipaddr", address));
                 remoteObj.push_back(Pair("collateral", address2.ToString()));
-
-                bool mnfound = false;
-                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-                {
-                    if (mn.addr.ToString() == mne.getIp()) {
-                        remoteObj.push_back(Pair("status", "online"));
-                        remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
-                        remoteObj.push_back(Pair("version",mn.protocolVersion));
-                        mnfound = true;
-                        break;
-                    }
-                }
-                if (!mnfound)
-                {
-                    if (!errorMessage.empty()) {
-                        remoteObj.push_back(Pair("status", "error"));
-                        remoteObj.push_back(Pair("error", errorMessage));
-                    } else {
-                        remoteObj.push_back(Pair("status", "notfound"));
-                    }
-                }
-                mnObj.push_back(Pair(mne.getAlias(),remoteObj));
             }
+            //remoteObj.push_back(Pair("collateral", address2.ToString()));
+            //remoteObj.push_back(Pair("collateral", CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString()));
 
-            return mnObj;
+            bool mnfound = false;
+            BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+            {
+                if (mn.addr.ToString() == mne.getIp()) {
+                    remoteObj.push_back(Pair("status", "online"));
+                    remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
+                    remoteObj.push_back(Pair("version",mn.protocolVersion));
+                    mnfound = true;
+                    break;
+                }
+            }
+            if (!mnfound)
+            {
+                if (!errorMessage.empty()) {
+                    remoteObj.push_back(Pair("status", "error"));
+                    remoteObj.push_back(Pair("error", errorMessage));
+                } else {
+                    remoteObj.push_back(Pair("status", "notfound"));
+                }
+            }
+            mnObj.push_back(Pair(mne.getAlias(),remoteObj));
+        }
+
+        return mnObj;
     }
 
 
