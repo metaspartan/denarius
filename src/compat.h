@@ -61,5 +61,12 @@ inline int myclosesocket(SOCKET& hSocket)
 }
 #define closesocket(s)      myclosesocket(s)
 
+bool static inline IsSelectableSocket(SOCKET s) {
+#ifdef WIN32
+    return true;
+#else
+    return (s < FD_SETSIZE);
+#endif
+}
 
 #endif
