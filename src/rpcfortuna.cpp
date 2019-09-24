@@ -10,7 +10,7 @@
 #include "fortunastake.h"
 #include "activefortunastake.h"
 #include "fortunastakeconfig.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include <boost/lexical_cast.hpp>
 #include "util.h"
 #include "base58.h"

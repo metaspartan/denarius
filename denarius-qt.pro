@@ -479,7 +479,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
-    src/bitcoinrpc.h \
+    src/denariusrpc.h \
     src/qt/overviewpage.h \
     src/qt/csvmodelwriter.h \
     src/crypter.h \
@@ -583,7 +583,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
     src/qt/walletmodel.cpp \
-    src/bitcoinrpc.cpp \
+    src/denariusrpc.cpp \
     src/rpcdump.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \

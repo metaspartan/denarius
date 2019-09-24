@@ -13,7 +13,7 @@
 #include "walletmodel.h"
 #include "wallet.h"
 #include "init.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "askpassphrasedialog.h"
 
 #include <boost/lexical_cast.hpp>

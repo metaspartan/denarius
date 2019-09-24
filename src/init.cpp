@@ -8,7 +8,7 @@
 #include "main.h"
 #include "txdb.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "net.h"
 #include "init.h"
 #include "util.h"

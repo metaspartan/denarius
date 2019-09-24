@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "main.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "spork.h"
 
 using namespace json_spirit;
@@ -646,4 +646,39 @@ Value gettxout(const Array& params, bool fHelp)
     ret.push_back(Pair("coinstake", tx.IsCoinStake()));
 
     return ret;
+}
+
+Value getblockchaininfo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+                "getblockchaininfo\n"
+                "Returns an object containing various state info regarding block chain processing.\n"
+                "\nResult:\n"
+                "{\n"
+                "  \"chain\": \"xxxx\",        (string) current chain (main, testnet)\n"
+                "  \"blocks\": xxxxxx,         (numeric) the current number of blocks processed in the server\n"
+                "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
+                "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
+                "  \"initialblockdownload\": xxxx, (bool) estimate of whether this D node is in Initial Block Download mode.\n"
+                //"  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
+                //"  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
+                "}\n"
+        );
+
+    proxyType proxy;
+    GetProxy(NET_IPV4, proxy);
+
+    Object obj;
+    std::string chain = "testnet";
+    if(!fTestNet)
+        chain = "main";
+    obj.push_back(Pair("chain",         chain));
+    obj.push_back(Pair("blocks",        (int)nBestHeight));
+    obj.push_back(Pair("bestblockhash", hashBestChain.GetHex()));
+    obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
+    obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
+    //obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(hashBestChain)));
+    //obj.push_back(Pair("chainwork",     hashBestChain->nChainWork.GetHex()));
+    return obj;
 }
