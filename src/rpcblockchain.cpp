@@ -661,8 +661,8 @@ Value getblockchaininfo(const Array& params, bool fHelp)
                 "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
                 "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
                 "  \"initialblockdownload\": xxxx, (bool) estimate of whether this D node is in Initial Block Download mode.\n"
-                //"  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
-                //"  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
+                "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
+                "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
                 "  \"moneysupply\": xxxx, (numeric) the current supply of D in circulation\n"
                 "}\n"
         );
@@ -674,15 +674,17 @@ Value getblockchaininfo(const Array& params, bool fHelp)
     std::string chain = "testnet";
     if(!fTestNet)
         chain = "main";
-    obj.push_back(Pair("chain",         chain));
-    obj.push_back(Pair("blocks",        (int)nBestHeight));
-    obj.push_back(Pair("bestblockhash", hashBestChain.GetHex()));
+    obj.push_back(Pair("chain",          chain));
+    obj.push_back(Pair("blocks",         (int)nBestHeight));
+    //obj.push_back(Pair("headers",      pindexBestHeader ? pindexBestHeader->nHeight : -1));
+    obj.push_back(Pair("bestblockhash",  hashBestChain.GetHex()));
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    obj.push_back(Pair("difficulty",    diff));
+    obj.push_back(Pair("difficulty",     diff));
     obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
-    //obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(hashBestChain)));
-    //obj.push_back(Pair("chainwork",     hashBestChain->nChainWork.GetHex()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(pindexBest)));
+    obj.push_back(Pair("chainwork",      pindexBest->nChainWork.GetHex()));
+    obj.push_back(Pair("moneysupply",    ValueFromAmount(pindexBest->nMoneySupply)));
+    //obj.push_back(Pair("size_on_disk",   CalculateCurrentUsage()));
     return obj;
 }
