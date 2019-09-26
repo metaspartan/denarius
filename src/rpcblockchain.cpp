@@ -159,6 +159,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
     result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
+    result.push_back(Pair("chainwork", leftTrim(blockindex->nChainWork.GetHex(), '0')));
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
     if (blockindex->pnext)
@@ -683,7 +684,7 @@ Value getblockchaininfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",     diff));
     obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
     obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(pindexBest)));
-    obj.push_back(Pair("chainwork",      pindexBest->nChainWork.GetHex()));
+    obj.push_back(Pair("chainwork",      leftTrim(pindexBest->nChainWork.GetHex(), '0')));
     obj.push_back(Pair("moneysupply",    ValueFromAmount(pindexBest->nMoneySupply)));
     //obj.push_back(Pair("size_on_disk",   CalculateCurrentUsage()));
     return obj;
