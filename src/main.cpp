@@ -91,6 +91,8 @@ extern enum Checkpoints::CPMode CheckpointsMode;
 
 std::set<uint256> setValidatedTx;
 
+CHooks* hooks; // This adds Namecoin style hooks which allow splicing of code inside standard Denarius functions.
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -832,6 +834,7 @@ bool CTransaction::CheckTransaction() const
 	*/
 
     return true;
+    //return hooks->CheckTransaction(*this);
 }
 
 int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
@@ -892,11 +895,15 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
     if (tx.IsCoinStake())
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
 
+#define STANDARD_TX_ONLY
+#ifdef STANDARD_TX_ONLY
+    bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
+
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;
-    if (!fTestNet && !IsStandardTx(tx, reason)) //!IsStandardTx(tx, reason)
+    if (!fTestNet && !IsStandardTx(tx, reason) && !isNameTx) //!IsStandardTx(tx, reason)
         return error("CTxMemPool::accept() : nonstandard transaction type");
-
+#endif
     // Do we already have it?
     uint256 hash = tx.GetHash();
     {
@@ -955,11 +962,11 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
                 *pfMissingInputs = true;
             return false;
         }
-
+#ifdef STANDARD_TX_ONLY
             // Check for non-standard pay-to-script-hash in inputs
-            if (!AreInputsStandard(tx, mapInputs) && !fTestNet)
+            if (!AreInputsStandard(tx, mapInputs) && !fTestNet && !isNameTx)
                 return error("CTxMemPool::accept() : nonstandard transaction input");
-
+#endif
             nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
             GetMinFee_mode feeMode = GMF_RELAY;
@@ -1038,6 +1045,9 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         }
         addUnchecked(hash, tx);
     }
+
+    //AddToPendingNames() hooks.h
+    hooks->AddToPendingNames(tx);
 
     ///// are we sure this is ok when loading transactions or restoring block txes
     // If updated, erase old tx from wallet
@@ -1791,6 +1801,8 @@ void Misbehaving(NodeId pnode, int howmuch)
 
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
+    //DisconnectInputs() hooks.h Name related
+    hooks->DisconnectInputs(*this);
     // Relinquish previous transactions' spent pointers
     if (!IsCoinBase())
     {
@@ -2148,6 +2160,10 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     // ... both are false when called from CTransaction::AcceptToMemoryPool
     if (!IsCoinBase())
     {
+        //New name related
+        vector<CTransaction> vTxPrev;
+        vector<CTxIndex> vTxindex;
+
         int64_t nValueIn = 0;
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
@@ -2206,7 +2222,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             if (!(fBlock && (nBestHeight < Checkpoints::GetTotalBlocksEstimate())))
             {
                 // Verify signature
-                if (!VerifySignature(txPrev, *this, i, flags, 0))
+                if (!VerifySignature(txPrev, *this, i, flags, true, 0))
                 {
                     if (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) {
                     // Check whether the failure was caused by a
@@ -2215,7 +2231,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                     // if so, don't trigger DoS protection to
                     // avoid splitting the network between upgraded and
                     // non-upgraded nodes.
-                    if (VerifySignature(txPrev, *this, i, flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, 0))
+                    if (VerifySignature(txPrev, *this, i, flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, true, 0))
                         return error("ConnectInputs() : %s non-mandatory VerifySignature failed", GetHash().ToString().c_str());
                     }
                     // Failures of other flags indicate a transaction that is
@@ -2237,7 +2253,15 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             {
                 mapTestPool[prevout.hash] = txindex;
             }
+            //Push back txprev and txindex for name related
+            vTxPrev.push_back(txPrev);
+            vTxindex.push_back(txindex);
         }
+
+        /*
+		if (!hooks->ConnectInputs(txdb, mapTestPool, *this, vTxPrev, vTxindex, pindexBlock, posThisTx, fBlock, fMiner))
+            return false;
+		*/
 
         if (nVersion == ANON_TXN_VERSION)
         {
@@ -2950,6 +2974,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)
         SyncWithWallets(tx, this, true);
+
+    // add names to namedb.dat
+    hooks->ConnectBlock(txdb, pindex);
 
     // update the UI about the new block
     uiInterface.NotifyRanksUpdated();
@@ -5406,4 +5433,10 @@ int64_t GetFortunastakePayment(int nHeight, int64_t blockValue)
 	int64_t ret = static_cast<int64_t>(blockValue * 1/3); //33%
 
     return ret;
+}
+
+bool IsSynchronized() {
+    static bool rc = false;
+    if(rc == false) rc = !IsInitialBlockDownload();
+    return rc;
 }

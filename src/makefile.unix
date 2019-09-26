@@ -317,7 +317,9 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
-    obj/stun.o
+    obj/stun.o \
+    obj/namecoin.o \
+    obj/egeriadns.o
 else
 OBJS= \
     obj/echo.o \
@@ -370,7 +372,12 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
+<<<<<<< HEAD
     obj/stun.o
+=======
+    obj/namecoin.o \
+    obj/egeriadns.o
+>>>>>>> egeria
 endif
 
 

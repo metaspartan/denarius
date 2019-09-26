@@ -214,6 +214,9 @@ Value listunspent(const Array& params, bool fHelp)
             if (!setAddress.count(address))
                 continue;
         }
+        // ignore namecoin TxOut
+        if (hooks->IsNameTx(out.tx->nVersion) && hooks->IsNameScript(out.tx->vout[out.i].scriptPubKey))
+            continue;
 
         int64_t nValue = out.tx->vout[out.i].nValue;
         const CScript& pk = out.tx->vout[out.i].scriptPubKey;
@@ -536,7 +539,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
         {
             txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);
         }
-		if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
+		if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, true, 0))
             fComplete = false;
     }
 

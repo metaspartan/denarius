@@ -28,6 +28,7 @@
 #include "fortuna.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
+#include "managenamespage.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -184,6 +185,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
+    manageNamesPage = new ManageNamesPage(this);
 	//chatWindow = new ChatWindow(this);
 
     fFSLock = GetBoolArg("-fsconflock");
@@ -220,6 +222,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
     centralWidget->addWidget(messagePage);
+    centralWidget->addWidget(manageNamesPage);
 	centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(fortunastakeManagerPage);
@@ -341,6 +344,12 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 
+    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage Names"), this);
+    manageNamesAction->setToolTip(tr("Manage name values registered via Denarius Egeria DNS"));
+    manageNamesAction->setCheckable(true);
+    manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(manageNamesAction);
+
 	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     marketAction->setToolTip(tr("Market Data"));
     marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
@@ -435,6 +444,8 @@ void BitcoinGUI::createActions()
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(gotoManageNamesPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -571,6 +582,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(statisticsAction);
 	mainToolbar->addAction(fortunastakeManagerAction);
+    mainToolbar->addAction(manageNamesAction);
 	mainToolbar->addAction(proofOfImageAction);
 	mainToolbar->addAction(marketAction);
     mainToolbar->addAction(blockAction);
@@ -682,6 +694,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		marketBrowser->setModel(clientModel);
         fortunastakeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
+        manageNamesPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -739,6 +752,7 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addAction(receiveCoinsAction);
 	trayIconMenu->addSeparator();
 	trayIconMenu->addAction(multisigAction);
+    trayIconMenu->addAction(manageNamesAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(signMessageAction);
     trayIconMenu->addAction(verifyMessageAction);
@@ -1141,6 +1155,16 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 
+}
+
+void BitcoinGUI::gotoManageNamesPage()
+{
+    manageNamesAction->setChecked(true);
+    centralWidget->setCurrentWidget(manageNamesPage);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), manageNamesPage, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoProofOfImagePage()

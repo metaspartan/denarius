@@ -19,6 +19,7 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "egeriadns.h"
 
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
@@ -41,6 +42,7 @@
 using namespace std;
 using namespace boost;
 
+EgeriaDns* egeriadns = NULL;
 CWallet* pwalletMain = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
@@ -107,7 +109,8 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
-
+        if(egeriadns)
+            delete egeriadns;
         Finalise();
         /*
         SecureMsgShutdown();
@@ -664,14 +667,23 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+
+    hooks = InitHook();
+    printf("\n\n");
+    printf("Denarius (D) version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
+
+    //  Create egeria dns name index - this must happen before ReacceptWalletTransactions())
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "namedb.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile))
+        createNameIndexFile();
+        printf("Created an Egeria DNS Name Database in the Denarius Data Directory\n");
 
     if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
@@ -1256,15 +1268,33 @@ bool AppInit2()
     printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
 
+    // Start Egeria DNS Server alongside Denarius
+    // init egeriadns. WARNING: this should be done after hooks initialization
+    if (GetBoolArg("-egeria", true)) //Add fEgeria bool
+    {
+        //#define EGERIADNS_PORT 3333 in protocol.h
+        int port = GetArg("-egeriaport", EGERIADNS_PORT);
+        int verbose = GetArg("-egeriaverbose", 1);
+        if (port <= 0)
+            port = EGERIADNS_PORT;
+        string suffix  = GetArg("-egeriasuffix", "");
+        string bind_ip = GetArg("-egeriabindip", "");
+        string allowed = GetArg("-egeriaallowed", "");
+        string localcf = GetArg("-egerialocalcf", "");
+        egeriadns = new EgeriaDns(bind_ip.c_str(), port,
+                            suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius Egeria DNS server started...\n");
+    }
+
     if(fNativeTor)
-        printf("Native Tor Onion Relay Node Enabled");
+        printf("Native Tor Onion Relay Node Enabled\n");
     else
-        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+        printf("Native Tor Onion Relay Disabled, Using Regular Peers...\n");
 
     if (fDebug)
-        printf("Debugging is Enabled.");
+        printf("Debugging is Enabled.\n");
 	else
-        printf("Debugging is not enabled.");
+        printf("Debugging is not enabled.\n");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
@@ -1283,6 +1313,8 @@ bool AppInit2()
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
+    if(egeriadns)
+        egeriadns->Run();
     while (1)
         //MilliSleep(5000);
         sleep(5);

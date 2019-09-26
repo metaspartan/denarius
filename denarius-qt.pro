@@ -421,6 +421,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
+    src/hooks.h \
+    src/namecoin.h \
+    src/qt/nametablemodel.h \
+    src/qt/managenamespage.h \
+    src/egeriadns.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -548,6 +553,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
     src/qt/termsofuse.cpp \
+    src/namecoin.cpp \
+    src/qt/nametablemodel.cpp \
+    src/qt/managenamespage.cpp \
+    src/egeriadns.cpp \
     src/alert.cpp \
     src/stun.cpp \
     src/base58.cpp \
@@ -661,6 +670,7 @@ FORMS += \
     src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
+    src/qt/forms/managenamespage.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
