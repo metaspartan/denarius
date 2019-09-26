@@ -121,7 +121,7 @@ Value deletetransaction(const Array& params, bool fHelp)
     result.push_back(Pair("removing name tx (if this is name tx) from pending name operations", ret));
 
     int nMismatchSpent;
-    int64 nBalanceInQuestion;
+    int64_t nBalanceInQuestion;
     pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
 
     if (nMismatchSpent != 0)

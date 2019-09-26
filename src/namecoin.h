@@ -1,6 +1,6 @@
 #include "db.h"
 #include "txdb-leveldb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "base58.h"
 
 static const int NAMECOIN_TX_VERSION = 0x0333; //0x0333 is initial version

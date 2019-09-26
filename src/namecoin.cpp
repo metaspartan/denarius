@@ -1325,7 +1325,7 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
         nameScript += scriptPubKey;
 		std::string sNarr;
 
-		string sNarr = "Name OP";
+		sNarr = "Name OP";
 		
         int64_t prevFee = nTransactionFee;
         nTransactionFee = GetNameOpFee(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
