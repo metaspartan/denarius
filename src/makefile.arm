@@ -295,7 +295,7 @@ OBJS= \
     obj/net.o \
 	  obj/core.o \
     obj/protocol.o \
-    obj/bitcoinrpc.o \
+    obj/denariusrpc.o \
     obj/rpcdump.o \
     obj/rpcnet.o \
     obj/rpcmining.o \
@@ -325,9 +325,9 @@ OBJS= \
     obj/fortuna.o \
   	obj/eccryptoverify.o \
     obj/ringsig.o \
+    obj/stun.o \
     obj/namecoin.o \
     obj/egeriadns.o
-
 
 all: denariusd
 

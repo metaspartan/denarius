@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef _BITCOINRPC_H_
-#define _BITCOINRPC_H_ 1
+#ifndef _DENARIUSRPC_H_
+#define _DENARIUSRPC_H_ 1
 
 #include <string>
 #include <list>
@@ -232,6 +232,7 @@ extern json_spirit::Value searchrawtransactions(const json_spirit::Array& params
 
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
+extern json_spirit::Value getblockchaininfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getdifficulty(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpbootstrap(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value settxfee(const json_spirit::Array& params, bool fHelp);

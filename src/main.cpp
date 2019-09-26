@@ -794,15 +794,6 @@ bool CTransaction::CheckTransaction() const
 
     if (nVersion == ANON_TXN_VERSION)
     {
-        // -- Prevent Anon TXs in mainnet until after block 1,350,000 (1.35m Million) ~ D e n a r i u s
-
-        if (!fTestNet && nBestHeight < 1350000)
-        {
-            printf("CheckTransaction() failed - anon txn in live before block 1.35 million, %s.\n", GetHash().ToString().c_str());
-            return false;
-        };
-
-
         // -- Check for duplicate anon outputs
         // NOTE: is this necessary, duplicate coins would not be spendable anyway?
         set<CPubKey> vAnonOutPubkeys;
@@ -1540,6 +1531,31 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan)
     while (mapOrphanBlocks.count(pblockOrphan->hashPrevBlock))
         pblockOrphan = mapOrphanBlocks[pblockOrphan->hashPrevBlock];
     return pblockOrphan->hashPrevBlock;
+}
+
+// Remove a random orphan block (which does not have any dependent orphans).
+void static PruneOrphanBlocks()
+{
+    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+        return;
+
+    // Pick a random orphan block.
+    int pos = insecure_rand() % mapOrphanBlocksByPrev.size();
+    std::multimap<uint256, CBlock*>::iterator it = mapOrphanBlocksByPrev.begin();
+    while (pos--) it++;
+
+    // As long as this block has other orphans depending on it, move to one of those successors.
+    do {
+        std::multimap<uint256, CBlock*>::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetHash());
+        if (it2 == mapOrphanBlocksByPrev.end())
+            break;
+        it = it2;
+    } while(1);
+
+    uint256 hash = it->second->GetHash();
+    delete it->second;
+    mapOrphanBlocksByPrev.erase(it);
+    mapOrphanBlocks.erase(hash);
 }
 
 // Proof of Work miner's coin base reward
@@ -2663,12 +2679,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                         if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mn.nRank, mn.nBlockLastPaid);
 
                                         if (!fIsInitialDownload) {
-                                            if (!CheckFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
+                                            if (!CheckPoSFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // CheckPoSFSPayment()
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT) { //Update PoS FS Payments to not go out of sync
-													return error("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
+													printf("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
                                                 } else {
-                                                    if (fDebug) printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
+                                                    printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
 												//break; 
                                             } else {
@@ -3185,8 +3201,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-    printf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64"  date=%s\n",
+    printf("SetBestChain: new best=%s  height=%d  tx=%lu  trust=%s  blocktrust=%" PRId64"  date=%s\n",
       hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
+      (unsigned long)pindexBest->nChainTx,
       CBigNum(nBestChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
@@ -3306,6 +3323,11 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         pindexNew->pprev = (*miPrev).second;
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
     }
+
+    // denarius: add in nTx, nChainWork, and nChainTx
+    pindexNew->nTx = vtx.size();
+    pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + pindexNew->GetBlockWork().getuint256();
+    pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
 
     // ppcoin: compute chain trust score
     pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
@@ -3645,9 +3667,15 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     // If don't already have its previous block, shunt it off to holding area until we get it
-    if (!mapBlockIndex.count(pblock->hashPrevBlock))
+    if (!mapBlockIndex.count(pblock->hashPrevBlock)) //pblock->hashPrevBlock != 0 &&
     {
-         if (fDebug) printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+        if (fDebug)
+            printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+            //LogPrintf("ProcessBlock: ORPHAN BLOCK %lu, prev=%s\n", (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());
+
+        //if (pfrom)
+            //PruneOrphanBlocks();
+
         // ppcoin: check proof-of-stake
         if (pblock->IsProofOfStake())
         {
@@ -4256,6 +4284,16 @@ void static ProcessGetData(CNode* pfrom)
                         pfrom->hashContinue = 0;
                     }
                 }
+                // disconnect node in case we have reached the outbound limit for serving historical blocks
+                static const int nOneWeek = 7 * 24 * 60 * 60; // assume > 1 week = historical
+                if (send && CNode::OutboundTargetReached(true) && ( ((pindexBest != NULL) && (pindexBest->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek))) )
+                {
+                    printf("net historical block serving limit reached, disconnected peer=%d\n", pfrom->GetId());
+
+                    //disconnect node
+                    pfrom->fDisconnect = true;
+                    bool send = false;
+                }
             }
             else if (inv.IsKnownType())
             {
@@ -4813,7 +4851,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             AddOrphanTx(tx);
 
             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
-            unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);
+            //unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);
+            unsigned int nMaxOrphanTx = (unsigned int)std::max((int64_t)0, GetArg("-maxorphantx", DEFAULT_MAX_ORPHAN_TRANSACTIONS));
+            unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);
+
             if (nEvicted > 0)
                 printf("mapOrphan overflow, removed %u tx\n", nEvicted);
         }
@@ -5222,7 +5263,12 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
 
         // Resend wallet transactions that haven't gotten in a block yet
-        ResendWalletTransactions();
+        // Except during reindex, importing and IBD, when old wallet
+        // transactions become unconfirmed and spams other nodes.
+        if (!fReindex && !IsInitialBlockDownload())
+        {
+            ResendWalletTransactions();
+        }
 
         // Address refresh broadcast
         static int64_t nLastRebroadcast;

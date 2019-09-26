@@ -114,6 +114,7 @@ private:
     QLabel *labelConnectionsIcon;
     QLabel *labelBlocksIcon;
     QLabel *labelConnectTypeIcon;
+    QLabel *labelFSLockIcon;
     QLabel *progressBarLabel;
     QLabel *mainIcon;
     QToolBar *mainToolbar;

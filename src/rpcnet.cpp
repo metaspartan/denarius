@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "net.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "alert.h"
 #include "wallet.h"
 #include "db.h"
@@ -75,6 +75,8 @@ Value getpeerinfo(const Array& params, bool fHelp)
         obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
         obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
         obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
+        obj.push_back(Pair("bytessend", (int64_t)stats.nSendBytes));
+        obj.push_back(Pair("bytesrecv", (int64_t)stats.nRecvBytes));
         obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
         obj.push_back(Pair("pingtime", stats.dPingTime)); //return nodes ping time
         if (stats.dPingWait > 0.0)
@@ -355,6 +357,16 @@ Value getnettotals(const Array& params, bool fHelp)
     obj.push_back(Pair("totalbytesrecv", CNode::GetTotalBytesRecv()));
     obj.push_back(Pair("totalbytessent", CNode::GetTotalBytesSent()));
     obj.push_back(Pair("timemillis", GetTimeMillis()));
+
+    Object outboundLimit;
+    outboundLimit.push_back(Pair("timeframe", CNode::GetMaxOutboundTimeframe()));
+    outboundLimit.push_back(Pair("target", CNode::GetMaxOutboundTarget()));
+    outboundLimit.push_back(Pair("target_reached", CNode::OutboundTargetReached(false)));
+    outboundLimit.push_back(Pair("serve_historical_blocks", !CNode::OutboundTargetReached(true)));
+    outboundLimit.push_back(Pair("bytes_left_in_cycle", CNode::GetOutboundTargetBytesLeft()));
+    outboundLimit.push_back(Pair("time_left_in_cycle", CNode::GetMaxOutboundTimeLeftInCycle()));
+    obj.push_back(Pair("uploadtarget", outboundLimit));
+
     return obj;
 }
 

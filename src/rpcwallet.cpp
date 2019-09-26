@@ -6,7 +6,7 @@
 
 #include "wallet.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "init.h"
 #include "base58.h"
 #include "stealth.h"
@@ -187,6 +187,7 @@ Value getinfo(const Array& params, bool fHelp)
 
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("fortunastake",    fFortunaStake));
+    obj.push_back(Pair("fslock",        fFSLock));
     obj.push_back(Pair("nativetor",     fNativeTor));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));

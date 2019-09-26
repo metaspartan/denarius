@@ -8,7 +8,7 @@
 #include "sync.h"
 #include "ui_interface.h"
 #include "base58.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "db.h"
 
 #undef printf
@@ -262,6 +262,7 @@ static const CRPCCommand vRPCCommands[] =
     { "help",                   &help,                   true,   true },
     { "stop",                   &stop,                   true,   true },
     { "getbestblockhash",       &getbestblockhash,       true,   false },
+    { "getblockchaininfo",      &getblockchaininfo,      true,   false },
     { "getblockcount",          &getblockcount,          true,   false },
     { "getconnectioncount",     &getconnectioncount,     true,   false },
     { "getpeerinfo",            &getpeerinfo,            true,   false },

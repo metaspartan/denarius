@@ -630,6 +630,22 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     return true;
 }
 
+bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
+    if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+    // find height
+    // calculate average payment across all FS
+    // check if value is > 25% higher
+    nAverageFSIncome = avg2(vecFortunastakeScoresList);
+    if (nAverageFSIncome < 1 * COIN) return true; // if we can't calculate a decent average, then let the payment through
+    //int64_t max = nAverageFSIncome * 10 / 8;
+    /* // Dont check if value is > 25% higher since PoS
+    if (value > max) {
+        return false;
+    }
+    */
+    return true;
+}
+
 int64_t avg2(std::vector<CFortunaStake> const& v) {
     int n = 0;
     int64_t mean = 0;

@@ -2809,8 +2809,16 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                     return false;
                 BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
                 {
+                    //Fix priority calculation in CreateTransaction
+                    //Make this projection of priority in 1 block match the
+                    //calculation in the low priority reject code.
                     int64_t nCredit = pcoin.first->vout[pcoin.second].nValue;
-                    dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
+                    //But mempool inputs might still be in the mempool, so their age stays 0
+                    int age = pcoin.first->GetDepthInMainChain();
+                    if (age != 0)
+                        age += 1;
+                    //dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
+                    dPriority += (double)nCredit * age;
                 }
 
                 int64_t nChange = nValueIn - nValue - nFeeRet;

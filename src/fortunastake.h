@@ -262,6 +262,7 @@ public:
 // Get the current winner for this block
 int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
+bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
 int64_t avg2(std::vector<CFortunaStake> const& v);
 int GetFortunastakeByVin(CTxIn& vin);
 int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);

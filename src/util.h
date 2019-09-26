@@ -221,6 +221,7 @@ extern bool fCommandLine;
 extern std::string strMiscWarning;
 extern bool fTestNet;
 extern bool fNativeTor;
+extern bool fFSLock;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;

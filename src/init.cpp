@@ -8,7 +8,7 @@
 #include "main.h"
 #include "txdb.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "net.h"
 #include "init.h"
 #include "util.h"
@@ -306,6 +306,7 @@ std::string HelpMessage()
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
         "  -port=<port>           " + _("Listen for connections on <port> (default: 33369 or testnet: 33368)") + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
+        "  -maxuploadtarget=<n>   " + _("Set a max upload target for your D node, 100 = 100MB (default: 0 unlimited)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
         "  -seednode=<ip>         " + _("Connect to a node to retrieve peer addresses, and disconnect") + "\n" +
@@ -375,6 +376,8 @@ std::string HelpMessage()
         "  -blockminsize=<n>      "   + _("Set minimum block size in bytes (default: 0)") + "\n" +
         "  -blockmaxsize=<n>      "   + _("Set maximum block size in bytes (default: 250000)") + "\n" +
         "  -blockprioritysize=<n> "   + _("Set maximum size of high-priority/low-fee transactions in bytes (default: 27000)") + "\n" +
+        "  -maxorphantx=<n>       "   + strprintf(_("Keep at most <n> unconnectable transactions in memory (default: %u)"), DEFAULT_MAX_ORPHAN_TRANSACTIONS) + "\n" +
+        "  -maxorphanblocks=<n>   "   + strprintf(_("Keep at most <n> unconnectable blocks in memory (default: %u)"), DEFAULT_MAX_ORPHAN_BLOCKS) + "\n" +
 
         "\n" + _("SSL options: (see the Bitcoin Wiki for SSL setup instructions)") + "\n" +
         "  -rpcssl                                  " + _("Use OpenSSL (https) for JSON-RPC connections") + "\n" +
@@ -385,7 +388,6 @@ std::string HelpMessage()
         "\n" + _("Fortunastake options:") + "\n" +
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
-        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
@@ -515,6 +517,8 @@ bool AppInit2()
     nDerivationMethodIndex = 0;
 
     fTestNet = GetBoolArg("-testnet");
+
+    fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
 
     //if (fTestNet)
@@ -691,6 +695,11 @@ bool AppInit2()
 
     //ignore fortunastakes below protocol version
     CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
+
+    // Added maxuploadtarget=MB Tries to keep outbound traffic under the given target (in MiB per 24h), 0 = no limit
+    if (mapArgs.count("-maxuploadtarget")) {
+        CNode::SetMaxOutboundTarget(GetArg("-maxuploadtarget", 0)*1024*1024);
+    }
 
     if (fDaemon)
         fprintf(stdout, "Denarius server starting\n");
@@ -1187,7 +1196,7 @@ bool AppInit2()
     }
 
     if (pwalletMain) {
-        if(GetBoolArg("-fsconflock", true) & GetBoolArg("-mnconflock", true)) {
+        if(GetBoolArg("-fsconflock", true)) {
             LOCK(pwalletMain->cs_wallet);
             printf("Locking Fortunastakes:\n");
             uint256 mnTxHash;
