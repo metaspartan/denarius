@@ -47,19 +47,14 @@ void ThreadDNSAddressSeed2(void* parg);
 bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false);
 
 
-struct LocalServiceInfo {
-    int nScore;
-    int nPort;
-};
-
 //
 // Global state variables
 //
 bool fDiscover = true;
 bool fUseUPnP = false;
 uint64_t nLocalServices = NODE_NETWORK;
-static CCriticalSection cs_mapLocalHost;
-static map<CNetAddr, LocalServiceInfo> mapLocalHost;
+CCriticalSection cs_mapLocalHost;
+map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};
 static bool vfLimited[NET_MAX] = {};
 static CNode* pnodeLocalHost = NULL;
@@ -321,6 +316,7 @@ bool IsReachable(const CNetAddr& addr)
     return vfReachable[net] && !vfLimited[net];
 }
 
+#if 0
 bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const char* pszKeyword, CNetAddr& ipRet)
 {
     SOCKET hSocket;
@@ -373,8 +369,8 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
 bool GetMyExternalIP(CNetAddr& ipRet)
 {
     CService addrConnect;
-    const char* pszGet;
-    const char* pszKeyword;
+    const char* pszGet = NULL;
+    const char* pszKeyword = NULL;
 
     for (int nLookup = 0; nLookup <= 1; nLookup++)
     for (int nHost = 1; nHost <= 2; nHost++)
@@ -428,6 +424,26 @@ bool GetMyExternalIP(CNetAddr& ipRet)
 
     return false;
 }
+#endif
+
+/*--------------------------------------------------------------------------*/
+// from file stun.cpp
+int GetExternalIPbySTUN(uint64_t rnd, struct sockaddr_in *mapped, const char **srv);
+
+/*--------------------------------------------------------------------------*/
+bool GetMyExternalIP_STUN(CNetAddr& ipRet) {
+    struct sockaddr_in mapped;
+    uint64_t rnd = GetRand(~0LL);
+    const char *srv;
+    int rc = GetExternalIPbySTUN(rnd, &mapped, &srv);
+    if(rc > 0) {
+        ipRet = CNetAddr(mapped.sin_addr);
+        CNetAddr addrLocalHost;
+        printf("GetExternalIPbySTUN() returned %s in attempt %u; flags=%x; Server=%s\n", addrLocalHost.ToStringIP().c_str(), rc >> 8, (uint8_t)rc, srv);
+        return true;
+    }
+    return false;
+} // GetMyExternalIP_STUN
 
 void ThreadGetMyExternalIP(void* parg)
 {
@@ -435,9 +451,9 @@ void ThreadGetMyExternalIP(void* parg)
     RenameThread("denarius-ext-ip");
 
     CNetAddr addrLocalHost;
-    if (GetMyExternalIP(addrLocalHost))
+    if (GetMyExternalIP_STUN(addrLocalHost)) //GetMyExternalIP by STUN instead now
     {
-        printf("GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
+        //printf("GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
         AddLocal(addrLocalHost, LOCAL_HTTP);
     }
 }
@@ -460,6 +476,11 @@ uint64_t CNode::nTotalBytesSent = 0;
 CCriticalSection CNode::cs_totalBytesRecv;
 CCriticalSection CNode::cs_totalBytesSent;
 
+uint64_t CNode::nMaxOutboundLimit = 0;
+uint64_t CNode::nMaxOutboundTotalBytesSentInCycle = 0;
+uint64_t CNode::nMaxOutboundTimeframe = 60*60*24; //1 day
+uint64_t CNode::nMaxOutboundCycleStartTime = 0;
+
 CNode* FindNode(const CNetAddr& ip)
 {
     {
@@ -471,7 +492,7 @@ CNode* FindNode(const CNetAddr& ip)
     return NULL;
 }
 
-CNode* FindNode(std::string addrName)
+CNode* FindNode(const std::string& addrName)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
@@ -524,6 +545,11 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
     if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, GetDefaultPort(), nConnectTimeout, &proxyConnectionFailed) :
                   ConnectSocket(addrConnect, hSocket, nConnectTimeout, &proxyConnectionFailed))
     {
+        if (!IsSelectableSocket(hSocket)) {
+            LogPrintf("Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\n");
+            closesocket(hSocket);
+            return NULL;
+        }
         addrman.Attempt(addrConnect);
 
         if (fDebugNet) printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
@@ -565,7 +591,7 @@ void CNode::CloseSocketDisconnect()
     fDisconnect = true;
     if (hSocket != INVALID_SOCKET)
     {
-        printf("disconnecting node %s\n", addrName.c_str());
+        printf("Net() Disconnecting node %s\n", addrName.c_str());
         closesocket(hSocket);
         hSocket = INVALID_SOCKET;
 
@@ -621,6 +647,35 @@ bool CNode::IsBanned(CNetAddr ip)
     return fResult;
 }
 
+bool CNode::Ban(const CNetAddr &addr) {
+    int64_t banTime = GetTime()+GetArg("-bantime", 60*60*24);  // Default 24-hour ban
+    {
+        LOCK(cs_setBanned);
+        if (setBanned[addr] < banTime)
+            setBanned[addr] = banTime;
+    }
+    return true;
+}
+
+//Whitelisted peers/nodes
+//std::vector<CSubNet> CNode::vWhitelistedRange;
+//CCriticalSection CNode::cs_vWhitelistedRange;
+/*
+bool CNode::IsWhitelistedRange(const CNetAddr &addr) {
+    LOCK(cs_vWhitelistedRange);
+    BOOST_FOREACH(const CSubNet& subnet, vWhitelistedRange) {
+        if (subnet.Match(addr))
+            return true;
+    }
+    return false;
+}
+
+void CNode::AddWhitelistedRange(const CSubNet &subnet) {
+    LOCK(cs_vWhitelistedRange);
+    vWhitelistedRange.push_back(subnet);
+}
+ */
+
 bool CNode::Misbehaving(int howmuch)
 {
     if (addr.IsLocal())
@@ -663,6 +718,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(fInbound);
     X(nStartingHeight);
     X(nMisbehavior);
+    //X(fWhitelisted);
 
     // It is common for nodes with good ping times to suddenly become lagged,
     // due to a new block arriving or other large transfer.
@@ -691,6 +747,94 @@ void CNode::RecordBytesSent(uint64_t bytes)
 {
     LOCK(cs_totalBytesSent);
     nTotalBytesSent += bytes;
+
+    uint64_t now = GetTime();
+    if (nMaxOutboundCycleStartTime + nMaxOutboundTimeframe < now)
+    {
+        // timeframe expired, reset cycle
+        nMaxOutboundCycleStartTime = now;
+        nMaxOutboundTotalBytesSentInCycle = 0;
+    }
+
+    // TODO, exclude whitebind peers
+    nMaxOutboundTotalBytesSentInCycle += bytes;
+}
+
+void CNode::SetMaxOutboundTarget(uint64_t limit)
+{
+    LOCK(cs_totalBytesSent);
+    uint64_t recommendedMinimum = (nMaxOutboundTimeframe / 600) * MAX_BLOCK_SIZE;
+    nMaxOutboundLimit = limit;
+
+    if (limit < recommendedMinimum)
+        LogPrintf("Max outbound target is very small (%s) and will be overshot. Recommended minimum is %s\n.", nMaxOutboundLimit, recommendedMinimum);
+}
+
+uint64_t CNode::GetMaxOutboundTarget()
+{
+    LOCK(cs_totalBytesSent);
+    return nMaxOutboundLimit;
+}
+
+uint64_t CNode::GetMaxOutboundTimeframe()
+{
+    LOCK(cs_totalBytesSent);
+    return nMaxOutboundTimeframe;
+}
+
+uint64_t CNode::GetMaxOutboundTimeLeftInCycle()
+{
+    LOCK(cs_totalBytesSent);
+    if (nMaxOutboundLimit == 0)
+        return 0;
+
+    if (nMaxOutboundCycleStartTime == 0)
+        return nMaxOutboundTimeframe;
+
+    uint64_t cycleEndTime = nMaxOutboundCycleStartTime + nMaxOutboundTimeframe;
+    uint64_t now = GetTime();
+    return (cycleEndTime < now) ? 0 : cycleEndTime - GetTime();
+}
+
+void CNode::SetMaxOutboundTimeframe(uint64_t timeframe)
+{
+    LOCK(cs_totalBytesSent);
+    if (nMaxOutboundTimeframe != timeframe)
+    {
+        // reset measure-cycle in case of changing
+        // the timeframe
+        nMaxOutboundCycleStartTime = GetTime();
+    }
+    nMaxOutboundTimeframe = timeframe;
+}
+
+bool CNode::OutboundTargetReached(bool historicalBlockServingLimit)
+{
+    LOCK(cs_totalBytesSent);
+    if (nMaxOutboundLimit == 0)
+        return false;
+
+    if (historicalBlockServingLimit)
+    {
+        // keep a large enought buffer to at least relay each block once
+        uint64_t timeLeftInCycle = GetMaxOutboundTimeLeftInCycle();
+        uint64_t buffer = timeLeftInCycle / 600 * MAX_BLOCK_SIZE;
+        if (buffer >= nMaxOutboundLimit || nMaxOutboundTotalBytesSentInCycle >= nMaxOutboundLimit - buffer)
+            return true;
+    }
+    else if (nMaxOutboundTotalBytesSentInCycle >= nMaxOutboundLimit)
+        return true;
+
+    return false;
+}
+
+uint64_t CNode::GetOutboundTargetBytesLeft()
+{
+    LOCK(cs_totalBytesSent);
+    if (nMaxOutboundLimit == 0)
+        return 0;
+
+    return (nMaxOutboundTotalBytesSentInCycle >= nMaxOutboundLimit) ? 0 : nMaxOutboundLimit - nMaxOutboundTotalBytesSentInCycle;
 }
 
 uint64_t CNode::GetTotalBytesRecv()
@@ -1025,6 +1169,11 @@ void ThreadSocketHandler2(void* parg)
                 if (nErr != WSAEWOULDBLOCK)
                     printf("socket error accept failed: %d\n", nErr);
             }
+            else if (!IsSelectableSocket(hSocket))
+            {
+                LogPrintf("connection from %s dropped: non-selectable socket\n", addr.ToString());
+                closesocket(hSocket);
+            }
             else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
             {
                 closesocket(hSocket);
@@ -1104,6 +1253,17 @@ void ThreadSocketHandler2(void* parg)
                             {
                                 if (!pnode->fDisconnect)
                                     printf("socket recv error %d\n", nErr);
+                                pnode->CloseSocketDisconnect();
+                            }
+                        }
+                        else if (nBytes > 100000) // 100,000 Bytes
+                        {
+                            // error
+                            int nErr = WSAGetLastError();
+                            if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)
+                            {
+                                if (!pnode->fDisconnect)
+                                    printf("Closing socket, output too large %d\n", nErr);
                                 pnode->CloseSocketDisconnect();
                             }
                         }
@@ -1373,8 +1533,12 @@ void ThreadOnionSeed(void* parg)
 static const char *strDNSSeed[][2] = {
     {"dnsseed.hashbag.cc", "dnsseed.hashbag.cc"},
     {"seed.denarius.host", "seed.denarius.host"},
-	{"denariusseed.swarmpvp.com", "denariusseed.swarmpvp.com"}
+    {"dnsseed.denarius.guide", "dnsseed.denarius.guide"},
+    {"dnsseed.denarius.pro", "dnsseed.denarius.pro"},
+    {"mseed.denarius.guide", "mseed.denarius.guide"},
+    {"bseed.denarius.guide", "bseed.denarius.guide"}
 };
+
 
 void ThreadDNSAddressSeed(void* parg)
 {
@@ -1785,12 +1949,12 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
     //
     if (fShutdown)
         return false;
-    if (!strDest)
+    if (!strDest) {
         if (IsLocal(addrConnect) ||
-            FindNode((CNetAddr)addrConnect) || CNode::IsBanned(addrConnect) ||
-            FindNode(addrConnect.ToStringIPPort().c_str()))
+            FindNode((CNetAddr) addrConnect) || CNode::IsBanned(addrConnect) ||
+            FindNode(addrConnect.ToStringIPPort()))
             return false;
-    if (strDest && FindNode(strDest))
+    } else if (FindNode(strDest))
         return false;
 
     vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
@@ -1995,6 +2159,12 @@ bool BindListenPort(const CService &addrBind, string& strError)
     {
         strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
         printf("%s\n", strError.c_str());
+        return false;
+    }
+    if (!IsSelectableSocket(hListenSocket))
+    {
+        strError = "Error: Couldn't create a listenable socket for incoming connections";
+        LogPrintf("%s\n", strError);
         return false;
     }
 

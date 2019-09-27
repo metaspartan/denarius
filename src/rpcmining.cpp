@@ -9,7 +9,7 @@
 #include "init.h"
 #include "miner.h"
 #include "fortunastake.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 
 
 using namespace json_spirit;

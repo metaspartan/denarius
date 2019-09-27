@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef _BITCOINRPC_H_
-#define _BITCOINRPC_H_ 1
+#ifndef _DENARIUSRPC_H_
+#define _DENARIUSRPC_H_ 1
 
 #include <string>
 #include <list>
@@ -50,10 +50,14 @@ enum RPCErrorCode
     RPC_INVALID_PARAMETER           = -8,  // Invalid, missing or duplicate parameter
     RPC_DATABASE_ERROR              = -20, // Database error
     RPC_DESERIALIZATION_ERROR       = -22, // Error parsing or validating structure in raw format
+    RPC_SERVER_NOT_STARTED          = -18, // RPC server was not started (StartRPCThreads() not called)
 
     // P2P client errors
     RPC_CLIENT_NOT_CONNECTED        = -9,  // Bitcoin is not connected
     RPC_CLIENT_IN_INITIAL_DOWNLOAD  = -10, // Still downloading initial blocks
+    RPC_CLIENT_NODE_ALREADY_ADDED   = -23, // Node is already added
+    RPC_CLIENT_NODE_NOT_ADDED       = -24, // Node has not been added before
+    RPC_CLIENT_NODE_NOT_CONNECTED   = -29, // Node to disconnect not found in connected nodes
 
     // Wallet errors
     RPC_WALLET_ERROR                = -4,  // Unspecified problem with wallet (key not found etc.)
@@ -152,6 +156,12 @@ extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::s
 extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
 extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value addnode(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value ping(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getaddednodeinfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getnettotals(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getnetworkinfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value disconnectnode(const json_spirit::Array& params, bool fHelp);
+
 extern json_spirit::Value dumpwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
@@ -221,6 +231,7 @@ extern json_spirit::Value searchrawtransactions(const json_spirit::Array& params
 
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
+extern json_spirit::Value getblockchaininfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getdifficulty(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpbootstrap(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value settxfee(const json_spirit::Array& params, bool fHelp);

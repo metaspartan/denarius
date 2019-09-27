@@ -31,7 +31,7 @@ static const int PING_INTERVAL = 2 * 60;
 /** Time after which to disconnect, after waiting for a ping response (or inactivity). */
 static const int TIMEOUT_INTERVAL = 20 * 60;
 
-inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
+inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 1*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
 
 void AddOneShot(std::string strDest);
@@ -39,6 +39,7 @@ bool RecvLine(SOCKET hSocket, std::string& strLine);
 bool GetMyExternalIP(CNetAddr& ipRet);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
+CNode* FindNode(const std::string& addrName);
 CNode* FindNode(const CService& ip);
 //CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);
 CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL, bool forTunaMaster=false);
@@ -157,6 +158,13 @@ extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 extern NodeId nLastNodeId;
 extern CCriticalSection cs_nLastNodeId;
 
+struct LocalServiceInfo {
+    int nScore;
+    int nPort;
+};
+
+extern CCriticalSection cs_mapLocalHost;
+extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
 class CNodeStateStats
 {
@@ -291,6 +299,7 @@ public:
     CService addrLocal;
     int nVersion;
     std::string strSubVer;
+    //bool fWhitelisted; // This peer can bypass DoS banning.
     bool fOneShot;
     bool fClient;
     bool fInbound;
@@ -313,6 +322,11 @@ protected:
     // Key is IP address, value is banned-until-time
     static std::map<CNetAddr, int64_t> setBanned;
     static CCriticalSection cs_setBanned;
+
+    // Whitelisted ranges. Any node connecting from these is automatically
+    // whitelisted (as well as those connecting to whitelisted binds).
+    //static std::vector<CSubNet> vWhitelistedRange;
+    //static CCriticalSection cs_vWhitelistedRange;
 
 	std::vector<std::string> vecRequestsFulfilled; //keep track of what client has asked for
 
@@ -418,6 +432,12 @@ private:
     static CCriticalSection cs_totalBytesSent;
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
+
+    // outbound limit & stats
+    static uint64_t nMaxOutboundTotalBytesSentInCycle;
+    static uint64_t nMaxOutboundCycleStartTime;
+    static uint64_t nMaxOutboundLimit;
+    static uint64_t nMaxOutboundTimeframe;
 public:
 	NodeId GetId() const {
       return id;
@@ -789,6 +809,7 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
     // new code.
     static void ClearBanned(); // needed for unit testing
     static bool IsBanned(CNetAddr ip);
+    static bool Ban(const CNetAddr &ip); //new addnode ban command
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
 
@@ -798,6 +819,27 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
 
     static uint64_t GetTotalBytesRecv();
     static uint64_t GetTotalBytesSent();
+
+    //!set the max outbound target in bytes
+    static void SetMaxOutboundTarget(uint64_t limit);
+    static uint64_t GetMaxOutboundTarget();
+
+    //!set the timeframe for the max outbound target
+    static void SetMaxOutboundTimeframe(uint64_t timeframe);
+    static uint64_t GetMaxOutboundTimeframe();
+
+    //!check if the outbound target is reached
+    // if param historicalBlockServingLimit is set true, the function will
+    // response true if the limit for serving historical blocks has been reached
+    static bool OutboundTargetReached(bool historicalBlockServingLimit);
+
+    //!response the bytes left in the current max outbound cycle
+    // in case of no limit, it will always response 0
+    static uint64_t GetOutboundTargetBytesLeft();
+
+    //!response the time in second left in the current max outbound cycle
+    // in case of no limit, it will always response 0
+    static uint64_t GetMaxOutboundTimeLeftInCycle();
 };
 
 inline void RelayInventory(const CInv& inv)

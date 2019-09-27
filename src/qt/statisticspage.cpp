@@ -5,7 +5,7 @@
 #include "init.h"
 #include "base58.h"
 #include "clientmodel.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "marketbrowser.h"
 #include <sstream>
 #include <string>

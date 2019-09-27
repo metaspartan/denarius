@@ -131,7 +131,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         if((fTestNet && addr.GetPort() != 19999) || (!fTestNet && addr.GetPort() != 9999)) return;
 
         //search existing fortunastake list, this is where we update existing fortunastakes with new dsee broadcasts
-	      LOCK(cs_fortunastakes);
+        LOCK(cs_fortunastakes);
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
             if(mn.vin.prevout == vin.prevout) {
                 // count == -1 when it's a new entry
@@ -627,6 +627,22 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (value > max) {
         return false;
     }
+    return true;
+}
+
+bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
+    if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+    // find height
+    // calculate average payment across all FS
+    // check if value is > 25% higher
+    nAverageFSIncome = avg2(vecFortunastakeScoresList);
+    if (nAverageFSIncome < 1 * COIN) return true; // if we can't calculate a decent average, then let the payment through
+    //int64_t max = nAverageFSIncome * 10 / 8;
+    /* // Dont check if value is > 25% higher since PoS
+    if (value > max) {
+        return false;
+    }
+    */
     return true;
 }
 
