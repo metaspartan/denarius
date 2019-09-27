@@ -478,11 +478,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     return SendCoinsReturn(OK, 0, hex);
 }
 
-NameTxReturn WalletModel::nameNew(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays)
+NameTxReturn WalletModel::nameNew(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays, QString newAddress)
 {
     string strName = name.toStdString();
     vector<unsigned char> vchName(strName.begin(), strName.end());
-    return name_new(vchName, vchValue, nRentalDays);
+    return name_new(vchName, vchValue, nRentalDays, newAddress.toStdString());
 }
 
 NameTxReturn WalletModel::nameUpdate(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays, QString newAddress)

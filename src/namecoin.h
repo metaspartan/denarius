@@ -3,6 +3,10 @@
 #include "denariusrpc.h"
 #include "base58.h"
 
+class CBitcoinAddress;
+class CKeyStore;
+struct NameIndexStats;
+
 static const int NAMECOIN_TX_VERSION = 0x0333; //0x0333 is initial version
 static const unsigned int MAX_NAME_LENGTH = 512;
 static const unsigned int MAX_VALUE_LENGTH = 20*1024;
@@ -150,7 +154,7 @@ struct NameTxReturn
 };
 NameTxReturn name_new(const std::vector<unsigned char> &vchName,
               const std::vector<unsigned char> &vchValue,
-              const int nRentalDays);
+              const int nRentalDays, std::string strAddress);
 NameTxReturn name_update(const std::vector<unsigned char> &vchName,
               const std::vector<unsigned char> &vchValue,
               const int nRentalDays, std::string strAddress = "");

@@ -108,7 +108,7 @@ public:
 
     // Register new name or update it
     // Requires unlocked wallet; can throw exception instead of returning error
-    NameTxReturn nameNew(const QString &name, const std::vector<unsigned char> &vchValue, int days);
+    NameTxReturn nameNew(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress);
     NameTxReturn nameUpdate(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress = "");
     NameTxReturn nameDelete(const QString &name);
 

@@ -1234,7 +1234,7 @@ Value name_new(const Array& params, bool fHelp)
         throw runtime_error(
                 "name_new <name> <value> <days> [address] [valueAsFilepath]\n"
                 "Creates new key->value pair which expires after specified number of days.\n"
-                "[address] does not currently work but will be added in the future\n"
+                "[address] WIP\n"
                 "If [valueAsFilepath] is non-zero it will interpret <value> as a filepath and try to write file contents in binary format\n"
                 "Cost is square root of (1% of last PoW + 1% per year of last PoW)."
                 + HelpRequiringPassphrase());
@@ -1245,6 +1245,8 @@ Value name_new(const Array& params, bool fHelp)
     vector<unsigned char> vchName = vchFromValue(params[0]);
     vector<unsigned char> vchValue = vchFromValue(params[1]);
     int nRentalDays = params[2].get_int();
+
+    string strAddress = params.size() > 3 ? params[3].get_str() : "";
 
     bool fValueAsFilepath = false;
     if (params.size() > 4)
@@ -1269,7 +1271,7 @@ Value name_new(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to read file");
     }
 
-    NameTxReturn ret = name_new(vchName, vchValue, nRentalDays);
+    NameTxReturn ret = name_new(vchName, vchValue, nRentalDays, strAddress);
     if (!ret.ok)
         throw JSONRPCError(ret.err_code, ret.err_msg);
     return ret.hex.GetHex();
@@ -1277,7 +1279,7 @@ Value name_new(const Array& params, bool fHelp)
 
 NameTxReturn name_new(const vector<unsigned char> &vchName,
               const vector<unsigned char> &vchValue,
-              const int nRentalDays)
+              const int nRentalDays, string strAddress)
 {
     NameTxReturn ret;
     ret.err_code = RPC_INTERNAL_ERROR; //default value
@@ -1309,27 +1311,41 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
             return ret;
         }
 
-        CPubKey vchPubKey;
-
-        if (!pwalletMain->GetKeyFromPool(vchPubKey, true))
-        {
-            ret.err_msg = "failed to get key from pool";
-            return ret;
-        }
-        scriptPubKey.SetDestination(vchPubKey.GetID());
-
         CScript nameScript;
         if (!createNameScript(nameScript, vchName, vchValue, nRentalDays, OP_NAME_NEW, ret.err_msg))
             return ret;
 
+        // add destination to namescript
+        if (strAddress != "")
+        {
+            CBitcoinAddress address(strAddress);
+            if (!address.IsValid())
+            {
+                ret.err_code = RPC_INVALID_ADDRESS_OR_KEY;
+                ret.err_msg = "Denarius address is invalid";
+                return ret;
+            }
+            scriptPubKey = GetScriptForDestination(address.Get());
+        }
+        else
+        {
+            CPubKey vchPubKey;
+            if(!pwalletMain->GetKeyFromPool(vchPubKey))
+            {
+                ret.err_msg = "failed to get key from pool";
+                return ret;
+            }
+            scriptPubKey = GetScriptForDestination(vchPubKey.GetID());
+        }
         nameScript += scriptPubKey;
-		std::string sNarr;
-
-		sNarr = "Name OP";
+        
+        std::string sNarr;
+		sNarr = "Name New OP";
 		
         int64_t prevFee = nTransactionFee;
         nTransactionFee = GetNameOpFee(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
         string strError = pwalletMain->SendMoney(nameScript, CENT, sNarr, wtx, false);
+        //string strError = pwalletMain->SendMoneyToDestination(nameScript, CENT, sNarr, wtx);
         nTransactionFee = prevFee;
 
         if (strError != "")
