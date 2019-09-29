@@ -31,7 +31,7 @@ port="$(snapctl get port)"
 rpcport="$(snapctl get rpcport)"
 user="$(snapctl get user)"
 pass="$(snapctl get pass)"
-fortunastake="$(snapctl get fortunastakeprivkey)"
+fortunastake="$(snapctl get fortunastake)"
 fortunastakeaddr="$(snapctl get fortunastakeaddr)"
 fortunastakeprivkey="$(snapctl get fortunastakeprivkey)"
 

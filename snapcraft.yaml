@@ -11,14 +11,14 @@ grade: stable
 confinement: strict
  
 apps:
-  daemon:
+  denariusd:
     command: bin/denariusd
     plugs: [network, network-bind]
     daemon: forking
-  denarius:
+  daemon:
     command: bin/denariusd
     plugs: [network, network-bind]    
-  qt:
+  denarius:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7]
     desktop: denarius.desktop
