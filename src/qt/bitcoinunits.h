@@ -19,9 +19,10 @@ public:
     {
         BTC,
         dBTC,
-	USD,
+	    USD,
         mBTC,
-        uBTC
+        uBTC,
+        Denarii
     };
 
     //! @name Static API

@@ -545,6 +545,11 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
     if (pszDest ? ConnectSocketByName(addrConnect, hSocket, pszDest, GetDefaultPort(), nConnectTimeout, &proxyConnectionFailed) :
                   ConnectSocket(addrConnect, hSocket, nConnectTimeout, &proxyConnectionFailed))
     {
+        if (!IsSelectableSocket(hSocket)) {
+            LogPrintf("Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\n");
+            closesocket(hSocket);
+            return NULL;
+        }
         addrman.Attempt(addrConnect);
 
         if (fDebugNet) printf("net: connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
@@ -1163,6 +1168,11 @@ void ThreadSocketHandler2(void* parg)
                 int nErr = WSAGetLastError();
                 if (nErr != WSAEWOULDBLOCK)
                     printf("socket error accept failed: %d\n", nErr);
+            }
+            else if (!IsSelectableSocket(hSocket))
+            {
+                LogPrintf("connection from %s dropped: non-selectable socket\n", addr.ToString());
+                closesocket(hSocket);
             }
             else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
             {
@@ -2149,6 +2159,12 @@ bool BindListenPort(const CService &addrBind, string& strError)
     {
         strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
         printf("%s\n", strError.c_str());
+        return false;
+    }
+    if (!IsSelectableSocket(hListenSocket))
+    {
+        strError = "Error: Couldn't create a listenable socket for incoming connections";
+        LogPrintf("%s\n", strError);
         return false;
     }
 
