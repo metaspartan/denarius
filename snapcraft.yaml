@@ -12,7 +12,7 @@ confinement: strict
  
 apps:
   daemon:
-    command: $SNAP/bin/denariusd
+    command: bin/denariusd
     plugs: [network, network-bind]
     environment:
       XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
