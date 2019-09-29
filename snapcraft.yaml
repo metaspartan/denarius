@@ -11,17 +11,17 @@ grade: stable
 confinement: strict
  
 apps:
-  daemon:
+  denariusd:
     command: bin/denariusd
     plugs: [network, network-bind]
-    environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
+    daemon: forking
+  daemon:
+    command: bin/denariusd
+    plugs: [network, network-bind]    
   denarius:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7]
     desktop: denarius.desktop
-    environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
  
 parts:
   openssl:
@@ -190,3 +190,15 @@ parts:
   desktop:
     source: snap/gui
     plugin: dump
+  hooks:
+    plugin: dump
+    source: hooks/
+    organize:
+      bin/: snap/hooks/
+
+hooks:
+  install:
+    plugs: [network, network-bind]
+  configure:
+    plugs: [network, network-bind]
+

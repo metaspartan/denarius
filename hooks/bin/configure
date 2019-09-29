@@ -1,0 +1,95 @@
+#!/bin/sh -e
+
+err () {
+    echo "$1" >&2
+}
+
+
+DATA_DIR="$SNAP_COMMON"
+CONFIG="$DATA_DIR/denarius.conf"
+
+#check if file exists & create template if not
+if [[ -f "$CONFIG" ]]; then
+  EXISTS=1
+else
+  PORT=33369
+  RPCPORT=33379
+  RPCUSER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  RPCPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  echo "port=$PORT" > $CONFIG
+  echo "rpcuser=$RPCUSER" >> $CONFIG
+  echo "rpcpassword=$RPCPASS" >> $CONFIG
+  echo "rpcport=$RPCPORT" >> $CONFIG
+  echo "fortunastake=0" >> $CONFIG
+  echo "fortunastakeaddr=$FORTUNASTAKEADDR" >> $CONFIG
+  echo "fortunastakeprivkey=$FORTUNASTAKEPRIVKEY" >> $CONFIG
+  echo "daemon=1" >> $CONFIG
+fi
+
+# Obtain values from input
+port="$(snapctl get port)"
+rpcport="$(snapctl get rpcport)"
+user="$(snapctl get user)"
+pass="$(snapctl get pass)"
+fortunastake="$(snapctl get fortunastake)"
+fortunastakeaddr="$(snapctl get fortunastakeaddr)"
+fortunastakeprivkey="$(snapctl get fortunastakeprivkey)"
+
+# Obtain values from current config
+cport=$(cat $CONFIG | grep '^port' | cut -d'=' -f2)
+crpcport=$(cat $CONFIG | grep 'rpcport' | cut -d'=' -f2)
+crpcuser=$(cat $CONFIG | grep 'rpcusername' | cut -d'=' -f2)
+crpcpass=$(cat $CONFIG | grep 'rpcpass' | cut -d'=' -f2)
+cfortunastake=$(cat $CONFIG | grep 'fortunastake=' | cut -d'=' -f2)
+cfortunastakeaddr=$(cat $CONFIG | grep 'fortunastakeaddr' | cut -d'=' -f2)
+cfortunastakeprivkey=$(cat $CONFIG | grep 'fortunastakeprivkey' | cut -d'=' -f2)
+
+# Check for blank values in config file & error if not given as well
+if [[ -z "$cport" ] && [ -z "$port" ]; then
+    err "port is not set."
+    exit 1
+fi
+if [[ -z "$crpcport" ] && [ -z "$rpcport" ]; then
+    err "rpcport is not set."
+    exit 1
+fi
+if [[ -z "$crpcuser" ] && [ -z "$rpcuser" ]; then
+    err "rpcuser is not set."
+    exit 1
+fi
+if [[ -z "$crpcpass" ] && [ -z "$rpcpass" ]; then
+    err "rpcpass is not set."
+    exit 1
+fi
+
+# Set the stuff with no validation because we're baller like that
+if [ -n "$port" ]; then
+    sed -i "s/^port=.*/port=$port/g" "$CONFIG"
+    echo "set port to $port\n"
+fi
+if [ -n "$rpcport" ]; then
+    sed -i "s/^rpcport=.*/rpcport=$rpcport/g" "$CONFIG"
+    echo "set rpcport to $rpcport\n"
+fi
+if [ -n "$rpcpass" ]; then
+    sed -i "s/^rpcpass=.*/rpcpass=$rpcpass/g" "$CONFIG"
+    echo "set rpcpass to $rpcpass\n"
+fi
+if [ -n "$rpcuser" ]; then
+    sed -i "s/^rpcuser=.*/rpcuser=$rpcuser/g" "$CONFIG"
+    echo "set rpcuser to $rpcuser\n"
+fi
+if [ -n "$fortunastake" ]; then
+    sed -i "s/^fortunastake=.*/fortunastake=$fortunastake/g" "$CONFIG"
+    echo "set fortunastake to $fortunastake\n"
+fi
+if [ -n "$fortunastakeaddr" ]; then
+    sed -i "s/^fortunastakeaddr=.*/fortunastakeaddr=$fortunastakeaddr/g" "$CONFIG"
+    echo "set fortunastakeaddr to $fortunastakeaddr\n"
+fi
+if [ -n "$fortunastakeprivkey" ]; then
+    sed -i "s/^fortunastakeprivkey=.*/fortunastakeprivkey=$fortunastakeprivkey/g" "$CONFIG"
+    echo "set fortunastakeprivkey to $fortunastakeprivkey\n"
+fi
+
+exit 0

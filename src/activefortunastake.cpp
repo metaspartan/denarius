@@ -544,7 +544,7 @@ vector<COutput> CActiveFortunastake::SelectCoinsFortunastakeForPubKey(std::strin
 // when starting a fortunastake, this can enable to run as a hot wallet with no funds
 bool CActiveFortunastake::EnableHotColdFortunaStake(CTxIn& newVin, CService& newService)
 {
-    if(!fFortunaStake) return false;
+    if(!fFortunaStake) fFortunaStake = true;
 
     status = FORTUNASTAKE_REMOTELY_ENABLED;
 
