@@ -1114,6 +1114,7 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
+
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Denarius
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Denarius
     // Mac: ~/Library/Application Support/Denarius
@@ -1138,9 +1139,9 @@ boost::filesystem::path GetDefaultDataDir()
     // Run in the SNAP_DATA dir if we are running inside a snap
     char* pszSnap = getenv("SNAP_DATA");
     if (pszSnap == NULL || strlen(pszSnap) == 0)
-        return fs::path(pszSnap);
-    else
         return pathRet / ".denarius";
+    else
+        return fs::path(pszSnap);
 #endif
 #endif
 }
