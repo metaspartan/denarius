@@ -1,0 +1,15 @@
+# http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.0.html
+[Desktop Entry]
+Type=Application
+Version=master
+Encoding=UTF-8
+Name=Denarius
+Icon=${SNAP}/meta/gui/denarius128.png
+MimeType=x-scheme-handler/denarius;
+Exec=Denarius %u
+Terminal=false
+Categories=Office;Finance;
+Comment=Denarius P2P Hybrid Cryptocurrency
+Keywords=internet;bitcoin;denarius;
+Comment[fr]=Denarius, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=Denarius, eşten eşe kriptografik sanal para birimi

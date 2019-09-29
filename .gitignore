@@ -8,7 +8,6 @@ src/leveldb/*.a
 src/leveldb/build_config.mk
 parts
 prime
-snap
 stage
 *.snap
 *.tar.bz2
