@@ -16,6 +16,9 @@ apps:
     plugs: [network, network-bind]
     daemon: forking
   denarius:
+    command: bin/denariusd
+    plugs: [network, network-bind]    
+  qt:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7]
     desktop: denarius.desktop
