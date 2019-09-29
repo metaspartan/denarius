@@ -20,6 +20,7 @@ else
   echo "rpcuser=$RPCUSER" >> $CONFIG
   echo "rpcpassword=$RPCPASS" >> $CONFIG
   echo "rpcport=$RPCPORT" >> $CONFIG
+  echo "daemon=1" >> $CONFIG
 fi
 
 # Obtain values from input
