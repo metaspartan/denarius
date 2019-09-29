@@ -1185,6 +1185,9 @@ void WriteConfigFile(FILE* configFile)
     fputs ("daemon=1\n", configFile);
     fputs ("listen=1\n", configFile);
     fputs ("server=1\n", configFile);
+    fputs ("fortunastake=0\n", configFile); //input fs=0 by default
+    fputs ("fortunastakeaddr=\n", configFile);
+    fputs ("fortunastakeprivkey=\n", configFile);
     fputs ("addnode=149.28.51.135\n", configFile); //mining.cafe
     fputs ("addnode=144.136.70.136\n", configFile);
     fputs ("addnode=104.238.179.184\n", configFile);
