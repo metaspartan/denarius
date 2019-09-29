@@ -105,7 +105,7 @@ parts:
       fi
       cd src
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -f "${MF}" -j4
-      cp src/denariusd $SNAPCRAFT_PART_INSTALL/bin
+      cp $SNAPCRAFT_PART_BUILD/src/denariusd $SNAPCRAFT_PART_INSTALL/bin
   denarius:
     source: https://github.com/carsenk/denarius.git
     source-type: git
