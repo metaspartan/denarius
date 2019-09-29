@@ -118,6 +118,3 @@ parts:
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
       cp Denarius $SNAPCRAFT_PART_INSTALL/bin
     after: [desktop-qt5]
-  desktop:
-    source: snap/gui
-    plugin: dump
