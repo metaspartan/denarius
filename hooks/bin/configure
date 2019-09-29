@@ -4,8 +4,23 @@ err () {
     echo "$1" >&2
 }
 
-DATA_DIR="$SNAP_DATA"
+DATA_DIR="$SNAP_COMMON"
 CONFIG="$DATA_DIR/denariusd.conf"
+
+#check if file exists & create tempalte if not
+
+if [[ -f "$CONFIG" ]]; then
+  EXISTS=1
+else
+  PORT=33369
+  RPCPORT=33379
+  RPCUSER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  RPCPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+  echo "port=$PORT" > $CONFIG
+  echo "rpcuser=$RPCUSER" >> $CONFIG
+  echo "rpcpassword=$RPCPASS" >> $CONFIG
+  echo "rpcport=$RPCPORT" >> $CONFIG
+fi
 
 # Obtain values from input
 port="$(snapctl get port)"

@@ -1136,8 +1136,8 @@ boost::filesystem::path GetDefaultDataDir()
     return pathRet / "Denarius";
 #else
     // Unix
-    // Run in the SNAP_DATA dir if we are running inside a snap
-    char* pszSnap = getenv("SNAP_DATA");
+    // Run in the SNAP_COMMON dir if we are running inside a snap
+    char* pszSnap = getenv("SNAP_COMMON");
     if (pszSnap == NULL || strlen(pszSnap) == 0)
         return pathRet / ".denarius";
     else
