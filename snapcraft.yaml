@@ -20,23 +20,6 @@ apps:
       XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
  
 parts:
-  openssl:
-    plugin: nil
-    source: https://www.openssl.org/source/openssl-1.0.1j.tar.gz
-    build-packages:
-      - g++
-      - build-essential
-      - libtool
-    override-build: |
-      echo "Downgrading OpenSSL to 1.0.1j"
-      sudo ./config
-      sudo make
-      echo "Make depends OpenSSL to 1.0.1j"
-      sudo make depend
-      echo "Make install OpenSSL to 1.0.1j"
-      sudo make install
-      echo "Linking OpenSSL to 1.0.1j"
-      sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
   denarius:
     source: https://github.com/carsenk/denarius.git
     source-type: git
@@ -89,32 +72,9 @@ parts:
       - qttools5-dev-tools
       - qt5-default
       - qtbase5-dev-tools
-    override-build: |
-      set -x
-      ARCH=$(uname -m)
-      MF=USE_NATIVETOR=1
-      if [ "$ARCH" = "x86_64" ]; then
-          MF="USE_NATIVETOR=1"
-      elif [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = *"armv8"* ] || [ "$ARCH" = "aarch64" ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = *"mips64le"* ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = *"mips64"* ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = *"mipsle"* ]; then
-          MF="USE_NATIVETOR=-"
-      elif [ "$ARCH" = *"mips"* ]; then
-          MF="USE_NATIVETOR=-"
-      elif [[ "$ARCH" == "ppc64le" ]]; then
-          MF="USE_NATIVETOR=-"
-      elif [[ "$ARCH" == "ppc64" ]]; then
-          MF="USE_NATIVETOR=-"
-      fi
-      qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
-      OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
-      cp Denarius $SNAPCRAFT_PART_INSTALL/bin
+    install: |
+        cp Denarius $SNAPCRAFT_PART_INSTALL/bin
     after: [desktop-qt5]
+  desktop:
+    source: snap/gui
+    plugin: dump
