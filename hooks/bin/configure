@@ -4,11 +4,11 @@ err () {
     echo "$1" >&2
 }
 
+
 DATA_DIR="$SNAP_COMMON"
 CONFIG="$DATA_DIR/denarius.conf"
 
-#check if file exists & create tempalte if not
-
+#check if file exists & create template if not
 if [[ -f "$CONFIG" ]]; then
   EXISTS=1
 else
@@ -20,6 +20,9 @@ else
   echo "rpcuser=$RPCUSER" >> $CONFIG
   echo "rpcpassword=$RPCPASS" >> $CONFIG
   echo "rpcport=$RPCPORT" >> $CONFIG
+  echo "fortunastake=0" >> $CONFIG
+  echo "fortunastakeaddr=$FORTUNASTAKEADDR" >> $CONFIG
+  echo "fortunastakeprivkey=$FORTUNASTAKEPRIVKEY" >> $CONFIG
   echo "daemon=1" >> $CONFIG
 fi
 
@@ -28,13 +31,18 @@ port="$(snapctl get port)"
 rpcport="$(snapctl get rpcport)"
 user="$(snapctl get user)"
 pass="$(snapctl get pass)"
+fortunastake="$(snapctl get fortunastakeprivkey)"
+fortunastakeaddr="$(snapctl get fortunastakeaddr)"
+fortunastakeprivkey="$(snapctl get fortunastakeprivkey)"
 
 # Obtain values from current config
 cport=$(cat $CONFIG | grep '^port' | cut -d'=' -f2)
 crpcport=$(cat $CONFIG | grep 'rpcport' | cut -d'=' -f2)
 crpcuser=$(cat $CONFIG | grep 'rpcusername' | cut -d'=' -f2)
 crpcpass=$(cat $CONFIG | grep 'rpcpass' | cut -d'=' -f2)
-
+cfortunastake=$(cat $CONFIG | grep 'fortunastake=' | cut -d'=' -f2)
+cfortunastakeaddr=$(cat $CONFIG | grep 'fortunastakeaddr' | cut -d'=' -f2)
+cfortunastakeprivkey=$(cat $CONFIG | grep 'fortunastakeprivkey' | cut -d'=' -f2)
 
 # Check for blank values in config file & error if not given as well
 if [[ -z "$cport" ] && [ -z "$port" ]; then
@@ -71,6 +79,17 @@ if [ -n "$rpcuser" ]; then
     sed -i "s/^rpcuser=.*/rpcuser=$rpcuser/g" "$CONFIG"
     echo "set rpcuser to $rpcuser\n"
 fi
+if [ -n "$fortunastake" ]; then
+    sed -i "s/^fortunastake=.*/fortunastake=$fortunastake/g" "$CONFIG"
+    echo "set fortunastake to $fortunastake\n"
+fi
+if [ -n "$fortunastakeaddr" ]; then
+    sed -i "s/^fortunastakeaddr=.*/fortunastakeaddr=$fortunastakeaddr/g" "$CONFIG"
+    echo "set fortunastakeaddr to $fortunastakeaddr\n"
+fi
+if [ -n "$fortunastakeprivkey" ]; then
+    sed -i "s/^fortunastakeprivkey=.*/fortunastakeprivkey=$fortunastakeprivkey/g" "$CONFIG"
+    echo "set fortunastakeprivkey to $fortunastakeprivkey\n"
+fi
 
 exit 0
-
