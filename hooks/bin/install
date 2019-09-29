@@ -12,3 +12,5 @@ CONFIG="$DATA_DIR/denarius.conf"
 # snapctl set rpcport=33379
 # snapctl set rpcuser=$RPCUSER
 # snapctl set rpcpass=$RPCPASS
+
+snapctl stop --disable denarius.denariusd
