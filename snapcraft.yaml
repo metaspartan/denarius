@@ -14,14 +14,11 @@ apps:
   daemon:
     command: bin/denariusd
     plugs: [network, network-bind]
-    environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
+    daemon: forking
   denarius:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7]
     desktop: denarius.desktop
-    environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
  
 parts:
   openssl:
