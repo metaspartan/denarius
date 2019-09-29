@@ -190,3 +190,15 @@ parts:
   desktop:
     source: snap/gui
     plugin: dump
+  hooks:
+    plugin: dump
+    source: hooks/
+    organize:
+      bin/: snap/hooks/
+
+hooks:
+  install:
+    plugs: [network, network-bind]
+  configure:
+    plugs: [network, network-bind]
+

@@ -1,0 +1,60 @@
+#!/bin/sh -e
+
+err () {
+    echo "$1" >&2
+}
+
+DATA_DIR="$SNAP_DATA"
+CONFIG="$DATA_DIR/denariusd.conf"
+
+# Obtain values from input
+port="$(snapctl get port)"
+rpcport="$(snapctl get rpcport)"
+user="$(snapctl get user)"
+pass="$(snapctl get pass)"
+
+# Obtain values from current config
+cport=$(cat $CONFIG | grep '^port' | cut -d'=' -f2)
+crpcport=$(cat $CONFIG | grep 'rpcport' | cut -d'=' -f2)
+crpcuser=$(cat $CONFIG | grep 'rpcusername' | cut -d'=' -f2)
+crpcpass=$(cat $CONFIG | grep 'rpcpass' | cut -d'=' -f2)
+
+
+# Check for blank values in config file & error if not given as well
+if [[ -z "$cport" ] && [ -z "$port" ]; then
+    err "port is not set."
+    exit 1
+fi
+if [[ -z "$crpcport" ] && [ -z "$rpcport" ]; then
+    err "rpcport is not set."
+    exit 1
+fi
+if [[ -z "$crpcuser" ] && [ -z "$rpcuser" ]; then
+    err "rpcuser is not set."
+    exit 1
+fi
+if [[ -z "$crpcpass" ] && [ -z "$rpcpass" ]; then
+    err "rpcpass is not set."
+    exit 1
+fi
+
+# Set the stuff with no validation because we're baller like that
+if [ -n "$port" ]; then
+    sed -i "s/^port=.*/port=$port/g" "$CONFIG"
+    echo "set port to $port\n"
+fi
+if [ -n "$rpcport" ]; then
+    sed -i "s/^rpcport=.*/rpcport=$rpcport/g" "$CONFIG"
+    echo "set rpcport to $rpcport\n"
+fi
+if [ -n "$rpcpass" ]; then
+    sed -i "s/^rpcpass=.*/rpcpass=$rpcpass/g" "$CONFIG"
+    echo "set rpcpass to $rpcpass\n"
+fi
+if [ -n "$rpcuser" ]; then
+    sed -i "s/^rpcuser=.*/rpcuser=$rpcuser/g" "$CONFIG"
+    echo "set rpcuser to $rpcuser\n"
+fi
+
+exit 0
+
