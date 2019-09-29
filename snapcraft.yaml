@@ -1,4 +1,3 @@
-
 # Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.9.4
 # https://denarius.io
 # https://github.com/carsenk/denarius
@@ -8,10 +7,15 @@ version: '3.3.9.4'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
-grade: devel
+grade: stable
 confinement: strict
  
 apps:
+  daemon:
+    command: bin/denariusd
+    plugs: [network, network-bind]
+    environment:
+      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
   denarius:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7]
@@ -37,6 +41,71 @@ parts:
       sudo make install
       echo "Linking OpenSSL to 1.0.1j"
       sudo ln -sf /usr/local/ssl/bin/openssl `which openssl`
+  daemon:
+    source: https://github.com/carsenk/denarius.git
+    source-type: git
+    source-tag: master
+    plugin: nil
+    build-packages:
+      - g++
+      - jq
+      - wget
+      - unzip
+      - curl
+      - build-essential
+      - apt-transport-https
+      - zlib1g-dev
+      - libdb++-dev
+      - libboost-all-dev
+      - libqrencode-dev
+      - libminiupnpc-dev
+      - libevent-dev
+      - libssl-dev
+      - libtool
+    stage-packages:
+      - g++
+      - jq
+      - wget
+      - unzip
+      - curl
+      - build-essential
+      - apt-transport-https
+      - zlib1g-dev
+      - libdb++-dev
+      - libboost-all-dev
+      - libqrencode-dev
+      - libminiupnpc-dev
+      - libevent-dev
+      - libssl-dev
+      - libtool
+    override-build: |
+      set -x
+      ARCH=$(uname -m)
+      MF=makefile.unix
+      if [ "$ARCH" = "x86_64" ]; then
+          MF="makefile.unix"
+      elif [ "$ARCH" = "i686" ] || [ "$ARCH" = "i386" ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = *"armv8"* ] || [ "$ARCH" = "aarch64" ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = *"mips64le"* ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = *"mips64"* ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = *"mipsle"* ]; then
+          MF="makefile.arm"
+      elif [ "$ARCH" = *"mips"* ]; then
+          MF="makefile.arm"
+      elif [[ "$ARCH" == "ppc64le" ]]; then
+          MF="makefile.arm"
+      elif [[ "$ARCH" == "ppc64" ]]; then
+          MF="makefile.arm"
+      fi
+      cd src
+      OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -f "${MF}" -j4
+      cp $SNAPCRAFT_PART_BUILD/src/denariusd $SNAPCRAFT_PART_INSTALL/bin
   denarius:
     source: https://github.com/carsenk/denarius.git
     source-type: git
@@ -116,8 +185,7 @@ parts:
       fi
       qmake "USE_UPNP=1" "USE_QRCODE=1" "${MF}" OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib denarius-qt.pro
       OPENSSL_INCLUDE_PATH=/usr/local/ssl/include OPENSSL_LIB_PATH=/usr/local/ssl/lib make -j4
-    install: |
-        cp Denarius $SNAPCRAFT_PART_INSTALL/bin
+      cp Denarius $SNAPCRAFT_PART_INSTALL/bin
     after: [desktop-qt5]
   desktop:
     source: snap/gui

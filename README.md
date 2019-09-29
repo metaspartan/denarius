@@ -5,7 +5,8 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 [![GitHub version](https://img.shields.io/github/release/carsenk/denarius.svg)](https://badge.fury.io/gh/carsenk%2Fdenarius)
 [![License: GPL v3](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/carsenk/denarius/blob/master/COPYING)
-[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg?maxAge=2592000)](https://github.com/carsenk/denarius/releases)
+[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg)](https://github.com/carsenk/denarius/releases)
+[![Denarius lateat release downloads](https://img.shields.io/github/downloads/carsenk/denarius/latest/total)](https://github.com/carsenk/denarius/releases)
 [![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
 
 [![HitCount](http://hits.dwyl.io/carsenk/denarius.svg)](http://hits.dwyl.io/carsenk/denarius)
