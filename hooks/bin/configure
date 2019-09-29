@@ -5,7 +5,7 @@ err () {
 }
 
 DATA_DIR="$SNAP_COMMON"
-CONFIG="$DATA_DIR/denariusd.conf"
+CONFIG="$DATA_DIR/denarius.conf"
 
 #check if file exists & create tempalte if not
 
