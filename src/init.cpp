@@ -1173,6 +1173,7 @@ bool AppInit2()
         return InitError(strErrors.str());
 
     fFortunaStake = GetBoolArg("-fortunastake", false);
+    strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
     if(fFortunaStake) {
         printf("Fortunastake Enabled\n");
         strFortunaStakeAddr = GetArg("-fortunastakeaddr", "");
@@ -1186,23 +1187,24 @@ bool AppInit2()
             }
         }
 
-        strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
-        if(!strFortunaStakePrivKey.empty()){
-            std::string errorMessage;
-
-            CKey key;
-            CPubKey pubkey;
-
-            if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
-            {
-                return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
-            }
-
-            activeFortunastake.pubKeyFortunastake = pubkey;
-
-        } else {
+        if(strFortunaStakePrivKey.empty()){
             return InitError(_("You must specify a fortunastakeprivkey in the configuration. Please see documentation for help."));
         }
+    }
+
+    if(!strFortunaStakePrivKey.empty()){
+        std::string errorMessage;
+
+        CKey key;
+        CPubKey pubkey;
+
+        if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
+        {
+            return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
+        }
+
+        activeFortunastake.pubKeyFortunastake = pubkey;
+
     }
 
     if (pwalletMain) {

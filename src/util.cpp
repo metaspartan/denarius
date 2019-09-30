@@ -1114,6 +1114,7 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
+
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Denarius
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Denarius
     // Mac: ~/Library/Application Support/Denarius
@@ -1135,7 +1136,12 @@ boost::filesystem::path GetDefaultDataDir()
     return pathRet / "Denarius";
 #else
     // Unix
-    return pathRet / ".denarius";
+    // Run in the SNAP_COMMON dir if we are running inside a snap
+    char* pszSnap = getenv("SNAP_COMMON");
+    if (pszSnap == NULL || strlen(pszSnap) == 0)
+        return pathRet / ".denarius";
+    else
+        return fs::path(pszSnap);
 #endif
 #endif
 }
@@ -1179,6 +1185,9 @@ void WriteConfigFile(FILE* configFile)
     fputs ("daemon=1\n", configFile);
     fputs ("listen=1\n", configFile);
     fputs ("server=1\n", configFile);
+    fputs ("fortunastake=0\n", configFile); //input fs=0 by default
+    fputs ("fortunastakeaddr=\n", configFile);
+    fputs ("fortunastakeprivkey=\n", configFile);
     fputs ("addnode=149.28.51.135\n", configFile); //mining.cafe
     fputs ("addnode=144.136.70.136\n", configFile);
     fputs ("addnode=104.238.179.184\n", configFile);

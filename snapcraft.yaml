@@ -7,21 +7,41 @@ version: '3.3.9.4'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
+
 grade: stable
 confinement: strict
+
+plugs: # plugs for theming, font settings, cursor and to use gtk3 file chooser
+  gtk-3-themes:
+    interface: content
+    target: $SNAP/data-dir/themes
+    default-provider: gtk-common-themes:gtk-3-themes
+  icon-themes:
+    interface: content
+    target: $SNAP/data-dir/icons
+    default-provider: gtk-common-themes:icon-themes
+  sound-themes:
+    interface: content
+    target: $SNAP/data-dir/sounds
+    default-provider: gtk-common-themes:sounds-themes
  
 apps:
+  denariusd:
+    command: bin/denariusd
+    plugs: [home, network, network-bind]
+    daemon: forking
   daemon:
     command: bin/denariusd
-    plugs: [network, network-bind]
+    plugs: [home, network, network-bind]
     environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
+      XDG_DATA_DIRS: $SNAP_USER_DATA:/var/lib/snapd/desktop:$XDG_DATA_DIRS
   denarius:
     command: desktop-launch $SNAP/bin/Denarius
-    plugs: [home, network, network-bind, unity7]
+    plugs: [home, network, network-bind, unity7, wayland, desktop-legacy, desktop, x11, gsettings]
     desktop: denarius.desktop
     environment:
-      XDG_DATA_DIRS: $SNAP_USER_DATA:$SNAP/usr/share:$XDG_DATA_DIRS
+      QT_QPA_PLATFORMTHEME: gtk3
+      XDG_DATA_DIRS: $SNAP_USER_DATA:/var/lib/snapd/desktop:$XDG_DATA_DIRS
  
 parts:
   openssl:
@@ -190,3 +210,14 @@ parts:
   desktop:
     source: snap/gui
     plugin: dump
+  hooks:
+    plugin: dump
+    source: hooks/
+    organize:
+      bin/: snap/hooks/
+
+hooks:
+  install:
+    plugs: [network, network-bind]
+  configure:
+    plugs: [network, network-bind]
