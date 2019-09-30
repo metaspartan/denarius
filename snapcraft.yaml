@@ -7,6 +7,7 @@ version: '3.3.9.4'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
+
 grade: stable
 confinement: strict
 
