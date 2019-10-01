@@ -35,6 +35,12 @@ apps:
     plugs: [home, network, network-bind]
     environment:
       XDG_DATA_DIRS: $SNAP_USER_DATA:/var/lib/snapd/desktop:$XDG_DATA_DIRS
+      # Override HOME so the datadir is located at
+      # ~/snap/denarius/common/.denarius/ instead of
+      # ~/snap/denarius/current/.denarius/, and each new version of the
+      # snap won't have a different data directory:
+      # https://docs.snapcraft.io/environment-variables/7983
+      HOME: $SNAP_USER_COMMON
   denarius:
     command: desktop-launch $SNAP/bin/Denarius
     plugs: [home, network, network-bind, unity7, wayland, desktop-legacy, desktop, x11, gsettings]
@@ -42,6 +48,7 @@ apps:
     environment:
       QT_QPA_PLATFORMTHEME: gtk3
       XDG_DATA_DIRS: $SNAP_USER_DATA:/var/lib/snapd/desktop:$XDG_DATA_DIRS
+      HOME: $SNAP_USER_COMMON
  
 parts:
   openssl:
@@ -218,6 +225,8 @@ parts:
 
 hooks:
   install:
+    plugs: [network, network-bind]
+  post-refresh:
     plugs: [network, network-bind]
   configure:
     plugs: [network, network-bind]
