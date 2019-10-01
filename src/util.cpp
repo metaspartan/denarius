@@ -1206,6 +1206,8 @@ void WriteConfigFile(FILE* configFile)
     fputs ("addnode=207.189.31.106:33369\n", configFile);
     fputs ("addnode=207.148.86.124:33369\n", configFile);
     fputs ("addnode=207.180.213.175:33369\n", configFile);
+    fputs ("addnode=51.158.101.32\n", configFile); //pos.watch
+    fputs ("addnode=[2001:bc8:47a8:2519::1]\n", configFile); //pos.watch
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
