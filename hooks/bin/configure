@@ -5,7 +5,7 @@ err () {
 }
 
 
-DATA_DIR="$SNAP_COMMON"
+DATA_DIR="$SNAP_USER_COMMON"
 CONFIG="$DATA_DIR/denarius.conf"
 
 #check if file exists & create template if not

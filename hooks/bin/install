@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-DATA_DIR="$SNAP_COMMON"
+DATA_DIR="$SNAP_USER_COMMON"
 CONFIG="$DATA_DIR/denarius.conf"
 
 # This may be used to bootstrap config settings from the environment settings

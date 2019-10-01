@@ -226,5 +226,7 @@ parts:
 hooks:
   install:
     plugs: [network, network-bind]
+  post-refresh:
+    plugs: [network, network-bind]
   configure:
     plugs: [network, network-bind]
