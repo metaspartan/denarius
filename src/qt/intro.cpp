@@ -16,7 +16,7 @@
 #include <QMessageBox>
 
 /* Minimum free space (in bytes) needed for data directory */
-static const uint64_t GB_BYTES = 1000000000LL; // 1 Billion Bytes, 1GB Required
+static const uint64_t GB_BYTES = 3000000000LL; // 3 Billion Bytes, 3GB Required
 static const uint64_t BLOCK_CHAIN_SIZE = 1LL * GB_BYTES;
 
 /* Check free space asynchronously to prevent hanging the UI thread.
