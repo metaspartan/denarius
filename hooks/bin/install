@@ -13,4 +13,5 @@ CONFIG="$DATA_DIR/denarius.conf"
 # snapctl set rpcuser=$RPCUSER
 # snapctl set rpcpass=$RPCPASS
 
-snapctl stop --disable denarius.denariusd
+# Updated to support Parallel Snap Installs
+snapctl stop --disable $SNAP_INSTANCE_NAME.denariusd

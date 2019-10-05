@@ -2,4 +2,4 @@
 
 # This prevents the denarius.daemon from booting upon snap refresh/install
 
-snapctl stop --disable denarius.denariusd
+snapctl stop --disable $SNAP_INSTANCE_NAME.denariusd
