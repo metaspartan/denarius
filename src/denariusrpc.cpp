@@ -382,6 +382,10 @@ static const CRPCCommand vRPCCommands[] =
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
 
+    // Denarius Thin Mode
+    { "thinscanmerkleblocks",   &thinscanmerkleblocks,   false,  false},
+    { "thinforcestate",         &thinforcestate,         false,  false},
+
 
 
 };
@@ -1382,6 +1386,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 
     if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
+
+    if (strMethod == "thinscanmerkleblocks"   && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "thinforcestate"         && n > 0) ConvertTo<int>(params[0]);
 
     return params;
 }

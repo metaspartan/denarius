@@ -461,6 +461,10 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
 
             pwallet->mapStealthKeyMeta[keyId] = sxKeyMeta;
         }
+        else if (strType == "lastfilteredheight")
+        {
+            ssValue >> pwallet->nLastFilteredHeight;
+        }
         else if (strType == "defaultkey")
         {
             ssValue >> pwallet->vchDefaultKey;

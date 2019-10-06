@@ -278,7 +278,7 @@ OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	  obj/alert.o \
+	obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -293,7 +293,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	  obj/core.o \
+	obj/core.o \
     obj/protocol.o \
     obj/denariusrpc.o \
     obj/rpcdump.o \
@@ -325,6 +325,8 @@ OBJS= \
     obj/fortuna.o \
   	obj/eccryptoverify.o \
     obj/ringsig.o \
+    obj/bloom.o \
+	obj.state.o \
     obj/stun.o
 
 

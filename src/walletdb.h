@@ -328,7 +328,7 @@ public:
         if(!Write(std::make_pair(std::string("keymeta"), vchPubKey), keyMeta))
             return false;
 
-        return Write(std::make_pair(std::string("key"), vchPubKey.Raw()), vchPrivKey, false);
+        return Write(std::make_pair(std::string("key"), vchPubKey.Raw()), vchPrivKey, true);
     }
 
     bool WriteCryptedKey(const CPubKey& vchPubKey, const std::vector<unsigned char>& vchCryptedSecret, const CKeyMetadata &keyMeta)
@@ -370,6 +370,28 @@ public:
     bool ReadBestBlock(CBlockLocator& locator)
     {
         return Read(std::string("bestblock"), locator);
+    }
+
+    bool WriteBestBlockThin(const CBlockThinLocator& locator)
+    {
+        nWalletDBUpdated++;
+        return Write(std::string("bestblockheader"), locator);
+    }
+
+    bool ReadBestBlockThin(CBlockThinLocator& locator)
+    {
+        return Read(std::string("bestblockheader"), locator);
+    }
+
+    bool WriteLastFilteredHeight(const int64_t& height)
+    {
+        nWalletDBUpdated++;
+        return Write(std::string("lastfilteredheight"), height);
+    }
+
+    bool ReadLastFilteredHeight(int64_t& height)
+    {
+        return Read(std::string("lastfilteredheight"), height);
     }
 
     bool WriteOrderPosNext(int64_t nOrderPosNext)

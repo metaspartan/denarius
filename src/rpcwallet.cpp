@@ -57,6 +57,7 @@ void EnsureWalletIsUnlocked()
 
 void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
 {
+    entry.push_back(Pair("version", wtx.nVersion));
     int confirms = wtx.GetDepthInMainChain();
     entry.push_back(Pair("confirmations", confirms));
     if (wtx.IsCoinBase() || wtx.IsCoinStake())
@@ -65,8 +66,19 @@ void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
     {
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", (int64_t)(mapBlockIndex[wtx.hashBlock]->nTime)));
-    }
+        int64_t nTime = 0;
+        if (nNodeMode == NT_FULL)
+        {
+            nTime = mapBlockIndex[wtx.hashBlock]->nTime;
+        } else
+        {
+            std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(wtx.hashBlock);
+            if (mi != mapBlockThinIndex.end())
+                nTime = (*mi).second->nTime;
+        };
+
+        entry.push_back(Pair("blocktime", nTime));
+    };
     entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
     entry.push_back(Pair("time", (int64_t)wtx.GetTxTime()));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
@@ -95,19 +107,28 @@ Value getinfo(const Array& params, bool fHelp)
 
     Object obj, diff;
     obj.push_back(Pair("version",       FormatFullVersion()));
+    obj.push_back(Pair("mode",          std::string(GetNodeModeName(nNodeMode))));
+    if (nNodeMode == NT_THIN)
+        obj.push_back(Pair("state",     std::string(GetNodeStateName(nNodeState))));
     obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("anonbalance",   ValueFromAmount(pwalletMain->GetAnonBalance())));
+    obj.push_back(Pair("reserve",       ValueFromAmount(nReserveBalance)));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
     obj.push_back(Pair("reserve",       ValueFromAmount(nReserveBalance)));
     obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
     obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
+    if (nNodeMode == NT_THIN)
+        obj.push_back(Pair("filteredblocks",   (int)nHeightFilteredNeeded));
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    if (nNodeMode == NT_FULL)
+        obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
+    obj.push_back(Pair("datareceived",  bytesReadable(CNode::GetTotalBytesRecv())));
+    obj.push_back(Pair("datasent",      bytesReadable(CNode::GetTotalBytesSent())));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     if(fNativeTor)
     {
@@ -125,8 +146,15 @@ Value getinfo(const Array& params, bool fHelp)
     if(!fNativeTor)
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
-    diff.push_back(Pair("proof-of-work",  GetDifficulty()));
-    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    if (nNodeMode == NT_FULL)
+    {
+        diff.push_back(Pair("proof-of-work",  GetDifficulty()));
+        diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    } else
+    {
+        diff.push_back(Pair("proof-of-work",  GetHeaderDifficulty()));
+        diff.push_back(Pair("proof-of-stake", GetHeaderDifficulty(GetLastBlockThinIndex(pindexBestHeader, true))));
+    };
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
@@ -337,7 +365,13 @@ Value sendtoaddress(const Array& params, bool fHelp)
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
-    //EnsureWalletIsUnlocked();
+    EnsureWalletIsUnlocked();
+    
+    /*
+    if (params[0].get_str().length() > 75
+        && IsStealthAddress(params[0].get_str()))
+        return sendtostealthaddress(params, false);
+    */
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
@@ -2078,6 +2112,10 @@ Value importstealthaddress(const Array& params, bool fHelp)
     std::string sSpendSecret = params[1].get_str();
     std::string sLabel;
 
+    if (pwalletMain->IsLocked())
+    {
+        throw runtime_error("Failed: Wallet must be unlocked.");
+    }
 
     if (params.size() > 2)
     {
@@ -2286,6 +2324,11 @@ Value clearwallettransactions(const Array& params, bool fHelp)
 
 
         //pwalletMain->mapWallet.clear();
+        if (nNodeMode == NT_THIN)
+        {
+            // reset LastFilteredHeight
+            walletdb.WriteLastFilteredHeight(0);
+        }
     }
 
     snprintf(cbuf, sizeof(cbuf), "Removed %u transactions.", nTransactions);
@@ -2303,6 +2346,9 @@ Value scanforalltxns(const Array& params, bool fHelp)
             "scanforalltxns [fromHeight]\n"
             "Scan blockchain for owned transactions.");
 
+    if (nNodeMode != NT_FULL)
+        throw runtime_error("Can't run in thin mode.");
+    
     Object result;
     int32_t nFromHeight = 0;
 

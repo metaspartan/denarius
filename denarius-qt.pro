@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.9.4
+VERSION = 3.3.9.5
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
@@ -325,7 +325,6 @@ contains(USE_LEVELDB, -) {
 	message(Building with Berkeley DB transaction index)
 
 	    SOURCES += src/txdb-bdb.cpp \
-		src/bloom.cpp \
 		src/hash.cpp \
 		src/aes_helper.c \
 		src/echo.c \
@@ -343,7 +342,6 @@ contains(USE_LEVELDB, -) {
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 	SOURCES += src/txdb-leveldb.cpp \
-		src/bloom.cpp \
 		src/hash.cpp \
 		src/aes_helper.c \
 		src/echo.c \
@@ -440,6 +438,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/smessage.h \
     src/main.h \
     src/core.h \
+    src/state.h \
     src/ringsig.h \
     src/miner.h \
     src/net.h \
@@ -560,6 +559,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/script.cpp \
     src/main.cpp \
     src/core.cpp \
+    src/bloom.cpp \
+    src/state.cpp \
     src/ringsig.cpp \
     src/miner.cpp \
     src/init.cpp \

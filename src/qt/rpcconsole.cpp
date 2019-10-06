@@ -600,7 +600,7 @@ void RPCConsole::updateNodeDetail(const CNodeCombinedStats *stats)
     ui->peerSubversion->setText(QString::fromStdString(stats->nodeStats.strSubVer));
     ui->peerId->setText(QString("%1").arg(stats->nodeStats.nodeid));
     ui->peerDirection->setText(stats->nodeStats.fInbound ? tr("Inbound") : tr("Outbound"));
-    ui->peerHeight->setText(QString("%1").arg(stats->nodeStats.nStartingHeight));
+    ui->peerHeight->setText(QString("%1").arg(stats->nodeStats.nChainHeight));
 
     // This check fails for example if the lock was busy and
     // nodeStateStats couldn't be fetched.

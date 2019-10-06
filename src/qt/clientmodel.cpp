@@ -145,6 +145,11 @@ bool ClientModel::isFSLock() const
     return fFSLock;
 }
 
+bool ClientModel::isThinMode() const
+{
+    return fThinMode;
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();

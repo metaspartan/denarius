@@ -56,8 +56,16 @@ Value getmininginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
 
-    diff.push_back(Pair("proof-of-work",        GetDifficulty()));
-    diff.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    if (nNodeMode == NT_FULL)
+    {
+        diff.push_back(Pair("proof-of-work",  GetDifficulty()));
+        diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    } else
+    {
+        diff.push_back(Pair("proof-of-work",  GetHeaderDifficulty()));
+        diff.push_back(Pair("proof-of-stake", GetHeaderDifficulty(GetLastBlockThinIndex(pindexBestHeader, true))));  
+    };
+
     diff.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
     obj.push_back(Pair("difficulty",    diff));
 
@@ -119,6 +127,9 @@ Value getworkex(const Array& params, bool fHelp)
             "getworkex [data, coinbase]\n"
             "If [data, coinbase] is not specified, returns extended work data.\n"
         );
+
+    if (nNodeMode != NT_FULL)
+            throw JSONRPCError(RPC_MISC_ERROR, "Not running as a full node!");
 
     if (vNodes.empty())
         throw JSONRPCError(-9, "Denarius is not connected!");
@@ -253,6 +264,9 @@ Value getwork(const Array& params, bool fHelp)
             "  \"hash1\" : formatted hash buffer for second hash (DEPRECATED)\n" // deprecated
             "  \"target\" : little endian hash target\n"
             "If [data] is specified, tries to solve the block and returns true if it was successful.");
+
+    if (nNodeMode != NT_FULL)
+        throw JSONRPCError(RPC_MISC_ERROR, "Not running as a full node!");
 
     if (vNodes.empty())
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Denarius is not connected!");
@@ -602,7 +616,8 @@ Value submitblock(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
-    bool fAccepted = ProcessBlock(NULL, &block);
+    uint256 hashblock = block.GetHash();
+    bool fAccepted = ProcessBlock(NULL, &block, hashblock);
     if (!fAccepted)
         return "rejected";
 

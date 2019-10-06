@@ -80,7 +80,7 @@ CTxDB::CTxDB(const char* pszMode)
 
     options = GetOptions();
     options.create_if_missing = fCreate;
-    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
+    //options.filter_policy = leveldb::NewBloomFilterPolicy(10);
 
     init_blockindex(options); // Init directory
     pdb = txdb;
@@ -128,8 +128,11 @@ void CTxDB::Close()
     options.filter_policy = NULL;
     delete options.block_cache;
     options.block_cache = NULL;
-    delete activeBatch;
-    activeBatch = NULL;
+    if (activeBatch)
+    {
+        delete activeBatch;
+        activeBatch = NULL;
+    };
 }
 
 bool CTxDB::TxnBegin()
@@ -314,6 +317,21 @@ bool CTxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)
     return Write(make_pair(string("blockindex"), blockindex.GetBlockHash()), blockindex);
 }
 
+bool CTxDB::EraseBlockIndex(const uint256& blockhash)
+{
+    return Erase(make_pair(string("blockindex"), blockhash));
+}
+
+bool CTxDB::WriteBlockThinIndex(const CDiskBlockThinIndex& blockindex)
+{
+    return Write(make_pair(string("bhidx"), blockindex.GetBlockHash()), blockindex);
+}
+
+bool CTxDB::ReadBlockThinIndex(const uint256& hash, CDiskBlockThinIndex& blockindex)
+{
+    return Read(make_pair(string("bhidx"), hash), blockindex);
+};
+
 bool CTxDB::ReadHashBestChain(uint256& hashBestChain)
 {
     return Read(string("hashBestChain"), hashBestChain);
@@ -323,6 +341,16 @@ bool CTxDB::WriteHashBestChain(uint256 hashBestChain)
 {
     return Write(string("hashBestChain"), hashBestChain);
 }
+
+bool CTxDB::ReadHashBestHeaderChain(uint256& hashBestChain)
+{
+    return Read(string("hashBestHeaderChain"), hashBestChain);
+};
+
+bool CTxDB::WriteHashBestHeaderChain(uint256 hashBestChain)
+{
+    return Write(string("hashBestHeaderChain"), hashBestChain);
+};
 
 bool CTxDB::ReadBestInvalidTrust(CBigNum& bnBestInvalidTrust)
 {
@@ -376,6 +404,9 @@ static CBlockIndex *InsertBlockIndex(uint256 hash)
 
 bool CTxDB::LoadBlockIndex()
 {
+    if (nNodeMode != NT_FULL)
+        return 0;
+
     if (mapBlockIndex.size() > 0) {
         // Already loaded once in this session. It can happen during migration
         // from BDB.
@@ -438,10 +469,25 @@ bool CTxDB::LoadBlockIndex()
 
         // NovaCoin: build setStakeSeen
         if (pindexNew->IsProofOfStake())
-            setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+        {
+            // don't setStakeSeen for orpan blocks
+            if (diskindex.hashPrev == 0)
+            {
+                if (fDebug)
+                    printf("setStakeSeen, found orphan block.\n");
+                setStakeSeenOrphan.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+            } else
+            {
+                setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+            };
+
+
+            //setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+        };
 
         iterator->Next();
-    }
+    };
+
     delete iterator;
 
     if (fRequestShutdown)
@@ -485,7 +531,15 @@ bool CTxDB::LoadBlockIndex()
 
     // NovaCoin: load hashSyncCheckpoint
     if (!ReadSyncCheckpoint(Checkpoints::hashSyncCheckpoint))
+    {
         return error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
+    };
+    if (!mapBlockIndex.count(Checkpoints::hashSyncCheckpoint))
+    {
+        // We haven't received the checkpoint chain, keep the checkpoint as pending
+        Checkpoints::hashPendingCheckpoint = Checkpoints::hashSyncCheckpoint;
+        Checkpoints::hashSyncCheckpoint = !fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet;
+    };
     printf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
 
     // Load bnBestInvalidTrust, OK if it doesn't exist
@@ -621,3 +675,160 @@ bool CTxDB::LoadBlockIndex()
 
     return true;
 }
+
+static CBlockThinIndex *InsertBlockThinIndex(uint256 hash)
+{
+    if (hash == 0)
+        return NULL;
+
+    // Return existing
+    map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(hash);
+    if (mi != mapBlockThinIndex.end())
+        return (*mi).second;
+
+    // Create new
+    CBlockThinIndex* pindexNew = new CBlockThinIndex();
+    if (!pindexNew)
+        throw runtime_error("LoadBlockIndex() : new CBlockIndex failed");
+    mi = mapBlockThinIndex.insert(make_pair(hash, pindexNew)).first;
+    pindexNew->phashBlock = &((*mi).first);
+
+    return pindexNew;
+}
+
+bool CTxDB::LoadBlockThinIndex()
+{
+    if (fDebug)
+        printf("CTxDB::LoadBlockThinIndex()\n");
+
+    if (mapBlockThinIndex.size() > 0)
+    {
+        // Already loaded
+        return true;
+    };
+
+
+
+    // TODO: allocate once is possible as using hard limit on items in map
+
+    uint256 hashNext = (uint256) (fTestNet ? hashGenesisBlockTestNet : hashGenesisBlock);
+
+    CDiskBlockThinIndex diskindex;
+    map<uint256, CBlockThinIndex*>::iterator mi;
+    CBlockThinIndex* pIndexLast = NULL;
+
+    while (hashNext != 0)
+    {
+        if (!ReadBlockThinIndex(hashNext, diskindex))
+        {
+            printf("LoadBlockThinIndex() Read header %s failed.\n", hashNext.ToString().c_str());
+            break;
+        };
+
+        //printf("[rem] bhidx %s\n", hashNext.ToString().c_str());
+
+        // Construct block index object
+        CBlockThinIndex* pindexNew      = new CBlockThinIndex();
+        if (!pindexNew)
+            return error("LoadBlockThinIndex() : new CBlockIndex failed");
+
+        mi = mapBlockThinIndex.insert(make_pair(hashNext, pindexNew)).first;
+        pindexNew->phashBlock = &(mi->first);
+
+
+        pindexNew->nFile                = diskindex.nFile;
+        pindexNew->nBlockPos            = diskindex.nBlockPos;
+        pindexNew->nHeight              = diskindex.nHeight;
+        pindexNew->nFlags               = diskindex.nFlags;
+        pindexNew->nStakeModifier       = diskindex.nStakeModifier;
+        pindexNew->hashProof            = diskindex.hashProof;
+        pindexNew->nVersion             = diskindex.nVersion;
+        pindexNew->hashMerkleRoot       = diskindex.hashMerkleRoot;
+        pindexNew->nTime                = diskindex.nTime;
+        pindexNew->nBits                = diskindex.nBits;
+        pindexNew->nNonce               = diskindex.nNonce;
+
+        pindexNew->pprev                = pIndexLast;
+        if (pIndexLast)
+            pIndexLast->pnext           = pindexNew;
+
+        pindexNew->nChainTrust = (pIndexLast ? pIndexLast->nChainTrust : 0) + pindexNew->GetBlockTrust();
+
+        pindexNew->nStakeModifierChecksum = GetStakeModifierChecksumThin(pindexNew);
+        if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
+            return error("CTxDB::LoadBlockThinIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016"PRIx64, pindexNew->nHeight, pindexNew->nStakeModifier);
+
+        // -- genesis block will always be first
+        if (pindexGenesisBlockThin == NULL)
+        {
+            pindexGenesisBlockThin = pindexNew;
+            pindexRear = pindexGenesisBlockThin;
+        };
+
+
+
+        // pindexNew->CheckIndex() does nothing !?
+
+        pIndexLast = pindexNew;
+        hashNext = diskindex.hashNext;
+
+
+        while (!fThinFullIndex && pindexRear
+            && pindexNew->nHeight - pindexRear->nHeight > nThinIndexWindow)
+        {
+            const uint256* pRemHash = pindexRear->phashBlock;
+
+            pindexRear = pindexRear->pnext;
+            pindexRear->pprev = NULL;
+
+            std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(*pRemHash);
+
+
+            if (mi != mapBlockThinIndex.end())
+            {
+                delete mi->second;
+                mapBlockThinIndex.erase(mi);
+            };
+        };
+
+
+    };
+
+    // -- load hashBestChain pointer to end of best chain
+    if (!ReadHashBestHeaderChain(hashBestChain))
+    {
+        if (pindexGenesisBlockThin == NULL)
+            return true;
+        return error("CTxDB::LoadBlockThinIndex() : hashBestChain not loaded");
+    };
+
+    if (!mapBlockThinIndex.count(hashBestChain))
+        return error("CTxDB::LoadBlockThinIndex() : hashBestChain not found in the block index");
+
+    pindexBestHeader = mapBlockThinIndex[hashBestChain];
+
+    nBestHeight = pindexBestHeader->nHeight;
+    nBestChainTrust = pindexBestHeader->nChainTrust;
+
+    printf("LoadBlockThinIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n",
+        hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, CBigNum(nBestChainTrust).ToString().c_str(),
+        DateTimeStrFormat("%x %H:%M:%S", pindexBestHeader->GetBlockTime()).c_str());
+
+    // NovaCoin: load hashSyncCheckpoint
+    if (!ReadSyncCheckpoint(Checkpoints::hashSyncCheckpoint))
+    {
+        return error("CTxDB::LoadBlockThinIndex() : hashSyncCheckpoint not loaded");
+    };
+
+    if (!mapBlockThinIndex.count(Checkpoints::hashSyncCheckpoint))
+    {
+        // We haven't received the checkpoint chain, keep the checkpoint as pending
+        Checkpoints::hashPendingCheckpoint = Checkpoints::hashSyncCheckpoint;
+        Checkpoints::hashSyncCheckpoint = !fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet;
+    };
+
+    printf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
+
+
+    return true;
+};

@@ -108,7 +108,7 @@ public:
  */
 class CWallet : public CCryptoKeyStore
 {
-private:
+public:
     bool SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
     //bool SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=NULL) const;
     bool SelectCoins(CAmount nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl = NULL) const;
@@ -123,7 +123,6 @@ private:
     int64_t nNextResend;
     int64_t nLastResend;
 
-public:
     /// Main wallet lock.
     /// This lock protects all the fields added by CWallet
     ///   except for:
@@ -150,6 +149,9 @@ public:
     std::set<int64_t> setKeyPool;
     std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
 
+    CBloomFilter* pBloomFilter; // Thin Mode
+    int nLastFilteredHeight;
+
     std::set<CStealthAddress> stealthAddresses;
     StealthKeyMetaMap mapStealthKeyMeta;
     uint32_t nStealth, nFoundStealth; // for reporting, zero before use
@@ -172,6 +174,17 @@ public:
         strWalletFile = strWalletFileIn;
         fFileBacked = true;
     }
+
+    ~CWallet()
+    {
+        if (pBloomFilter)
+        {
+            delete pBloomFilter;
+            if (fDebug)
+                printf("Freed bloom filter.\n");
+        };
+    }
+
     void SetNull()
     {
         nWalletVersion = FEATURE_BASE;
@@ -179,8 +192,10 @@ public:
         fFileBacked = false;
         nMasterKeyMaxID = 0;
         pwalletdbEncryption = NULL;
+        pBloomFilter = NULL;
         nOrderPosNext = 0;
         nTimeFirstKey = 0;
+        nLastFilteredHeight = 0;
     }
 
     std::map<uint256, CWalletTx> mapWallet;
@@ -275,8 +290,8 @@ public:
     TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "", bool fShowCoinstake = true);
 
     void MarkDirty();
-    bool AddToWallet(const CWalletTx& wtxIn);
-    bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false, bool fFindBlock = false);
+    bool AddToWallet(const CWalletTx& wtxIn, const uint256& hashIn);
+    bool AddToWalletIfInvolvingMe(const CTransaction& tx, const uint256& hash, const void* pblock, bool fUpdate = false, bool fFindBlock = false);
     bool EraseFromWallet(uint256 hash);
     void WalletUpdateSpent(const CTransaction& prevout, bool fBlock = false);
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
@@ -350,6 +365,8 @@ public:
 
     bool CreateCollateralTransaction(CTransaction& txCollateral, std::string strReason);
     bool ConvertList(std::vector<CTxIn> vCoins, std::vector<int64_t>& vecAmounts);
+
+    bool InitBloomFilter();
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int nSize = 0);
@@ -481,12 +498,13 @@ public:
         return nChange;
     }
     void SetBestChain(const CBlockLocator& loc);
+    void SetBestThinChain(const CBlockThinLocator& loc);
 
     DBErrors LoadWallet(bool& fFirstRunRet);
     DBErrors ZapWalletTx();
 
     //D E N A R I U S
-    bool SetAddressBookName(const CTxDestination& address, const std::string& strName);
+    bool SetAddressBookName(const CTxDestination& address, const std::string& strName, CWalletDB* pwdb = NULL, bool fAddKeyToMerkleFilters = true);
     bool DelAddressBookName(const CTxDestination& address);
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);

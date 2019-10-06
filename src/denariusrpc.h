@@ -280,4 +280,7 @@ extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
 
+extern json_spirit::Value thinscanmerkleblocks(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value thinforcestate(const json_spirit::Array& params, bool fHelp);
+
 #endif

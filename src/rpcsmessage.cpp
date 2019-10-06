@@ -9,6 +9,7 @@
 
 #include "smessage.h"
 #include "init.h" // pwalletMain
+#include "util.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -837,7 +838,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
                         uint64_t nFBytes = 0;
                         nFBytes = boost::filesystem::file_size(fullPath);
                         nBytes += nFBytes;
-                        objM.push_back(Pair("file size", fsReadable(nFBytes)));
+                        objM.push_back(Pair("file size", bytesReadable(nFBytes)));
                     } catch (const boost::filesystem::filesystem_error& ex)
                     {
                         objM.push_back(Pair("file size, error", ex.what()));
@@ -855,7 +856,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
         Object objM;
         objM.push_back(Pair("buckets", snBuckets));
         objM.push_back(Pair("messages", snMessages));
-        objM.push_back(Pair("size", fsReadable(nBytes)));
+        objM.push_back(Pair("size", bytesReadable(nBytes)));
         result.push_back(Pair("total", objM));
         
     } else

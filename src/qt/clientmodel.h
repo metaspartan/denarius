@@ -40,6 +40,9 @@ public:
     //! Return true if client connected to Tor
     bool isNativeTor() const;
 
+    //! Return true if client connected in Thin Mode
+    bool isThinMode() const;
+
     //! Return true if client has locked FS inputs
     bool isFSLock() const;
 

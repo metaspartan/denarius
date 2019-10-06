@@ -7,6 +7,7 @@
 #include "sync.h"
 #include "strlcpy.h"
 #include "version.h"
+#include "state.h"
 #include "ui_interface.h"
 #include <boost/algorithm/string/join.hpp>
 
@@ -63,7 +64,7 @@ string strFortunaStakePrivKey = "";
 string strFortunaStakeAddr = "";
 int nFortunaRounds = 2;
 
-int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
+int nMinStakeInterval = 60;         // in seconds, min time between successful stakes
 
 /** Spork enforcement enabled time */
 int64_t enforceFortunastakePaymentsTime = 4085657524;
@@ -93,6 +94,7 @@ string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
 bool fFSLock = false;
+bool fThinMode = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -204,6 +206,11 @@ uint64_t GetRand(uint64_t nMax)
 int GetRandInt(int nMax)
 {
     return GetRand(nMax);
+}
+
+uint32_t GetRandUInt32()
+{
+    return GetRand(numeric_limits<uint32_t>::max());
 }
 
 uint256 GetRandHash()
@@ -557,6 +564,19 @@ bool ParseMoney(const char* pszIn, int64_t& nRet)
     return true;
 }
 
+// safeChars chosen to allow simple messages/URLs/email addresses, but avoid anything
+// even possibly remotely dangerous like & or >
+static string safeChars("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890 .,;_/:?@");
+string SanitizeString(const string& str)
+{
+    string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (safeChars.find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
+}
 
 static const signed char phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -711,6 +731,12 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("1"));
     else
         return SoftSetArg(strArg, std::string("0"));
+}
+
+bool SetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg] = strValue;
+    return true;
 }
 
 
@@ -1330,6 +1356,49 @@ void FileCommit(FILE *fileout)
     fsync(fileno(fileout));
 #endif
 }
+
+const char *GetNodeModeName(int modeInd)
+{
+    switch (modeInd)
+    {
+        case NT_FULL:   return "full";
+        case NT_THIN:   return "thin";
+    };
+
+    return "unknown";
+};
+
+const char *GetNodeStateName(int stateInd)
+{
+    switch (stateInd)
+    {
+        case NS_STARTUP:                return "Startup";
+        case NS_GET_HEADERS:            return "Get Headers";
+        case NS_GET_FILTERED_BLOCKS:    return "Get Filtered Blocks";
+        case NS_READY:                  return "Ready";
+    };
+
+    return "unknown";
+};
+
+std::string bytesReadable(uint64_t nBytes)
+{
+    char buffer[128];
+    if (nBytes >= 1024ll*1024ll*1024ll*1024ll)
+        snprintf(buffer, sizeof(buffer), "%.2f TB", nBytes/1024.0/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f GB", nBytes/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f MB", nBytes/1024.0/1024.0);
+    else
+    if (nBytes >= 1024)
+        snprintf(buffer, sizeof(buffer), "%.2f KB", nBytes/1024.0);
+    else
+        snprintf(buffer, sizeof(buffer), "%"PRIu64" B", nBytes);
+    return std::string(buffer);
+};
 
 void ShrinkDebugFile()
 {
