@@ -823,18 +823,29 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     // don't bother showing anything if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
-        progressBarLabel->setText(tr("Connecting to the Denarius network..."));
+        if (nNodeMode == NT_FULL) {
+            progressBarLabel->setText(tr("Connecting to the Denarius network..."));
+        } else {
+            progressBarLabel->setText(tr("Connecting to the Denarius network in Thin Mode..."));
+        }
         progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
         return;
-    }
+    }    
 
     QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
     QString tooltip;
     QString nRemainingTime;
 
     if (nLastBlocks == 0)
-        nLastBlocks = pindexBest->nHeight;
+    {
+        if (nNodeMode == NT_FULL)
+        {
+            nLastBlocks = pindexBest->nHeight;
+        } else {
+            nLastBlocks = pwalletMain->nLastFilteredHeight;
+        }
+    }
 
     if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
         nBlocksInLastPeriod = count - nLastBlocks;
@@ -882,12 +893,22 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
         if (strStatusBarWarnings.isEmpty())
         {
-            progressBarLabel->setText(tr("Synchronizing with the network..."));
-            progressBarLabel->setVisible(true);
-            if (nBlocksPerSec>0)
-                progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
-            else
-                progressBar->setFormat(tr("~%1 block(s) remaining").arg(nRemainingBlocks));
+            if (nNodeMode == NT_FULL)
+            {
+                progressBarLabel->setText(tr("Synchronizing with the network..."));
+                progressBarLabel->setVisible(true);
+                if (nBlocksPerSec>0)
+                    progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+                else
+                    progressBar->setFormat(tr("~%1 block(s) remaining").arg(nRemainingBlocks));
+            } else {
+                progressBarLabel->setText(tr("Synchronizing in thin mode..."));
+                progressBarLabel->setVisible(true);
+                if (nBlocksPerSec>0)
+                    progressBar->setFormat(tr("~%1 header(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+                else
+                    progressBar->setFormat(tr("~%1 header(s) remaining").arg(nRemainingBlocks));
+            }
             progressBar->setMaximum(nTotalBlocks);
             progressBar->setValue(count);
             progressBar->setVisible(true);
@@ -902,8 +923,12 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         }
 
         overviewPage->showOutOfSyncWarning(true);
-
-        tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+        if (nNodeMode == NT_FULL)
+        {
+            tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+        } else {
+            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+        }
     }
     else
     {
@@ -914,7 +939,12 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
         overviewPage->showOutOfSyncWarning(false);
         progressBar->setVisible(false);
-        tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
+        if (nNodeMode == NT_FULL)
+        {
+            tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
+        } else {
+            tooltip = tr("Downloaded %1 headers of transaction history.").arg(count);
+        }
     }
 
     // Override progressBarLabel text and hide progress bar, when we have warnings to display

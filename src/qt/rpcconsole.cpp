@@ -372,11 +372,18 @@ void RPCConsole::setNumBlocks(int count, int countOfPeers)
 {
     ui->numberOfBlocks->setText(QString::number(count));
     ui->totalBlocks->setText(QString::number(countOfPeers));
+
+    QDateTime lastBlockDate;
+    if (nNodeMode == NT_FULL)
+        lastBlockDate = clientModel->getLastBlockDate();
+    else
+        lastBlockDate = clientModel->getLastBlockThinDate();
+
     if(clientModel)
     {
         // If there is no current number available display N/A instead of 0, which can't ever be true
         ui->totalBlocks->setText(clientModel->getNumBlocksOfPeers() == 0 ? tr("N/A") : QString::number(clientModel->getNumBlocksOfPeers()));
-        ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());
+        ui->lastBlockTime->setText(lastBlockDate.toString());
     }
 }
 

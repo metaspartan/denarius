@@ -33,6 +33,7 @@ public:
     quint64 getTotalBytesSent() const;
 
     QDateTime getLastBlockDate() const;
+    QDateTime getLastBlockThinDate() const;
 
     //! Return true if client connected to testnet
     bool isTestNet() const;

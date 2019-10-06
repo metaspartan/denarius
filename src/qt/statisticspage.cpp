@@ -38,45 +38,68 @@ QString rewardPrevious = "";
 
 void StatisticsPage::updateStatistics()
 {
-    double pHardness = GetDifficulty();
-    double pHardness2 = GetDifficulty(GetLastBlockIndex(pindexBest, true));
-    int pPawrate = GetPoWMHashPS();
+    double pHardness;
+    double pHardness2;
+    int64_t volume;
+    int pPawrate;
+    int nHeight;
     double pPawrate2 = 0.000;
-    int nHeight = pindexBest->nHeight;
+
     uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
+
+    if (nNodeMode == NT_FULL)
+    {
+        double pHardness = GetDifficulty();
+        double pHardness2 = GetDifficulty(GetLastBlockIndex(pindexBest, true));
+        int64_t volume = ((pindexBest->nMoneySupply)/100000000);
+        int nHeight = pindexBest->nHeight;
+        int pPawrate = GetPoWMHashPS();
+        double pPawrate2 = 0.000;
+        pPawrate2 = (double)pPawrate;
+    } else
+    { // THIN MODE STATS PAGE - WIP - Not working fully atm
+        double pHardness = GetHeaderDifficulty();
+        double pHardness2 = GetHeaderDifficulty(GetLastBlockThinIndex(pindexBestHeader, true));
+        int64_t volume = 0; //Needs better fix WIP
+        int nHeight;
+        int pPawrate;
+        double pPawrate2 = 0.000;
+        pPawrate2 = (double)pPawrate;
+    };
+    
     pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
     uint64_t nNetworkWeight = GetPoSKernelPS();
-    int64_t volume = ((pindexBest->nMoneySupply)/100000000);
 	int64_t marketcap = dnrmarket.toDouble();
     int peers = this->model->getNumConnections();
-    pPawrate2 = (double)pPawrate;
+
     QString height = QString::number(nHeight);
     QString stakemin = QString::number(nMinWeight);
     QString stakemax = QString::number(nNetworkWeight);
     QString phase = "";
-    if (pindexBest->nHeight < 3000000)
+
+    if (nHeight < 3000000)
     {
         phase = "Tribus Proof of Work with Proof of Stake";
     }
-    else if (pindexBest->nHeight > 3000000)
+    else if (nHeight > 3000000)
     {
         phase = "Proof of Stake";
     }
 
     QString subsidy = "";
-	if (pindexBest->nHeight < 1000000)
+	if (nHeight < 1000000)
     {
         subsidy = "3 D per block";
     }
-	else if (pindexBest->nHeight < 2000000)
+	else if (nHeight < 2000000)
     {
         subsidy = "4 D per block";
     }
-	else if (pindexBest->nHeight < 3000000)
+	else if (nHeight < 3000000)
     {
         subsidy = "3 D per block";
     }
-    else if (pindexBest->nHeight > 3000000)
+    else if (nHeight > 3000000)
     {
         subsidy = "No PoW Reward";
     }
