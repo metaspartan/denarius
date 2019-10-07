@@ -117,25 +117,25 @@ double GetPoSKernelPS()
             pindex = pindex->pprev;
         };
 
-        return nStakesTime ? dStakeKernelsTriedAvg / nStakesTime : 0;
-    };
+    } else {
 
-    CBlockIndex* pindex = pindexBest;;
-    CBlockIndex* pindexPrevStake = NULL;
+        CBlockIndex* pindex = pindexBest;;
+        CBlockIndex* pindexPrevStake = NULL;
 
-    while (pindex && nStakesHandled < nPoSInterval)
-    {
-        if (pindex->IsProofOfStake())
+        while (pindex && nStakesHandled < nPoSInterval)
         {
-            dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
-            nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
-            pindexPrevStake = pindex;
-            nStakesHandled++;
-        }
+            if (pindex->IsProofOfStake())
+            {
+                dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
+                nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
+                pindexPrevStake = pindex;
+                nStakesHandled++;
+            };
 
-        pindex = pindex->pprev;
+            pindex = pindex->pprev;
+        };
+
     }
-
     return nStakesTime ? dStakeKernelsTriedAvg / nStakesTime : 0;
 }
 
@@ -530,6 +530,16 @@ Value getblockheader(const Array& params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
+    if (nNodeMode == NT_THIN)
+    {
+        CDiskBlockThinIndex diskindex;
+        CTxDB txdb("r");
+        if (txdb.ReadBlockThinIndex(hash, diskindex))
+            return diskBlockThinIndexToJSON(diskindex);
+
+        throw runtime_error("Read header from db failed.\n");
+    };
+
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
@@ -568,6 +578,16 @@ Value getblock_old(const Array& params, bool fHelp)
 
     std::string strHash = params[0].get_str();
     uint256 hash(strHash);
+
+    if (nNodeMode == NT_THIN)
+    {
+        CDiskBlockThinIndex diskindex;
+        CTxDB txdb("r");
+        if (txdb.ReadBlockThinIndex(hash, diskindex))
+            return diskBlockThinIndexToJSON(diskindex);
+
+        throw runtime_error("Read header from db failed.\n");
+    };
 
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -659,6 +679,49 @@ Value getblockbynumber(const Array& params, bool fHelp)
     block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
+}
+
+Value setbestblockbyheight(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "setbestblockbyheight <height>\n"
+            "Sets the tip of the chain with a block at <height>.");
+
+    int nHeight = params[0].get_int();
+    if (nHeight < 0 || nHeight > nBestHeight)
+        throw runtime_error("Block height out of range.");
+
+    if (nNodeMode == NT_THIN)
+    {
+        throw runtime_error("Must be in full mode.");
+    };
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
+    while (pblockindex->nHeight > nHeight)
+        pblockindex = pblockindex->pprev;
+
+    uint256 hash = *pblockindex->phashBlock;
+
+    pblockindex = mapBlockIndex[hash];
+    block.ReadFromDisk(pblockindex, true);
+
+
+    Object result;
+
+    CTxDB txdb;
+    {
+        LOCK(cs_main);
+
+        if (!block.SetBestChain(txdb, pblockindex))
+            result.push_back(Pair("result", "failure"));
+        else
+            result.push_back(Pair("result", "success"));
+
+    };
+
+    return result;
 }
 
 Value thinscanmerkleblocks(const Array& params, bool fHelp)

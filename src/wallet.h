@@ -1149,12 +1149,16 @@ public:
         // Quick answer in most cases
         if (!IsFinal())
             return false;
-        // Coins newer than our current chain can't be trusted
-        if (nTime > pindexBest->GetBlockTime())
-            return false;
-        // Coins whose block is not in our chain can't be trusted
-        if (!mapBlockIndex.count(hashBlock))
-            return false;
+
+        if(!GetBoolArg("-thinmode"))
+        {
+            // Coins newer than our current chain can't be trusted
+            if (nTime > pindexBest->GetBlockTime())
+                return false;
+            // Coins whose block is not in our chain can't be trusted
+            if (!mapBlockIndex.count(hashBlock))
+                return false;
+        }
         int nDepth = GetDepthInMainChain();
         if (nDepth >= 1)
             return true;
@@ -1216,30 +1220,6 @@ public:
 
 
 
-/*
-class COutput
-{
-public:
-    const CWalletTx *tx;
-    int i;
-    int nDepth;
-
-    COutput(const CWalletTx *txIn, int iIn, int nDepthIn)
-    {
-        tx = txIn; i = iIn; nDepth = nDepthIn;
-    }
-
-    std::string ToString() const
-    {
-        return strprintf("COutput(%s, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, nDepth, FormatMoney(tx->vout[i].nValue).c_str());
-    }
-
-    void print() const
-    {
-        printf("%s\n", ToString().c_str());
-    }
-};
-*/
 class COutput
 {
 public:

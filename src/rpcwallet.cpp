@@ -158,7 +158,7 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("fortunastake",    fFortunaStake));
+    obj.push_back(Pair("fortunastake",  fFortunaStake));
     obj.push_back(Pair("fslock",        fFSLock));
     obj.push_back(Pair("thin",          fThinMode));
     obj.push_back(Pair("nativetor",     fNativeTor));
@@ -166,6 +166,11 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
     obj.push_back(Pair("mininput",      ValueFromAmount(nMinimumInputValue)));
+    obj.push_back(Pair("datadir",       GetDataDir().string()));
+    obj.push_back(Pair("walletfile",        pwalletMain->strWalletFile));
+    obj.push_back(Pair("debug",             fDebug));
+    obj.push_back(Pair("debugnet",          fDebugNet));
+    obj.push_back(Pair("debugringsig",      fDebugRingSig));
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));

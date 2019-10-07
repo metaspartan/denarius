@@ -265,7 +265,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->addWidget(labelBlocksIcon);
     frameBlocksLayout->addStretch();
 
-    if (GetBoolArg("-staking", true))
+    if (GetBoolArg("-staking", true) && !fThinMode)
     {
         QTimer *timerStakingIcon = new QTimer(labelStakingIcon);
         connect(timerStakingIcon, SIGNAL(timeout()), this, SLOT(updateStakingIcon()));
@@ -579,7 +579,6 @@ void BitcoinGUI::createToolBars()
         mainToolbar->addAction(addressBookAction);
         mainToolbar->addAction(proofOfImageAction);
 	    mainToolbar->addAction(marketAction);
-	    mainToolbar->addAction(mintingAction);
     } else {
         mainToolbar->addAction(overviewAction);
         mainToolbar->addAction(sendCoinsAction);
@@ -687,8 +686,8 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 
         // Put transaction list in tabs
         transactionView->setModel(walletModel);
-
-		mintingView->setModel(walletModel);
+        if(!fThinMode)
+            mintingView->setModel(walletModel);
 
         overviewPage->setModel(walletModel);
         addressBookPage->setModel(walletModel->getAddressTableModel());
@@ -882,11 +881,18 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
     }
 
-    QDateTime lastBlockDate = clientModel->getLastBlockDate();
-    int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
-    QString text;
+    if(GetBoolArg("-thinmode"))
+    {
+        QDateTime lastBlockDate = clientModel->getLastBlockThinDate();
+        int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
+        QString text;
+    } else {
+        QDateTime lastBlockDate = clientModel->getLastBlockDate();
+        int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
+        QString text;
+    }
 
-    // Represent time from last generated block in human readable text
+    // Represent time from last generated block or header in human readable text
     if(secs <= 0)
     {
         // Fully up to date. Leave text empty.
@@ -914,7 +920,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         float nPercentageDone = count / (nTotalBlocks * 0.01f);
         if (strStatusBarWarnings.isEmpty())
         {
-            if (nNodeMode == NT_FULL)
+            if (nNodeMode == NT_FULL && !GetBoolArg("-thinmode"))
             {
                 progressBarLabel->setText(tr("Synchronizing with the network..."));
                 progressBarLabel->setVisible(true);
@@ -944,7 +950,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         }
 
         overviewPage->showOutOfSyncWarning(true);
-        if (nNodeMode == NT_FULL)
+        if (nNodeMode == NT_FULL && !GetBoolArg("-thinmode"))
         {
             tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
         } else {
@@ -1585,6 +1591,8 @@ void BitcoinGUI::updateStakingIcon()
             labelStakingIcon->setToolTip(tr("Not staking because wallet is offline"));
         else if (IsInitialBlockDownload())
             labelStakingIcon->setToolTip(tr("Not staking because wallet is syncing"));
+        else if (nNodeMode == NT_THIN)
+            labelStakingIcon->setToolTip(tr("Not staking because wallet is in thin mode"));
         else if (!nWeight)
             labelStakingIcon->setToolTip(tr("Not staking because you don't have mature coins<br>Coins take 8 hours to mature."));
         else

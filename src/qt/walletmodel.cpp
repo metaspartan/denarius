@@ -28,7 +28,8 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
     fHaveWatchOnly = wallet->HaveWatchOnly();
 
     addressTableModel = new AddressTableModel(wallet, this);
-    mintingTableModel = new MintingTableModel(wallet, this);
+    if(!GetBoolArg("-thinmode"))
+        mintingTableModel = new MintingTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(wallet, this);
 
     // This timer will be fired repeatedly to update the balance
@@ -132,7 +133,12 @@ void WalletModel::pollBalanceChanged()
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
 
-        checkBalanceChanged();
+        if(!GetBoolArg("-thinmode"))
+        {
+            checkBalanceChanged();
+        } else {
+            checkBalanceChangedThin();
+        }
         //if(transactionTableModel)
             //transactionTableModel->updateConfirmations();
     }
@@ -166,6 +172,24 @@ void WalletModel::checkBalanceChanged()
         cachedImmatureBalance = newImmatureBalance;
 
         emit balanceChanged(newBalance, newLockedBalance, newStake, newUnconfirmedBalance, newImmatureBalance, newWatchOnlyBalance, newWatchUnconfBalance, newWatchImmatureBalance);
+    }
+}
+
+void WalletModel::checkBalanceChangedThin()
+{
+    qint64 newBalance = getBalance();
+    qint64 newStake = getStakeAmount();
+    qint64 newUnconfirmedBalance = getUnconfirmedBalance();
+    qint64 newImmatureBalance = getImmatureBalance();
+
+    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
+    {
+        cachedBalance = newBalance;
+        cachedStake = newStake;
+        cachedUnconfirmedBalance = newUnconfirmedBalance;
+        cachedImmatureBalance = newImmatureBalance;
+
+        emit balanceChangedThin(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
     }
 }
 

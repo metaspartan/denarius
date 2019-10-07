@@ -4112,7 +4112,7 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockThinIndex* &pindexRet) const
 
         if (!fThinFullIndex)
         {
-            //printf("[rem] GetDepthInMainChainINTERNAL ReadBlockThinIndex\n");
+            //printf("[test] GetDepthInMainChainINTERNAL ReadBlockThinIndex\n");
 
             CTxDB txdb("r");
             CDiskBlockThinIndex diskindex;
@@ -4128,15 +4128,6 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockThinIndex* &pindexRet) const
     if (!pindex || !pindex->IsInMainChain())
         return 0;
 
-    /*
-    // Make sure the merkle branch connects to this block
-    if (!fMerkleVerified)
-    {
-        if (CBlock::CheckMerkleBranch(GetHash(), vMerkleBranch, nIndex) != pindex->hashMerkleRoot)
-            return 0;
-        fMerkleVerified = true;
-    };
-    */
     pindexRet = pindex;
     return pindexBestHeader->nHeight - pindex->nHeight + 1;
 }
@@ -4156,9 +4147,8 @@ int CMerkleTx::GetBlocksToMaturity() const
     if (!(IsCoinBase() || IsCoinStake()))
         return 0;
 
-    return max(0, (nCoinbaseMaturity) - GetDepthInMainChain());
+    return max(0, (nCoinbaseMaturity+10) - GetDepthInMainChain());
 }
-
 
 bool CMerkleTx::AcceptToMemoryPool(CTxDB& txdb)
 {

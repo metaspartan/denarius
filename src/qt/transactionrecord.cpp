@@ -212,18 +212,36 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     AssertLockHeld(cs_main);
     // Determine transaction status
 
+    int nHeight = std::numeric_limits<int>::max();
+
     // Find the block the tx is in
-    CBlockIndex* pindex = NULL;
-    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(wtx.hashBlock);
-    if (mi != mapBlockIndex.end())
-        pindex = (*mi).second;
+    if (nNodeMode == NT_FULL)
+    {
+        CBlockIndex* pindex = NULL;
+        std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(wtx.hashBlock);
+        if (mi != mapBlockIndex.end())
+        {
+            pindex = (*mi).second;
+            nHeight = pindex->nHeight;
+        };
+    } else
+    {
+        CBlockThinIndex* pindex = NULL;
+        std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(wtx.hashBlock);
+        if (mi != mapBlockThinIndex.end())
+        {
+            pindex = (*mi).second;
+            nHeight = pindex->nHeight;
+        };
+    };
 
     // Sort order, unrecorded transactions sort to the top
     status.sortKey = strprintf("%010d-%01d-%010u-%03d",
-        (pindex ? pindex->nHeight : std::numeric_limits<int>::max()),
+        nHeight,
         (wtx.IsCoinBase() ? 1 : 0),
         wtx.nTimeReceived,
         idx);
+
     status.countsForBalance = wtx.IsTrusted() && !(wtx.GetBlocksToMaturity() > 0);
     status.depth = wtx.GetDepthInMainChain();
     status.cur_num_blocks = nBestHeight;
