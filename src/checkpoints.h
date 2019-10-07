@@ -45,6 +45,7 @@ namespace Checkpoints
 
     // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
+    CBlockThinIndex* GetLastCheckpoint(const std::map<uint256, CBlockThinIndex*>& mapBlockThinIndex);
 
     extern uint256 hashSyncCheckpoint;
     extern uint256 hashPendingCheckpoint;
@@ -59,8 +60,12 @@ namespace Checkpoints
     CBlockThinIndex* GetLastSyncCheckpointHeader();
     bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
     bool AcceptPendingSyncCheckpoint();
+
     bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
+    bool CheckSyncThin(const uint256& hashBlock, const CBlockThinIndex* pindexPrev);
     const CBlockIndex* AutoSelectSyncCheckpoint();
+    const CBlockThinIndex* AutoSelectSyncThinCheckpoint();
+
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
     bool WantedByPendingSyncCheckpointHeader(uint256 hashBlock);
     bool ResetSyncCheckpoint();

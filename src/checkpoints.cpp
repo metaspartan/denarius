@@ -151,6 +151,20 @@ namespace Checkpoints
         return NULL;
     }
 
+    CBlockThinIndex* GetLastCheckpoint(const std::map<uint256, CBlockThinIndex*>& mapBlockThinIndex)
+    {
+        MapCheckpoints& checkpoints = (fTestNet ? mapCheckpointsTestnet : mapCheckpoints);
+
+        BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, checkpoints)
+        {
+            const uint256& hash = i.second;
+            std::map<uint256, CBlockThinIndex*>::const_iterator t = mapBlockThinIndex.find(hash);
+            if (t != mapBlockThinIndex.end())
+                return t->second;
+        }
+        return NULL;
+    }
+
     // ppcoin: synchronized checkpoint (centrally broadcasted)
     uint256 hashSyncCheckpoint = 0;
     uint256 hashPendingCheckpoint = 0;
@@ -164,7 +178,7 @@ namespace Checkpoints
     {
         LOCK(cs_hashSyncCheckpoint);
         if (!mapBlockIndex.count(hashSyncCheckpoint))
-            printf("GetSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
+            printf("GetSyncCheckpoint: block index missing for current sync-checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
         else
             return mapBlockIndex[hashSyncCheckpoint];
         return NULL;
@@ -175,7 +189,7 @@ namespace Checkpoints
     {
         LOCK(cs_hashSyncCheckpoint);
         if (!mapBlockThinIndex.count(hashSyncCheckpoint))
-            printf("GetLastSyncCheckpointHeader: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
+            printf("GetLastSyncCheckpointHeader: block index missing for current sync-checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
         else
             return mapBlockThinIndex[hashSyncCheckpoint];
         return NULL;
@@ -368,6 +382,16 @@ namespace Checkpoints
         return pindex;
     }
 
+    // Automatically select a suitable sync-checkpoint - Thin mode
+    const CBlockThinIndex* AutoSelectSyncThinCheckpoint()
+    {
+        const CBlockThinIndex *pindex = pindexBestHeader;
+        // Search backward for a block within max span and maturity window
+        while (pindex->pprev && pindex->nHeight + nCheckpointSpan > pindexBest->nHeight)
+            pindex = pindex->pprev;
+        return pindex;
+    }
+
     // Check the chain this block is going to attach to is valid past maturity
     bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev)
     {
@@ -399,6 +423,45 @@ namespace Checkpoints
             if (nHeight == pindexSync->nHeight && hashBlock != hashSyncCheckpoint)
                 return false; // same height with sync-checkpoint
             if (nHeight < pindexSync->nHeight && !mapBlockIndex.count(hashBlock))
+                return false; // lower height than sync-checkpoint
+            return true;
+        }
+    }
+
+       // Check the chain this block is going to attach to is valid past maturity
+    bool CheckSyncThin(const uint256& hashBlock, const CBlockThinIndex* pindexPrev)
+    {
+        assert(nNodeMode == NT_THIN); // Ensure NT_THIN Thin Mode is enabled
+        
+        if (fTestNet) return true; // Testnet has no checkpoints
+        int nHeight = pindexPrev->nHeight + 1;
+        if (IsInitialBlockDownload()) { // Do a basic check if we are catching up
+            // Thin Mode AutoSelectSyncThinCheckpoint()
+            const CBlockThinIndex *pindexSync = AutoSelectSyncThinCheckpoint();
+            if (nHeight <= pindexSync->nHeight) {
+                return false; // lower height than auto thin checkpoint
+            }
+            return true;
+        } else { // do a more thorough check when we are already synced
+            LOCK(cs_hashSyncCheckpoint);
+            // sync-checkpoint should always be accepted block
+            assert(mapBlockThinIndex.count(hashSyncCheckpoint));
+            const CBlockThinIndex* pindexSync = mapBlockThinIndex[hashSyncCheckpoint];
+
+            if (nHeight > pindexSync->nHeight)
+            {
+                // trace back to same height as sync-checkpoint
+                const CBlockThinIndex* pindex = pindexPrev;
+                while (pindex->nHeight > pindexSync->nHeight)
+                    if (!(pindex = pindex->pprev))
+                        return error("CheckSync: pprev null - block index structure failure");
+                if (pindex->nHeight < pindexSync->nHeight || pindex->GetBlockHash() != hashSyncCheckpoint)
+                    return false; // only descendant of sync-checkpoint can pass check
+            };
+
+            if (nHeight == pindexSync->nHeight && hashBlock != hashSyncCheckpoint)
+                return false; // same height with sync-checkpoint
+            if (nHeight < pindexSync->nHeight && !mapBlockThinIndex.count(hashBlock))
                 return false; // lower height than sync-checkpoint
             return true;
         }

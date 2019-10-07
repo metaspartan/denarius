@@ -1903,44 +1903,10 @@ bool CBlockThin::AcceptBlockThin()
     // Check that the block chain matches the known block chain up to a checkpoint
     if (!Checkpoints::CheckHardened(nHeight, hash))
         return error("AcceptBlockThin() : rejected by hardened checkpoint lock-in at %d", nHeight);
-        
-    /*
-    // Verify hash target and signature of coinstake tx
-    if (IsProofOfStake())
-    {
-        uint256 targetProofOfStake;
-        if (!CheckProofOfStake(vtx[1], nBits, hashProof, targetProofOfStake))
-        {
-            printf("WARNING: AcceptHeader(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
-        };
-    };
-    */
-
-    /*
-    // PoW is checked in CheckBlock()
-    if (IsProofOfWork())
-    {
-        hashProof = GetHash();
-    };
-    */
-
-    //bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev);
 
     // Check that the block satisfies synchronized checkpoint
-    //if (CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
-    //    return error("AcceptHeader() : rejected by synchronized checkpoint");
-
-    //if (CheckpointsMode == Checkpoints::ADVISORY && !cpSatisfies)
-    //    strMiscWarning = _("WARNING: syncronized checkpoint violation detected, but skipped!");
-
-    /*
-    // Enforce rule that the coinbase starts with serialized block height
-    CScript expect = CScript() << nHeight;
-    if (vtx[0].vin[0].scriptSig.size() < expect.size() ||
-        !std::equal(expect.begin(), expect.end(), vtx[0].vin[0].scriptSig.begin()))
-        return DoS(100, error("AcceptHeader() : block height mismatch in coinbase"));
-    */
+    if (!Checkpoints::CheckSyncThin(nHeight, pindexPrev))
+        return error("AcceptBlockThin(CheckSyncThin()) : rejected by synchronized checkpoint");
 
     // Write header to history file
     if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))

@@ -108,8 +108,9 @@ Value getinfo(const Array& params, bool fHelp)
     Object obj, diff;
     obj.push_back(Pair("version",       FormatFullVersion()));
     obj.push_back(Pair("mode",          std::string(GetNodeModeName(nNodeMode))));
-    if (nNodeMode == NT_THIN)
+    if (nNodeMode == NT_THIN) {
         obj.push_back(Pair("state",     std::string(GetNodeStateName(nNodeState))));
+	}
     obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
@@ -121,11 +122,14 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
     obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
-    if (nNodeMode == NT_THIN)
+    if (nNodeMode == NT_THIN) {
+		obj.push_back(Pair("headers",          pindexBestHeader ? pindexBestHeader->nHeight : -1));
         obj.push_back(Pair("filteredblocks",   (int)nHeightFilteredNeeded));
+	}
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
-    if (nNodeMode == NT_FULL)
+    if (nNodeMode == NT_FULL) {
         obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+	}
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("datareceived",  bytesReadable(CNode::GetTotalBytesRecv())));
     obj.push_back(Pair("datasent",      bytesReadable(CNode::GetTotalBytesSent())));
@@ -168,10 +172,12 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("mininput",      ValueFromAmount(nMinimumInputValue)));
     obj.push_back(Pair("datadir",       GetDataDir().string()));
 	obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
-    if(fDebug)
+    if(fDebug) 
+	{
     	obj.push_back(Pair("debug",             fDebug));
         obj.push_back(Pair("debugnet",          fDebugNet));
         obj.push_back(Pair("debugringsig",      fDebugRingSig));
+	}
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
