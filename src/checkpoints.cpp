@@ -178,7 +178,7 @@ namespace Checkpoints
     {
         LOCK(cs_hashSyncCheckpoint);
         if (!mapBlockIndex.count(hashSyncCheckpoint))
-            printf("GetSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
+            error("GetSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
         else
             return mapBlockIndex[hashSyncCheckpoint];
         return NULL;
@@ -189,7 +189,7 @@ namespace Checkpoints
     {
         LOCK(cs_hashSyncCheckpoint);
         if (!mapBlockThinIndex.count(hashSyncCheckpoint))
-            //printf("GetLastSyncCheckpointHeader: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
+            error("GetLastSyncCheckpointHeader: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
         else
             return mapBlockThinIndex[hashSyncCheckpoint];
         return NULL;
