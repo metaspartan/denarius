@@ -387,7 +387,7 @@ namespace Checkpoints
     {
         const CBlockThinIndex *pindex = pindexBestHeader;
         // Search backward for a block within max span and maturity window
-        while (pindex->pprev && pindex->nHeight + nCheckpointSpan > pindexBest->nHeight)
+        while (pindex->pprev && (pindex->GetBlockTime() + nCheckpointSpan * nTargetSpacing > pindexBestHeader->GetBlockTime() || pindex->nHeight + nCheckpointSpan > pindexBestHeader->nHeight))
             pindex = pindex->pprev;
         return pindex;
     }
@@ -432,7 +432,7 @@ namespace Checkpoints
     bool CheckSyncThin(const uint256& hashBlock, const CBlockThinIndex* pindexPrev)
     {
         assert(nNodeMode == NT_THIN); // Ensure NT_THIN Thin Mode is enabled
-        
+
         if (fTestNet) return true; // Testnet has no checkpoints
         int nHeight = pindexPrev->nHeight + 1;
         if (IsInitialBlockDownload()) { // Do a basic check if we are catching up
