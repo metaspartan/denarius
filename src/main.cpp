@@ -3988,13 +3988,16 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
     mempool.AddTransactionsUpdated(1);
 
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
-
-    printf("SetBestChain: new best=%s  height=%d  tx=%lu  trust=%s  blocktrust=%" PRId64"  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
-      (unsigned long)pindexBest->nChainTx,
-      CBigNum(nBestChainTrust).ToString().c_str(),
-      nBestBlockTrust.Get64(),
-      DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
+    
+    if(fDebugChain)
+    {
+        printf("SetBestChain: new best=%s  height=%d  tx=%lu  trust=%s  blocktrust=%" PRId64"  date=%s\n",
+            hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
+            (unsigned long)pindexBest->nChainTx,
+            CBigNum(nBestChainTrust).ToString().c_str(),
+            nBestBlockTrust.Get64(),
+            DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
+    }
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     if (!fIsInitialDownload)
@@ -5047,9 +5050,9 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
 static unsigned int nCurrentBlockFile = 1;
 static unsigned int nCurrentBlockThinFile = 1;
 
-static filesystem::path BlockFilePath(unsigned int nFile)
+static filesystem::path BlockFilePath(bool fHeaderFile, unsigned int nFile)
 {
-    string strBlockFn = strprintf("blk%04u.dat", nFile);
+    string strBlockFn = strprintf(fHeaderFile ? "blk_hdr%04u.dat": "blk%04u.dat", nFile);
     return GetDataDir() / strBlockFn;
 }
 
@@ -5160,10 +5163,10 @@ bool LoadBlockIndex(bool fAllowNew)
         {
             block.nNonce   = 13278;
         }
-        if (false && (block.GetHash() != hashGenesisBlock)) {
 
         // This will figure out a valid hash and Nonce if you're
         // creating a different genesis block:
+        if (false && (block.GetHash() != hashGenesisBlock)) {
             uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
             while (block.GetHash() > hashTarget)
                {
