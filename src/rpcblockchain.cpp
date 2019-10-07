@@ -952,10 +952,14 @@ Value getblockchaininfo(const Array& params, bool fHelp)
     obj.push_back(Pair("chain",          chain));
     obj.push_back(Pair("blocks",         (int)nBestHeight));
     if (nNodeMode == NT_FULL)
+    {
         obj.push_back(Pair("bestblockhash",  hashBestChain.GetHex()));
+    }
     if (nNodeMode == NT_THIN)
+    {
         obj.push_back(Pair("headers",          pindexBestHeader ? pindexBestHeader->nHeight : -1));
         obj.push_back(Pair("filteredblocks",   (int)nHeightFilteredNeeded));
+    }
     if (nNodeMode == NT_FULL)
     {
         diff.push_back(Pair("proof-of-work",  GetDifficulty()));
@@ -968,9 +972,11 @@ Value getblockchaininfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty",     diff));
     obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
     if (nNodeMode == NT_FULL)
+    {
         obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(pindexBest)));
         obj.push_back(Pair("chainwork",      leftTrim(pindexBest->nChainWork.GetHex(), '0')));
         obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    }
     //obj.push_back(Pair("size_on_disk",   CalculateCurrentUsage()));
     return obj;
 }
