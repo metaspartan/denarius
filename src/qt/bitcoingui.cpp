@@ -176,6 +176,10 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     // Create the tray icon (or setup the dock icon)
     createTrayIcon();
+    
+    fFSLock = GetBoolArg("-fsconflock");
+    fThinMode = GetBoolArg("-thinmode");
+    fNativeTor = GetBoolArg("-nativetor");
 
     // Create tabs
     overviewPage = new OverviewPage();
@@ -185,9 +189,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
 	//chatWindow = new ChatWindow(this);
-
-    fFSLock = GetBoolArg("-fsconflock");
-    fNativeTor = GetBoolArg("-nativetor");
 
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
@@ -220,7 +221,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
     centralWidget->addWidget(messagePage);
-	centralWidget->addWidget(statisticsPage);
+    centralWidget->addWidget(statisticsPage);
 	centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(fortunastakeManagerPage);
 	centralWidget->addWidget(marketBrowser);
@@ -245,7 +246,11 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     labelBlocksIcon = new QLabel();
     labelConnectTypeIcon = new QLabel();
     labelFSLockIcon = new QLabel();
+    labelThinMode = new QLabel();
     frameBlocksLayout->addStretch();
+    if (fThinMode)
+        frameBlocksLayout->addWidget(labelThinMode);
+        frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelConnectTypeIcon);
@@ -564,18 +569,31 @@ void BitcoinGUI::createToolBars()
     mainToolbar = addToolBar(tr("Tabs toolbar"));
     mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mainToolbar->addWidget(mainIcon);
-    mainToolbar->addAction(overviewAction);
-    mainToolbar->addAction(sendCoinsAction);
-    mainToolbar->addAction(receiveCoinsAction);
-    mainToolbar->addAction(historyAction);
-    mainToolbar->addAction(addressBookAction);
-    mainToolbar->addAction(statisticsAction);
-	mainToolbar->addAction(fortunastakeManagerAction);
-	mainToolbar->addAction(proofOfImageAction);
-	mainToolbar->addAction(marketAction);
-    mainToolbar->addAction(blockAction);
-	mainToolbar->addAction(messageAction);
-	mainToolbar->addAction(mintingAction);
+
+    if (GetBoolArg("-thinmode"))
+    {
+        mainToolbar->addAction(overviewAction);
+        mainToolbar->addAction(sendCoinsAction);
+        mainToolbar->addAction(receiveCoinsAction);
+        mainToolbar->addAction(historyAction);
+        mainToolbar->addAction(addressBookAction);
+        mainToolbar->addAction(proofOfImageAction);
+	    mainToolbar->addAction(marketAction);
+	    mainToolbar->addAction(mintingAction);
+    } else {
+        mainToolbar->addAction(overviewAction);
+        mainToolbar->addAction(sendCoinsAction);
+        mainToolbar->addAction(receiveCoinsAction);
+        mainToolbar->addAction(historyAction);
+        mainToolbar->addAction(addressBookAction);
+        mainToolbar->addAction(statisticsAction);
+	    mainToolbar->addAction(fortunastakeManagerAction);
+        mainToolbar->addAction(proofOfImageAction);
+	    mainToolbar->addAction(marketAction);
+        mainToolbar->addAction(blockAction);
+	    mainToolbar->addAction(messageAction);
+	    mainToolbar->addAction(mintingAction);
+    }
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -815,6 +833,9 @@ void BitcoinGUI::setNumConnections(int count)
     }
     if (fFSLock == true) {
         labelFSLockIcon->setPixmap(QIcon(":/icons/fs").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+    }
+    if (fThinMode == true) {
+        labelThinMode->setText(tr("THIN"));
     }
 }
 
