@@ -886,32 +886,66 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         QDateTime lastBlockDate = clientModel->getLastBlockThinDate();
         int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
         QString text;
+
+        // Represent time from last generated block or header in human readable text
+        if(secs <= 0)
+        {
+            // Fully up to date. Leave text empty.
+        }
+        else if(secs < 60)
+        {
+            text = tr("%n second(s) ago","",secs);
+        }
+        else if(secs < 60*60)
+        {
+            text = tr("%n minute(s) ago","",secs/60);
+        }
+        else if(secs < 24*60*60)
+        {
+            text = tr("%n hour(s) ago","",secs/(60*60));
+        }
+        else
+        {
+            text = tr("%n day(s) ago","",secs/(60*60*24));
+        }
+
+        if(!text.isEmpty())
+        {
+            tooltip += QString("<br>");
+            tooltip += tr("Last received block was generated %1.").arg(text);
+        }
     } else {
         QDateTime lastBlockDate = clientModel->getLastBlockDate();
         int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
         QString text;
-    }
 
-    // Represent time from last generated block or header in human readable text
-    if(secs <= 0)
-    {
-        // Fully up to date. Leave text empty.
-    }
-    else if(secs < 60)
-    {
-        text = tr("%n second(s) ago","",secs);
-    }
-    else if(secs < 60*60)
-    {
-        text = tr("%n minute(s) ago","",secs/60);
-    }
-    else if(secs < 24*60*60)
-    {
-        text = tr("%n hour(s) ago","",secs/(60*60));
-    }
-    else
-    {
-        text = tr("%n day(s) ago","",secs/(60*60*24));
+        // Represent time from last generated block or header in human readable text
+        if(secs <= 0)
+        {
+            // Fully up to date. Leave text empty.
+        }
+        else if(secs < 60)
+        {
+            text = tr("%n second(s) ago","",secs);
+        }
+        else if(secs < 60*60)
+        {
+            text = tr("%n minute(s) ago","",secs/60);
+        }
+        else if(secs < 24*60*60)
+        {
+            text = tr("%n hour(s) ago","",secs/(60*60));
+        }
+        else
+        {
+            text = tr("%n day(s) ago","",secs/(60*60*24));
+        }
+
+        if(!text.isEmpty())
+        {
+            tooltip += QString("<br>");
+            tooltip += tr("Last received block was generated %1.").arg(text);
+        }
     }
 
     if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
@@ -980,12 +1014,6 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         progressBarLabel->setText(strStatusBarWarnings);
         progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
-    }
-
-    if(!text.isEmpty())
-    {
-        tooltip += QString("<br>");
-        tooltip += tr("Last received block was generated %1.").arg(text);
     }
 
     // Don't word-wrap this (fixed-width) tooltip
