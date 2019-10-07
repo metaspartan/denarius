@@ -380,7 +380,7 @@ void StatisticsPage::setModel(ClientModel *model)
 {
     if (nNodeMode == NT_THIN && fThinMode)
     {
-        updateStatisticsThin();
+        //updateStatisticsThin();
     } else {
         updateStatistics();
     }
