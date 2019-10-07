@@ -167,10 +167,11 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
     obj.push_back(Pair("mininput",      ValueFromAmount(nMinimumInputValue)));
     obj.push_back(Pair("datadir",       GetDataDir().string()));
-    obj.push_back(Pair("walletfile",        pwalletMain->strWalletFile));
-    obj.push_back(Pair("debug",             fDebug));
-    obj.push_back(Pair("debugnet",          fDebugNet));
-    obj.push_back(Pair("debugringsig",      fDebugRingSig));
+	obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
+    if(fDebug)
+    	obj.push_back(Pair("debug",             fDebug));
+        obj.push_back(Pair("debugnet",          fDebugNet));
+        obj.push_back(Pair("debugringsig",      fDebugRingSig));
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));

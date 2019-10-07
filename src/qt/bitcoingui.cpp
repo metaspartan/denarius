@@ -853,36 +853,31 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         return;
     }    
 
-    QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
-    QString tooltip;
-    QString nRemainingTime;
-
-    if (nLastBlocks == 0)
-    {
-        if (nNodeMode == NT_FULL)
-        {
-            nLastBlocks = pindexBest->nHeight;
-        } else {
-            nLastBlocks = pwalletMain->nLastFilteredHeight;
-        }
-    }
-
-    if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
-        nBlocksInLastPeriod = count - nLastBlocks;
-        nLastBlocks = count;
-        nClientUpdateTime = GetTime();
-    }
-    if (nBlocksInLastPeriod>0)
-        nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
-    else
-        nBlocksPerSec = 0;
-
-    if (nBlocksPerSec>0) {
-        nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
-    }
-
     if(GetBoolArg("-thinmode"))
     {
+        QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
+        QString tooltip;
+        QString nRemainingTime;
+
+        if (nLastBlocks == 0)
+        {
+            nLastBlocks = pwalletMain->nLastFilteredHeight;
+        }
+
+        if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
+            nBlocksInLastPeriod = count - nLastBlocks;
+            nLastBlocks = count;
+            nClientUpdateTime = GetTime();
+        }
+        if (nBlocksInLastPeriod>0)
+            nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
+        else
+            nBlocksPerSec = 0;
+
+        if (nBlocksPerSec>0) {
+            nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
+        }
+
         QDateTime lastBlockDate = clientModel->getLastBlockThinDate();
         int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
         QString text;
@@ -909,12 +904,93 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             text = tr("%n day(s) ago","",secs/(60*60*24));
         }
 
+        if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
+        {
+            int nRemainingBlocks = nTotalBlocks - count;
+            float nPercentageDone = count / (nTotalBlocks * 0.01f);
+            if (strStatusBarWarnings.isEmpty())
+            {
+                progressBarLabel->setText(tr("Synchronizing in thin mode..."));
+                progressBarLabel->setVisible(true);
+                if (nBlocksPerSec>0)
+                    progressBar->setFormat(tr("~%1 header(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+                else
+                    progressBar->setFormat(tr("~%1 header(s) remaining").arg(nRemainingBlocks));
+                progressBar->setMaximum(nTotalBlocks);
+                progressBar->setValue(count);
+                progressBar->setVisible(true);
+            }
+
+            tooltip = tr("Catching up...") + QString("<br>") + tooltip;
+
+            if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
+                labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+                spinnerFrame = (spinnerFrame + 1) % 36;
+                nLastUpdateTime = GetTimeMicros();
+            }
+
+            overviewPage->showOutOfSyncWarning(true);
+            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+        }
+        else
+        {
+            if (strStatusBarWarnings.isEmpty())
+                progressBarLabel->setVisible(false);
+
+            tooltip = tr("Up to date") + QString(".<br>") + tooltip;
+            labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+            overviewPage->showOutOfSyncWarning(false);
+            progressBar->setVisible(false);
+            tooltip = tr("Downloaded %1 headers of transaction history.").arg(count);
+
+        }
+
+        // Override progressBarLabel text and hide progress bar, when we have warnings to display
+        if (!strStatusBarWarnings.isEmpty())
+        {
+            progressBarLabel->setText(strStatusBarWarnings);
+            progressBarLabel->setVisible(true);
+            progressBar->setVisible(false);
+        }
+
         if(!text.isEmpty())
         {
             tooltip += QString("<br>");
             tooltip += tr("Last received block was generated %1.").arg(text);
         }
+
+        // Don't word-wrap this (fixed-width) tooltip
+        tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
+
+        labelBlocksIcon->setToolTip(tooltip);
+        progressBarLabel->setToolTip(tooltip);
+        progressBar->setToolTip(tooltip);
+
     } else {
+        
+        QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
+        QString tooltip;
+        QString nRemainingTime;
+
+        if (nLastBlocks == 0)
+        {
+            nLastBlocks = pindexBest->nHeight;
+        }
+
+        if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
+            nBlocksInLastPeriod = count - nLastBlocks;
+            nLastBlocks = count;
+            nClientUpdateTime = GetTime();
+        }
+        if (nBlocksInLastPeriod>0)
+            nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
+        else
+            nBlocksPerSec = 0;
+
+        if (nBlocksPerSec>0) {
+            nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
+        }
+
         QDateTime lastBlockDate = clientModel->getLastBlockDate();
         int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
         QString text;
@@ -941,87 +1017,69 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             text = tr("%n day(s) ago","",secs/(60*60*24));
         }
 
-        if(!text.isEmpty())
+        if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
         {
-            tooltip += QString("<br>");
-            tooltip += tr("Last received block was generated %1.").arg(text);
-        }
-    }
-
-    if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
-    {
-        int nRemainingBlocks = nTotalBlocks - count;
-        float nPercentageDone = count / (nTotalBlocks * 0.01f);
-        if (strStatusBarWarnings.isEmpty())
-        {
-            if (nNodeMode == NT_FULL && !GetBoolArg("-thinmode"))
+            int nRemainingBlocks = nTotalBlocks - count;
+            float nPercentageDone = count / (nTotalBlocks * 0.01f);
+            if (strStatusBarWarnings.isEmpty())
             {
+
                 progressBarLabel->setText(tr("Synchronizing with the network..."));
                 progressBarLabel->setVisible(true);
                 if (nBlocksPerSec>0)
                     progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
                 else
                     progressBar->setFormat(tr("~%1 block(s) remaining").arg(nRemainingBlocks));
-            } else {
-                progressBarLabel->setText(tr("Synchronizing in thin mode..."));
-                progressBarLabel->setVisible(true);
-                if (nBlocksPerSec>0)
-                    progressBar->setFormat(tr("~%1 header(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
-                else
-                    progressBar->setFormat(tr("~%1 header(s) remaining").arg(nRemainingBlocks));
+
+                progressBar->setMaximum(nTotalBlocks);
+                progressBar->setValue(count);
+                progressBar->setVisible(true);
             }
-            progressBar->setMaximum(nTotalBlocks);
-            progressBar->setValue(count);
-            progressBar->setVisible(true);
-        }
 
-        tooltip = tr("Catching up...") + QString("<br>") + tooltip;
+            tooltip = tr("Catching up...") + QString("<br>") + tooltip;
 
-        if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
-            labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-            spinnerFrame = (spinnerFrame + 1) % 36;
-            nLastUpdateTime = GetTimeMicros();
-        }
+            if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
+                labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+                spinnerFrame = (spinnerFrame + 1) % 36;
+                nLastUpdateTime = GetTimeMicros();
+            }
 
-        overviewPage->showOutOfSyncWarning(true);
-        if (nNodeMode == NT_FULL && !GetBoolArg("-thinmode"))
-        {
+            overviewPage->showOutOfSyncWarning(true);
             tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
-        } else {
-            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
         }
-    }
-    else
-    {
-        if (strStatusBarWarnings.isEmpty())
-            progressBarLabel->setVisible(false);
-
-        tooltip = tr("Up to date") + QString(".<br>") + tooltip;
-        labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-        overviewPage->showOutOfSyncWarning(false);
-        progressBar->setVisible(false);
-        if (nNodeMode == NT_FULL)
+        else
         {
+            if (strStatusBarWarnings.isEmpty())
+                progressBarLabel->setVisible(false);
+
+            tooltip = tr("Up to date") + QString(".<br>") + tooltip;
+            labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+            overviewPage->showOutOfSyncWarning(false);
+            progressBar->setVisible(false);
             tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
-        } else {
-            tooltip = tr("Downloaded %1 headers of transaction history.").arg(count);
         }
+
+        // Override progressBarLabel text and hide progress bar, when we have warnings to display
+        if (!strStatusBarWarnings.isEmpty())
+        {
+            progressBarLabel->setText(strStatusBarWarnings);
+            progressBarLabel->setVisible(true);
+            progressBar->setVisible(false);
+        }
+
+        if(!text.isEmpty())
+        {
+            tooltip += QString("<br>");
+            tooltip += tr("Last received block was generated %1.").arg(text);
+        }
+
+        // Don't word-wrap this (fixed-width) tooltip
+        tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
+
+        labelBlocksIcon->setToolTip(tooltip);
+        progressBarLabel->setToolTip(tooltip);
+        progressBar->setToolTip(tooltip);
     }
-
-    // Override progressBarLabel text and hide progress bar, when we have warnings to display
-    if (!strStatusBarWarnings.isEmpty())
-    {
-        progressBarLabel->setText(strStatusBarWarnings);
-        progressBarLabel->setVisible(true);
-        progressBar->setVisible(false);
-    }
-
-    // Don't word-wrap this (fixed-width) tooltip
-    tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
-
-    labelBlocksIcon->setToolTip(tooltip);
-    progressBarLabel->setToolTip(tooltip);
-    progressBar->setToolTip(tooltip);
 }
 
 void BitcoinGUI::error(const QString &title, const QString &message, bool modal)
