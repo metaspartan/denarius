@@ -28,8 +28,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
     fHaveWatchOnly = wallet->HaveWatchOnly();
 
     addressTableModel = new AddressTableModel(wallet, this);
-    if(!GetBoolArg("-thinmode"))
-        mintingTableModel = new MintingTableModel(wallet, this);
+    mintingTableModel = new MintingTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(wallet, this);
 
     // This timer will be fired repeatedly to update the balance
@@ -133,12 +132,8 @@ void WalletModel::pollBalanceChanged()
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
 
-        if(!GetBoolArg("-thinmode"))
-        {
-            checkBalanceChanged();
-        } else {
-            checkBalanceChangedThin();
-        }
+        checkBalanceChanged();
+
         //if(transactionTableModel)
             //transactionTableModel->updateConfirmations();
     }

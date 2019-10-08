@@ -264,7 +264,16 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
 	
 	QString news;
 	news = dnrnewsfeed;
-	ui->labelNewsFeed->setText(news);
+    if (!GetBoolArg("-thinmode")) {
+	    ui->labelNewsFeed->setText(news);
+    } else {
+        ui->horizontalSpacer_3->changeSize(0,0, QSizePolicy::Fixed, QSizePolicy::Fixed);
+        ui->verticalSpacer_2->changeSize(0,0, QSizePolicy::Fixed, QSizePolicy::Fixed);
+        ui->labelNewsFeed->hide();
+        ui->refreshButton->hide();
+        ui->line_3->hide();
+        ui->label_699->hide();
+    }
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users

@@ -143,11 +143,12 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 {
     if(GetBoolArg("-thinmode"))
     {
-        resize(400, 300);
+        resize(300, 300);        
+        setWindowTitle(tr("Denarius") + " - " + tr("Thin Wallet"));
     } else {
         resize(600, 400);
+        setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
     }
-    setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/denarius"));
     setWindowIcon(QIcon(":icons/denarius"));
