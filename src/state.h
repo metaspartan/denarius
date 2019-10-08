@@ -69,6 +69,10 @@ extern int nStakeMinConfirmations;
 extern int64_t nStakeSplitThreshold;
 extern int64_t nStakeCombineThreshold;
 
+extern int64_t nTimeLastMblkRecv;
+
+static const int64_t MBLK_RECEIVE_TIMEOUT = 60; // seconds
+
 extern bool fThinFullIndex;
 
 #endif /* COIN_STATE_H */

@@ -5537,7 +5537,8 @@ void static ProcessGetData(CNode* pfrom)
 
         if (fShutdown)
             return;
-
+        
+        boost::this_thread::interruption_point();
         const CInv &inv = *it;
         it++;
             
@@ -5558,7 +5559,7 @@ void static ProcessGetData(CNode* pfrom)
                 };
             };
             if (fDebug)
-                printf("strCommand getdata not for txn.\n");
+                printf("ProcessGetData() strCommand getdata not for txn.\n");
             continue;
         };
 
@@ -5715,14 +5716,14 @@ void static ProcessGetData(CNode* pfrom)
         {
             // Send stream from relay memory
             bool pushed = false;
-            /*{
+            {
                 LOCK(cs_mapRelay);
                 map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
                 if (mi != mapRelay.end()) {
                     pfrom->PushMessage(inv.GetCommand(), (*mi).second);
                     pushed = true;
                 }
-            }*/
+            }
             if (!pushed && inv.type == MSG_TX) {
                 if(mapFortunaBroadcastTxes.count(inv.hash)){
                     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
@@ -5815,6 +5816,9 @@ void static ProcessGetData(CNode* pfrom)
         // having to download the entire memory pool.
         pfrom->PushMessage("notfound", vNotFound);
     };
+
+    if (fDebugNet)
+        LogPrintf("ProcessGetData - End\n");
 }
 
 static int ProcessMerkleBlock(CNode* pfrom, CMerkleBlockIncoming& merkleBlock, std::vector<CTransaction>* pvTxns)
@@ -8604,19 +8608,17 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         {
             const CInv& inv = (*pto->mapAskFor.begin()).second;
 
-            if (!AlreadyHaveThin(txdb, inv))
+            if ((nNodeMode == NT_FULL && !AlreadyHave(txdb, inv)) || (nNodeMode == NT_THIN && !AlreadyHaveThin(txdb, inv)))
             {
-                if (fDebugNet)
-                    printf("sending getdata: %s\n", inv.ToString().c_str());
-
+                printf("sending getdata: %s\n", inv.ToString().c_str());
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
                 {
                     pto->PushMessage("getdata", vGetData);
                     vGetData.clear();
-                };
+                }
                 mapAlreadyAskedFor[inv] = nNow;
-            };
+            }
             pto->mapAskFor.erase(pto->mapAskFor.begin());
         };
 
@@ -8633,7 +8635,18 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
             PrepareThinStake(pto);
         };
-
+        
+        // - If syncing and !get mblk in MBLK_RECEIVE_TIMEOUT send another getblocks to random peer
+        if (nNodeMode == NT_FULL
+            && nTimeLastMblkRecv > 0
+            && pto->nChainHeight - nBestHeight > 256
+            && nTimeNow - nTimeLastMblkRecv > MBLK_RECEIVE_TIMEOUT)
+        {
+            pto->PushGetBlocks(pindexBest, uint256(0));
+            if (fDebug)
+                LogPrintf("Sync timeout, getblocks to %s, from %d\n", pto->addr.ToString().c_str(), pindexBest->nHeight);
+            nTimeLastMblkRecv = nTimeNow; // reset timeout
+        }
 
         if (fSecMsgEnabled)
             SecureMsgSendData(pto, fSendTrickle); // should be in cs_main?

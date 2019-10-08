@@ -14,6 +14,8 @@ int nThinStakeDelay = 48;           // in seconds
 int nThinIndexWindow = 4096;        // no. of block headers to keep in memory
 int nLastTryThinStake = 0;
 
+int64_t nTimeLastMblkRecv = 0;
+
 uint32_t nMaxThinStakeCandidates = 8;
 
 // -- services provided by local node, initialise to all on

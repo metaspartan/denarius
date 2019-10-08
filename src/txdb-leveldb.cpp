@@ -40,10 +40,10 @@ void init_blockindex(leveldb::Options& options, bool fRemoveOld = false) {
     if (fRemoveOld) {
         filesystem::remove_all(directory); // remove directory
         unsigned int nFile = 1;
-        bool fHeaderFile = GetBoolArg("-thinmode");
+        
         while (true)
         {
-            filesystem::path strBlockFile = GetDataDir() / strprintf(fHeaderFile ? "blk_hdr%04u.dat": "blk%04u.dat", nFile);
+            filesystem::path strBlockFile = GetDataDir() / strprintf(GetBoolArg("-thinmode") ? "blk_hdr%04u.dat": "blk%04u.dat", nFile);
 
             // Break if no such file
             if( !filesystem::exists( strBlockFile ) )
