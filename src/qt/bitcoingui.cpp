@@ -141,7 +141,12 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     nBlocksInLastPeriod(0),
     nLastBlocks(0)
 {
-    resize(600, 400);
+    if(GetBoolArg("-thinmode"))
+    {
+        resize(400, 300);
+    } else {
+        resize(600, 400);
+    }
     setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/denarius"));
@@ -577,8 +582,6 @@ void BitcoinGUI::createToolBars()
         mainToolbar->addAction(receiveCoinsAction);
         mainToolbar->addAction(historyAction);
         mainToolbar->addAction(addressBookAction);
-        mainToolbar->addAction(proofOfImageAction);
-	    mainToolbar->addAction(marketAction);
     } else {
         mainToolbar->addAction(overviewAction);
         mainToolbar->addAction(sendCoinsAction);
