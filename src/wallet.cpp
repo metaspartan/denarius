@@ -869,39 +869,39 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const uint256& ha
 
         mapValue_t mapNarr;
 
-        FindStealthTransactions(tx, mapNarr);
-
         bool fIsMine = false;
-        if (tx.nVersion == ANON_TXN_VERSION)
+        if(!tx.IsCoinBase() && !tx.IsCoinStake())
         {
-            LOCK(cs_main); // cs_wallet is already locked
-            CWalletDB walletdb(strWalletFile, "cr+");
-            CTxDB txdb("cr+");
+            // Skip transactions that we know wouldn't be stealth...
+            FindStealthTransactions(tx, mapNarr);
 
-            uint256 blockHash = 0;
-            if (nNodeMode == NT_FULL)
-                blockHash = pblock ? ((CBlock*)pblock)->GetHash() : 0;
-            else
-                blockHash = pblock ? *(uint256*)pblock : 0;
+            if (tx.nVersion == ANON_TXN_VERSION)
+            {
+                LOCK(cs_main); // cs_wallet is already locked
+                CWalletDB walletdb(strWalletFile, "cr+");
+                CTxDB txdb("cr+");
 
-            walletdb.TxnBegin();
-            txdb.TxnBegin();
-            std::vector<std::map<uint256, CWalletTx>::iterator> vUpdatedTxns;
-            if (!ProcessAnonTransaction(&walletdb, &txdb, tx, blockHash, fIsMine, mapNarr, vUpdatedTxns))
-            {
-                printf("ProcessAnonTransaction failed %s\n", hash.ToString().c_str());
-                walletdb.TxnAbort();
-                txdb.TxnAbort();
-                return false;
-            } else
-            {
-                walletdb.TxnCommit();
-                txdb.TxnCommit();
-                for (std::vector<std::map<uint256, CWalletTx>::iterator>::iterator it = vUpdatedTxns.begin();
-                    it != vUpdatedTxns.end(); ++it)
-                    NotifyTransactionChanged(this, (*it)->first, CT_UPDATED);
+                uint256 blockHash = (pblock ? (nNodeMode == NT_FULL ? ((CBlock*)pblock)->GetHash() : *(uint256*)pblock) : 0);
+
+                walletdb.TxnBegin();
+                txdb.TxnBegin();
+                std::vector<std::map<uint256, CWalletTx>::iterator> vUpdatedTxns;
+                if (!ProcessAnonTransaction(&walletdb, &txdb, tx, blockHash, fIsMine, mapNarr, vUpdatedTxns))
+                {
+                    printf("ProcessAnonTransaction failed %s\n", hash.ToString().c_str());
+                    walletdb.TxnAbort();
+                    txdb.TxnAbort();
+                    return false;
+                } else
+                {
+                    walletdb.TxnCommit();
+                    txdb.TxnCommit();
+                    for (std::vector<std::map<uint256, CWalletTx>::iterator>::iterator it = vUpdatedTxns.begin();
+                        it != vUpdatedTxns.end(); ++it)
+                        NotifyTransactionChanged(this, (*it)->first, CT_UPDATED);
+                };
             };
-        };
+        }
 
         if (fExisted || fIsMine || IsMine(tx) || IsFromMe(tx))
         {

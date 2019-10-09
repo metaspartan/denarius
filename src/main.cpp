@@ -6838,8 +6838,8 @@ static bool SetNodeType(CNode* pfrom, int nTypeInd)
                 pfrom->PushMessage("reject", _("conn"), (unsigned char)REJ_MAX_THIN_PEERS, _("max"));
                 pfrom->TryFlushSend(); // -- SocketSendData could be called by EndMessage(), try again in case it was not
 
-                if (!NewThread(ThreadCloseSocket, pfrom))
-                    pfrom->fDisconnect = true;
+                //if (!NewThread(ThreadCloseSocket, pfrom))
+                pfrom->fDisconnect = true;
                 return false;
             };
         };
@@ -7249,7 +7249,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
                 bool fAlreadyHave = AlreadyHaveThin(txdb, inv);
                 if (fDebug)
-                    printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
+                    printf("got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
                 if (nNodeMode != NT_FULL && inv.type == MSG_BLOCK)
                     inv.type = MSG_FILTERED_BLOCK;
