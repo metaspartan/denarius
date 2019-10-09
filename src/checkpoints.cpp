@@ -582,6 +582,13 @@ namespace Checkpoints
             pfrom->AskFor(CInv(MSG_BLOCK, hashPendingCheckpoint));
     }
 
+    void AskForPendingSyncCheckpointThin(CNode* pfrom)
+    {
+        LOCK(cs_hashSyncCheckpoint);
+        if (pfrom && hashPendingCheckpoint != 0 && (!mapBlockThinIndex.count(hashPendingCheckpoint)) && (!mapOrphanBlockThins.count(hashPendingCheckpoint)))
+            pfrom->AskFor(CInv(MSG_BLOCK, hashPendingCheckpoint));
+    }
+
     bool SetCheckpointPrivKey(std::string strPrivKey)
     {
         if (fDebug)

@@ -1709,8 +1709,7 @@ void static InvalidHeaderChainFound(CBlockThinIndex* pindexNew)
     {
         nBestInvalidTrust = pindexNew->nChainTrust;
         //CTxDB().WriteBestInvalidTrust(CBigNum(nBestInvalidTrust));
-        uiInterface.NotifyBlocksChanged(pindexBest->nHeight, GetNumBlocksOfPeers());
-        //maybe new instead of best
+        uiInterface.NotifyBlocksChanged(pindexNew->nHeight, GetNumBlocksOfPeers());
     };
 
     uint256 nBestInvalidBlockTrust = pindexNew->nChainTrust - pindexNew->pprev->nChainTrust;
@@ -2004,7 +2003,6 @@ bool CBlockThin::AddToBlockThinIndex(unsigned int nFile, unsigned int nBlockPos,
         };
     };
 
-
     uiInterface.NotifyBlocksChanged(pindexNew->nHeight, GetNumBlocksOfPeers());
     return true;
 }
@@ -2208,11 +2206,11 @@ bool CBlockThin::SetBestThinChain(CTxDB& txdb, CBlockThinIndex* pindexNew)
     if (fDebugChain)
     {
         printf("SetBestThinChain: new best=%s  height=%d  trust=%s  blocktrust=%"PRId64"  date=%s\n",
-          hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
-          CBigNum(nBestChainTrust).ToString().c_str(),
-          nBestBlockTrust.Get64(),
-          DateTimeStrFormat("%x %H:%M:%S", pindexBestHeader->GetBlockTime()).c_str());
-    };
+            hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
+            CBigNum(nBestChainTrust).ToString().c_str(),
+            nBestBlockTrust.Get64(),
+            DateTimeStrFormat("%x %H:%M:%S", pindexBestHeader->GetBlockTime()).c_str());
+    }
 
     std::string strCmd = GetArg("-blocknotify", "");
 
@@ -6866,6 +6864,7 @@ static bool SetNodeType(CNode* pfrom, int nTypeInd)
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
+// The Magic Number of D E N A R I U S
 unsigned char pchMessageStart[4] = { 0xfa, 0xf2, 0xef, 0xb4 };
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
@@ -6874,8 +6873,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     RandAddSeedPerfmon();
 
 
-    if (fDebugNet)
-        printf("received: %s (%" PRIszu" bytes)\n", strCommand.c_str(), vRecv.size());
+    if (fDebugNet) printf("PM() received: %s (%" PRIszu" bytes)\n", strCommand.c_str(), vRecv.size());
 
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -6921,8 +6919,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             pfrom->TryFlushSend();      // SocketSendData could be called by EndMessage(), try again in case it was not
 
             // -- seems like closesocket (on linux at least) doesn't always wait for data to be sent before destroying the connection
-            if (!NewThread(ThreadCloseSocket, pfrom))
-                pfrom->fDisconnect = true;
+            //if (!NewThread(ThreadCloseSocket, pfrom))
+            pfrom->fDisconnect = true;
 
             return false;
         }
@@ -7059,11 +7057,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 item.second.RelayTo(pfrom);
         }
 
-        // Relay sync-checkpoint
-        {
-            LOCK(Checkpoints::cs_hashSyncCheckpoint);
-            if (!Checkpoints::checkpointMessage.IsNull())
-                Checkpoints::checkpointMessage.RelayTo(pfrom);
+        if (nNodeMode == NT_FULL) {
+            // Relay sync-checkpoint
+            {
+                LOCK(Checkpoints::cs_hashSyncCheckpoint);
+                if (!Checkpoints::checkpointMessage.IsNull())
+                    Checkpoints::checkpointMessage.RelayTo(pfrom);
+            }
         }
 
         pfrom->fSuccessfullyConnected = true;
@@ -7075,7 +7075,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         // ppcoin: ask for pending sync-checkpoint if any
         if (!IsInitialBlockDownload())
-            Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+            if(GetBoolArg("-thinmode") && nNodeMode != NT_FULL)
+            {
+                Checkpoints::AskForPendingSyncCheckpointThin(pfrom);
+            } else {
+                Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+            }
     }
 
 
@@ -7123,6 +7128,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         BOOST_FOREACH(CAddress& addr, vAddr)
         {
+            boost::this_thread::interruption_point();
             if (fShutdown)
                 return true;
             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)
@@ -7188,9 +7194,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             }
         }
 
+        //LOCK
+        LOCK(cs_main);
+
         if (nNodeMode == NT_FULL)
         {
-            LOCK(cs_main);
             CTxDB txdb("r");
 
             for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
@@ -7227,7 +7235,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             }
         } else
         {
-            LOCK(cs_main);
             CTxDB txdb("r");
 
             for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
@@ -7236,6 +7243,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
                 if (fShutdown)
                     return true;
+
+                boost::this_thread::interruption_point();
                 pfrom->AddInventoryKnown(inv);
 
                 bool fAlreadyHave = AlreadyHaveThin(txdb, inv);
@@ -7292,6 +7301,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (fDebugNet || (vInv.size() != 1))
             printf("received getdata (%" PRIszu" invsz)\n", vInv.size());
 
+        if ((fDebugNet && vInv.size() > 0) || (vInv.size() == 1))
+            printf("received getdata for: %s\n", vInv[0].ToString().c_str());
+
         pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
         ProcessGetData(pfrom);
     }
@@ -7318,13 +7330,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // Send the rest of the chain
         if (pindex)
             pindex = pindex->pnext;
-        int nLimit = 1000;
+        int nLimit = 10000; // Increase to 10k Limit
         if (fDebugNet) printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
             if (pindex->GetBlockHash() == hashStop)
             {
-                if (fDebugNet) printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                if (fDebugNet) printf("getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 // ppcoin: tell downloading node about the latest block if it's
                 // without risk being rejected due to stake connection check
                 if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
@@ -7336,7 +7348,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             {
                 // When this block is requested, we'll send an inv that'll make them
                 // getblocks the next batch of inventory.
-                if (fDebugNet) printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                if (fDebugNet) printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 pfrom->hashContinue = pindex->GetBlockHash();
                 break;
             }
@@ -7376,8 +7388,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         LOCK(cs_main);
 
-        if (IsInitialBlockDownload())
-            return true;
+        //if (IsInitialBlockDownload())
+            //return true;
 
         CBlockIndex* pindex = NULL;
         if (locator.IsNull())
@@ -7396,13 +7408,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 pindex = pindex->pnext;
         }
 
-        vector<CBlockThin> vHeaders;
+        vector<CBlock> vHeaders;
         int nLimit = MAX_GETHEADERS_SZ;
-        if (fDebugNet) printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
+        if (fDebugNet) printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().c_str());
         for (; pindex; pindex = pindex->pnext)
         {
-            CBlockThin blockThin = pindex->GetBlockThinOnly();
-            vHeaders.push_back(blockThin);
+            vHeaders.push_back(pindex->GetBlockHeader());
             if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
                 break;
         }
@@ -7633,7 +7644,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     }
 
 
-    else if (strCommand == "block")
+    else if (strCommand == "block" && !fImporting && !fReindex) // Ignore blocks received while importing
     {
 
         if (nNodeMode != NT_FULL)
@@ -7652,8 +7663,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CInv inv(MSG_BLOCK, hashBlock);
         
         // -- if peer is thin, it will want the (merkle) block sent if accepted
-        if (pfrom->nTypeInd == NT_FULL)
-            pfrom->AddInventoryKnown(inv);
+        //if (pfrom->nTypeInd == NT_FULL)
+        pfrom->AddInventoryKnown(inv);
 
         LOCK(cs_main);
         if (ProcessBlock(pfrom, &block, hashBlock))
@@ -7852,6 +7863,16 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             // seconds to respond to each, the 5th ping the remote sends would appear to
             // return very quickly.
             pfrom->PushMessage("pong", nonce);
+
+            // -- keep the network height updated, needed for thin mode
+            int nPeerHeight;
+            vRecv >> nPeerHeight;
+
+            LOCK(cs_main);
+            cPeerBlockCounts.input(nPeerHeight);
+            pfrom->nChainHeight = nPeerHeight;
+
+            if (fDebugNet) printf("ping: peer %s chain height %d\n", pfrom->addr.ToString().c_str(), nPeerHeight);
         }
     }
 
@@ -8290,7 +8311,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         };
 
 
-		      // Start block sync
+		// Start block sync
         if (pto->fStartSync && !fImporting && !fReindex) {
             pto->fStartSync = false;
             pto->PushGetBlocks(pindexBest, uint256(0));
@@ -8610,7 +8631,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
             if ((nNodeMode == NT_FULL && !AlreadyHave(txdb, inv)) || (nNodeMode == NT_THIN && !AlreadyHaveThin(txdb, inv)))
             {
-                printf("sending getdata: %s\n", inv.ToString().c_str());
+                if(fDebugNet)
+                    printf("sending getdata with inv: %s\n", inv.ToString().c_str());
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
                 {

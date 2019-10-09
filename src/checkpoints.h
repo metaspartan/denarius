@@ -71,6 +71,7 @@ namespace Checkpoints
     bool ResetSyncCheckpoint();
     bool ResetSyncCheckpointThin();
     void AskForPendingSyncCheckpoint(CNode* pfrom);
+    void AskForPendingSyncCheckpointThin(CNode* pfrom);
     bool SetCheckpointPrivKey(std::string strPrivKey);
     bool SendSyncCheckpoint(uint256 hashCheckpoint);
     bool IsMatureSyncCheckpoint();

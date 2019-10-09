@@ -857,7 +857,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
         return;
     }    
 
-    if(GetBoolArg("-thinmode"))
+    if(GetBoolArg("-thinmode") && nNodeMode != NT_FULL)
     {
         QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
         QString tooltip;
@@ -908,10 +908,11 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             text = tr("%n day(s) ago","",secs/(60*60*24));
         }
 
-        if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
+        if (IsInitialBlockDownload() || pwalletMain->nLastFilteredHeight < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
         {
-            int nRemainingBlocks = nTotalBlocks - count;
-            float nPercentageDone = count / (nTotalBlocks * 0.01f);
+            int nRemainingBlocks = nTotalBlocks - pwalletMain->nLastFilteredHeight;
+            float nPercentageDone = pwalletMain->nLastFilteredHeight / (nTotalBlocks * 0.01f);
+
             if (strStatusBarWarnings.isEmpty())
             {
                 progressBarLabel->setText(tr("Synchronizing in thin mode..."));
@@ -921,7 +922,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
                 else
                     progressBar->setFormat(tr("~%1 header(s) remaining").arg(nRemainingBlocks));
                 progressBar->setMaximum(nTotalBlocks);
-                progressBar->setValue(count);
+                progressBar->setValue(pwalletMain->nLastFilteredHeight);
                 progressBar->setVisible(true);
             }
 
@@ -934,7 +935,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             }
 
             overviewPage->showOutOfSyncWarning(true);
-            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(pwalletMain->nLastFilteredHeight).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
         }
         else
         {
@@ -945,7 +946,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
             overviewPage->showOutOfSyncWarning(false);
             progressBar->setVisible(false);
-            tooltip = tr("Downloaded %1 headers of transaction history.").arg(count);
+            tooltip = tr("Downloaded %1 headers of transaction history.").arg(pwalletMain->nLastFilteredHeight);
 
         }
 
