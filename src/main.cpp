@@ -4845,14 +4845,21 @@ bool ProcessBlockThin(CNode* pfrom, CBlockThin* pblock)
     if (!pblock->CheckBlockThin())
         return error("ProcessBlockThin() : CheckBlockThin FAILED");
 
-    CBlockThinIndex* pcheckpoint = Checkpoints::GetLastSyncCheckpointHeader();
-    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !Checkpoints::WantedByPendingSyncCheckpointHeader(hash))
+    CBlockThinIndex* pcheckpoint = Checkpoints::AutoSelectSyncThinCheckpoint();
+    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain) //&& !Checkpoints::WantedByPendingSyncCheckpointHeader(hash)
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
+        int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
+        if (deltaTime < 0)
+        {
+            if (pfrom)
+                pfrom->Misbehaving(1);
+            return error("ProcessBlock() : block with timestamp before last checkpoint");
+        };
 
-        CBigNum bnNewBlock;
-        bnNewBlock.SetCompact(pblock->nBits);
-        CBigNum bnRequired;
+        //CBigNum bnNewBlock;
+        //bnNewBlock.SetCompact(pblock->nBits);
+        //CBigNum bnRequired;
 
         /*
         int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
@@ -4870,8 +4877,23 @@ bool ProcessBlockThin(CNode* pfrom, CBlockThin* pblock)
     };
 
     // ppcoin: ask for pending sync-checkpoint if any
-    //if (!IsInitialBlockDownload())
-    //    Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+    if (!IsInitialBlockDownload()) {
+        Checkpoints::AskForPendingSyncCheckpointThin(pfrom);
+
+        // Thin Mode Process FSPayments as well?
+        CScript payee;
+
+        if (!fImporting && !fReindex && pindexBest->nHeight > Checkpoints::GetTotalBlocksEstimate()){
+            if(fortunastakePayments.GetBlockPayee(pindexBest->nHeight, payee)){
+                printf("ProcessThinBlock() : Got BlockPayee for block : - %d\n", pindexBest->nHeight);
+            }
+
+            forTunaPool.CheckTimeout();
+            forTunaPool.NewBlock();
+            fortunastakePayments.ProcessBlock((pindexBest->nHeight)+10);
+
+        }
+    }
 
     // If don't already have its previous block, shunt it off to holding area until we get it
     if (!mapBlockThinIndex.count(pblock->hashPrevBlock))
@@ -7388,8 +7410,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
         LOCK(cs_main);
 
-        //if (IsInitialBlockDownload())
-            //return true;
+        if (IsInitialBlockDownload())
+            return true;
 
         CBlockIndex* pindex = NULL;
         if (locator.IsNull())
@@ -7408,12 +7430,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 pindex = pindex->pnext;
         }
 
-        vector<CBlock> vHeaders;
+        vector<CBlockThin> vHeaders;
+        //vector<CBlock> vHeaders;
         int nLimit = MAX_GETHEADERS_SZ;
-        if (fDebugNet) printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().c_str());
+        if (fDebugNet) printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
         for (; pindex; pindex = pindex->pnext)
         {
-            vHeaders.push_back(pindex->GetBlockHeader());
+            CBlockThin blockThin = pindex->GetBlockThinOnly();
+            //vHeaders.push_back(pindex->GetBlockHeader());
+            vHeaders.push_back(blockThin);
             if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
                 break;
         }
