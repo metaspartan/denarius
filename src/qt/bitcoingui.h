@@ -25,6 +25,7 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class ProofOfImage;
+class Jupiter;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -100,6 +101,7 @@ private:
 	QWidget *mintingPage;
 	MultisigDialog *multisigPage;
 	ProofOfImage *proofOfImagePage;
+    Jupiter *jupiterPage;
 	FortunastakeManager *fortunastakeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
@@ -129,6 +131,7 @@ private:
 	QAction *mintingAction;
 	QAction *multisigAction;
     QAction *proofOfImageAction;
+    QAction *jupiterAction;
 	QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
@@ -236,6 +239,9 @@ private slots:
 	void gotoFortunastakeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
+	/** Switch to Jupiter page */
+	void gotoJupiterPage();
+
 
     //void gotoChatPage();
 

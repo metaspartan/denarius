@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.9.5
+VERSION = 3.3.9.6
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -39,6 +39,10 @@ QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
 LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
 LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
+LIBCURL_INCLUDE_PATH=C:/deps/libcurl/include
+LIBCURL_LIB_PATH=C:/deps/libcurl/lib
+LIBSSH2_INCLUDE_PATH=C:/deps/libssh/include
+LIBSSH2_LIB_PATH=C:/deps/libssh/src/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
@@ -79,6 +83,25 @@ win32:QMAKE_LFLAGS *= -static
 #win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 #win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
+
+# use: qmake "USE_IPFS=1" ( enabled by default; default)
+#  or: qmake "USE_IPFS=0" (disabled by default)
+#  or: qmake "USE_IPFS=-" (not supported)
+# D E N A R I U S IPFS - USE_IPFS=- to not compile with the IPFS C Library located in src/ipfs
+contains(USE_IPFS, -) {
+    message(Building without IPFS support)
+} else {
+    message(Building with IPFS support)
+    count(USE_IPFS, 0) {
+        USE_IPFS=1
+    }
+    DEFINES += USE_IPFS=$$USE_IPFS
+    INCLUDEPATH += src/ipfs
+	
+	###IPFS C Library native integration sources
+	SOURCES += src/ipfs.cc \
+		src/ipfscurl.cc
+}
 
 
 # use: qmake "USE_NATIVETOR=1" ( enabled by default; default)
@@ -416,6 +439,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
     src/qt/proofofimage.h \
+    src/qt/jupiter.h \
     src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
@@ -546,6 +570,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
+    src/qt/jupiter.cpp \
     src/qt/termsofuse.cpp \
     src/alert.cpp \
     src/stun.cpp \
@@ -655,6 +680,7 @@ FORMS += \
     src/qt/forms/blockbrowser.ui \
     src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
+    src/qt/forms/jupiter.ui \
     src/qt/forms/termsofuse.ui \
     src/qt/forms/fortunastakemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
@@ -760,9 +786,9 @@ macx:QMAKE_CXXFLAGS += -stdlib=libc++
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH $$LIBCURL_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,) $$join(LIBCURL_LIB_PATH,,-L,)
+LIBS += -lcurl -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
 LIBS += -lz -levent
 
 # -lgdi32 has to happen after -lcrypto (see  #681)

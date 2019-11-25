@@ -20,6 +20,11 @@
 #include "smessage.h"
 #include "ringsig.h"
 
+#ifdef USE_IPFS
+#include <ipfs/client.h>
+#include <ipfs/http/transport.h>
+#endif
+
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
 #endif
@@ -31,7 +36,10 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 
-
+#include <string>
+#include <iostream> 
+#include <sstream>
+#include <stdexcept>
 
 #ifndef WIN32
 #include <signal.h>
@@ -1373,6 +1381,27 @@ bool AppInit2()
            pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
 
+    //Init IPFS
+#ifdef USE_IPFS
+    uiInterface.InitMessage(_("Connecting to IPFS..."));
+
+    try {
+        std::stringstream contents;
+        ipfs::Json version;
+
+        ipfs::Client client("ipfs.infura.io:5001");
+        
+        printf("Jupiter: IPFS Peer Connected: ipfs.infura.io\n");
+
+        client.Version(&version);
+        std::string v = version.dump();
+        printf("Jupiter: IPFS Peer Version: %s\n", v.c_str());
+
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+#endif
+
     //// debug print
     printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
     printf("mapBlockThinIndex.size() = %u\n",       mapBlockThinIndex.size());
@@ -1382,14 +1411,14 @@ bool AppInit2()
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
 
     if(fNativeTor)
-        printf("Native Tor Onion Relay Node Enabled");
+        printf("Native Tor Onion Relay Node Enabled\n");
     else
-        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+        printf("Native Tor Onion Relay Disabled, Using Regular Peers...\n");
 
     if (fDebug)
-        printf("Debugging is Enabled.");
+        printf("Debugging is Enabled.\n");
 	else
-        printf("Debugging is not enabled.");
+        printf("Debugging is not enabled.\n");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));

@@ -37,6 +37,7 @@
 #include "wallet.h"
 #include "termsofuse.h"
 #include "proofofimage.h"
+#include "jupiter.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -144,7 +145,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     if(GetBoolArg("-thinmode"))
     {
         resize(300, 300);        
-        setWindowTitle(tr("Denarius") + " - " + tr("Thin Wallet"));
+        setWindowTitle(tr("Denarius") + " - " + tr("Thin Wallet Beta"));
     } else {
         resize(600, 400);
         setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
@@ -194,6 +195,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     marketBrowser = new MarketBrowser(this);
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
+    jupiterPage = new Jupiter(this);
 	//chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -232,6 +234,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(fortunastakeManagerPage);
 	centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
+    centralWidget->addWidget(jupiterPage);
 	//centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
@@ -418,6 +421,12 @@ void BitcoinGUI::createActions()
 	proofOfImageAction->setStatusTip(tr("PoD: Timestamp files"));
     tabGroup->addAction(proofOfImageAction);
 
+    jupiterAction = new QAction(QIcon(":/icons/data"), tr("&Jupiter"), this);
+    jupiterAction ->setToolTip(tr("Decentralized your files, upload to IPFS!"));
+    jupiterAction ->setCheckable(true);
+	jupiterAction->setStatusTip(tr("Decentralized File Uploads"));
+    tabGroup->addAction(jupiterAction);
+
 	multisigAction = new QAction(QIcon(":/icons/multi"), tr("Multisig"), this);
     tabGroup->addAction(multisigAction);
 	multisigAction->setStatusTip(tr("Multisig Interface"));
@@ -446,6 +455,8 @@ void BitcoinGUI::createActions()
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(jupiterAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(jupiterAction, SIGNAL(triggered()), this, SLOT(gotoJupiterPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -583,6 +594,7 @@ void BitcoinGUI::createToolBars()
         mainToolbar->addAction(receiveCoinsAction);
         mainToolbar->addAction(historyAction);
         mainToolbar->addAction(addressBookAction);
+        mainToolbar->addAction(jupiterAction);
     } else {
         mainToolbar->addAction(overviewAction);
         mainToolbar->addAction(sendCoinsAction);
@@ -592,6 +604,7 @@ void BitcoinGUI::createToolBars()
         mainToolbar->addAction(statisticsAction);
 	    mainToolbar->addAction(fortunastakeManagerAction);
         mainToolbar->addAction(proofOfImageAction);
+        mainToolbar->addAction(jupiterAction);
 	    mainToolbar->addAction(marketAction);
         mainToolbar->addAction(blockAction);
 	    mainToolbar->addAction(messageAction);
@@ -1295,6 +1308,15 @@ void BitcoinGUI::gotoProofOfImagePage()
 {
     proofOfImageAction->setChecked(true);
     centralWidget->setCurrentWidget(proofOfImagePage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
+void BitcoinGUI::gotoJupiterPage()
+{
+    jupiterAction->setChecked(true);
+    centralWidget->setCurrentWidget(jupiterPage);
 
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
