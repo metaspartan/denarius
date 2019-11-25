@@ -41,8 +41,6 @@ LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
 LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 LIBCURL_INCLUDE_PATH=C:/deps/libcurl/include
 LIBCURL_LIB_PATH=C:/deps/libcurl/lib
-LIBSSH2_INCLUDE_PATH=C:/deps/libssh/include
-LIBSSH2_LIB_PATH=C:/deps/libssh/src/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
