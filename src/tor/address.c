@@ -1697,7 +1697,7 @@ get_interface_address6_via_udp_socket_hack,(int severity,
   if (tor_connect_socket(sock,(struct sockaddr *)&target_addr,
                          addr_len) < 0) {
     int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
+    log_fn(severity, LD_NET, "Native Tor connect() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
