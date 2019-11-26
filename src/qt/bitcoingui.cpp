@@ -421,7 +421,7 @@ void BitcoinGUI::createActions()
 	proofOfImageAction->setStatusTip(tr("PoD: Timestamp files"));
     tabGroup->addAction(proofOfImageAction);
 
-    jupiterAction = new QAction(QIcon(":/icons/data"), tr("&Jupiter"), this);
+    jupiterAction = new QAction(QIcon(":/icons/jupiter"), tr("&Jupiter"), this);
     jupiterAction ->setToolTip(tr("Decentralized your files, upload to IPFS!"));
     jupiterAction ->setCheckable(true);
 	jupiterAction->setStatusTip(tr("Decentralized File Uploads"));

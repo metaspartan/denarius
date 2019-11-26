@@ -231,6 +231,8 @@ void Client::FilesAdd(const std::vector<http::FileUpload>& files,
   */
   Json temp;
 
+  //printf("JSON Dump: %s", temp.dump().c_str());
+
   std::string line;
   for (size_t i = 1; std::getline(body, line); ++i) {
     Json json_chunk;

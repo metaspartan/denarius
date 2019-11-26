@@ -17,6 +17,7 @@ public:
     explicit Jupiter(QWidget *parent = 0);
     ~Jupiter();
     QString fileName;
+    QString fileCont;
 
 public slots:
 

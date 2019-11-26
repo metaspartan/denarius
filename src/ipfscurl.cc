@@ -112,7 +112,9 @@ void TransportCurl::Fetch(const std::string& url,
   for (size_t i = 0; i < files.size(); ++i) {
     const FileUpload& file = files[i];
     const std::string name("file" + std::to_string(i));
-    static const char* content_type = "multipart/form-data";
+    static const char* content_type = "application/octet-stream";
+
+    //printf("FILEUPLOAD: %s", file.data.c_str());
 
     switch (file.type) {
       case FileUpload::Type::kFileContents:

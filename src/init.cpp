@@ -1390,12 +1390,14 @@ bool AppInit2()
         ipfs::Json version;
 
         ipfs::Client client("ipfs.infura.io:5001");
-        
+        uiInterface.InitMessage(_("Connected to IPFS"));
         printf("Jupiter: IPFS Peer Connected: ipfs.infura.io\n");
 
         client.Version(&version);
         std::string v = version.dump();
-        printf("Jupiter: IPFS Peer Version: %s\n", v.c_str());
+
+        const std::string& vv = version["Version"].dump();
+        printf("Jupiter: IPFS Peer Version: %s\n", vv.c_str());
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
