@@ -38,6 +38,8 @@ Jupiter::Jupiter(QWidget *parent) :
     fileCont = "";
     ui->checkButton->setHidden(true);
     ui->checkLabel->setHidden(true);
+    ui->lineEdit->setHidden(true);
+    ui->hashLabel->setHidden(true);
 }
 
 Jupiter::~Jupiter()
@@ -117,6 +119,8 @@ void Jupiter::on_createPushButton_clicked()
         if (hash != "") {
           ui->checkButton->setHidden(false);
           ui->checkLabel->setHidden(false);
+          ui->lineEdit->setHidden(false);
+          ui->hashLabel->setHidden(false);
         }
 
     } catch (const std::exception& e) {
