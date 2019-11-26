@@ -10,6 +10,11 @@
 #include "txdb.h"
 #include <errno.h>
 
+#ifdef USE_IPFS
+#include <ipfs/client.h>
+#include <ipfs/http/transport.h>
+#endif
+
 using namespace json_spirit;
 using namespace std;
 
@@ -316,6 +321,123 @@ Value dumpbootstrap(const Array& params, bool fHelp)
 
     return Value::null;
 }
+
+#ifdef USE_IPFS
+Value jupiterversion(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "jupiterversion\n"
+            "Returns the version of the connected IPFS node within the Denarius Jupiter");
+
+    ipfs::Json version;
+    bool connected = false;
+    Object obj;
+
+    ipfs::Client client("ipfs.infura.io:5001");
+    client.Version(&version);
+    const std::string& vv = version["Version"].dump();
+    printf("Jupiter: IPFS Peer Version: %s\n", vv.c_str());
+    std::string versionj = version["Version"].dump();
+
+    if (version["Version"].dump() != "") {
+        connected = true;
+    }
+    
+    obj.push_back(Pair("connected",          connected));
+    obj.push_back(Pair("ipfspeer",           "ipfs.infura.io:5001"));
+    obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
+
+    return obj;
+}
+
+Value jupiterupload(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+    throw runtime_error(
+        "jupiterupload\n"
+        "\nArguments:\n"
+        "1. \"filelocation\"          (string, required) The file location of the file to upload (e.g. /home/name/file.jpg)\n"
+        "Returns the uploaded IPFS file CID/Hash of the uploaded file and public gateway link if successful.");
+
+    Object obj;
+    std::string userFile = params[0].get_str();
+
+    try {
+        ipfs::Json add_result;
+
+        //Ensure IPFS connected
+        ipfs::Client client("ipfs.infura.io:5001");
+
+        if(userFile == "")
+        { 
+          return;
+        }
+
+        //read whole file
+        std::ifstream ipfsFile;
+        std::string filename = userFile.c_str();
+        // Remove directory if present.
+        // Do this before extension removal incase directory has a period character.
+        const size_t last_slash_idx = filename.find_last_of("\\/");
+        if (std::string::npos != last_slash_idx)
+        {
+            filename.erase(0, last_slash_idx + 1);
+        }
+        
+        // Remove extension if present.
+        /*
+        const size_t period_idx = filename.rfind('.');
+        if (std::string::npos != period_idx)
+        {
+            filename.erase(period_idx);
+        }
+        */
+
+        ipfsFile.open(userFile.c_str(), std::ios::binary);
+        std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
+
+        std::string ipfsC(ipfsContents.begin(), ipfsContents.end());
+
+        printf("Jupiter Upload File Start: %s\n", filename.c_str());
+        //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+        client.FilesAdd(
+        {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+        &add_result);
+        
+        const std::string& hash = add_result[0]["hash"];
+        int size = add_result[0]["size"];
+
+        std::string r = add_result.dump();
+        printf("Jupiter Successfully Added IPFS File(s): %s\n", r.c_str());
+
+        std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+
+        obj.push_back(Pair("filename",           filename.c_str()));
+        obj.push_back(Pair("sizebytes",          size));
+        obj.push_back(Pair("ipfshash",           hash));
+        obj.push_back(Pair("ipfslink",           filelink));
+
+        /*     ￼
+        jupiterupload C:/users/NAME/Dropbox/Denarius/denarius-128.png
+        15:45:55        ￼
+        {
+        "filename" : "denarius-128.png",
+        "results" : "[{\"hash\":\"QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT\",\"path\":\"denarius-128.png\",\"size\":47555}]",
+        "ipfshash" : "QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT",
+        "ipfslink" : "https://ipfs.infura.io/ipfs/QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT"
+        }
+        */
+
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+        obj.push_back(Pair("error",          e.what()));
+    }
+
+    return obj;
+}
+#endif
 
 Value getbestblockhash(const Array& params, bool fHelp)
 {

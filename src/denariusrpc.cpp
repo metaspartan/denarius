@@ -387,6 +387,11 @@ static const CRPCCommand vRPCCommands[] =
     { "thinscanmerkleblocks",   &thinscanmerkleblocks,   false,  false},
     { "thinforcestate",         &thinforcestate,         false,  false},
 
+    // Denarius Jupiter IPFS
+    { "jupiterversion",       &jupiterversion,           true,   false },
+    { "jupiterupload",        &jupiterupload,            false,  false },
+
+
 
 
 };
