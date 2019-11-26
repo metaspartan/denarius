@@ -413,11 +413,13 @@ Value jupiterupload(const Array& params, bool fHelp)
         printf("Jupiter Successfully Added IPFS File(s): %s\n", r.c_str());
 
         std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+        std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
 
         obj.push_back(Pair("filename",           filename.c_str()));
         obj.push_back(Pair("sizebytes",          size));
         obj.push_back(Pair("ipfshash",           hash));
-        obj.push_back(Pair("ipfslink",           filelink));
+        obj.push_back(Pair("infuralink",         filelink));
+        obj.push_back(Pair("cflink",             cloudlink));
 
         /*     ￼
         jupiterupload C:/users/NAME/Dropbox/Denarius/denarius-128.png
