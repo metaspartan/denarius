@@ -121,10 +121,9 @@ xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wno
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 ifeq (${USE_IPFS}, 1)
-@echo "Building with IPFS Support ...";
 OBJS= \
-	obj/ipfs.o \
-	obj/ipfscurl.o
+     obj/ipfs.o \
+     obj/ipfscurl.o
 endif
 
 ifeq (${USE_NATIVETOR}, 1)
@@ -333,8 +332,10 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
-	obj/bloom.o \
-	obj/state.o \
+    obj/bloom.o \
+    obj/state.o \
+    obj/ipfs.o \
+    obj/ipfscurl.o  \
     obj/stun.o 
 else
 OBJS= \
@@ -388,8 +389,10 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
-	obj/bloom.o \
-	obj/state.o \
+    obj/bloom.o \
+    obj/state.o \
+    obj/ipfs.o \
+    obj/ipfscurl.o  \
     obj/stun.o
 endif
 
@@ -467,7 +470,7 @@ obj/anonymize.o: tor/anonymize.cpp
 endif
 
 ifeq (${USE_IPFS}, 1)
-obj/%.o: ipfs/%.c
+obj/%.o: %.cc
 	$(CC) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
