@@ -23,6 +23,7 @@ class CSyncCheckpoint;
  */
 namespace Checkpoints
 {
+    typedef std::map<int, uint256> MapCheckpoints;
     /** Checkpointing mode */
     enum CPMode
     {
@@ -44,20 +45,33 @@ namespace Checkpoints
 
     // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
+    CBlockThinIndex* GetLastCheckpoint(const std::map<uint256, CBlockThinIndex*>& mapBlockThinIndex);
 
     extern uint256 hashSyncCheckpoint;
+    extern uint256 hashPendingCheckpoint;
     extern CSyncCheckpoint checkpointMessage;
     extern uint256 hashInvalidCheckpoint;
     extern CCriticalSection cs_hashSyncCheckpoint;
 
+    extern MapCheckpoints mapCheckpoints;
+    extern MapCheckpoints mapCheckpointsTestnet;
+
     CBlockIndex* GetLastSyncCheckpoint();
+    CBlockThinIndex* GetLastSyncCheckpointHeader();
     bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
     bool AcceptPendingSyncCheckpoint();
+
     bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
+    bool CheckSyncThin(const uint256& hashBlock, const CBlockThinIndex* pindexPrev);
     const CBlockIndex* AutoSelectSyncCheckpoint();
+    const CBlockThinIndex* AutoSelectSyncThinCheckpoint();
+
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
+    bool WantedByPendingSyncCheckpointHeader(uint256 hashBlock);
     bool ResetSyncCheckpoint();
+    bool ResetSyncCheckpointThin();
     void AskForPendingSyncCheckpoint(CNode* pfrom);
+    void AskForPendingSyncCheckpointThin(CNode* pfrom);
     bool SetCheckpointPrivKey(std::string strPrivKey);
     bool SendSyncCheckpoint(uint256 hashCheckpoint);
     bool IsMatureSyncCheckpoint();
@@ -151,6 +165,7 @@ public:
 
     bool CheckSignature();
     bool ProcessSyncCheckpoint(CNode* pfrom);
+    bool ProcessSyncCheckpointHeaders(CNode* pfrom);
 };
 
 #endif

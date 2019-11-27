@@ -99,7 +99,7 @@ bool CBloomFilter::IsWithinSizeConstraints() const
     return vData.size() <= MAX_BLOOM_FILTER_SIZE && nHashFuncs <= MAX_HASH_FUNCS;
 }
 
-bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx, const uint256& hash)
+bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
 {
     bool fFound = false;
     // Match if the filter contains the hash of tx
@@ -108,8 +108,17 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx, const uint256& ha
         return true;
     if (isEmpty)
         return false;
-    if (contains(hash))
+    
+    const uint256& hash = tx.GetHash();
+    
+    
+    if (((nFlags & BLOOM_ACCEPT_STEALTH) && tx.HasStealthOutput())
+        || contains(hash))
+    {
         fFound = true;
+        // -- don't return here!
+    };
+    
 
     for (unsigned int i = 0; i < tx.vout.size(); i++)
     {
@@ -125,23 +134,38 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx, const uint256& ha
             opcodetype opcode;
             if (!txout.scriptPubKey.GetOp(pc, opcode, data))
                 break;
-            if (data.size() != 0 && contains(data))
+            
+            if (data.size() == 33) // coinstake
             {
+                uint160 pkHash = Hash160(data);
+                vector<unsigned char> dataHash160(pkHash.begin(), pkHash.end());
+                
+                if (dataHash160.size() != 0 && contains(dataHash160))
+                    fFound = true;
+            };
+            
+            if (!fFound
+                && data.size() != 0 && contains(data))
                 fFound = true;
+            
+            if (fFound)
+            {
                 if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
+                {
                     insert(COutPoint(hash, i));
-                else if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_P2PUBKEY_ONLY)
+                } else
+                if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_P2PUBKEY_ONLY)
                 {
                     txnouttype type;
                     vector<vector<unsigned char> > vSolutions;
                     if (Solver(txout.scriptPubKey, type, vSolutions) &&
                             (type == TX_PUBKEY || type == TX_MULTISIG))
                         insert(COutPoint(hash, i));
-                }
+                };
                 break;
-            }
-        }
-    }
+            };
+        };
+    };
 
     if (fFound)
         return true;
@@ -162,8 +186,8 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx, const uint256& ha
                 break;
             if (data.size() != 0 && contains(data))
                 return true;
-        }
-    }
+        };
+    };
 
     return false;
 }

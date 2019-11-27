@@ -15,6 +15,7 @@
 #include "fortuna.h"
 #include "fortunastake.h"
 #include "bloom.h"
+#include "state.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -252,6 +253,9 @@ bool CWallet::LoadWatchOnly(const CScript &dest)
 
 bool CWallet::Unlock(const SecureString& strWalletPassphrase)
 {
+    if (fDebug)
+        printf("CWallet::Unlock()\n");
+
     if (!IsLocked())
         return false;
 
@@ -259,7 +263,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
     CKeyingMaterial vMasterKey;
 
     {
-        LOCK(cs_wallet);
+        LOCK2(cs_main, cs_wallet);
         BOOST_FOREACH(const MasterKeyMap::value_type& pMasterKey, mapMasterKeys)
         {
             if(!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
@@ -367,6 +371,12 @@ void CWallet::SetBestChain(const CBlockLocator& loc)
 {
     CWalletDB walletdb(strWalletFile);
     walletdb.WriteBestBlock(loc);
+}
+
+void CWallet::SetBestThinChain(const CBlockThinLocator& loc)
+{
+    CWalletDB walletdb(strWalletFile);
+    walletdb.WriteBestBlockThin(loc);
 }
 
 bool CWallet::SetMinVersion(enum WalletFeature nVersion, CWalletDB* pwalletdbIn, bool fExplicit)
@@ -542,6 +552,8 @@ CWallet::TxItems CWallet::OrderedTxItems(std::list<CAccountingEntry>& acentries,
     for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
     {
         CWalletTx* wtx = &((*it).second);
+        if (!fShowCoinstake && wtx->IsCoinStake())
+            continue;
         txOrdered.insert(make_pair(wtx->nOrderPos, TxPair(wtx, (CAccountingEntry*)0)));
     }
     acentries.clear();
@@ -626,13 +638,14 @@ void CWallet::MarkDirty()
     }
 }
 
-bool CWallet::AddToWallet(const CWalletTx& wtxIn)
+bool CWallet::AddToWallet(const CWalletTx& wtxIn, const uint256& hashIn)
 {
-    uint256 hash = wtxIn.GetHash();
+    //uint256 hashIn = wtxIn.GetHash();
     {
         LOCK(cs_wallet);
+
         // Inserts only if not already there, returns tx inserted or tx found
-        pair<map<uint256, CWalletTx>::iterator, bool> ret = mapWallet.insert(make_pair(hash, wtxIn));
+        pair<map<uint256, CWalletTx>::iterator, bool> ret = mapWallet.insert(make_pair(hashIn, wtxIn));
         CWalletTx& wtx = (*ret.first).second;
         wtx.BindWallet(this);
         bool fInsertedNew = ret.second;
@@ -644,51 +657,87 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (wtxIn.hashBlock != 0)
             {
-                if (mapBlockIndex.count(wtxIn.hashBlock))
+                bool fInBlockIndex = false;
+                unsigned int blocktime;
+
+                if (nNodeMode == NT_FULL)
+                {
+                    fInBlockIndex = mapBlockIndex.count(wtxIn.hashBlock);
+                    blocktime = mapBlockIndex[wtxIn.hashBlock]->nTime;
+                } else
+                {
+                    //fInBlockIndex = mapBlockThinIndex.count(wtxIn.hashBlock);
+
+                    std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(wtxIn.hashBlock);
+                    if (mi == mapBlockThinIndex.end()
+                        && !fThinFullIndex
+                        && pindexRear)
+                    {
+                        CTxDB txdb("r");
+                        CDiskBlockThinIndex diskindex;
+                        if (txdb.ReadBlockThinIndex(wtxIn.hashBlock, diskindex)
+                            || diskindex.hashNext != 0)
+                        {
+                            fInBlockIndex = true;
+                            blocktime = diskindex.nTime;
+                        };
+                    } else
+                    {
+                        fInBlockIndex = true;
+                        blocktime = mi->second->nTime;
+                    };
+                };
+
+                if (fInBlockIndex)
                 {
                     unsigned int latestNow = wtx.nTimeReceived;
                     unsigned int latestEntry = 0;
-                    {
-                        // Tolerate times up to the last timestamp in the wallet not more than 5 minutes into the future
-                        int64_t latestTolerated = latestNow + 300;
-                        std::list<CAccountingEntry> acentries;
-                        TxItems txOrdered = OrderedTxItems(acentries);
-                        for (TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
-                        {
-                            CWalletTx *const pwtx = (*it).second.first;
-                            if (pwtx == &wtx)
-                                continue;
-                            CAccountingEntry *const pacentry = (*it).second.second;
-                            int64_t nSmartTime;
-                            if (pwtx)
-                            {
-                                nSmartTime = pwtx->nTimeSmart;
-                                if (!nSmartTime)
-                                    nSmartTime = pwtx->nTimeReceived;
-                            }
-                            else
-                                nSmartTime = pacentry->nTime;
-                            if (nSmartTime <= latestTolerated)
-                            {
-                                latestEntry = nSmartTime;
-                                if (nSmartTime > latestNow)
-                                    latestNow = nSmartTime;
-                                break;
-                            }
-                        }
-                    }
 
-                    unsigned int& blocktime = mapBlockIndex[wtxIn.hashBlock]->nTime;
+                    // Tolerate times up to the last timestamp in the wallet not more than 5 minutes into the future
+                    int64_t latestTolerated = latestNow + 300;
+                    std::list<CAccountingEntry> acentries;
+                    TxItems txOrdered = OrderedTxItems(acentries);
+                    for (TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
+                    {
+                        CWalletTx *const pwtx = (*it).second.first;
+                        if (pwtx == &wtx)
+                            continue;
+
+                        CAccountingEntry *const pacentry = (*it).second.second;
+                        int64_t nSmartTime;
+                        if (pwtx)
+                        {
+                            nSmartTime = pwtx->nTimeSmart;
+                            if (!nSmartTime)
+                                nSmartTime = pwtx->nTimeReceived;
+                        } else
+                        {
+                            nSmartTime = pacentry->nTime;
+                        };
+
+                        if (nSmartTime <= latestTolerated)
+                        {
+                            latestEntry = nSmartTime;
+                            if (nSmartTime > latestNow)
+                                latestNow = nSmartTime;
+                            break;
+                        };
+                    };
+
+
+
                     wtx.nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));
-                }
-                else
+                } else
+                {
                     printf("AddToWallet() : found %s in block %s not in index\n",
-                           wtxIn.GetHash().ToString().substr(0,10).c_str(),
+                           hashIn.ToString().substr(0,10).c_str(),
                            wtxIn.hashBlock.ToString().c_str());
-            }
-        }
+                };
+            };
+        };
 
         bool fUpdated = false;
+
         if (!fInsertedNew)
         {
             // Merge
@@ -696,31 +745,38 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
             {
                 wtx.hashBlock = wtxIn.hashBlock;
                 fUpdated = true;
-            }
+            };
+
             if (wtxIn.nIndex != -1 && (wtxIn.vMerkleBranch != wtx.vMerkleBranch || wtxIn.nIndex != wtx.nIndex))
             {
                 wtx.vMerkleBranch = wtxIn.vMerkleBranch;
                 wtx.nIndex = wtxIn.nIndex;
                 fUpdated = true;
-            }
+            };
+
             if (wtxIn.fFromMe && wtxIn.fFromMe != wtx.fFromMe)
             {
                 wtx.fFromMe = wtxIn.fFromMe;
                 fUpdated = true;
-            }
+            };
+
             fUpdated |= wtx.UpdateSpent(wtxIn.vfSpent);
-        }
+        };
 
         //// debug print
-        printf("AddToWallet %s  %s%s\n", wtxIn.GetHash().ToString().substr(0,10).c_str(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
+        printf("AddToWallet %s  %s%s\n", hashIn.ToString().substr(0,10).c_str(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
 
         // Write to disk
         if (fInsertedNew || fUpdated)
+        {
             if (!wtx.WriteToDisk())
                 return false;
+        };
+
 #ifndef QT_GUI
         // If default receiving address gets used, replace it with a new one
-        if (vchDefaultKey.IsValid()) {
+        if (vchDefaultKey.IsValid())
+        {
             CScript scriptDefaultKey;
             scriptDefaultKey.SetDestination(vchDefaultKey.GetID());
             BOOST_FOREACH(const CTxOut& txout, wtx.vout)
@@ -732,27 +788,64 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
                     {
                         SetDefaultKey(newDefaultKey);
                         SetAddressBookName(vchDefaultKey.GetID(), "");
-                    }
-                }
-            }
-        }
+                    };
+                };
+            };
+        };
 #endif
         // since AddToWallet is called directly for self-originating transactions, check for consumption of own coins
         WalletUpdateSpent(wtx, (wtxIn.hashBlock != 0));
 
         // Notify UI of new or updated transaction
-        NotifyTransactionChanged(this, hash, fInsertedNew ? CT_NEW : CT_UPDATED);
+        NotifyTransactionChanged(this, hashIn, fInsertedNew ? CT_NEW : CT_UPDATED);
 
-		vMintingWalletUpdated.push_back(hash);
+        if (nNodeMode == NT_THIN
+            && fInsertedNew == CT_NEW
+            && pBloomFilter
+            && (pBloomFilter->nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
+        {
+            uint32_t nAdded = 0;
+
+            // -- add unspent outputs to bloom filters
+            BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+            {
+                if (wtx.nVersion == ANON_TXN_VERSION
+                    && txin.IsAnonInput())
+                    continue;
+
+                map<uint256, CWalletTx>::iterator mi = mapWallet.find(txin.prevout.hash);
+                if (mi == mapWallet.end())
+                    continue;
+
+                CWalletTx& wtxPrev = (*mi).second;
+
+                if (txin.prevout.n >= wtxPrev.vout.size())
+                {
+                    printf("AddToWallet: bad wtx %s\n", wtxPrev.GetHash().ToString().c_str());
+                } else
+                if (!wtxPrev.IsSpent(txin.prevout.n) && IsMine(wtxPrev.vout[txin.prevout.n]))
+                {
+
+                    CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
+                    stream << txin.prevout;
+                    std::vector<unsigned char> vData(stream.begin(), stream.end());
+                    AddDataToMerkleFilters(vData);
+                    nAdded++;
+                };
+            };
+
+            if (fDebug)
+                printf("AddToWallet() Added %u outputs to bloom filters.\n", nAdded);
+        }
 
         // notify an external script when a wallet transaction comes in or is updated
         std::string strCmd = GetArg("-walletnotify", "");
 
-        if ( !strCmd.empty())
+        if (!strCmd.empty())
         {
             boost::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
             boost::thread t(runCommand, strCmd); // thread runs free
-        }
+        };
 
     }
     return true;
@@ -761,11 +854,11 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
 // Add a transaction to the wallet, or update it.
 // pblock is optional, but should be provided if the transaction is known to be in a block.
 // If fUpdate is true, existing transactions will be updated.
-bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate, bool fFindBlock)
+bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const uint256& hash, const void* pblock, bool fUpdate, bool fFindBlock)
 {
     //printf("AddToWalletIfInvolvingMe() %s\n", hash.ToString().c_str()); // happens often
 
-    uint256 hash = tx.GetHash();
+    //uint256 hash = tx.GetHash();
     {
         LOCK(cs_wallet);
         bool fExisted = mapWallet.count(hash);
@@ -775,36 +868,40 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         };
 
         mapValue_t mapNarr;
-        if (stealthAddresses.size() > 0 && !fDisableStealth) FindStealthTransactions(tx, mapNarr);
 
         bool fIsMine = false;
-        if (tx.nVersion == ANON_TXN_VERSION)
+        if(!tx.IsCoinBase() && !tx.IsCoinStake())
         {
-            LOCK(cs_main); // cs_wallet is already locked
-            CWalletDB walletdb(strWalletFile, "cr+");
-            CTxDB txdb("cr+");
+            // Skip transactions that we know wouldn't be stealth...
+            FindStealthTransactions(tx, mapNarr);
 
-            uint256 blockHash = 0;
-            blockHash = pblock ? ((CBlock*)pblock)->GetHash() : 0;
+            if (tx.nVersion == ANON_TXN_VERSION)
+            {
+                LOCK(cs_main); // cs_wallet is already locked
+                CWalletDB walletdb(strWalletFile, "cr+");
+                CTxDB txdb("cr+");
 
-            walletdb.TxnBegin();
-            txdb.TxnBegin();
-            std::vector<std::map<uint256, CWalletTx>::iterator> vUpdatedTxns;
-            if (!ProcessAnonTransaction(&walletdb, &txdb, tx, blockHash, fIsMine, mapNarr, vUpdatedTxns))
-            {
-                printf("ProcessAnonTransaction failed %s\n", hash.ToString().c_str());
-                walletdb.TxnAbort();
-                txdb.TxnAbort();
-                return false;
-            } else
-            {
-                walletdb.TxnCommit();
-                txdb.TxnCommit();
-                for (std::vector<std::map<uint256, CWalletTx>::iterator>::iterator it = vUpdatedTxns.begin();
-                    it != vUpdatedTxns.end(); ++it)
-                    NotifyTransactionChanged(this, (*it)->first, CT_UPDATED);
+                uint256 blockHash = (pblock ? (nNodeMode == NT_FULL ? ((CBlock*)pblock)->GetHash() : *(uint256*)pblock) : 0);
+
+                walletdb.TxnBegin();
+                txdb.TxnBegin();
+                std::vector<std::map<uint256, CWalletTx>::iterator> vUpdatedTxns;
+                if (!ProcessAnonTransaction(&walletdb, &txdb, tx, blockHash, fIsMine, mapNarr, vUpdatedTxns))
+                {
+                    printf("ProcessAnonTransaction failed %s\n", hash.ToString().c_str());
+                    walletdb.TxnAbort();
+                    txdb.TxnAbort();
+                    return false;
+                } else
+                {
+                    walletdb.TxnCommit();
+                    txdb.TxnCommit();
+                    for (std::vector<std::map<uint256, CWalletTx>::iterator>::iterator it = vUpdatedTxns.begin();
+                        it != vUpdatedTxns.end(); ++it)
+                        NotifyTransactionChanged(this, (*it)->first, CT_UPDATED);
+                };
             };
-        };
+        }
 
         if (fExisted || fIsMine || IsMine(tx) || IsFromMe(tx))
         {
@@ -814,11 +911,20 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
                 wtx.mapValue.insert(mapNarr.begin(), mapNarr.end());
 
             // Get merkle branch if transaction was found in a block
-            const CBlock* pcblock = (CBlock*)pblock;
-            if (pcblock)
-                wtx.SetMerkleBranch(pcblock);
+            if (nNodeMode == NT_FULL)
+            {
+                const CBlock* pcblock = (CBlock*)pblock;
+                if (pcblock)
+                    wtx.SetMerkleBranch(pcblock);
+            } else
+            {
+                const uint256* pblockhash = (uint256*)pblock;
 
-            return AddToWallet(wtx); //AddToWallet(wtx, hash);
+                if (pblockhash)
+                    wtx.hashBlock = *pblockhash;
+            };
+
+            return AddToWallet(wtx, hash);
         } else
         {
             WalletUpdateSpent(tx);
@@ -1301,6 +1407,15 @@ bool CWalletTx::WriteToDisk()
 // exist in the wallet will be updated.
 int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
+    if (fDebug)
+        printf("ScanForWalletTransactions()\n");
+
+    if (nNodeMode != NT_FULL)
+    {
+        printf("Error: CWallet::ScanForWalletTransactions() must be run in full mode.\n");
+        return 0;
+    };
+
     int ret = 0;
 
     CBlockIndex* pindex = pindexStart;
@@ -1343,7 +1458,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             BOOST_FOREACH(CTransaction& tx, block.vtx)
             {
                 LOCK(cs_wallet);
-                if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
+                uint256 hash = tx.GetHash();
+                if (AddToWalletIfInvolvingMe(tx, hash, &block, fUpdate))
                     ret++;
             }
             pindex = pindex->pnext;
@@ -1382,6 +1498,38 @@ void CWallet::ReacceptWalletTransactions()
 void CWallet::ReacceptWalletTransactions()
 {
     CTxDB txdb("r");
+
+    if (nNodeMode == NT_THIN)
+    {
+        for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
+            CWalletTx& wtx = (*it).second;
+
+            if ((wtx.IsCoinBase() && wtx.IsSpent(0))
+                || (wtx.IsCoinStake() && wtx.IsSpent(1)))
+                continue;
+
+            std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(wtx.hashBlock);
+            if (mi == mapBlockThinIndex.end())
+            {
+                if (!fThinFullIndex)
+                {
+                    CDiskBlockThinIndex diskindex;
+                    if (txdb.ReadBlockThinIndex(wtx.hashBlock, diskindex)
+                        && diskindex.hashNext != 0)
+                        continue; // block is in db and in main chain
+                };
+
+                // Re-accept any txes of ours that aren't already in a block
+                if (!(wtx.IsCoinBase() || wtx.IsCoinStake()))
+                    wtx.AcceptWalletTransaction(txdb);
+
+                continue;
+            };
+        };
+        return;
+    };
+
     bool fRepeat = true;
     while (fRepeat)
     {
@@ -3445,11 +3593,29 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
     CTxDB txdb("r");
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
-        CTxIndex txindex;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
-                continue;
+            if (nNodeMode == NT_THIN)
+            {
+                // -- check txn is in chain
+                std::map<uint256, CBlockThinIndex*>::iterator mi (mapBlockThinIndex.find(pcoin.first->hashBlock));
+                if (mi == mapBlockThinIndex.end())
+                {
+                    if (fThinFullIndex
+                        || !pindexRear)
+                        continue;
+
+                    CDiskBlockThinIndex diskindex;
+                    if (!txdb.ReadBlockThinIndex(pcoin.first->hashBlock, diskindex)
+                        || diskindex.hashNext == 0)
+                        continue;
+                };
+            } else
+            {
+                CTxIndex txindex;
+                if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
+                    continue;
+            }
         }
 
         int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetTime());
@@ -3546,7 +3712,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             // Search nSearchInterval seconds back up to nMaxStakeSearchInterval
             uint256 hashProofOfStake = 0, targetProofOfStake = 0;
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(nBits, block, txindex.pos.nTxPos - txindex.pos.nBlockPos, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake, targetProofOfStake))
+            if (CheckStakeKernelHash(nBits, block, txindex.pos.nTxPos - txindex.pos.nBlockPos, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake, targetProofOfStake, fDebug && GetBoolArg("-printcoinstake")))
             {
                 // Found a kernel
                 if (fDebug && GetBoolArg("-printcoinstake"))
@@ -3837,7 +4003,8 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
 
             // Add tx to wallet, because if it has change it's also ours,
             // otherwise just for transaction history.
-            AddToWallet(wtxNew);
+            uint256 hash = wtxNew.GetHash();
+            AddToWallet(wtxNew, hash);
 
             // Mark old coins as spent
             set<CWalletTx*> setCoins;
@@ -3869,6 +4036,25 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
             return false;
         }
         wtxNew.RelayWalletTransaction();
+
+         // -- look for new change addresses to add to the bloom filters
+        if (pBloomFilter)
+        {
+            BOOST_FOREACH(CTxOut txout, wtxNew.vout)
+            {
+                if (wtxNew.nVersion == ANON_TXN_VERSION
+                    && txout.IsAnonOutput())
+                    continue;
+
+                if (IsChange(txout))
+                {
+                    CTxDestination txoutAddr;
+                    if (!ExtractDestination(txout.scriptPubKey, txoutAddr))
+                        continue;
+                    AddKeyToMerkleFilters(txoutAddr);
+                };
+            };
+        }
     }
     return true;
 }
@@ -3996,10 +4182,11 @@ DBErrors CWallet::ZapWalletTx()
 }
 
 //D E N A R I U S
-bool CWallet::SetAddressBookName(const CTxDestination& address, const string& strName)
+bool CWallet::SetAddressBookName(const CTxDestination& address, const string& strName, CWalletDB* pwdb, bool fAddKeyToMerkleFilters)
 {
     bool fOwned;
     ChangeType nMode;
+
     {
         LOCK(cs_wallet); // mapAddressBook
         std::map<CTxDestination, std::string>::iterator mi = mapAddressBook.find(address);
@@ -4009,16 +4196,28 @@ bool CWallet::SetAddressBookName(const CTxDestination& address, const string& st
         mapAddressBook[address] = strName;
     }
 
-    if (fOwned)
+    // -- fAddKeyToMerkleFilters is always false when adding keys for anonoutputs
+    if (fOwned
+        && fAddKeyToMerkleFilters)
     {
         const CBitcoinAddress& caddress = address;
         SecureMsgWalletKeyChanged(caddress.ToString(), strName, nMode);
-    }
+    };
+
+    if (nMode == CT_NEW
+        && fAddKeyToMerkleFilters)
+    {
+        AddKeyToMerkleFilters(address);
+    };
+
     NotifyAddressBookChanged(this, address, strName, fOwned, nMode);
 
     if (!fFileBacked)
         return false;
-    return CWalletDB(strWalletFile).WriteName(CBitcoinAddress(address).ToString(), strName);
+
+    if (!pwdb)
+        return CWalletDB(strWalletFile).WriteName(CBitcoinAddress(address).ToString(), strName);
+    return pwdb->WriteName(CBitcoinAddress(address).ToString(), strName);
 }
 
 bool CWallet::DelAddressBookName(const CTxDestination& address)
@@ -4402,6 +4601,12 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()
 // ppcoin: fix wallet spent state according to txindex
 void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bool fCheckOnly)
 {
+    if (nNodeMode != NT_FULL)
+    {
+        printf("FixSpentCoins must be run in full mode.\n");
+        return;
+    };
+
     nMismatchFound = 0;
     nBalanceInQuestion = 0;
 
@@ -4636,10 +4841,32 @@ static int GetBlockHeightFromHash(const uint256& blockHash)
     if (blockHash == 0)
         return 0;
 
-    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(blockHash);
-    if (mi == mapBlockIndex.end())
-        return 0;
-    return mi->second->nHeight;
+
+    if (nNodeMode == NT_FULL)
+    {
+        std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(blockHash);
+        if (mi == mapBlockIndex.end())
+            return 0;
+        return mi->second->nHeight;
+    } else
+    {
+        std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(blockHash);
+        if (mi == mapBlockThinIndex.end()
+            && !fThinFullIndex
+            && pindexRear)
+        {
+            CTxDB txdb("r");
+            CDiskBlockThinIndex diskindex;
+            if (txdb.ReadBlockThinIndex(blockHash, diskindex)
+                || diskindex.hashNext != 0)
+            {
+                return diskindex.nHeight;
+            };
+        } else
+        {
+            return mi->second->nHeight;
+        };
+    };
 
     return 0;
 }
@@ -6381,6 +6608,129 @@ bool CWallet::CacheAnonStats()
             mapAnonOutputStats[it->nValue].set(
                 it->nValue, it->nExists, it->nSpends, it->nOwned,
                 it->nLeastDepth < 1 ? 0 : nBestHeight - it->nLeastDepth); // mapAnonOutputStats stores height in chain instead of depth
+    };
+
+    return true;
+};
+
+bool CWallet::InitBloomFilter()
+{
+    if (fDebug)
+        printf("Initialising bloom filter, max elements %d.\n", nBloomFilterElements);
+
+    LOCK(cs_wallet);
+
+    if (pBloomFilter)
+        return error("Bloom filter already created.");
+
+    char nFlags = BLOOM_UPDATE_ALL;
+
+    if (nLocalRequirements & THIN_STEALTH)
+        nFlags |= BLOOM_ACCEPT_STEALTH;
+    pBloomFilter = new CBloomFilter(nBloomFilterElements, 0.001, GetRandUInt32(), nFlags);
+
+    if (!pBloomFilter)
+        return error("Bloom filter new failed.");
+
+    if (!pBloomFilter->IsWithinSizeConstraints())
+    {
+        delete pBloomFilter;
+        pBloomFilter = NULL;
+        return error("Bloom filter is too large.");
+    };
+
+    std::string sAnonPrefix("ao ");
+
+    // TODO: don't load addresses created from receiving stealth txns
+    // TODO: exclude change addresses of spent outputs
+    std::set<CKeyID> setKeys;
+    GetKeys(setKeys);
+
+    uint32_t nKeysAdded = 0;
+
+    // -- need to add change addresses too
+    BOOST_FOREACH(const CKeyID &keyId, setKeys)
+    {
+        // -- don't add keys generated for aonon outputs (marked with label prefix "ao ")
+        std::map<CTxDestination, std::string>::iterator mi(mapAddressBook.find(keyId));
+        if (mi != mapAddressBook.end() && mi->second.compare(0, sAnonPrefix.length(), sAnonPrefix) == 0)
+        {
+            if (fDebugRingSig)
+            {
+                CBitcoinAddress coinAddress(keyId);
+                printf("InitBloomFilter() - ignoring key for anon output %s.\n", coinAddress.ToString().c_str());
+            };
+            continue;
+        };
+
+        pBloomFilter->UpdateEmptyFull();
+        if (pBloomFilter->IsFull())
+        {
+            // TODO: try resize?
+            printf("Error: InitBloomFilter() - Filter is full.\n");
+            continue; // continue so more messages show in log
+        };
+
+        if (fDebug)
+        {
+            CBitcoinAddress coinAddress(keyId);
+            if (coinAddress.IsValid())
+                printf("Adding key: %s.\n", coinAddress.ToString().c_str());
+        };
+
+        vector<unsigned char> vData(keyId.begin(), keyId.end());
+
+        pBloomFilter->insert(vData);
+
+        nKeysAdded++;
+    };
+
+    setKeys.clear();
+
+
+    // - load unspent outputs
+    uint32_t nOutPointsAdded = 0;
+
+    for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+    {
+        CWalletTx& wtx = (*it).second;
+
+        // -- add unspent outputs to bloom filters
+        BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+        {
+            if (wtx.nVersion == ANON_TXN_VERSION
+                && txin.IsAnonInput())
+                continue;
+
+            std::map<uint256, CWalletTx>::iterator mi = mapWallet.find(txin.prevout.hash);
+            if (mi == mapWallet.end())
+                continue;
+
+            CWalletTx& wtxPrev = (*mi).second;
+
+            if (txin.prevout.n >= wtxPrev.vout.size())
+            {
+                printf("InitBloomFilter(): bad wtx %s\n", wtxPrev.GetHash().ToString().c_str());
+            } else
+            //if (!wtxPrev.IsSpent(txin.prevout.n) && IsMine(wtxPrev.vout[txin.prevout.n]))
+            if (!wtxPrev.IsSpent(txin.prevout.n))
+            {
+                CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
+                stream << txin.prevout;
+                std::vector<unsigned char> vData(stream.begin(), stream.end());
+                pBloomFilter->insert(vData);
+                nOutPointsAdded++;
+            };
+
+        };
+    };
+
+    if (fDebug)
+    {
+        printf("Added %u key%s, %u outpoint%s to filter.\n",
+            nKeysAdded, nKeysAdded != 1 ? "s": "",
+            nOutPointsAdded, nOutPointsAdded != 1 ? "s": "");
+        printf("Filter bytes: %u.\n", pBloomFilter->GetSize());
     };
 
     return true;

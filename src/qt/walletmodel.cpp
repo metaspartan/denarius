@@ -133,6 +133,7 @@ void WalletModel::pollBalanceChanged()
         cachedNumBlocks = nBestHeight;
 
         checkBalanceChanged();
+
         //if(transactionTableModel)
             //transactionTableModel->updateConfirmations();
     }
@@ -166,6 +167,24 @@ void WalletModel::checkBalanceChanged()
         cachedImmatureBalance = newImmatureBalance;
 
         emit balanceChanged(newBalance, newLockedBalance, newStake, newUnconfirmedBalance, newImmatureBalance, newWatchOnlyBalance, newWatchUnconfBalance, newWatchImmatureBalance);
+    }
+}
+
+void WalletModel::checkBalanceChangedThin()
+{
+    qint64 newBalance = getBalance();
+    qint64 newStake = getStakeAmount();
+    qint64 newUnconfirmedBalance = getUnconfirmedBalance();
+    qint64 newImmatureBalance = getImmatureBalance();
+
+    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
+    {
+        cachedBalance = newBalance;
+        cachedStake = newStake;
+        cachedUnconfirmedBalance = newUnconfirmedBalance;
+        cachedImmatureBalance = newImmatureBalance;
+
+        emit balanceChangedThin(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
     }
 }
 

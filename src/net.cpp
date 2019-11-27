@@ -52,7 +52,9 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 //
 bool fDiscover = true;
 bool fUseUPnP = false;
-uint64_t nLocalServices = NODE_NETWORK;
+
+//uint64_t nLocalServices = NODE_NETWORK;
+
 CCriticalSection cs_mapLocalHost;
 map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};
@@ -98,6 +100,15 @@ unsigned short GetListenPort()
     return (unsigned short)(GetArg("-port", GetDefaultPort()));
 }
 
+void CNode::PushGetBlocks(uint256& hashBegin, uint256 hashEnd)
+{
+    //pindexLastGetBlocksBegin = pindexBegin;
+    hashLastGetBlocksEnd = hashEnd;
+
+    CBlockLocator blockLocator;
+    blockLocator.SetThin(hashBegin);
+    PushMessage("getblocks", blockLocator, hashEnd);
+}
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
@@ -112,6 +123,30 @@ void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 
     //PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
 }
+
+void CNode::PushGetBlocks(CBlockThinIndex* pindexBegin, uint256 hashEnd)
+{
+    // Filter out duplicate requests
+    if (pindexBegin == pindexLastGetBlockThinsBegin && hashEnd == hashLastGetBlocksEnd)
+        return;
+
+    pindexLastGetBlockThinsBegin = pindexBegin;
+    hashLastGetBlocksEnd = hashEnd;
+
+    PushMessage("getblocks", CBlockThinLocator(pindexBegin), hashEnd);
+};
+
+void CNode::PushGetHeaders(CBlockThinIndex* pindexBegin, uint256 hashEnd)
+{
+    // Filter out duplicate requests
+    if (pindexBegin == pindexLastGetBlockThinsBegin && hashEnd == hashLastGetBlocksEnd)
+        return;
+
+    pindexLastGetBlockThinsBegin = pindexBegin;
+    hashLastGetBlocksEnd = hashEnd;
+
+    PushMessage("getheaders", CBlockThinLocator(pindexBegin), hashEnd);
+};
 
 
 // find 'best' local address for a particular peer
@@ -606,6 +641,20 @@ void CNode::Cleanup()
 {
 }
 
+void CNode::TryFlushSend()
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        TRY_LOCK(cs_vSend, lockSend);
+        if (lockSend)
+        {
+            SocketSendData(this);
+            break;
+        };
+        MilliSleep(10);
+    };
+}
+
 
 void CNode::PushVersion()
 {
@@ -615,8 +664,15 @@ void CNode::PushVersion()
     CAddress addrMe = GetLocalAddress(&addr);
     RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
     printf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
-    PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
-                nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight);
+    
+    // -- node requirements are packed into the top 32 bits of nServices
+    //uint64_t nServices = ((uint64_t) nLocalRequirements) << 32 | nLocalServices;
+    uint64_t nServices = nLocalServices;
+    unsigned char *p = (unsigned char*)&nServices; // fortify
+    memcpy(p+4, &nLocalRequirements, 4);
+
+    PushMessage("version", PROTOCOL_VERSION, nServices, nTime, addrYou, addrMe,
+                nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight, nNodeMode);
 }
 
 
@@ -701,6 +757,28 @@ bool CNode::Misbehaving(int howmuch)
     return false;
 }
 
+bool CNode::SoftBan()
+{
+    // -- same as Misbehaving, but a shorter ban time
+    if (addr.IsLocal())
+    {
+        printf("Warning: Tried to soft ban local node %s !\n", addrName.c_str());
+        return false;
+    };
+
+    int64_t banTime = GetTime()+GetArg("-softbantime", 60*60*1);  // Default 1-hour ban
+    printf("SoftBan: %s DISCONNECTING\n", addr.ToString().c_str());
+    {
+        LOCK(cs_setBanned);
+        if (setBanned[addr] < banTime)
+            setBanned[addr] = banTime;
+    }
+
+    CloseSocketDisconnect();
+
+    return true;
+}
+
 #undef X
 #define X(name) stats.name = name
 void CNode::copyStats(CNodeStats &stats)
@@ -716,7 +794,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(nVersion);
     X(strSubVer);
     X(fInbound);
-    X(nStartingHeight);
+    X(nChainHeight);
     X(nMisbehavior);
     //X(fWhitelisted);
 
@@ -1802,6 +1880,8 @@ void ThreadOpenConnections2(void* parg)
         int nTries = 0;
         while (true)
         {
+            if (fShutdown)
+                return;
             // use an nUnkBias between 10 (no outgoing connections) and 90 (8 outgoing connections)
             CAddress addr = addrman.Select(10 + min(nOutbound,8)*10);
 
@@ -1998,7 +2078,7 @@ void static StartSync(const vector<CNode*> &vNodes) {
         // check preconditions for allowing a sync
         if (!pnode->fClient && !pnode->fOneShot &&
             !pnode->fDisconnect && pnode->fSuccessfullyConnected &&
-            (pnode->nStartingHeight > (nBestHeight - 144)) &&
+            (pnode->nChainHeight > (nBestHeight - 144)) &&
             (pnode->nVersion < NOBLKS_VERSION_START || pnode->nVersion >= NOBLKS_VERSION_END)) {
             // if ok, compare node's score with the best so far
             int64_t nScore = NodeSyncScore(pnode);
@@ -2080,7 +2160,7 @@ void ThreadMessageHandler2(void* parg)
                     if (!ProcessMessages(pnode))
                         pnode->CloseSocketDisconnect();
 
-                      if (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete()))
+                      if (pnode->nSendSize < SendBufferSize() && (!pnode->vRecvGetData.empty() || (!pnode->vRecvMsg.empty() && pnode->vRecvMsg[0].complete())))
                       {
                           fSleep = false; // don't sleep, we have work to do!
                       }
@@ -2529,7 +2609,22 @@ void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataSt
         vRelayExpiration.push_back(std::make_pair(GetTime() + 15 * 60, inv));
     }
 
-    RelayInventory(inv);
+    LOCK(cs_vNodes);
+    BOOST_FOREACH(CNode* pnode, vNodes)
+    {
+        if(!pnode->fRelayTxes)
+            continue;
+        LOCK(pnode->cs_filter);
+        if (pnode->pfilter)
+        {
+            if ((*((uint32_t*)(&pnode->nServices+4)) & THIN_STAKE) // pass all mempool txns if peer is staking
+                || pnode->pfilter->IsRelevantAndUpdate(tx))
+                pnode->PushInventory(inv);
+        } else
+        {
+            pnode->PushInventory(inv);
+        };
+    };
 }
 
 void RelayTransactionLockReq(const CTransaction& tx, const uint256& hash, bool relayToAll)

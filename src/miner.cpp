@@ -8,6 +8,7 @@
 #include "miner.h"
 #include "kernel.h"
 #include "fortunastake.h"
+#include "core.h"
 
 using namespace std;
 
@@ -17,10 +18,15 @@ using namespace std;
 //
 
 extern unsigned int nMinerSleep;
+extern unsigned int nBlockMaxSize;
+extern unsigned int nBlockPrioritySize;
+extern unsigned int nBlockMinSize;
+
+extern int64_t nMinTxFee;
 
 int static FormatHashBlocks(void* pbuffer, unsigned int len)
 {
-    unsigned char* pdata = (unsigned char*)pbuffer;
+    unsigned char* pdata = (unsigned char*) pbuffer;
     unsigned int blocks = 1 + ((len + 8) / 64);
     unsigned char* pend = pdata + 64 * blocks;
     memset(pdata + len, 0, 64 * blocks - len);
@@ -157,21 +163,6 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);
 
-    // Largest block you're willing to create:
-    unsigned int nBlockMaxSize = GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
-    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
-
-    // How much of the block should be dedicated to high-priority transactions,
-    // included regardless of the fees they pay
-    unsigned int nBlockPrioritySize = GetArg("-blockprioritysize", 27000);
-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
-
-    // Minimum block size you want to create; block will be filled with free transactions
-    // until there are no more or the block reaches this size:
-    unsigned int nBlockMinSize = GetArg("-blockminsize", 0);
-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
-
     // start fortunastake payments
     bool bFortunaStakePayment = false;
 
@@ -189,15 +180,6 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 		}
         if(fDebug && fDebugFS) { printf("CreateNewBlock(): Fortunastake Payments : %i\n", bFortunaStakePayment); }
 	}
-
-    // Fee-per-kilobyte amount considered the same as "free"
-    // Be careful setting this: if you set it to zero then
-    // a transaction spammer can cheaply fill blocks using
-    // 1-denarii-fee transactions. It should be set above the real
-    // cost to you of processing a transaction.
-    int64_t nMinTxFee = MIN_TX_FEE;
-    if (mapArgs.count("-mintxfee"))
-        ParseMoney(mapArgs["-mintxfee"], nMinTxFee);
 
     pblock->nBits = GetNextTargetRequired(pindexPrev, fProofOfStake);
 
@@ -311,7 +293,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
                 nTotalIn += nValueIn;
 
-                int nConf = txindex.GetDepthInMainChain();
+                int nConf = txindex.GetDepthInMainChainFromIndex();
                 dPriority += (double)nValueIn * nConf;
             };
 
@@ -612,7 +594,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         }
 
         // Process this block the same as if we had received it from another node
-        if (!ProcessBlock(NULL, pblock))
+        if (!ProcessBlock(NULL, pblock, hashBlock))
             return error("CheckWork() : ProcessBlock, block not accepted");
     }
 
@@ -650,7 +632,7 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
         }
 
         // Process this block the same as if we had received it from another node
-        if (!ProcessBlock(NULL, pblock))
+        if (!ProcessBlock(NULL, pblock, hashBlock))
             return error("CheckStake() : ProcessBlock, block not accepted");
     }
 

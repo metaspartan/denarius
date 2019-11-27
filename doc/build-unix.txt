@@ -27,6 +27,7 @@ Dependencies
  libssl       SSL Support       Secure communications
  libdb        Berkeley DB       Blockchain & wallet storage
  libboost     Boost             C++ Library
+ libcurl      IPFS API Support  C Library
  miniupnpc    UPnP Support      Optional firewall-jumping support
  libqrencode  QRCode generation Optional QRCode generation
  libevent-dev Libevent Support  Optional Libevent Library required for building with USE_NATIVETOR=1
@@ -68,6 +69,7 @@ Versions used in this release:
  miniupnpc     1.9.20140401
  libevent	   2.1.8 Stable
  obfs4proxy    0.0.6-2
+ libcurl       latest
 
 Dependency Build Instructions: Ubuntu & Debian
 ----------------------------------------------
@@ -79,6 +81,11 @@ sudo apt-get install libminiupnpc-dev
 sudo apt-get install libqrencode-dev
 sudo apt-get install libevent-dev
 sudo apt-get install obfs4proxy
+sudo apt-get install libcurl4-openssl-dev
+
+Libcurl is only required if you are building with IPFS API Support
+----------------------------------------------
+sudo apt-get install libcurl4-openssl-dev
 
 
 Libevent-dev and obfs4proxy is only required if you are building with USE_NATIVETOR=1 support
