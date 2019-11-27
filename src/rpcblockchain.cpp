@@ -374,9 +374,8 @@ Value jupiterupload(const Array& params, bool fHelp)
           return;
         }
 
-        //read whole file
-        std::ifstream ipfsFile;
         std::string filename = userFile.c_str();
+        
         // Remove directory if present.
         // Do this before extension removal incase directory has a period character.
         const size_t last_slash_idx = filename.find_last_of("\\/");
@@ -384,20 +383,6 @@ Value jupiterupload(const Array& params, bool fHelp)
         {
             filename.erase(0, last_slash_idx + 1);
         }
-        
-        // Remove extension if present.
-        /*
-        const size_t period_idx = filename.rfind('.');
-        if (std::string::npos != period_idx)
-        {
-            filename.erase(period_idx);
-        }
-        */
-
-        ipfsFile.open(userFile.c_str(), std::ios::binary);
-        std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
-
-        std::string ipfsC(ipfsContents.begin(), ipfsContents.end());
 
         printf("Jupiter Upload File Start: %s\n", filename.c_str());
         //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
