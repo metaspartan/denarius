@@ -81,6 +81,7 @@ Technology
 * New/First Tribus PoW Algorithm comprising of 3 NIST5 algorithms
 * Tribus PoW/PoS Hybrid
 * Full decentralization
+* Jupiter - IPFS API Implementation with Anonymous Decentralized File Uploads (UI and RPC)
 
 LINKS
 ==========================
