@@ -93,6 +93,7 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
+bool fJupiterLocal = false;
 bool fFSLock = false;
 bool fThinMode = false;
 bool fNoListen = false;

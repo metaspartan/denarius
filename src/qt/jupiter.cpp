@@ -29,6 +29,7 @@
 #include <sstream>
 #include <stdexcept>
 
+
 Jupiter::Jupiter(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Jupiter)
@@ -62,73 +63,144 @@ void Jupiter::on_createPushButton_clicked()
 {
 
 #ifdef USE_IPFS
-    try {
-        std::stringstream contents;
-        ipfs::Json add_result;
+fJupiterLocal = GetBoolArg("-jupiterlocal");
 
-        //Ensure IPFS connected
-        ipfs::Client client("ipfs.infura.io:5001");
+//Ensure IPFS connected
+if (fJupiterLocal) {
+  try {
+    std::stringstream contents;
+    ipfs::Json add_result;
+    ipfs::Client client("localhost");
 
-        if(fileName == "")
-        {
-          noImageSelected();   
-          return;
-        }
-
-        //read whole file
-        std::ifstream ipfsFile;
-        std::string filename = fileName.toStdString().c_str();
-        // Remove directory if present.
-        // Do this before extension removal incase directory has a period character.
-        const size_t last_slash_idx = filename.find_last_of("\\/");
-        if (std::string::npos != last_slash_idx)
-        {
-            filename.erase(0, last_slash_idx + 1);
-        }
-        
-        // Remove extension if present.
-        /*
-        const size_t period_idx = filename.rfind('.');
-        if (std::string::npos != period_idx)
-        {
-            filename.erase(period_idx);
-        }
-        */
-
-        ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
-        std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
-
-        std::string ipfsC(ipfsContents.begin(), ipfsContents.end());
-
-        std::string fileContents = ipfsC.c_str();
-
-        printf("Jupiter Upload File Start: %s\n", filename.c_str());
-        //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
-
-        client.FilesAdd(
-        {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
-        &add_result);
-        
-        const std::string& hash = add_result[0]["hash"];
-
-        ui->lineEdit->setText(QString::fromStdString(hash));
-
-        std::string r = add_result.dump();
-        printf("Jupiter Successfully Added IPFS File(s): %s\n", r.c_str());
-
-        if (hash != "") {
-          ui->checkButton->setHidden(false);
-          ui->checkLabel->setHidden(false);
-          ui->lineEdit->setHidden(false);
-          ui->hashLabel->setHidden(false);
-        }
-
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
-        QMessageBox errbox;
-        errbox.setText(QString::fromStdString(e.what()));
-        errbox.exec();
+    if(fileName == "")
+    {
+      noImageSelected();   
+      return;
     }
+
+    //read whole file
+    std::ifstream ipfsFile;
+    std::string filename = fileName.toStdString().c_str();
+    // Remove directory if present.
+    // Do this before extension removal incase directory has a period character.
+    const size_t last_slash_idx = filename.find_last_of("\\/");
+    if (std::string::npos != last_slash_idx)
+    {
+        filename.erase(0, last_slash_idx + 1);
+    }
+    
+    // Remove extension if present.
+    /*
+    const size_t period_idx = filename.rfind('.');
+    if (std::string::npos != period_idx)
+    {
+        filename.erase(period_idx);
+    }
+    */
+
+    ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
+    std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
+
+    std::string ipfsC(ipfsContents.begin(), ipfsContents.end());
+
+    std::string fileContents = ipfsC.c_str();
+
+    printf("Jupiter Upload File Start: %s\n", filename.c_str());
+    //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+    client.FilesAdd(
+    {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+    &add_result);
+    
+    const std::string& hash = add_result[0]["hash"];
+
+    ui->lineEdit->setText(QString::fromStdString(hash));
+
+    std::string r = add_result.dump();
+    printf("Jupiter Successfully Added IPFS File(s): %s\n", r.c_str());
+
+    if (hash != "") {
+      ui->checkButton->setHidden(false);
+      ui->checkLabel->setHidden(false);
+      ui->lineEdit->setHidden(false);
+      ui->hashLabel->setHidden(false);
+    }
+
+  } catch (const std::exception& e) {
+      std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+      QMessageBox errbox;
+      errbox.setText(QString::fromStdString(e.what()));
+      errbox.exec();
+  }
+
+} else {
+  try {
+    std::stringstream contents;
+    ipfs::Json add_result;
+    ipfs::Client client("ipfs.infura.io:5001");
+
+    if(fileName == "")
+    {
+      noImageSelected();   
+      return;
+    }
+
+    //read whole file
+    std::ifstream ipfsFile;
+    std::string filename = fileName.toStdString().c_str();
+    // Remove directory if present.
+    // Do this before extension removal incase directory has a period character.
+    const size_t last_slash_idx = filename.find_last_of("\\/");
+    if (std::string::npos != last_slash_idx)
+    {
+        filename.erase(0, last_slash_idx + 1);
+    }
+    
+    // Remove extension if present.
+    /*
+    const size_t period_idx = filename.rfind('.');
+    if (std::string::npos != period_idx)
+    {
+        filename.erase(period_idx);
+    }
+    */
+
+    ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
+    std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
+
+    std::string ipfsC(ipfsContents.begin(), ipfsContents.end());
+
+    std::string fileContents = ipfsC.c_str();
+
+    printf("Jupiter Upload File Start: %s\n", filename.c_str());
+    //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+    client.FilesAdd(
+    {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+    &add_result);
+    
+    const std::string& hash = add_result[0]["hash"];
+
+    ui->lineEdit->setText(QString::fromStdString(hash));
+
+    std::string r = add_result.dump();
+    printf("Jupiter Successfully Added IPFS File(s): %s\n", r.c_str());
+
+    if (hash != "") {
+      ui->checkButton->setHidden(false);
+      ui->checkLabel->setHidden(false);
+      ui->lineEdit->setHidden(false);
+      ui->hashLabel->setHidden(false);
+    }
+
+  } catch (const std::exception& e) {
+      std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+      QMessageBox errbox;
+      errbox.setText(QString::fromStdString(e.what()));
+      errbox.exec();
+  }
+
+}
 #endif
 
   /*

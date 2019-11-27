@@ -534,6 +534,7 @@ bool AppInit2()
     fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
     fThinMode = GetBoolArg("-thinmode");
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (fThinMode)
     {

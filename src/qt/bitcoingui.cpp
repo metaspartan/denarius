@@ -187,6 +187,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     fFSLock = GetBoolArg("-fsconflock");
     fThinMode = GetBoolArg("-thinmode");
     fNativeTor = GetBoolArg("-nativetor");
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     // Create tabs
     overviewPage = new OverviewPage();
