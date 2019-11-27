@@ -390,7 +390,8 @@ static const CRPCCommand vRPCCommands[] =
     // Denarius Jupiter IPFS
     { "jupiterversion",       &jupiterversion,           true,   false },
     { "jupiterupload",        &jupiterupload,            false,  false },
-
+    { "jupitergetblock",      &jupitergetblock,          false,  false },
+    { "jupitergetstat",       &jupitergetstat,           false,  false },
 
 
 

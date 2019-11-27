@@ -13,6 +13,7 @@
 #ifdef USE_IPFS
 #include <ipfs/client.h>
 #include <ipfs/http/transport.h>
+#include <ipfs/test/utils.h>
 #endif
 
 using namespace json_spirit;
@@ -323,6 +324,80 @@ Value dumpbootstrap(const Array& params, bool fHelp)
 }
 
 #ifdef USE_IPFS
+Value jupitergetstat(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+        throw runtime_error(
+            "jupitergetstat\n"
+            "\nArguments:\n"
+            "1. \"ipfshash\"          (string, required) The IPFS Hash/Block\n"
+            "Returns the IPFS block stats of the inputted IPFS CID/Hash/Block");
+
+    Object obj;
+    std::string userHash = params[0].get_str();
+    ipfs::Json stat_result;
+
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
+
+    if (fJupiterLocal) {
+        ipfs::Client client("localhost:5001");
+
+        /* An example output:
+        Stat: {"Key":"QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo","Size":15}
+        */
+        client.BlockStat(userHash, &stat_result);
+        obj.push_back(Pair("key",        stat_result["Key"].dump().c_str()));
+        obj.push_back(Pair("size",       stat_result["Size"].dump().c_str()));
+
+        return obj;
+    } else {
+        ipfs::Client client("ipfs.infura.io:5001");
+
+        /* An example output:
+        Stat: {"Key":"QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo","Size":15}
+        */
+        client.BlockStat(userHash, &stat_result);
+        obj.push_back(Pair("key",        stat_result["Key"].dump().c_str()));
+        obj.push_back(Pair("size",       stat_result["Size"].dump().c_str()));
+
+        return obj;
+    }
+}
+Value jupitergetblock(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+        throw runtime_error(
+            "jupitergetblock\n"
+            "\nArguments:\n"
+            "1. \"ipfshash\"          (string, required) The IPFS Hash/Block\n"
+            "Returns the IPFS hash/block data hex of the inputted IPFS CID/Hash/Block");
+
+    Object obj;
+    std::string userHash = params[0].get_str();
+    std::stringstream block_contents;
+
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
+
+    if (fJupiterLocal) {
+        ipfs::Client client("localhost:5001");
+
+        client.BlockGet(userHash, &block_contents);
+        obj.push_back(Pair("blockhex", ipfs::test::string_to_hex(block_contents.str()).c_str()));
+
+        return obj;
+    } else {
+        ipfs::Client client("ipfs.infura.io:5001");
+
+        /* E.g. userHash is "QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo". */
+        client.BlockGet(userHash, &block_contents);
+        obj.push_back(Pair("blockhex", ipfs::test::string_to_hex(block_contents.str()).c_str()));
+
+        return obj;
+        /* An example output:
+        Block (hex): 426c6f636b2070757420746573742e
+        */
+    }
+}
 Value jupiterversion(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -337,7 +412,7 @@ Value jupiterversion(const Array& params, bool fHelp)
     fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (fJupiterLocal) {
-        ipfs::Client client("localhost");
+        ipfs::Client client("localhost:5001");
 
         client.Version(&version);
         const std::string& vv = version["Version"].dump();
@@ -349,7 +424,7 @@ Value jupiterversion(const Array& params, bool fHelp)
         }
         
         obj.push_back(Pair("connected",          connected));
-        obj.push_back(Pair("localpeer",          "localhost"));
+        obj.push_back(Pair("localpeer",          "localhost:5001"));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
 
         return obj;
@@ -393,7 +468,7 @@ Value jupiterupload(const Array& params, bool fHelp)
         try {
             ipfs::Json add_result;
 
-            ipfs::Client client("localhost");
+            ipfs::Client client("localhost:5001");
 
             if(userFile == "")
             { 

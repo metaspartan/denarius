@@ -248,6 +248,8 @@ extern json_spirit::Value importaddress(const json_spirit::Array& params, bool f
 
 extern json_spirit::Value jupiterversion(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp Denarius Jupiter
 extern json_spirit::Value jupiterupload(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value jupitergetblock(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value jupitergetstat(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getnewstealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value liststealthaddresses(const json_spirit::Array& params, bool fHelp);

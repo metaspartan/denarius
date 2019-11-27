@@ -70,7 +70,7 @@ if (fJupiterLocal) {
   try {
     std::stringstream contents;
     ipfs::Json add_result;
-    ipfs::Client client("localhost");
+    ipfs::Client client("localhost:5001");
 
     if(fileName == "")
     {
