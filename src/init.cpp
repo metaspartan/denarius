@@ -20,11 +20,6 @@
 #include "smessage.h"
 #include "ringsig.h"
 
-#ifdef USE_IPFS
-#include <ipfs/client.h>
-#include <ipfs/http/transport.h>
-#endif
-
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
 #endif
@@ -1380,29 +1375,6 @@ bool AppInit2()
     printf("Rebuilt address index of %i blocks in %" PRId64"ms\n",
            pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
-
-    //Init IPFS
-#ifdef USE_IPFS
-    uiInterface.InitMessage(_("Connecting to IPFS..."));
-
-    try {
-        std::stringstream contents;
-        ipfs::Json version;
-
-        ipfs::Client client("ipfs.infura.io:5001");
-        uiInterface.InitMessage(_("Connected to IPFS"));
-        printf("Jupiter: IPFS Peer Connected: ipfs.infura.io\n");
-
-        client.Version(&version);
-        std::string v = version.dump();
-
-        const std::string& vv = version["Version"].dump();
-        printf("Jupiter: IPFS Peer Version: %s\n", vv.c_str());
-
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
-#endif
 
     //// debug print
     printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
