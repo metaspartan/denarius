@@ -203,7 +203,7 @@ void Client::FilesAdd(const std::vector<http::FileUpload>& files,
                       Json* result) {
   std::stringstream body;
 
-  http_->Fetch(MakeUrl("add", {{"progress", "true"}}), files, &body);
+  http_->Fetch(MakeUrl("add", {{"progress", "true"},{"pin", "true"}}), files, &body);
 
   /* The reply consists of multiple lines, each one of which is a JSON, for
   example:
