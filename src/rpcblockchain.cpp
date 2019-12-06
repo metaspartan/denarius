@@ -546,12 +546,14 @@ Value jupiterpod(const Array& params, bool fHelp)
 
                     std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
                     std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                    std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                     obj.push_back(Pair("filename",           filename.c_str()));
                     obj.push_back(Pair("sizebytes",          size));
                     obj.push_back(Pair("ipfshash",           hash));
                     obj.push_back(Pair("infuralink",         filelink));
                     obj.push_back(Pair("cflink",             cloudlink));
+                    obj.push_back(Pair("ipfslink",           ipfsoglink));
                     obj.push_back(Pair("podaddress",         addr.c_str()));
                     obj.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
                 }
@@ -645,12 +647,14 @@ Value jupiterpod(const Array& params, bool fHelp)
 
                         std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
                         std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                        std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                         obj.push_back(Pair("filename",           filename.c_str()));
                         obj.push_back(Pair("sizebytes",          size));
                         obj.push_back(Pair("ipfshash",           hash));
                         obj.push_back(Pair("infuralink",         filelink));
                         obj.push_back(Pair("cflink",             cloudlink));
+                        obj.push_back(Pair("ipfslink",           ipfsoglink));
                         obj.push_back(Pair("podaddress",         addr.c_str()));
                         obj.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
                     }
@@ -719,12 +723,14 @@ Value jupiterupload(const Array& params, bool fHelp)
 
             std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
             std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+            std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
             obj.push_back(Pair("filename",           filename.c_str()));
             obj.push_back(Pair("sizebytes",          size));
             obj.push_back(Pair("ipfshash",           hash));
             obj.push_back(Pair("infuralink",         filelink));
             obj.push_back(Pair("cflink",             cloudlink));
+            obj.push_back(Pair("ipfslink",           ipfsoglink));
             
             } catch (const std::exception& e) {
                 std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
@@ -767,12 +773,14 @@ Value jupiterupload(const Array& params, bool fHelp)
 
                 std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
                 std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                 obj.push_back(Pair("filename",           filename.c_str()));
                 obj.push_back(Pair("sizebytes",          size));
                 obj.push_back(Pair("ipfshash",           hash));
                 obj.push_back(Pair("infuralink",         filelink));
                 obj.push_back(Pair("cflink",             cloudlink));
+                obj.push_back(Pair("ipfslink",           ipfsoglink));
                 
                 } catch (const std::exception& e) {
                 std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
@@ -848,6 +856,7 @@ Value jupiterduo(const Array& params, bool fHelp)
 
             std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
             std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+            std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
             obj.push_back(Pair("duoupload",          "true"));
 
@@ -857,6 +866,7 @@ Value jupiterduo(const Array& params, bool fHelp)
             first.push_back(Pair("ipfshash",           hash));
             first.push_back(Pair("infuralink",         filelink));
             first.push_back(Pair("cflink",             cloudlink));
+            first.push_back(Pair("ipfslink",           ipfsoglink));
             obj.push_back(Pair("first",                first));
             
             } catch (const std::exception& e) {
@@ -898,6 +908,7 @@ Value jupiterduo(const Array& params, bool fHelp)
 
                 std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
                 std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                 second.push_back(Pair("nodeip",             "https://ipfs.infura.io:5001"));
                 second.push_back(Pair("filename",           filename.c_str()));
@@ -905,6 +916,7 @@ Value jupiterduo(const Array& params, bool fHelp)
                 second.push_back(Pair("ipfshash",           hash));
                 second.push_back(Pair("infuralink",         filelink));
                 second.push_back(Pair("cflink",             cloudlink));
+                second.push_back(Pair("ipfslink",           ipfsoglink));
                 obj.push_back(Pair("second",                second));
                 
                 } catch (const std::exception& e) {
