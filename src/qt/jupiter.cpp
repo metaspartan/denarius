@@ -203,7 +203,7 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
       try {
         std::stringstream contents;
         ipfs::Json add_result;
-        ipfs::Client client("ipfs.infura.io:5001");
+        ipfs::Client client("https://ipfs.infura.io:5001");
 
         if(fileName == "")
         {
@@ -469,7 +469,7 @@ if (fJupiterLocal) {
   try {
     std::stringstream contents;
     ipfs::Json add_result;
-    ipfs::Client client("ipfs.infura.io:5001");
+    ipfs::Client client("https://ipfs.infura.io:5001");
 
     if(fileName == "")
     {

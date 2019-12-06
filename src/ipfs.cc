@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 namespace ipfs {
 
 Client::Client(const std::string& host)
-    : url_prefix_("https://" + host + "/api/v0") {
+    : url_prefix_(host + "/api/v0") {
   http_ = new http::TransportCurl();
 }
 

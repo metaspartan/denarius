@@ -353,7 +353,7 @@ Value jupitergetstat(const Array& params, bool fHelp)
 
         return obj;
     } else {
-        ipfs::Client client("ipfs.infura.io:5001");
+        ipfs::Client client("https://ipfs.infura.io:5001");
 
         /* An example output:
         Stat: {"Key":"QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo","Size":15}
@@ -390,7 +390,7 @@ Value jupitergetblock(const Array& params, bool fHelp)
 
         return obj;
     } else {
-        ipfs::Client client("ipfs.infura.io:5001");
+        ipfs::Client client("https://ipfs.infura.io:5001");
 
         /* E.g. userHash is "QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo". */
         client.BlockGet(userHash, &block_contents);
@@ -436,7 +436,7 @@ Value jupiterversion(const Array& params, bool fHelp)
 
         return obj;
     } else {
-        ipfs::Client client("ipfs.infura.io:5001");
+        ipfs::Client client("https://ipfs.infura.io:5001");
 
         client.Version(&version);
         const std::string& vv = version["Version"].dump();
@@ -449,7 +449,7 @@ Value jupiterversion(const Array& params, bool fHelp)
         
         obj.push_back(Pair("connected",          connected));
         obj.push_back(Pair("jupiterlocal",       "false"));
-        obj.push_back(Pair("ipfspeer",           "ipfs.infura.io:5001"));
+        obj.push_back(Pair("ipfspeer",           "https://ipfs.infura.io:5001"));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
 
         return obj;
@@ -577,7 +577,7 @@ Value jupiterpod(const Array& params, bool fHelp)
         } else {
             try {
                 ipfs::Json add_result;
-                ipfs::Client client("ipfs.infura.io:5001");
+                ipfs::Client client("https://ipfs.infura.io:5001");
 
                 if(userFile == "")
                 { 
@@ -735,7 +735,7 @@ Value jupiterupload(const Array& params, bool fHelp)
         } else {
             try {
                 ipfs::Json add_result;
-                ipfs::Client client("ipfs.infura.io:5001");
+                ipfs::Client client("https://ipfs.infura.io:5001");
 
                 if(userFile == "")
                 { 
@@ -779,6 +779,144 @@ Value jupiterupload(const Array& params, bool fHelp)
                 obj.push_back(Pair("error",          e.what()));
             }
 
+            return obj;
+        }
+
+        /*     ￼
+        jupiterupload C:/users/NAME/Dropbox/Denarius/denarius-128.png
+        15:45:55        ￼
+        {
+        "filename" : "denarius-128.png",
+        "results" : "[{\"hash\":\"QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT\",\"path\":\"denarius-128.png\",\"size\":47555}]",
+        "ipfshash" : "QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT",
+        "ipfslink" : "https://ipfs.infura.io/ipfs/QmYKi7A9PyqywRA4aBWmqgSCYrXgRzri2QF25JKzBMjCxT"
+        }
+        */
+}
+
+Value jupiterduo(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+    throw runtime_error(
+        "jupiterduo\n"
+        "\nArguments:\n"
+        "1. \"filelocation\"          (string, required) The file location of the file to upload (e.g. /home/name/file.jpg)\n"
+        "Returns the uploaded IPFS file CID/Hashes of the uploaded file and public gateway links if successful from submission to two IPFS API nodes.");
+
+    Object obj, second, first;
+    std::string userFile = params[0].get_str();
+
+
+    //Ensure IPFS connected
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
+
+    if (fJupiterLocal) {
+        try {
+            ipfs::Json add_result;
+
+            std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+            ipfs::Client client(ipfsip);
+
+            if(userFile == "")
+            { 
+            return;
+            }
+
+            std::string filename = userFile.c_str();
+
+            // Remove directory if present.
+            // Do this before extension removal incase directory has a period character.
+            const size_t last_slash_idx = filename.find_last_of("\\/");
+            if (std::string::npos != last_slash_idx)
+            {
+                filename.erase(0, last_slash_idx + 1);
+            }
+
+            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+            client.FilesAdd(
+            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            &add_result);
+            
+            const std::string& hash = add_result[0]["hash"];
+            int size = add_result[0]["size"];
+
+            std::string r = add_result.dump();
+            printf("Jupiter Duo Successfully Added IPFS File(s): %s\n", r.c_str());
+
+            std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+            std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+
+            obj.push_back(Pair("duoupload",          "true"));
+
+            first.push_back(Pair("nodeip",             ipfsip));
+            first.push_back(Pair("filename",           filename.c_str()));
+            first.push_back(Pair("sizebytes",          size));
+            first.push_back(Pair("ipfshash",           hash));
+            first.push_back(Pair("infuralink",         filelink));
+            first.push_back(Pair("cflink",             cloudlink));
+            obj.push_back(Pair("first",                first));
+            
+            } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+                obj.push_back(Pair("error",          e.what()));
+            }
+
+            try {
+                ipfs::Json add_result;
+                ipfs::Client client("https://ipfs.infura.io:5001");
+
+                if(userFile == "")
+                { 
+                return;
+                }
+
+                std::string filename = userFile.c_str();
+
+                // Remove directory if present.
+                // Do this before extension removal incase directory has a period character.
+                const size_t last_slash_idx = filename.find_last_of("\\/");
+                if (std::string::npos != last_slash_idx)
+                {
+                    filename.erase(0, last_slash_idx + 1);
+                }
+
+                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+                client.FilesAdd(
+                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                &add_result);
+                
+                const std::string& hash = add_result[0]["hash"];
+                int size = add_result[0]["size"];
+
+                std::string r = add_result.dump();
+                printf("Jupiter Duo Successfully Added IPFS File(s): %s\n", r.c_str());
+
+                std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+                std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+
+                second.push_back(Pair("nodeip",             "https://ipfs.infura.io:5001"));
+                second.push_back(Pair("filename",           filename.c_str()));
+                second.push_back(Pair("sizebytes",          size));
+                second.push_back(Pair("ipfshash",           hash));
+                second.push_back(Pair("infuralink",         filelink));
+                second.push_back(Pair("cflink",             cloudlink));
+                obj.push_back(Pair("second",                second));
+                
+                } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+                obj.push_back(Pair("error",          e.what()));
+            }
+
+            return obj;
+
+
+        } else {
+            obj.push_back(Pair("error",          "jupiterduo is only available with -jupiterlocal=1"));
             return obj;
         }
 
