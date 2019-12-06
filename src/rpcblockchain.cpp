@@ -340,7 +340,9 @@ Value jupitergetstat(const Array& params, bool fHelp)
     fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (fJupiterLocal) {
-        ipfs::Client client("localhost:5001");
+        std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+        ipfs::Client client(ipfsip);
 
         /* An example output:
         Stat: {"Key":"QmQpWo5TL9nivqvL18Bq8bS34eewAA6jcgdVsUu4tGeVHo","Size":15}
@@ -379,7 +381,9 @@ Value jupitergetblock(const Array& params, bool fHelp)
     fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (fJupiterLocal) {
-        ipfs::Client client("localhost:5001");
+        std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+        ipfs::Client client(ipfsip);
 
         client.BlockGet(userHash, &block_contents);
         obj.push_back(Pair("blockhex", ipfs::test::string_to_hex(block_contents.str()).c_str()));
@@ -412,7 +416,9 @@ Value jupiterversion(const Array& params, bool fHelp)
     fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (fJupiterLocal) {
-        ipfs::Client client("localhost:5001");
+        std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+        ipfs::Client client(ipfsip);
 
         client.Version(&version);
         const std::string& vv = version["Version"].dump();
@@ -424,7 +430,8 @@ Value jupiterversion(const Array& params, bool fHelp)
         }
         
         obj.push_back(Pair("connected",          connected));
-        obj.push_back(Pair("localpeer",          "localhost:5001"));
+        obj.push_back(Pair("jupiterlocal",       "true"));
+        obj.push_back(Pair("ipfspeer",           ipfsip));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
 
         return obj;
@@ -441,6 +448,7 @@ Value jupiterversion(const Array& params, bool fHelp)
         }
         
         obj.push_back(Pair("connected",          connected));
+        obj.push_back(Pair("jupiterlocal",       "false"));
         obj.push_back(Pair("ipfspeer",           "ipfs.infura.io:5001"));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
 
@@ -468,7 +476,9 @@ Value jupiterpod(const Array& params, bool fHelp)
         try {
             ipfs::Json add_result;
 
-            ipfs::Client client("localhost:5001");
+            std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+            ipfs::Client client(ipfsip);
 
             if(userFile == "")
             { 
@@ -675,7 +685,9 @@ Value jupiterupload(const Array& params, bool fHelp)
         try {
             ipfs::Json add_result;
 
-            ipfs::Client client("localhost:5001");
+            std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+            ipfs::Client client(ipfsip);
 
             if(userFile == "")
             { 

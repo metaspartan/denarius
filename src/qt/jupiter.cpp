@@ -81,7 +81,10 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
       try {
         std::stringstream contents;
         ipfs::Json add_result;
-        ipfs::Client client("localhost:5001");
+
+        std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+        ipfs::Client client(ipfsip);
 
         if(fileName == "")
         {
@@ -126,8 +129,6 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
         const std::string& hash = add_result[0]["hash"];
 
         ui->lineEdit->setText(QString::fromStdString(hash));
-
-
 
         std::string r = add_result.dump();
         printf("Jupiter POD Successfully Added IPFS File(s): %s\n", r.c_str());
@@ -397,7 +398,10 @@ if (fJupiterLocal) {
   try {
     std::stringstream contents;
     ipfs::Json add_result;
-    ipfs::Client client("localhost:5001");
+    
+    std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+    ipfs::Client client(ipfsip);
 
     if(fileName == "")
     {
