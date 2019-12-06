@@ -943,6 +943,215 @@ Value jupiterduo(const Array& params, bool fHelp)
         }
         */
 }
+
+Value jupiterduopod(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+    throw runtime_error(
+        "jupiterduopod\n"
+        "\nArguments:\n"
+        "1. \"filelocation\"          (string, required) The file location of the file to upload (e.g. /home/name/file.jpg)\n"
+        "Returns the uploaded IPFS file CID/Hashes of the uploaded file and public gateway links if successful from submission to two IPFS API nodes and PODs with D");
+
+    Object obj, second, first;
+    std::string userFile = params[0].get_str();
+
+
+    //Ensure IPFS connected
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
+
+    if (fJupiterLocal) {
+        try {
+            ipfs::Json add_result;
+
+            std::string ipfsip = GetArg("-jupiterip", "localhost:5001"); //Default Localhost
+
+            ipfs::Client client(ipfsip);
+
+            if(userFile == "")
+            { 
+            return;
+            }
+
+            std::string filename = userFile.c_str();
+
+            // Remove directory if present.
+            // Do this before extension removal incase directory has a period character.
+            const size_t last_slash_idx = filename.find_last_of("\\/");
+            if (std::string::npos != last_slash_idx)
+            {
+                filename.erase(0, last_slash_idx + 1);
+            }
+
+            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+            client.FilesAdd(
+            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            &add_result);
+            
+            const std::string& hash = add_result[0]["hash"];
+            int size = add_result[0]["size"];
+
+            std::string r = add_result.dump();
+            printf("Jupiter Duo Pod Successfully Added IPFS File(s): %s\n", r.c_str());
+
+            //Jupiter POD for Duo
+            if (hash != "") {
+                //Hash the file for Denarius Jupiter POD
+                //uint256 imagehash = SerializeHash(ipfsContents);
+                CKeyID keyid(Hash160(hash.begin(), hash.end()));
+                CBitcoinAddress baddr = CBitcoinAddress(keyid);
+                std::string addr = baddr.ToString();
+
+                //ui->lineEdit_2->setText(QString::fromStdString(addr));
+
+                CAmount nAmount = 0.0005 * COIN; // 0.0005 D Fee - 0.001 D Total for Jupiter Duo Pod
+                
+                // Wallet comments
+                CWalletTx wtx;
+                wtx.mapValue["comment"] = hash;
+                std::string sNarr = "Jupiter Duo POD";
+                wtx.mapValue["to"]      = "Jupiter Duo POD";
+                
+                if (pwalletMain->IsLocked())
+                {
+                    obj.push_back(Pair("error",  "Error, Your wallet is locked! Please unlock your wallet!"));
+                    //ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send Jupiter POD. Unlock your wallet!");
+                } else if (pwalletMain->GetBalance() < 0.001) {
+                    obj.push_back(Pair("error",  "Error, You need at least 0.001 D to send Jupiter POD!"));
+                    //ui->txLineEdit->setText("ERROR: You need at least a 0.001 D balance to send Jupiter POD.");
+                } else {          
+                    //std::string sNarr;
+                    std::string strError = pwalletMain->SendMoneyToDestination(baddr.Get(), nAmount, sNarr, wtx);
+
+                    if(strError != "")
+                    {
+                        obj.push_back(Pair("error",  strError.c_str()));
+                    }
+
+                    std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+                    std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                    std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
+
+                    obj.push_back(Pair("duoupload",          "true"));
+
+                    first.push_back(Pair("nodeip",             ipfsip));
+                    first.push_back(Pair("filename",           filename.c_str()));
+                    first.push_back(Pair("sizebytes",          size));
+                    first.push_back(Pair("ipfshash",           hash));
+                    first.push_back(Pair("infuralink",         filelink));
+                    first.push_back(Pair("cflink",             cloudlink));
+                    first.push_back(Pair("ipfslink",           ipfsoglink));
+                    first.push_back(Pair("podaddress",         addr.c_str()));
+                    first.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
+                    obj.push_back(Pair("first",                first));
+
+                }
+            }
+            
+            } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+                obj.push_back(Pair("error",          e.what()));
+            }
+
+            try {
+                ipfs::Json add_result;
+                ipfs::Client client("https://ipfs.infura.io:5001");
+
+                if(userFile == "")
+                { 
+                return;
+                }
+
+                std::string filename = userFile.c_str();
+
+                // Remove directory if present.
+                // Do this before extension removal incase directory has a period character.
+                const size_t last_slash_idx = filename.find_last_of("\\/");
+                if (std::string::npos != last_slash_idx)
+                {
+                    filename.erase(0, last_slash_idx + 1);
+                }
+
+                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
+
+                client.FilesAdd(
+                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                &add_result);
+                
+                const std::string& hash = add_result[0]["hash"];
+                int size = add_result[0]["size"];
+
+                std::string r = add_result.dump();
+                printf("Jupiter Duo POD Successfully Added IPFS File(s): %s\n", r.c_str());
+
+                //Jupiter POD for Duo
+                if (hash != "") {
+                    //Hash the file for Denarius Jupiter POD
+                    //uint256 imagehash = SerializeHash(ipfsContents);
+                    CKeyID keyid(Hash160(hash.begin(), hash.end()));
+                    CBitcoinAddress baddr = CBitcoinAddress(keyid);
+                    std::string addr = baddr.ToString();
+
+                    //ui->lineEdit_2->setText(QString::fromStdString(addr));
+
+                    CAmount nAmount = 0.0005 * COIN; // 0.0005 D Fee - 0.001 D Total for Jupiter Duo Pod
+                    
+                    // Wallet comments
+                    CWalletTx wtx;
+                    wtx.mapValue["comment"] = hash;
+                    std::string sNarr = "Jupiter Duo POD";
+                    wtx.mapValue["to"]      = "Jupiter Duo POD";
+                    
+                    if (pwalletMain->IsLocked())
+                    {
+                        obj.push_back(Pair("error",  "Error, Your wallet is locked! Please unlock your wallet!"));
+                        //ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send Jupiter POD. Unlock your wallet!");
+                    } else if (pwalletMain->GetBalance() < 0.001) {
+                        obj.push_back(Pair("error",  "Error, You need at least 0.001 D to send Jupiter POD!"));
+                        //ui->txLineEdit->setText("ERROR: You need at least a 0.001 D balance to send Jupiter POD.");
+                    } else {          
+                        //std::string sNarr;
+                        std::string strError = pwalletMain->SendMoneyToDestination(baddr.Get(), nAmount, sNarr, wtx);
+
+                        if(strError != "")
+                        {
+                            obj.push_back(Pair("error",  strError.c_str()));
+                        }
+
+                        std::string filelink = "https://ipfs.infura.io/ipfs/" + hash;
+                        std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
+                        std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
+
+                        second.push_back(Pair("nodeip",             "https://ipfs.infura.io:5001"));
+                        second.push_back(Pair("filename",           filename.c_str()));
+                        second.push_back(Pair("sizebytes",          size));
+                        second.push_back(Pair("ipfshash",           hash));
+                        second.push_back(Pair("infuralink",         filelink));
+                        second.push_back(Pair("cflink",             cloudlink));
+                        second.push_back(Pair("ipfslink",           ipfsoglink));
+                        second.push_back(Pair("podaddress",         addr.c_str()));
+                        second.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
+                        obj.push_back(Pair("second",                second));
+
+                    }
+                }
+                
+                } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl; //302 error on large files: passing null and throwing exception
+                obj.push_back(Pair("error",          e.what()));
+            }
+
+            return obj;
+
+
+        } else {
+            obj.push_back(Pair("error",          "jupiterduopod is only available with -jupiterlocal=1"));
+            return obj;
+        }
+}
 #endif
 
 Value getbestblockhash(const Array& params, bool fHelp)

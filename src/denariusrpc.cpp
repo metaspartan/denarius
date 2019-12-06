@@ -392,6 +392,7 @@ static const CRPCCommand vRPCCommands[] =
     { "jupiterupload",        &jupiterupload,            false,  false },
     { "jupiterpod",           &jupiterpod,               false,  false },
     { "jupiterduo",           &jupiterduo,               false,  false },
+    { "jupiterduopod",        &jupiterduopod,            false,  false },
     { "jupitergetblock",      &jupitergetblock,          false,  false },
     { "jupitergetstat",       &jupitergetstat,           false,  false },
 

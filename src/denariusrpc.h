@@ -250,6 +250,7 @@ extern json_spirit::Value jupiterversion(const json_spirit::Array& params, bool 
 extern json_spirit::Value jupiterupload(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupiterpod(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupiterduo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value jupiterduopod(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetblock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetstat(const json_spirit::Array& params, bool fHelp);
 
