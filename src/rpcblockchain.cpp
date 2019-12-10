@@ -323,6 +323,79 @@ Value dumpbootstrap(const Array& params, bool fHelp)
     return Value::null;
 }
 
+Value proofofdata(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+    throw runtime_error(
+        "proofofdata\n"
+        "\nArguments:\n"
+        "1. \"filelocation\"          (string, required) The file location of the file to upload (e.g. /home/name/file.jpg)\n"
+        "Returns the Denarius address and transaction ID of the proof of data submission of the file hashed into a D address");
+
+    Object obj;
+    std::string userFile = params[0].get_str();
+    std::ifstream dataFile;
+
+    if(userFile == "")
+    { 
+        return;
+    }
+
+    std::string filename = userFile.c_str();
+
+    // Remove directory if present.
+    // Do this before extension removal incase directory has a period character.
+    const size_t last_slash_idx = filename.find_last_of("\\/");
+    if (std::string::npos != last_slash_idx)
+    {
+        filename.erase(0, last_slash_idx + 1);
+    }
+
+    dataFile.open(userFile.c_str(), std::ios::binary);
+    std::vector<char> dataContents((std::istreambuf_iterator<char>(dataFile)), std::istreambuf_iterator<char>());
+
+    printf("POD Upload File Start: %s\n", filename.c_str());    
+
+    //Hash the file for Denarius POD
+    uint256 datahash = SerializeHash(dataContents);
+    CKeyID keyid(Hash160(datahash.begin(), datahash.end()));
+    CBitcoinAddress baddr = CBitcoinAddress(keyid);
+    std::string addr = baddr.ToString();
+
+    CAmount nAmount = 0.001 * COIN; // 0.001 D Fee
+    
+    // Wallet comments
+    CWalletTx wtx;
+    wtx.mapValue["comment"] = filename.c_str();
+    std::string sNarr = "POD";
+    wtx.mapValue["to"]      = "Proof of Data";
+    
+    if (pwalletMain->IsLocked())
+    {
+        obj.push_back(Pair("error",  "Error, Your wallet is locked! Please unlock your wallet!"));
+        //ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send POD. Unlock your wallet!");
+    } else if (pwalletMain->GetBalance() < 0.001) {
+        obj.push_back(Pair("error",  "Error, You need at least 0.001 D to send POD!"));
+        //ui->txLineEdit->setText("ERROR: You need at least a 0.001 D balance to send POD.");
+    } else {          
+        //std::string sNarr;
+        std::string strError = pwalletMain->SendMoneyToDestination(baddr.Get(), nAmount, sNarr, wtx);
+
+        if(strError != "")
+        {
+            obj.push_back(Pair("error",  strError.c_str()));
+        }
+
+        obj.push_back(Pair("filename",           filename.c_str()));
+        //obj.push_back(Pair("sizebytes",        size));
+        obj.push_back(Pair("podaddress",         addr.c_str()));
+        obj.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
+    }
+
+    return obj;
+    
+}
+
 #ifdef USE_IPFS
 Value jupitergetstat(const Array& params, bool fHelp)
 {

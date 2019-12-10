@@ -387,12 +387,14 @@ static const CRPCCommand vRPCCommands[] =
     { "thinscanmerkleblocks",   &thinscanmerkleblocks,   false,  false},
     { "thinforcestate",         &thinforcestate,         false,  false},
 
+    { "proofofdata",          &proofofdata,              false,  true  },
+
     // Denarius Jupiter IPFS
     { "jupiterversion",       &jupiterversion,           true,   false },
     { "jupiterupload",        &jupiterupload,            false,  false },
-    { "jupiterpod",           &jupiterpod,               false,  false },
+    { "jupiterpod",           &jupiterpod,               false,  true  },
     { "jupiterduo",           &jupiterduo,               false,  false },
-    { "jupiterduopod",        &jupiterduopod,            false,  false },
+    { "jupiterduopod",        &jupiterduopod,            false,  true  },
     { "jupitergetblock",      &jupitergetblock,          false,  false },
     { "jupitergetstat",       &jupitergetstat,           false,  false },
 

@@ -254,6 +254,8 @@ extern json_spirit::Value jupiterduopod(const json_spirit::Array& params, bool f
 extern json_spirit::Value jupitergetblock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetstat(const json_spirit::Array& params, bool fHelp);
 
+extern json_spirit::Value proofofdata(const json_spirit::Array& params, bool fHelp);
+
 extern json_spirit::Value getnewstealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value liststealthaddresses(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importstealthaddress(const json_spirit::Array& params, bool fHelp);
