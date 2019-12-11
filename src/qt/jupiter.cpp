@@ -13,6 +13,8 @@
 #include "wallet.h"
 #include "walletdb.h"
 
+#include <boost/filesystem.hpp>
+
 #ifdef USE_IPFS
 #include <ipfs/client.h>
 #include <ipfs/http/transport.h>
@@ -95,22 +97,9 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
         //read whole file
         std::ifstream ipfsFile;
         std::string filename = fileName.toStdString().c_str();
-        // Remove directory if present.
-        // Do this before extension removal incase directory has a period character.
-        const size_t last_slash_idx = filename.find_last_of("\\/");
-        if (std::string::npos != last_slash_idx)
-        {
-            filename.erase(0, last_slash_idx + 1);
-        }
-        
-        // Remove extension if present.
-        /*
-        const size_t period_idx = filename.rfind('.');
-        if (std::string::npos != period_idx)
-        {
-            filename.erase(period_idx);
-        }
-        */
+
+        boost::filesystem::path p(filename);
+        std::string basename = p.filename().string();
 
         ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
         std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
@@ -119,11 +108,11 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
 
         std::string fileContents = ipfsC.c_str();
 
-        printf("Jupiter Upload File Start: %s\n", filename.c_str());
+        printf("Jupiter Upload File Start: %s\n", basename.c_str());
         //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
         client.FilesAdd(
-        {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+        {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
         &add_result);
         
         const std::string& hash = add_result[0]["hash"];
@@ -214,22 +203,9 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
         //read whole file
         std::ifstream ipfsFile;
         std::string filename = fileName.toStdString().c_str();
-        // Remove directory if present.
-        // Do this before extension removal incase directory has a period character.
-        const size_t last_slash_idx = filename.find_last_of("\\/");
-        if (std::string::npos != last_slash_idx)
-        {
-            filename.erase(0, last_slash_idx + 1);
-        }
-        
-        // Remove extension if present.
-        /*
-        const size_t period_idx = filename.rfind('.');
-        if (std::string::npos != period_idx)
-        {
-            filename.erase(period_idx);
-        }
-        */
+
+        boost::filesystem::path p(filename);
+        std::string basename = p.filename().string();
 
         ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
         std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
@@ -238,11 +214,11 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
 
         std::string fileContents = ipfsC.c_str();
 
-        printf("Jupiter Upload File Start: %s\n", filename.c_str());
+        printf("Jupiter Upload File Start: %s\n", basename.c_str());
         //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
         client.FilesAdd(
-        {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+        {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
         &add_result);
         
         const std::string& hash = add_result[0]["hash"];
@@ -325,66 +301,6 @@ if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Denarius Jupiter 
   }
 #endif
 
-  /*
-    if(fileName == "")
-    {
-  noImageSelected();   
-  return;
-    }
-
-    //read whole file
-    std::ifstream imageFile;
-    imageFile.open(fileName.toStdString().c_str(), std::ios::binary);
-std::vector<char> imageContents((std::istreambuf_iterator<char>(imageFile)),
-                               std::istreambuf_iterator<char>());
-
-    //hash file
-    uint256 imagehash = SerializeHash(imageContents);
-    CKeyID keyid(Hash160(imagehash.begin(), imagehash.end()));
-    CBitcoinAddress baddr = CBitcoinAddress(keyid);
-    std::string addr = baddr.ToString();
-
-    ui->lineEdit->setText(QString::fromStdString(addr));
-
-    CAmount nAmount = 0.001 * COIN; // 0.001 D Fee
-    
-    // Wallet comments
-    CWalletTx wtx;
-    wtx.mapValue["comment"] = fileName.toStdString();
-	std::string sNarr = ui->edit->text().toStdString();
-    wtx.mapValue["to"]      = "Proof of Data";
-    
-    if (pwalletMain->IsLocked())
-    {
-	  QMessageBox unlockbox;
-	  unlockbox.setText("Error, Your wallet is locked! Please unlock your wallet!");
-	  unlockbox.exec();
-      ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send proof of data. Unlock your wallet!");
-    }
-    else if(pwalletMain->GetBalance() < 0.001)
-    {
-	  QMessageBox error2box;
-	  error2box.setText("Error, You need at least 0.001 D to send proof of data!");
-	  error2box.exec();
-      ui->txLineEdit->setText("ERROR: You need at least a 0.001 D balance to send proof of data.");
-    }
-    else
-    {
-      //std::string sNarr;
-      std::string strError = pwalletMain->SendMoneyToDestination(baddr.Get(), nAmount, sNarr, wtx);
-
-     if(strError != "")
-     {
-        QMessageBox infobox;
-        infobox.setText(QString::fromStdString(strError));
-        infobox.exec();
-     }
-		QMessageBox successbox;
-		successbox.setText("Proof of Data, Successful!");
-		successbox.exec();
-        ui->txLineEdit->setText(QString::fromStdString(wtx.GetHash().GetHex()));
-     }
-    */
 }
 
 void Jupiter::on_createPushButton_clicked()
@@ -412,22 +328,9 @@ if (fJupiterLocal) {
     //read whole file
     std::ifstream ipfsFile;
     std::string filename = fileName.toStdString().c_str();
-    // Remove directory if present.
-    // Do this before extension removal incase directory has a period character.
-    const size_t last_slash_idx = filename.find_last_of("\\/");
-    if (std::string::npos != last_slash_idx)
-    {
-        filename.erase(0, last_slash_idx + 1);
-    }
-    
-    // Remove extension if present.
-    /*
-    const size_t period_idx = filename.rfind('.');
-    if (std::string::npos != period_idx)
-    {
-        filename.erase(period_idx);
-    }
-    */
+
+    boost::filesystem::path p(filename);
+    std::string basename = p.filename().string();
 
     ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
     std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
@@ -436,11 +339,11 @@ if (fJupiterLocal) {
 
     std::string fileContents = ipfsC.c_str();
 
-    printf("Jupiter Upload File Start: %s\n", filename.c_str());
+    printf("Jupiter Upload File Start: %s\n", basename.c_str());
     //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
     client.FilesAdd(
-    {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+    {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
     &add_result);
     
     const std::string& hash = add_result[0]["hash"];
@@ -480,22 +383,9 @@ if (fJupiterLocal) {
     //read whole file
     std::ifstream ipfsFile;
     std::string filename = fileName.toStdString().c_str();
-    // Remove directory if present.
-    // Do this before extension removal incase directory has a period character.
-    const size_t last_slash_idx = filename.find_last_of("\\/");
-    if (std::string::npos != last_slash_idx)
-    {
-        filename.erase(0, last_slash_idx + 1);
-    }
-    
-    // Remove extension if present.
-    /*
-    const size_t period_idx = filename.rfind('.');
-    if (std::string::npos != period_idx)
-    {
-        filename.erase(period_idx);
-    }
-    */
+
+    boost::filesystem::path p(filename);
+    std::string basename = p.filename().string();
 
     ipfsFile.open(fileName.toStdString().c_str(), std::ios::binary);
     std::vector<char> ipfsContents((std::istreambuf_iterator<char>(ipfsFile)), std::istreambuf_iterator<char>());
@@ -504,11 +394,11 @@ if (fJupiterLocal) {
 
     std::string fileContents = ipfsC.c_str();
 
-    printf("Jupiter Upload File Start: %s\n", filename.c_str());
+    printf("Jupiter Upload File Start: %s\n", basename.c_str());
     //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
     client.FilesAdd(
-    {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
+    {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, fileName.toStdString().c_str()}},
     &add_result);
     
     const std::string& hash = add_result[0]["hash"];
@@ -535,67 +425,6 @@ if (fJupiterLocal) {
 
 }
 #endif
-
-  /*
-    if(fileName == "")
-    {
-  noImageSelected();   
-  return;
-    }
-
-    //read whole file
-    std::ifstream imageFile;
-    imageFile.open(fileName.toStdString().c_str(), std::ios::binary);
-std::vector<char> imageContents((std::istreambuf_iterator<char>(imageFile)),
-                               std::istreambuf_iterator<char>());
-
-    //hash file
-    uint256 imagehash = SerializeHash(imageContents);
-    CKeyID keyid(Hash160(imagehash.begin(), imagehash.end()));
-    CBitcoinAddress baddr = CBitcoinAddress(keyid);
-    std::string addr = baddr.ToString();
-
-    ui->lineEdit->setText(QString::fromStdString(addr));
-
-    CAmount nAmount = 0.001 * COIN; // 0.001 D Fee
-    
-    // Wallet comments
-    CWalletTx wtx;
-    wtx.mapValue["comment"] = fileName.toStdString();
-	std::string sNarr = ui->edit->text().toStdString();
-    wtx.mapValue["to"]      = "Proof of Data";
-    
-    if (pwalletMain->IsLocked())
-    {
-	  QMessageBox unlockbox;
-	  unlockbox.setText("Error, Your wallet is locked! Please unlock your wallet!");
-	  unlockbox.exec();
-      ui->txLineEdit->setText("ERROR: Your wallet is locked! Cannot send proof of data. Unlock your wallet!");
-    }
-    else if(pwalletMain->GetBalance() < 0.001)
-    {
-	  QMessageBox error2box;
-	  error2box.setText("Error, You need at least 0.001 D to send proof of data!");
-	  error2box.exec();
-      ui->txLineEdit->setText("ERROR: You need at least a 0.001 D balance to send proof of data.");
-    }
-    else
-    {
-      //std::string sNarr;
-      std::string strError = pwalletMain->SendMoneyToDestination(baddr.Get(), nAmount, sNarr, wtx);
-
-     if(strError != "")
-     {
-        QMessageBox infobox;
-        infobox.setText(QString::fromStdString(strError));
-        infobox.exec();
-     }
-		QMessageBox successbox;
-		successbox.setText("Proof of Data, Successful!");
-		successbox.exec();
-        ui->txLineEdit->setText(QString::fromStdString(wtx.GetHash().GetHex()));
-     }
-    */
 
 }
 

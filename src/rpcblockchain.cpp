@@ -10,6 +10,8 @@
 #include "txdb.h"
 #include <errno.h>
 
+#include <boost/filesystem.hpp>
+
 #ifdef USE_IPFS
 #include <ipfs/client.h>
 #include <ipfs/http/transport.h>
@@ -343,18 +345,13 @@ Value proofofdata(const Array& params, bool fHelp)
 
     std::string filename = userFile.c_str();
 
-    // Remove directory if present.
-    // Do this before extension removal incase directory has a period character.
-    const size_t last_slash_idx = filename.find_last_of("\\/");
-    if (std::string::npos != last_slash_idx)
-    {
-        filename.erase(0, last_slash_idx + 1);
-    }
+    boost::filesystem::path p(filename);
+    std::string basename = p.filename().string();
 
     dataFile.open(userFile.c_str(), std::ios::binary);
     std::vector<char> dataContents((std::istreambuf_iterator<char>(dataFile)), std::istreambuf_iterator<char>());
 
-    printf("POD Upload File Start: %s\n", filename.c_str());    
+    printf("POD Upload File Start: %s\n", basename.c_str());    
 
     //Hash the file for Denarius POD
     uint256 datahash = SerializeHash(dataContents);
@@ -366,7 +363,7 @@ Value proofofdata(const Array& params, bool fHelp)
     
     // Wallet comments
     CWalletTx wtx;
-    wtx.mapValue["comment"] = filename.c_str();
+    wtx.mapValue["comment"] = basename.c_str();
     std::string sNarr = "POD";
     wtx.mapValue["to"]      = "Proof of Data";
     
@@ -386,7 +383,7 @@ Value proofofdata(const Array& params, bool fHelp)
             obj.push_back(Pair("error",  strError.c_str()));
         }
 
-        obj.push_back(Pair("filename",           filename.c_str()));
+        obj.push_back(Pair("filename",           basename.c_str()));
         //obj.push_back(Pair("sizebytes",        size));
         obj.push_back(Pair("podaddress",         addr.c_str()));
         obj.push_back(Pair("podtxid",            wtx.GetHash().GetHex()));
@@ -560,19 +557,14 @@ Value jupiterpod(const Array& params, bool fHelp)
 
             std::string filename = userFile.c_str();
 
-            // Remove directory if present.
-            // Do this before extension removal incase directory has a period character.
-            const size_t last_slash_idx = filename.find_last_of("\\/");
-            if (std::string::npos != last_slash_idx)
-            {
-                filename.erase(0, last_slash_idx + 1);
-            }
+            boost::filesystem::path p(filename);
+            std::string basename = p.filename().string();
 
-            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            printf("Jupiter Upload File Start: %s\n", basename.c_str());
             //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
             client.FilesAdd(
-            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
             &add_result);
             
             const std::string& hash = add_result[0]["hash"];
@@ -621,7 +613,7 @@ Value jupiterpod(const Array& params, bool fHelp)
                     std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
                     std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
-                    obj.push_back(Pair("filename",           filename.c_str()));
+                    obj.push_back(Pair("filename",           basename.c_str()));
                     obj.push_back(Pair("sizebytes",          size));
                     obj.push_back(Pair("ipfshash",           hash));
                     obj.push_back(Pair("infuralink",         filelink));
@@ -661,19 +653,14 @@ Value jupiterpod(const Array& params, bool fHelp)
 
                 std::string filename = userFile.c_str();
 
-                // Remove directory if present.
-                // Do this before extension removal incase directory has a period character.
-                const size_t last_slash_idx = filename.find_last_of("\\/");
-                if (std::string::npos != last_slash_idx)
-                {
-                    filename.erase(0, last_slash_idx + 1);
-                }
+                boost::filesystem::path p(filename);
+                std::string basename = p.filename().string();
 
-                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                printf("Jupiter Upload File Start: %s\n", basename.c_str());
                 //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
                 client.FilesAdd(
-                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
                 &add_result);
                 
                 const std::string& hash = add_result[0]["hash"];
@@ -722,7 +709,7 @@ Value jupiterpod(const Array& params, bool fHelp)
                         std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
                         std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
-                        obj.push_back(Pair("filename",           filename.c_str()));
+                        obj.push_back(Pair("filename",           basename.c_str()));
                         obj.push_back(Pair("sizebytes",          size));
                         obj.push_back(Pair("ipfshash",           hash));
                         obj.push_back(Pair("infuralink",         filelink));
@@ -773,19 +760,14 @@ Value jupiterupload(const Array& params, bool fHelp)
 
             std::string filename = userFile.c_str();
 
-            // Remove directory if present.
-            // Do this before extension removal incase directory has a period character.
-            const size_t last_slash_idx = filename.find_last_of("\\/");
-            if (std::string::npos != last_slash_idx)
-            {
-                filename.erase(0, last_slash_idx + 1);
-            }
+            boost::filesystem::path p(filename);
+            std::string basename = p.filename().string();
 
-            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            printf("Jupiter Upload File Start: %s\n", basename.c_str());
             //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
             client.FilesAdd(
-            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
             &add_result);
             
             const std::string& hash = add_result[0]["hash"];
@@ -798,7 +780,7 @@ Value jupiterupload(const Array& params, bool fHelp)
             std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
             std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
-            obj.push_back(Pair("filename",           filename.c_str()));
+            obj.push_back(Pair("filename",           basename.c_str()));
             obj.push_back(Pair("sizebytes",          size));
             obj.push_back(Pair("ipfshash",           hash));
             obj.push_back(Pair("infuralink",         filelink));
@@ -823,19 +805,14 @@ Value jupiterupload(const Array& params, bool fHelp)
 
                 std::string filename = userFile.c_str();
 
-                // Remove directory if present.
-                // Do this before extension removal incase directory has a period character.
-                const size_t last_slash_idx = filename.find_last_of("\\/");
-                if (std::string::npos != last_slash_idx)
-                {
-                    filename.erase(0, last_slash_idx + 1);
-                }
+                boost::filesystem::path p(filename);
+                std::string basename = p.filename().string();
 
-                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                printf("Jupiter Upload File Start: %s\n", basename.c_str());
                 //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
                 client.FilesAdd(
-                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
                 &add_result);
                 
                 const std::string& hash = add_result[0]["hash"];
@@ -848,7 +825,7 @@ Value jupiterupload(const Array& params, bool fHelp)
                 std::string cloudlink = "https://cloudflare-ipfs.com/ipfs/" + hash;
                 std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
-                obj.push_back(Pair("filename",           filename.c_str()));
+                obj.push_back(Pair("filename",           basename.c_str()));
                 obj.push_back(Pair("sizebytes",          size));
                 obj.push_back(Pair("ipfshash",           hash));
                 obj.push_back(Pair("infuralink",         filelink));
@@ -906,19 +883,14 @@ Value jupiterduo(const Array& params, bool fHelp)
 
             std::string filename = userFile.c_str();
 
-            // Remove directory if present.
-            // Do this before extension removal incase directory has a period character.
-            const size_t last_slash_idx = filename.find_last_of("\\/");
-            if (std::string::npos != last_slash_idx)
-            {
-                filename.erase(0, last_slash_idx + 1);
-            }
+            boost::filesystem::path p(filename);
+            std::string basename = p.filename().string();
 
-            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            printf("Jupiter Upload File Start: %s\n", basename.c_str());
             //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
             client.FilesAdd(
-            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
             &add_result);
             
             const std::string& hash = add_result[0]["hash"];
@@ -934,7 +906,7 @@ Value jupiterduo(const Array& params, bool fHelp)
             obj.push_back(Pair("duoupload",          "true"));
 
             first.push_back(Pair("nodeip",             ipfsip));
-            first.push_back(Pair("filename",           filename.c_str()));
+            first.push_back(Pair("filename",           basename.c_str()));
             first.push_back(Pair("sizebytes",          size));
             first.push_back(Pair("ipfshash",           hash));
             first.push_back(Pair("infuralink",         filelink));
@@ -958,19 +930,14 @@ Value jupiterduo(const Array& params, bool fHelp)
 
                 std::string filename = userFile.c_str();
 
-                // Remove directory if present.
-                // Do this before extension removal incase directory has a period character.
-                const size_t last_slash_idx = filename.find_last_of("\\/");
-                if (std::string::npos != last_slash_idx)
-                {
-                    filename.erase(0, last_slash_idx + 1);
-                }
+                boost::filesystem::path p(filename);
+                std::string basename = p.filename().string();
 
-                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                printf("Jupiter Upload File Start: %s\n", basename.c_str());
                 //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
                 client.FilesAdd(
-                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
                 &add_result);
                 
                 const std::string& hash = add_result[0]["hash"];
@@ -984,7 +951,7 @@ Value jupiterduo(const Array& params, bool fHelp)
                 std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                 second.push_back(Pair("nodeip",             "https://ipfs.infura.io:5001"));
-                second.push_back(Pair("filename",           filename.c_str()));
+                second.push_back(Pair("filename",           basename.c_str()));
                 second.push_back(Pair("sizebytes",          size));
                 second.push_back(Pair("ipfshash",           hash));
                 second.push_back(Pair("infuralink",         filelink));
@@ -1048,19 +1015,14 @@ Value jupiterduopod(const Array& params, bool fHelp)
 
             std::string filename = userFile.c_str();
 
-            // Remove directory if present.
-            // Do this before extension removal incase directory has a period character.
-            const size_t last_slash_idx = filename.find_last_of("\\/");
-            if (std::string::npos != last_slash_idx)
-            {
-                filename.erase(0, last_slash_idx + 1);
-            }
+            boost::filesystem::path p(filename);
+            std::string basename = p.filename().string();
 
-            printf("Jupiter Upload File Start: %s\n", filename.c_str());
+            printf("Jupiter Upload File Start: %s\n", basename.c_str());
             //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
             client.FilesAdd(
-            {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+            {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
             &add_result);
             
             const std::string& hash = add_result[0]["hash"];
@@ -1110,7 +1072,7 @@ Value jupiterduopod(const Array& params, bool fHelp)
                     obj.push_back(Pair("duoupload",          "true"));
 
                     first.push_back(Pair("nodeip",             ipfsip));
-                    first.push_back(Pair("filename",           filename.c_str()));
+                    first.push_back(Pair("filename",           basename.c_str()));
                     first.push_back(Pair("sizebytes",          size));
                     first.push_back(Pair("ipfshash",           hash));
                     first.push_back(Pair("infuralink",         filelink));
@@ -1139,19 +1101,14 @@ Value jupiterduopod(const Array& params, bool fHelp)
 
                 std::string filename = userFile.c_str();
 
-                // Remove directory if present.
-                // Do this before extension removal incase directory has a period character.
-                const size_t last_slash_idx = filename.find_last_of("\\/");
-                if (std::string::npos != last_slash_idx)
-                {
-                    filename.erase(0, last_slash_idx + 1);
-                }
+                boost::filesystem::path p(filename);
+                std::string basename = p.filename().string();
 
-                printf("Jupiter Upload File Start: %s\n", filename.c_str());
+                printf("Jupiter Upload File Start: %s\n", basename.c_str());
                 //printf("Jupiter File Contents: %s\n", ipfsC.c_str());
 
                 client.FilesAdd(
-                {{filename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
+                {{basename.c_str(), ipfs::http::FileUpload::Type::kFileName, userFile.c_str()}},
                 &add_result);
                 
                 const std::string& hash = add_result[0]["hash"];
@@ -1199,7 +1156,7 @@ Value jupiterduopod(const Array& params, bool fHelp)
                         std::string ipfsoglink = "https://ipfs.io/ipfs/" + hash;
 
                         second.push_back(Pair("nodeip",             "https://ipfs.infura.io:5001"));
-                        second.push_back(Pair("filename",           filename.c_str()));
+                        second.push_back(Pair("filename",           basename.c_str()));
                         second.push_back(Pair("sizebytes",          size));
                         second.push_back(Pair("ipfshash",           hash));
                         second.push_back(Pair("infuralink",         filelink));
