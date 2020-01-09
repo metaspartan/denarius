@@ -53,23 +53,6 @@ static bool GetLastStakeModifier(const CBlockIndex* pindex, uint64_t& nStakeModi
     return true;
 }
 
-// Get the last stake modifier and its generation time from a given block
-static bool GetLastStakeModifierThin(const CBlockThinIndex* pindex, uint64_t& nStakeModifier, int64_t& nModifierTime)
-{
-    if (!pindex)
-        return error("GetLastStakeModifierThin: null pindex");
-
-    while (pindex && pindex->pprev && !pindex->GeneratedStakeModifier())
-        pindex = pindex->pprev;
-
-    if (!pindex->GeneratedStakeModifier())
-        return error("GetLastStakeModifierThin: no generation at genesis block");
-
-    nStakeModifier = pindex->nStakeModifier;
-    nModifierTime = pindex->GetBlockTime();
-    return true;
-}
-
 // Get selection interval section (in seconds)
 static int64_t GetStakeModifierSelectionIntervalSection(int nSection)
 {
@@ -128,55 +111,6 @@ static bool SelectBlockFromCandidates(vector<pair<int64_t, uint256> >& vSortedBy
     }
     if (fDebug && GetBoolArg("-printstakemodifier"))
         printf("SelectBlockFromCandidates: selection hash=%s\n", hashBest.ToString().c_str());
-    return fSelected;
-}
-
-static bool SelectBlockFromCandidatesThin(vector<pair<int64_t, uint256> >& vSortedByTimestamp, map<uint256, const CBlockThinIndex*>& mapSelectedBlocks,
-    int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockThinIndex** pindexSelected)
-{
-    bool fSelected = false;
-    uint256 hashBest = 0;
-    *pindexSelected = (const CBlockThinIndex*) 0;
-    BOOST_FOREACH(const PAIRTYPE(int64_t, uint256)& item, vSortedByTimestamp)
-    {
-        if (!mapBlockThinIndex.count(item.second))
-            return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
-
-
-        const CBlockThinIndex* pindex = mapBlockThinIndex[item.second];
-
-        if (fSelected && pindex->GetBlockTime() > nSelectionIntervalStop)
-            break;
-
-        if (mapSelectedBlocks.count(pindex->GetBlockHash()) > 0)
-            continue;
-
-        // compute the selection hash by hashing its proof-hash and the
-        // previous proof-of-stake modifier
-        CDataStream ss(SER_GETHASH, 0);
-        ss << pindex->hashProof << nStakeModifierPrev;
-        uint256 hashSelection = Hash(ss.begin(), ss.end());
-        // the selection hash is divided by 2**32 so that proof-of-stake block
-        // is always favored over proof-of-work block. this is to preserve
-        // the energy efficiency property
-        if (pindex->IsProofOfStake())
-            hashSelection >>= 32;
-
-        if (fSelected && hashSelection < hashBest)
-        {
-            hashBest = hashSelection;
-            *pindexSelected = (const CBlockThinIndex*) pindex;
-        } else
-        if (!fSelected)
-        {
-            fSelected = true;
-            hashBest = hashSelection;
-            *pindexSelected = (const CBlockThinIndex*) pindex;
-        };
-    };
-
-    if (fDebug && GetBoolArg("-printstakemodifier"))
-        printf("SelectBlockFromCandidatesThin: selection hash=%s\n", hashBest.ToString().c_str());
     return fSelected;
 }
 
@@ -280,103 +214,6 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     return true;
 }
 
-bool ComputeNextStakeModifierThin(const CBlockThinIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier)
-{
-    nStakeModifier = 0;
-    fGeneratedStakeModifier = false;
-    if (!pindexPrev)
-    {
-        fGeneratedStakeModifier = true;
-        return true;  // genesis block's modifier is 0
-    };
-
-    // First find current stake modifier and its generation block time
-    // if it's not old enough, return the same stake modifier
-    int64_t nModifierTime = 0;
-    if (!GetLastStakeModifierThin(pindexPrev, nStakeModifier, nModifierTime))
-        return error("ComputeNextStakeModifier: unable to get last modifier");
-
-    if (fDebug)
-    {
-        printf("ComputeNextStakeModifierThin: prev modifier=0x%016"PRIx64" time=%s\n", nStakeModifier, DateTimeStrFormat(nModifierTime).c_str());
-    };
-
-    if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
-        return true;
-
-    // Sort candidate blocks by timestamp
-    vector<pair<int64_t, uint256> > vSortedByTimestamp;
-    vSortedByTimestamp.reserve(64 * nModifierInterval / nTargetSpacing);
-    int64_t nSelectionInterval = GetStakeModifierSelectionInterval();
-    int64_t nSelectionIntervalStart = (pindexPrev->GetBlockTime() / nModifierInterval) * nModifierInterval - nSelectionInterval;
-    const CBlockThinIndex* pindex = pindexPrev;
-    while (pindex && pindex->GetBlockTime() >= nSelectionIntervalStart)
-    {
-        vSortedByTimestamp.push_back(make_pair(pindex->GetBlockTime(), pindex->GetBlockHash()));
-        pindex = pindex->pprev;
-    };
-
-    int nHeightFirstCandidate = pindex ? (pindex->nHeight + 1) : 0;
-    reverse(vSortedByTimestamp.begin(), vSortedByTimestamp.end());
-    sort(vSortedByTimestamp.begin(), vSortedByTimestamp.end());
-
-    // Select 64 blocks from candidate blocks to generate stake modifier
-    uint64_t nStakeModifierNew = 0;
-    int64_t nSelectionIntervalStop = nSelectionIntervalStart;
-    map<uint256, const CBlockThinIndex*> mapSelectedBlocks;
-
-    for (int nRound=0; nRound<min(64, (int)vSortedByTimestamp.size()); nRound++)
-    {
-        // add an interval section to the current selection round
-        nSelectionIntervalStop += GetStakeModifierSelectionIntervalSection(nRound);
-        // select a block from the candidates of current round
-        if (!SelectBlockFromCandidatesThin(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifier, &pindex))
-            return error("ComputeNextStakeModifierThin: unable to select block at round %d", nRound);
-        // write the entropy bit of the selected block
-        nStakeModifierNew |= (((uint64_t)pindex->GetStakeEntropyBit()) << nRound);
-        // add the selected block from candidates to selected list
-        mapSelectedBlocks.insert(make_pair(pindex->GetBlockHash(), pindex));
-        if (fDebug && GetBoolArg("-printstakemodifier"))
-            printf("ComputeNextStakeModifierThin: selected round %d stop=%s height=%d bit=%d\n", nRound, DateTimeStrFormat(nSelectionIntervalStop).c_str(), pindex->nHeight, pindex->GetStakeEntropyBit());
-    };
-
-    // Print selection map for visualization of the selected blocks
-    if (fDebug
-        && fThinFullIndex
-        && GetBoolArg("-printstakemodifier"))
-    {
-        string strSelectionMap = "";
-        // '-' indicates proof-of-work blocks not selected
-        strSelectionMap.insert(0, pindexPrev->nHeight - nHeightFirstCandidate + 1, '-');
-        pindex = pindexPrev;
-        while (pindex && pindex->nHeight >= nHeightFirstCandidate)
-        {
-            // '=' indicates proof-of-stake blocks not selected
-            if (pindex->IsProofOfStake())
-                strSelectionMap.replace(pindex->nHeight - nHeightFirstCandidate, 1, "=");
-            pindex = pindex->pprev;
-        };
-
-        BOOST_FOREACH(const PAIRTYPE(uint256, const CBlockThinIndex*)& item, mapSelectedBlocks)
-        {
-            // 'S' indicates selected proof-of-stake blocks
-            // 'W' indicates selected proof-of-work blocks
-            strSelectionMap.replace(item.second->nHeight - nHeightFirstCandidate, 1, item.second->IsProofOfStake()? "S" : "W");
-        };
-
-        printf("ComputeNextStakeModifier: selection height [%d, %d] map %s\n", nHeightFirstCandidate, pindexPrev->nHeight, strSelectionMap.c_str());
-    };
-
-    if (fDebug)
-    {
-        printf("ComputeNextStakeModifierThin: new modifier=0x%016"PRIx64" time=%s\n", nStakeModifierNew, DateTimeStrFormat(pindexPrev->GetBlockTime()).c_str());
-    };
-
-    nStakeModifier = nStakeModifierNew;
-    fGeneratedStakeModifier = true;
-    return true;
-};
-
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
 static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
@@ -415,116 +252,6 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
     nStakeModifier = pindex->nStakeModifier;
     return true;
 };
-
-static bool GetKernelStakeModifierThinIt(CBlockThinIndex* pindex, int64_t nFoundTime, int64_t nStakeModifierSelectionInterval, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
-{
-    // loop to find the stake modifier later by a selection interval
-    while (nStakeModifierTime < nFoundTime + nStakeModifierSelectionInterval)
-    {
-        if (!pindex->pnext)
-        {
-            // reached best block; may happen if node is behind on block chain
-            if (fPrintProofOfStake || (pindex->GetBlockTime() + nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
-            {
-                //return error("GetKernelStakeModifier() : reached best block %s at height %d from block %s",
-                //    pindex->GetBlockHash().ToString().c_str(), pindex->nHeight, hashBlockFrom.ToString().c_str());
-                return error("GetKernelStakeModifier() : reached best block %s at height %d",
-                    pindex->GetBlockHash().ToString().c_str(), pindex->nHeight);
-            } else
-            {
-                return false;
-            };
-        };
-
-        pindex = pindex->pnext;
-        if (pindex->GeneratedStakeModifier())
-        {
-            nStakeModifierHeight = pindex->nHeight;
-            nStakeModifierTime = pindex->GetBlockTime();
-        };
-    };
-    nStakeModifier = pindex->nStakeModifier;
-    return true;
-};
-
-static bool GetKernelStakeModifierThin(uint256 hashBlockFrom, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
-{
-    nStakeModifier = 0;
-
-    int64_t nFoundTime;
-    int64_t nStakeModifierSelectionInterval = GetStakeModifierSelectionInterval();
-
-    std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(hashBlockFrom);
-    if (mi == mapBlockThinIndex.end())
-    {
-        if (fThinFullIndex
-            || !pindexRear)
-            return error("GetKernelStakeModifierThin() : block not indexed");
-
-        CTxDB txdb("r");
-        CDiskBlockThinIndex diskindex;
-        if (!txdb.ReadBlockThinIndex(hashBlockFrom, diskindex)
-            || diskindex.hashNext == 0)
-            return error("GetKernelStakeModifierThin() : block not in db %s", hashBlockFrom.ToString().c_str());
-
-        nStakeModifierHeight = diskindex.nHeight;
-        nStakeModifierTime = (int64_t)diskindex.nTime;
-        nFoundTime = (int64_t)diskindex.nTime;
-
-        // TODO, check mapBlockThinIndex
-        while (nStakeModifierTime < nFoundTime + nStakeModifierSelectionInterval)
-        {
-            if (diskindex.hashNext == 0)
-            {
-                // reached best block; may happen if node is behind on block chain
-                if (fPrintProofOfStake || ((int64_t)diskindex.nTime + nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
-                {
-                    uint256 hash = diskindex.GetBlockHash();
-                    return error("GetKernelStakeModifier() : reached best block %s at height %d from block %s",
-                        hash.ToString().c_str(), diskindex.nHeight, hashBlockFrom.ToString().c_str());
-                } else
-                {
-                    return false;
-                };
-            };
-
-
-            if ((int64_t)diskindex.nTime > pindexRear->GetBlockTime())
-            {
-                // -- back into the index window
-                mi = mapBlockThinIndex.find(diskindex.hashNext);
-
-                if (mi != mapBlockThinIndex.end())
-                {
-                    CBlockThinIndex* pindex = mi->second;
-                    return GetKernelStakeModifierThinIt(pindex, nFoundTime, nStakeModifierSelectionInterval, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake);
-                };
-            };
-
-            if (!txdb.ReadBlockThinIndex(diskindex.hashNext, diskindex)
-                || diskindex.hashNext == 0)
-                return error("GetKernelStakeModifierThin() : block not indexed %s", diskindex.hashNext.ToString().c_str());
-
-            //pindex = pindex->pnext;
-            if (diskindex.GeneratedStakeModifier())
-            {
-                nStakeModifierHeight = diskindex.nHeight;
-                nStakeModifierTime = (int64_t)diskindex.nTime;
-            };
-        };
-
-        nStakeModifier = diskindex.nStakeModifier;
-        return true;
-    };
-
-    CBlockThinIndex* pindexFrom = mi->second;
-    nStakeModifierHeight = pindexFrom->nHeight;
-    nStakeModifierTime = pindexFrom->GetBlockTime();
-    nFoundTime = pindexFrom->GetBlockTime();
-
-    CBlockThinIndex* pindex = pindexFrom;
-    return GetKernelStakeModifierThinIt(pindex, nFoundTime, nStakeModifierSelectionInterval, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake);
-}
 
 // Denarius kernel protocol
 // coinstake must meet hash target according to the protocol:
@@ -571,15 +298,9 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     int nStakeModifierHeight = 0;
     int64_t nStakeModifierTime = 0;
 
-    if (nNodeMode == NT_FULL)
-    {
-        if (!GetKernelStakeModifier(hashBlockFrom, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake))
-            return false;
-    } else
-    {
-        if (!GetKernelStakeModifierThin(hashBlockFrom, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake))
-            return false;
-    };
+    if (!GetKernelStakeModifier(hashBlockFrom, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake))
+        return false;
+
     ss << nStakeModifier;
 
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev.nTime << prevout.n << nTimeTx;
@@ -588,11 +309,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     if (fPrintProofOfStake)
     {
         int nHeight = 0;
-        if (nNodeMode == NT_FULL)
-            nHeight = mapBlockIndex[hashBlockFrom]->nHeight;
-        else
-        if (fThinFullIndex) // otherwise index may not be in the window
-            nHeight = mapBlockThinIndex[hashBlockFrom]->nHeight;
+        nHeight = mapBlockIndex[hashBlockFrom]->nHeight;
         printf("CheckStakeKernelHash() : using modifier 0x%016" PRIx64" at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
             nStakeModifier, nStakeModifierHeight,
             DateTimeStrFormat(nStakeModifierTime).c_str(),
@@ -614,11 +331,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     if (fDebug && !fPrintProofOfStake)
     {
         int nHeight = 0;
-        if (nNodeMode == NT_FULL)
-            nHeight = mapBlockIndex[hashBlockFrom]->nHeight;
-        else
-        if (fThinFullIndex) // otherwise index may not be in the window
-            nHeight = mapBlockThinIndex[hashBlockFrom]->nHeight;
+        nHeight = mapBlockIndex[hashBlockFrom]->nHeight;
         printf("CheckStakeKernelHash() : using modifier 0x%016" PRIx64" at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
             nStakeModifier, nStakeModifierHeight,
             DateTimeStrFormat(nStakeModifierTime).c_str(),
@@ -684,20 +397,6 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     hashChecksum >>= (256 - 32);
     return hashChecksum.Get64();
 }
-
-unsigned int GetStakeModifierChecksumThin(const CBlockThinIndex* pindex)
-{
-    assert(pindex->pprev || pindex->GetBlockHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
-
-    // Hash previous checksum with flags, hashProofOfStake and nStakeModifier
-    CDataStream ss(SER_GETHASH, 0);
-    if (pindex->pprev)
-        ss << pindex->pprev->nStakeModifierChecksum;
-    ss << pindex->nFlags << (pindex->IsProofOfStake() ? pindex->hashProof : 0) << pindex->nStakeModifier;
-    uint256 hashChecksum = Hash(ss.begin(), ss.end());
-    hashChecksum >>= (256 - 32);
-    return hashChecksum.Get64();
-};
 
 // Check stake modifier hard checkpoints
 bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierChecksum)

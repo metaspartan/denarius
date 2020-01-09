@@ -399,18 +399,6 @@ std::string HelpMessage()
         "  -debugsmsg                               " + _("Log extra debug messages.") + "\n" +
         "  -smsgscanchain                           " + _("Scan the block chain for public key addresses on startup.") + "\n";
 
-        "\n" + _("Thin options:") + "\n" +
-        "  -thinmode              " + _("Operate in less secure, less resource hungry 'thin' mode") + "\n" +
-
-        "  -thinstake             " + _("Request data to enable staking in thin mode. (default: 0)") + "\n" +
-        "  -thinfullindex         " + _("Keep the entire block index in memory. (default: 0)") + "\n" +
-        "  -thinindexmax=<n>      " + _("When not thinfullindex, the max number of block headers to keep in memory. (default: 4096)") + "\n" +
-
-        "  -nothinssupport        " + _("Disable supporting thin nodes. (default: 0)") + "\n" +
-        "  -nothinstealth         " + _("Disable forwarding, or requesting all stealth txns. (default: 0)") + "\n" +
-        "  -nothinstake           " + _("Disable sending data to enable thin nodes to stake. (default: 0)") + "\n" +
-        "  -maxthinpeers=<n>      " + _("Don't connect to more than <n> thin peers (default: 8)") + "\n";
-
     return strUsage;
 }
 
@@ -533,14 +521,7 @@ bool AppInit2()
 
     fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
-    fThinMode = GetBoolArg("-thinmode");
     fJupiterLocal = GetBoolArg("-jupiterlocal");
-
-    if (fThinMode)
-    {
-        nNodeMode = NT_THIN;
-    }
-    //if (fTestNet)
 
     if (mapArgs.count("-bind"))
     {
@@ -695,7 +676,6 @@ bool AppInit2()
         ShrinkDebugFile();
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
-    printf("Denarius Node Operating in %s mode.\n", GetNodeModeName(nNodeMode));
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
@@ -724,79 +704,7 @@ bool AppInit2()
 
     int64_t nStart;
 
-    /* *********************************************************
-        Step 4.5: adjust parameters for nNodeMode ( D e n a r i u s NT_THIN or NT_FULL )
-    ********************************************************* */
-
-    switch (nNodeMode)
-    {
-        case NT_FULL:
-            if (GetBoolArg("-nothinssupport"))
-            {
-                printf("Thin support disabled.\n");
-                nLocalServices &= ~(THIN_SUPPORT);
-            };
-
-            if (GetBoolArg("-nothinstake"))
-            {
-                printf("Thin staking support disabled.\n");
-                nLocalServices &= ~(THIN_STAKE);
-            };
-
-            if (GetBoolArg("-nothinstealth"))
-            {
-                printf("Thin stealth support disabled.\n");
-                nLocalServices &= ~(THIN_STEALTH);
-            };
-            break;
-        case NT_THIN:
-            SetBoolArg("-staking", false);
-
-            // -- clear services
-            nLocalServices &= ~(NODE_NETWORK);
-            nLocalServices &= ~(THIN_SUPPORT);
-            nLocalServices &= ~(THIN_STAKE);
-            nLocalServices &= ~(THIN_STEALTH);
-
-            nLocalRequirements |= (THIN_SUPPORT);
-
-            if (GetBoolArg("-thinstake"))
-            {
-                printf("Thin staking enabled.\n");
-                nLocalRequirements |= (THIN_STAKE);
-            };
-
-            if (GetBoolArg("-thinfullindex"))
-            {
-                printf("Thin full index enabled.\n");
-                fThinFullIndex = true;
-            } else
-            {
-                nThinIndexWindow = GetArg("-thinindexmax", 4096);
-
-                if (nThinIndexWindow < 4096)
-                {
-                    printf("Thin index window minimum size is %d.\n", 4096);
-                    nThinIndexWindow = 4096;
-                };
-
-                printf("Thin index window size %d.\n", nThinIndexWindow);
-            };
-
-            if (GetBoolArg("-nothinstealth"))
-            {
-                printf("Thin stealth disabled.\n");
-            } else
-            {
-                nLocalRequirements |= (THIN_STEALTH);
-            };
-
-            break;
-        default:
-            break;
-    };
-
-    // -- thin and full
+    // SMSG_RELAY Node Enum
     if (fNoSmsg)
         nLocalServices &= ~(SMSG_RELAY);
 
@@ -841,8 +749,6 @@ bool AppInit2()
     };
 
     // ********************************************************* Step 6: network initialization
-
-    nMaxThinPeers = GetArg("-maxthinpeers", 8); // Maximum peers for thin node
 
     nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
 
@@ -1215,9 +1121,8 @@ bool AppInit2()
     // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
-    // Init Bloom Filters if the Node State isnt a Full Node
-    if (nNodeMode != NT_FULL)
-        pwalletMain->InitBloomFilter();
+    // Init Bloom Filters
+    //pwalletMain->InitBloomFilter();
 
     // ********************************************************* Step 9: import blocks
 
@@ -1379,7 +1284,6 @@ bool AppInit2()
 
     //// debug print
     printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
-    printf("mapBlockThinIndex.size() = %u\n",       mapBlockThinIndex.size());
     printf("nBestHeight = %d\n",            nBestHeight);
     printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());

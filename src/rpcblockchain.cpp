@@ -62,23 +62,10 @@ double GetDifficulty(const CBlockIndex* blockindex)
     return BitsToDouble(blockindex->nBits);
 }
 
-double GetHeaderDifficulty(const CBlockThinIndex* blockindex)
-{
-    if (blockindex == NULL)
-    {
-        if (pindexBest == NULL)
-            return 1.0;
-        else
-            blockindex = GetLastBlockThinIndex(pindexBestHeader, false);
-    };
-
-    return BitsToDouble(blockindex->nBits);
-}
-
 double GetPoWMHashPS()
 {
-    if (pindexBest->nHeight >= LAST_POW_BLOCK)
-        return 0;
+    //if (pindexBest->nHeight >= LAST_POW_BLOCK)
+        //return 0;
 
     int nPoWInterval = 72;
     int64_t nTargetSpacingWorkMin = 30, nTargetSpacingWork = 30;
@@ -108,117 +95,23 @@ double GetPoSKernelPS()
     double dStakeKernelsTriedAvg = 0;
     int nStakesHandled = 0, nStakesTime = 0;
 
-    if (nNodeMode == NT_THIN)
+    CBlockIndex* pindex = pindexBest;;
+    CBlockIndex* pindexPrevStake = NULL;
+
+    while (pindex && nStakesHandled < nPoSInterval)
     {
-        CBlockThinIndex* pindex = pindexBestHeader;;
-        CBlockThinIndex* pindexPrevStake = NULL;
-
-        while (pindex && nStakesHandled < nPoSInterval)
+        if (pindex->IsProofOfStake())
         {
-            if (pindex->IsProofOfStake())
-            {
-                dStakeKernelsTriedAvg += GetHeaderDifficulty(pindex) * 4294967296.0;
-                nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
-                pindexPrevStake = pindex;
-                nStakesHandled++;
-            };
-
-            pindex = pindex->pprev;
+            dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
+            nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
+            pindexPrevStake = pindex;
+            nStakesHandled++;
         };
 
-    } else {
-
-        CBlockIndex* pindex = pindexBest;;
-        CBlockIndex* pindexPrevStake = NULL;
-
-        while (pindex && nStakesHandled < nPoSInterval)
-        {
-            if (pindex->IsProofOfStake())
-            {
-                dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
-                nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
-                pindexPrevStake = pindex;
-                nStakesHandled++;
-            };
-
-            pindex = pindex->pprev;
-        };
-
-    }
+        pindex = pindex->pprev;
+    };
+    
     return nStakesTime ? dStakeKernelsTriedAvg / nStakesTime : 0;
-}
-
-Object blockHeaderToJSON(const CBlockThin& block, const CBlockThinIndex* blockindex)
-{
-    Object result;
-    result.push_back(Pair("hash", block.GetHash().GetHex()));
-    //CMerkleTx txGen(block.vtx[0]);
-    //txGen.SetMerkleBranch(&block);
-    //result.push_back(Pair("confirmations", (int)txGen.GetDepthInMainChain()));
-    result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
-    result.push_back(Pair("height", blockindex->nHeight));
-    result.push_back(Pair("version", block.nVersion));
-    result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
-    //result.push_back(Pair("mint", ValueFromAmount(blockindex->nMint)));
-    result.push_back(Pair("time", (int64_t)block.GetBlockTime()));
-    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
-    result.push_back(Pair("bits", HexBits(block.nBits)));
-    result.push_back(Pair("difficulty", GetHeaderDifficulty(blockindex)));
-    result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
-    result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
-
-    if (blockindex->pprev)
-        result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
-    if (blockindex->pnext)
-        result.push_back(Pair("nextblockhash", blockindex->pnext->GetBlockHash().GetHex()));
-
-    result.push_back(Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
-    result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
-    result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
-    result.push_back(Pair("modifier", strprintf("%016"PRIx64, blockindex->nStakeModifier)));
-    result.push_back(Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
-
-    //if (block.IsProofOfStake())
-    //    result.push_back(Pair("signature", HexStr(block.vchBlockSig.begin(), block.vchBlockSig.end())));
-
-    return result;
-}
-
-Object diskBlockThinIndexToJSON(CDiskBlockThinIndex& diskBlock)
-{
-    CBlock block = diskBlock.GetBlock();
-
-    Object result;
-    result.push_back(Pair("hash", block.GetHash().GetHex()));
-    //CMerkleTx txGen(block.vtx[0]);
-    //txGen.SetMerkleBranch(&block);
-    //result.push_back(Pair("confirmations", (int)txGen.GetDepthInMainChain()));
-    //result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
-    result.push_back(Pair("height", diskBlock.nHeight));
-    result.push_back(Pair("version", block.nVersion));
-    result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
-    //result.push_back(Pair("mint", ValueFromAmount(blockindex->nMint)));
-    result.push_back(Pair("time", (int64_t)block.GetBlockTime()));
-    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
-    result.push_back(Pair("bits", HexBits(block.nBits)));
-    result.push_back(Pair("difficulty", BitsToDouble(diskBlock.nBits)));
-    result.push_back(Pair("blocktrust", leftTrim(diskBlock.GetBlockTrust().GetHex(), '0')));
-    result.push_back(Pair("chaintrust", leftTrim(diskBlock.nChainTrust.GetHex(), '0')));
-
-    result.push_back(Pair("previousblockhash", diskBlock.hashPrev.GetHex()));
-    result.push_back(Pair("nextblockhash", diskBlock.hashNext.GetHex()));
-
-
-    result.push_back(Pair("flags", strprintf("%s%s", diskBlock.IsProofOfStake()? "proof-of-stake" : "proof-of-work", diskBlock.GeneratedStakeModifier()? " stake-modifier": "")));
-    result.push_back(Pair("proofhash", diskBlock.hashProof.GetHex()));
-    result.push_back(Pair("entropybit", (int)diskBlock.GetStakeEntropyBit()));
-    result.push_back(Pair("modifier", strprintf("%016"PRIx64, diskBlock.nStakeModifier)));
-    //result.push_back(Pair("modifierchecksum", strprintf("%08x", diskBlock.nStakeModifierChecksum)));
-
-    //if (block.IsProofOfStake())
-    //    result.push_back(Pair("signature", HexStr(block.vchBlockSig.begin(), block.vchBlockSig.end())));
-
-    return result;
 }
 
 Object blockHeader2ToJSON(const CBlock& block, const CBlockIndex* blockindex)
@@ -252,7 +145,6 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
     result.push_back(Pair("chaintrust", leftTrim(blockindex->nChainTrust.GetHex(), '0')));
-    result.push_back(Pair("chainwork", leftTrim(blockindex->nChainWork.GetHex(), '0')));
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
     if (blockindex->pnext)
@@ -1300,7 +1192,6 @@ Value getblock(const Array& params, bool fHelp)
             "  \"nonce\" : n,           (numeric) The nonce\n"
             "  \"bits\" : \"1d00ffff\", (string) The bits\n"
             "  \"difficulty\" : x.xxx,  (numeric) The difficulty\n"
-            "  \"chainwork\" : \"xxxx\",  (string) Expected number of hashes required to produce the chain up to this block (in hex)\n"
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
             "}\n"
@@ -1326,16 +1217,6 @@ Value getblock(const Array& params, bool fHelp)
     if (params.size() > 1) {
             verbosity = params[1].get_bool() ? 1 : 0;
     }
-
-    if (nNodeMode == NT_THIN)
-    {
-        CDiskBlockThinIndex diskindex;
-        CTxDB txdb("r");
-        if (txdb.ReadBlockThinIndex(hash, diskindex))
-            return diskBlockThinIndexToJSON(diskindex);
-
-        throw runtime_error("Read header from db failed.\n");
-    };
 
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -1398,16 +1279,6 @@ Value getblockheader(const Array& params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
-    if (nNodeMode == NT_THIN)
-    {
-        CDiskBlockThinIndex diskindex;
-        CTxDB txdb("r");
-        if (txdb.ReadBlockThinIndex(hash, diskindex))
-            return diskBlockThinIndexToJSON(diskindex);
-
-        throw runtime_error("Read header from db failed.\n");
-    };
-
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
@@ -1447,16 +1318,6 @@ Value getblock_old(const Array& params, bool fHelp)
     std::string strHash = params[0].get_str();
     uint256 hash(strHash);
 
-    if (nNodeMode == NT_THIN)
-    {
-        CDiskBlockThinIndex diskindex;
-        CTxDB txdb("r");
-        if (txdb.ReadBlockThinIndex(hash, diskindex))
-            return diskBlockThinIndexToJSON(diskindex);
-
-        throw runtime_error("Read header from db failed.\n");
-    };
-
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
@@ -1478,63 +1339,6 @@ Value getblockbynumber(const Array& params, bool fHelp)
     int nHeight = params[0].get_int();
     if (nHeight < 0 || nHeight > nBestHeight)
         throw runtime_error("Block number out of range.");
-
-    if (nNodeMode == NT_THIN)
-    {
-        if (!fThinFullIndex
-            && pindexRear
-            && nHeight < pindexRear->nHeight)
-        {
-            CDiskBlockThinIndex diskindex;
-            uint256 hashPrev = pindexRear->GetBlockHash();
-
-            // -- find closest checkpoint
-            Checkpoints::MapCheckpoints& checkpoints = (fTestNet ? Checkpoints::mapCheckpointsTestnet : Checkpoints::mapCheckpoints);
-            Checkpoints::MapCheckpoints::reverse_iterator rit;
-
-            for (rit = checkpoints.rbegin(); rit != checkpoints.rend(); ++rit)
-            {
-                if (rit->first < nHeight)
-                    break;
-                hashPrev = rit->second;
-            };
-
-            CTxDB txdb("r");
-            while (hashPrev != 0)
-            {
-                if (!txdb.ReadBlockThinIndex(hashPrev, diskindex))
-                    throw runtime_error("Read header from db failed.\n");
-
-                if (diskindex.nHeight == nHeightFilteredNeeded)
-                    return diskBlockThinIndexToJSON(diskindex);
-
-                hashPrev = diskindex.hashPrev;
-            };
-
-            throw runtime_error("block not found.");
-        };
-
-
-        CBlockThin block;
-        std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(hashBestChain);
-        if (mi != mapBlockThinIndex.end())
-        {
-            CBlockThinIndex* pblockindex = mi->second;
-            while (pblockindex->pprev && pblockindex->nHeight > nHeight)
-                pblockindex = pblockindex->pprev;
-
-            if (nHeight != pblockindex->nHeight)
-            {
-                throw runtime_error("block not in chain index.");
-            }
-            return blockHeaderToJSON(block, pblockindex);
-        } else
-        {
-            throw runtime_error("hashBestChain not in chain index.");
-        }
-
-
-    };
 
     CBlock block;
     CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
@@ -1560,11 +1364,6 @@ Value setbestblockbyheight(const Array& params, bool fHelp)
     if (nHeight < 0 || nHeight > nBestHeight)
         throw runtime_error("Block height out of range.");
 
-    if (nNodeMode == NT_THIN)
-    {
-        throw runtime_error("Must be in full mode.");
-    };
-
     CBlock block;
     CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
     while (pblockindex->nHeight > nHeight)
@@ -1588,66 +1387,6 @@ Value setbestblockbyheight(const Array& params, bool fHelp)
             result.push_back(Pair("result", "success"));
 
     };
-
-    return result;
-}
-
-Value thinscanmerkleblocks(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
-            "thinscanmerkleblocks <height>\n"
-            "Request and rescan merkle blocks from peers starting from <height>.");
-
-    int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > nBestHeight)
-        throw runtime_error("Block height out of range.");
-
-    if (nNodeMode != NT_THIN)
-        throw runtime_error("Must be in thin mode.");
-
-    if (nNodeState == NS_GET_FILTERED_BLOCKS)
-        throw runtime_error("Wait for current merkle block scan to complete.");
-
-    {
-        LOCK2(cs_main, pwalletMain->cs_wallet);
-
-        pwalletMain->nLastFilteredHeight = nHeight;
-        nHeightFilteredNeeded = nHeight;
-        CWalletDB walletdb(pwalletMain->strWalletFile);
-        walletdb.WriteLastFilteredHeight(nHeight);
-
-        ChangeNodeState(NS_GET_FILTERED_BLOCKS, false);
-    }
-
-    Object result;
-    result.push_back(Pair("result", "Success."));
-    result.push_back(Pair("startheight", nHeight));
-    return result;
-}
-
-Value thinforcestate(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
-            "thinforcestate <state>\n"
-            "force into state <state>.\n"
-            "2 get headers, 3 get filtered blocks, 4 ready");
-
-    if (nNodeMode != NT_THIN)
-        throw runtime_error("Must be in thin mode.");
-
-    int nState = params[0].get_int();
-    if (nState <= NS_STARTUP || nState >= NS_UNKNOWN)
-        throw runtime_error("unknown state.");
-
-
-
-    Object result;
-    if (ChangeNodeState(nState))
-        result.push_back(Pair("result", "Success."));
-    else
-        result.push_back(Pair("result", "Failed."));
 
     return result;
 }
@@ -1804,8 +1543,6 @@ Value getblockchaininfo(const Array& params, bool fHelp)
                 "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
                 "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
                 "  \"initialblockdownload\": xxxx, (bool) estimate of whether this D node is in Initial Block Download mode.\n"
-                "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
-                "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
                 "  \"moneysupply\": xxxx, (numeric) the current supply of D in circulation\n"
                 "}\n"
         );
@@ -1819,32 +1556,14 @@ Value getblockchaininfo(const Array& params, bool fHelp)
         chain = "main";
     obj.push_back(Pair("chain",          chain));
     obj.push_back(Pair("blocks",         (int)nBestHeight));
-    if (nNodeMode == NT_FULL)
-    {
-        obj.push_back(Pair("bestblockhash",  hashBestChain.GetHex()));
-    }
-    if (nNodeMode == NT_THIN)
-    {
-        obj.push_back(Pair("headers",          pindexBestHeader ? pindexBestHeader->nHeight : -1));
-        obj.push_back(Pair("filteredblocks",   (int)nHeightFilteredNeeded));
-    }
-    if (nNodeMode == NT_FULL)
-    {
-        diff.push_back(Pair("proof-of-work",  GetDifficulty()));
-        diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    } else
-    {
-        diff.push_back(Pair("proof-of-work",  GetHeaderDifficulty()));
-        diff.push_back(Pair("proof-of-stake", GetHeaderDifficulty(GetLastBlockThinIndex(pindexBestHeader, true))));  
-    };
+    obj.push_back(Pair("bestblockhash",  hashBestChain.GetHex()));   
+
+    diff.push_back(Pair("proof-of-work",  GetDifficulty()));
+    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    
     obj.push_back(Pair("difficulty",     diff));
     obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
-    if (nNodeMode == NT_FULL)
-    {
-        obj.push_back(Pair("verificationprogress", Checkpoints::GuessVerificationProgress(pindexBest)));
-        obj.push_back(Pair("chainwork",      leftTrim(pindexBest->nChainWork.GetHex(), '0')));
-        obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
-    }
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     //obj.push_back(Pair("size_on_disk",   CalculateCurrentUsage()));
     return obj;
 }

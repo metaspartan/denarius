@@ -95,7 +95,6 @@ bool fTestNet = false;
 bool fNativeTor = false;
 bool fJupiterLocal = false;
 bool fFSLock = false;
-bool fThinMode = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -1356,30 +1355,6 @@ void FileCommit(FILE *fileout)
     fsync(fileno(fileout));
 #endif
 }
-
-const char *GetNodeModeName(int modeInd)
-{
-    switch (modeInd)
-    {
-        case NT_FULL:   return "full";
-        case NT_THIN:   return "thin";
-    };
-
-    return "unknown";
-};
-
-const char *GetNodeStateName(int stateInd)
-{
-    switch (stateInd)
-    {
-        case NS_STARTUP:                return "Startup";
-        case NS_GET_HEADERS:            return "Get Headers";
-        case NS_GET_FILTERED_BLOCKS:    return "Get Filtered Blocks";
-        case NS_READY:                  return "Ready";
-    };
-
-    return "unknown";
-};
 
 std::string bytesReadable(uint64_t nBytes)
 {

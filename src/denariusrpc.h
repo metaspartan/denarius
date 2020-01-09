@@ -11,7 +11,6 @@
 #include <map>
 
 class CBlockIndex;
-class CBlockThinIndex;
 
 #include "json/json_spirit_reader_template.h"
 #include "json/json_spirit_writer_template.h"
@@ -135,7 +134,6 @@ extern int64_t nWalletUnlockTime;
 extern int64_t AmountFromValue(const json_spirit::Value& value);
 extern json_spirit::Value ValueFromAmount(int64_t amount);
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
-extern double GetHeaderDifficulty(const CBlockThinIndex* blockindex = NULL);
 
 extern double GetPoWMHashPS();
 extern double GetPoSKernelPS();
@@ -290,8 +288,5 @@ extern json_spirit::Value smsgsendanon(const json_spirit::Array& params, bool fH
 extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgbuckets(const json_spirit::Array& params, bool fHelp);
-
-extern json_spirit::Value thinscanmerkleblocks(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value thinforcestate(const json_spirit::Array& params, bool fHelp);
 
 #endif

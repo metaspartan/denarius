@@ -49,9 +49,6 @@ static const int CADDR_TIME_VERSION = 33900; // start sharing node timeinfo with
 static const int NOBLKS_VERSION_START = 70002;
 static const int NOBLKS_VERSION_END = 70006;
 
-static const int MIN_THIN_VERSION = 60068;
-static const int MIN_MBLK_VERSION = 60069;
-
 // BIP 0031, pong message, is enabled for all versions AFTER this one
 static const int BIP0031_VERSION = 21212; // changed to 21212 from 60000 - start sending nonces to all clients.
 

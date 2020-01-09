@@ -67,15 +67,7 @@ void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
         int64_t nTime = 0;
-        if (nNodeMode == NT_FULL)
-        {
-            nTime = mapBlockIndex[wtx.hashBlock]->nTime;
-        } else
-        {
-            std::map<uint256, CBlockThinIndex*>::iterator mi = mapBlockThinIndex.find(wtx.hashBlock);
-            if (mi != mapBlockThinIndex.end())
-                nTime = (*mi).second->nTime;
-        };
+        nTime = mapBlockIndex[wtx.hashBlock]->nTime;        
 
         entry.push_back(Pair("blocktime", nTime));
     };
@@ -107,10 +99,6 @@ Value getinfo(const Array& params, bool fHelp)
 
     Object obj, diff;
     obj.push_back(Pair("version",       FormatFullVersion()));
-    obj.push_back(Pair("mode",          std::string(GetNodeModeName(nNodeMode))));
-    if (nNodeMode == NT_THIN) {
-        obj.push_back(Pair("state",     std::string(GetNodeStateName(nNodeState))));
-	}
     obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
@@ -121,14 +109,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
     obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
-    if (nNodeMode == NT_THIN) {
-		obj.push_back(Pair("headers",          pindexBestHeader ? pindexBestHeader->nHeight : -1));
-        obj.push_back(Pair("filteredblocks",   (int)nHeightFilteredNeeded));
-	}
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
-    if (nNodeMode == NT_FULL) {
-        obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
-	}
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));	
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("datareceived",  bytesReadable(CNode::GetTotalBytesRecv())));
     obj.push_back(Pair("datasent",      bytesReadable(CNode::GetTotalBytesSent())));
@@ -149,21 +131,14 @@ Value getinfo(const Array& params, bool fHelp)
     if(!fNativeTor)
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
-    if (nNodeMode == NT_FULL)
-    {
-        diff.push_back(Pair("proof-of-work",  GetDifficulty()));
-        diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    } else
-    {
-        diff.push_back(Pair("proof-of-work",  GetHeaderDifficulty()));
-        diff.push_back(Pair("proof-of-stake", GetHeaderDifficulty(GetLastBlockThinIndex(pindexBestHeader, true))));
-    };
+    diff.push_back(Pair("proof-of-work",  GetDifficulty()));
+    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("fortunastake",  fFortunaStake));
     obj.push_back(Pair("fslock",        fFSLock));
-    obj.push_back(Pair("thin",          fThinMode));
     obj.push_back(Pair("nativetor",     fNativeTor));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
@@ -2337,11 +2312,6 @@ Value clearwallettransactions(const Array& params, bool fHelp)
 
 
         //pwalletMain->mapWallet.clear();
-        if (nNodeMode == NT_THIN)
-        {
-            // reset LastFilteredHeight
-            walletdb.WriteLastFilteredHeight(0);
-        }
     }
 
     snprintf(cbuf, sizeof(cbuf), "Removed %u transactions.", nTransactions);
@@ -2358,9 +2328,6 @@ Value scanforalltxns(const Array& params, bool fHelp)
         throw runtime_error(
             "scanforalltxns [fromHeight]\n"
             "Scan blockchain for owned transactions.");
-
-    if (nNodeMode != NT_FULL)
-        throw runtime_error("Can't run in thin mode.");
     
     Object result;
     int32_t nFromHeight = 0;

@@ -300,7 +300,6 @@ void RPCConsole::setClientModel(ClientModel *model)
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
         ui->isNativeTor->setChecked(model->isNativeTor());
-        ui->isThinMode->setChecked(model->isThinMode());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }
@@ -375,10 +374,7 @@ void RPCConsole::setNumBlocks(int count, int countOfPeers)
     ui->totalBlocks->setText(QString::number(countOfPeers));
 
     QDateTime lastBlockDate;
-    if (nNodeMode == NT_FULL)
-        lastBlockDate = clientModel->getLastBlockDate();
-    else
-        lastBlockDate = clientModel->getLastBlockThinDate();
+    lastBlockDate = clientModel->getLastBlockDate();
 
     if(clientModel)
     {

@@ -211,8 +211,6 @@ public:
     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx);
     bool WriteBlockIndex(const CDiskBlockIndex& blockindex);
     bool EraseBlockIndex(const uint256& blockhash);
-    bool WriteBlockThinIndex(const CDiskBlockThinIndex& blockindex);
-    bool ReadBlockThinIndex(const uint256& hash, CDiskBlockThinIndex& blockindex);
     bool ReadHashBestChain(uint256& hashBestChain);
     bool WriteHashBestChain(uint256 hashBestChain);
     bool ReadHashBestHeaderChain(uint256& hashBestChain);
@@ -224,7 +222,6 @@ public:
     bool ReadCheckpointPubKey(std::string& strPubKey);
     bool WriteCheckpointPubKey(const std::string& strPubKey);
     bool LoadBlockIndex();
-    bool LoadBlockThinIndex();
 private:
     bool LoadBlockIndexGuts();
 };

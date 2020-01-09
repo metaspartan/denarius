@@ -50,7 +50,6 @@ public:
 public slots:
 
     void updateStatistics();
-    void updateStatisticsThin();
     void updatePrevious(int, int, int, QString, QString, double, double, double, QString, int, int, int64_t);
 
 private slots:

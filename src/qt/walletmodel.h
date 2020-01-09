@@ -179,7 +179,6 @@ private:
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
     void checkBalanceChanged();
-    void checkBalanceChangedThin();
 
 
 public slots:
@@ -197,8 +196,6 @@ public slots:
 signals:
     // Signal that balance in wallet changed
     void balanceChanged(qint64 balance, qint64 lockedbalance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance,  qint64 watchOnlyBalance, qint64 watchUnconfBalance, qint64 watchImmatureBalance);
-
-    void balanceChangedThin(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);

@@ -170,24 +170,6 @@ void WalletModel::checkBalanceChanged()
     }
 }
 
-void WalletModel::checkBalanceChangedThin()
-{
-    qint64 newBalance = getBalance();
-    qint64 newStake = getStakeAmount();
-    qint64 newUnconfirmedBalance = getUnconfirmedBalance();
-    qint64 newImmatureBalance = getImmatureBalance();
-
-    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
-    {
-        cachedBalance = newBalance;
-        cachedStake = newStake;
-        cachedUnconfirmedBalance = newUnconfirmedBalance;
-        cachedImmatureBalance = newImmatureBalance;
-
-        emit balanceChangedThin(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
-    }
-}
-
 void WalletModel::updateTransaction(const QString &hash, int status)
 {
     if(transactionTableModel)

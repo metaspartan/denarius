@@ -222,7 +222,6 @@ extern bool fTestNet;
 extern bool fNativeTor;
 extern bool fJupiterLocal;
 extern bool fFSLock;
-extern bool fThinMode;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
@@ -297,9 +296,6 @@ void WriteConfigFile(FILE* configFile);
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
-
-const char *GetNodeModeName(int modeInd);
-const char *GetNodeStateName(int stateInd);
 
 std::string bytesReadable(uint64_t nBytes);
 

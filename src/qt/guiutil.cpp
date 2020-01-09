@@ -120,15 +120,6 @@ QString formatServicesStr(quint64 mask)
             //case NODE_GETUTXO:
             //    strList.append("GETUTXO");
             //    break;
-            case THIN_SUPPORT:
-                strList.append("THIN_SUPPORT");
-                break;
-            case THIN_STAKE:
-                strList.append("THIN_STAKE");
-                break;
-            case THIN_STEALTH:
-                strList.append("THIN_STEALTH");
-                break;
             case SMSG_RELAY:
                 strList.append("SMSG_RELAY");
                 break;
