@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include <boost/filesystem.hpp>
+#include <fstream>
 
 #ifdef USE_IPFS
 #include <ipfs/client.h>
