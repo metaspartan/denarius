@@ -613,6 +613,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
     src/rpcfortuna.cpp \
+    src/rpcjupiter.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \

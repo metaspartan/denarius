@@ -287,7 +287,7 @@ OBJS= \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	obj/alert.o \
+	  obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -302,7 +302,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	obj/core.o \
+	  obj/core.o \
     obj/protocol.o \
     obj/denariusrpc.o \
     obj/rpcdump.o \
@@ -312,6 +312,7 @@ OBJS= \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
     obj/rpcsmessage.o \
+    obj/rpcjupiter.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
@@ -335,7 +336,7 @@ OBJS= \
   	obj/eccryptoverify.o \
     obj/ringsig.o \
     obj/bloom.o \
-	obj/state.o \
+  	obj/state.o \
     obj/ipfs.o \
     obj/ipfscurl.o  \
     obj/stun.o

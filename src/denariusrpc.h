@@ -228,7 +228,7 @@ extern json_spirit::Value sendrawtransaction(const json_spirit::Array& params, b
 extern json_spirit::Value searchrawtransactions(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
-extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
+extern json_spirit::Value getblockcount(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockchaininfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getdifficulty(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value setbestblockbyheight(const json_spirit::Array& params, bool fHelp);
@@ -243,16 +243,15 @@ extern json_spirit::Value getblockbynumber(const json_spirit::Array& params, boo
 extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gettxout(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importaddress(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value proofofdata(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 
-extern json_spirit::Value jupiterversion(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp Denarius Jupiter
+extern json_spirit::Value jupiterversion(const json_spirit::Array& params, bool fHelp); // in rpcjupiter.cpp Denarius Jupiter
 extern json_spirit::Value jupiterupload(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupiterpod(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupiterduo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupiterduopod(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetblock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetstat(const json_spirit::Array& params, bool fHelp);
-
-extern json_spirit::Value proofofdata(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getnewstealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value liststealthaddresses(const json_spirit::Array& params, bool fHelp);
