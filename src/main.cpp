@@ -3787,6 +3787,47 @@ bool CBlock::CheckBlockSignature() const
         return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
     }
 
+    //Cold Staking D E N A R I U S
+    else if (whichType == TX_SCRIPTHASH)
+    {
+        // Output is a pay-to-script-hash
+        // Only allowed with cold staking
+
+        if (!IsProofOfStake())
+            return false;
+
+        // CoinStake scriptSig should contain 3 pushes: the signature, the pubkey and the cold staking script
+        CScript scriptSig = vtx[1].vin[0].scriptSig;
+        if (!scriptSig.IsPushOnly())
+            return false;
+        vector<vector<unsigned char> > stack;
+        if (!EvalScript(stack, scriptSig, CTransaction(), 0, 0, 0))
+            return false;
+        if (stack.size() != 3)
+            return false;
+
+        // Verify the script is a cold staking script
+        const valtype& scriptSerialized = stack.back();
+        CScript script(scriptSerialized.begin(), scriptSerialized.end());
+        if (!Solver(script, whichType, vSolutions))
+            return false;
+        if (whichType != TX_COLDSTAKING)
+            return false;
+
+        // Verify the scriptSig pubkey matches the staking key
+        valtype& vchPubKey = stack[1];
+        if (Hash160(vchPubKey) != uint160(vSolutions[0]))
+            return false;
+
+        // Verify the block signature with the staking key
+        CKey key;
+        if (!key.SetPubKey(vchPubKey))
+            return false;
+        if (vchBlockSig.empty())
+            return false;
+        return key.Verify(GetHash(), vchBlockSig);
+    }
+
     return false;
 }
 

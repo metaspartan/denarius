@@ -420,6 +420,20 @@ bool CKey::Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck=false) {
     return true;
 }
 
+bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)
+{
+    // -1 = error, 0 = bad sig, 1 = good
+    if (ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], vchSig.size(), pkey) != 1)
+        return false;
+
+    return true;
+}
+
+bool CKey::SetPubKey(const CPubKey &pubkey) {
+    const unsigned char* pbegin = pubkey.begin();
+    return o2i_ECPublicKey(&pkey, &pbegin, pubkey.size());
+}
+
 // Check whether an element of a signature (r or s) is valid.
 bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
     return CompareBigEndian(vch, len, vchZero, 0) > 0 &&

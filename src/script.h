@@ -180,6 +180,7 @@ enum txnouttype
     TX_PUBKEYHASH,
     TX_SCRIPTHASH,
     TX_MULTISIG,
+    TX_COLDSTAKING,
     TX_NULL_DATA,
 };
 
@@ -320,6 +321,7 @@ enum opcodetype
     OP_NOP8 = 0xb7,
     OP_NOP9 = 0xb8,
     OP_ANON_MARKER = 0xb9, //OP_NOP10
+    OP_COINSTAKE = 0xc0, //Cold Staking
 
 
 
@@ -840,6 +842,7 @@ public:
     void SetDestination(const CTxDestination& address);
     void SetMultisig(int nRequired, const std::vector<CKey>& keys);
 	void SetMultisigpub(int nRequired, const std::vector<CPubKey>& keys);
+    void SetColdStaking(const CKeyID& stakingKey, const CKeyID& spendingKey); // Cold Staking
 
     std::string ToString(bool fShort=false) const
     {
@@ -881,6 +884,7 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c
 bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest);
+bool IsMineForStakingOnly(const CKeyStore& keystore, const CScript& scriptPubKey); // Cold Staking
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);

@@ -191,6 +191,7 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_SCRIPTHASH: return "scripthash";
     case TX_MULTISIG: return "multisig";
     case TX_NULL_DATA: return "nulldata";
+    case TX_COLDSTAKING: return "coldstaking";
     }
     return NULL;
 }
@@ -325,8 +326,10 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP7                   : return "OP_NOP7";
     case OP_NOP8                   : return "OP_NOP8";
     case OP_NOP9                   : return "OP_NOP9";
+    //case OP_NOP10                  : return "OP_NOP10";
     case OP_ANON_MARKER            : return "OP_ANON_MARKER"; // Ring Sigs
 
+    case OP_COINSTAKE              : return "OP_COINSTAKE"; // Cold Stake
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
     // Note:
@@ -521,6 +524,12 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 }
                 break;
 
+                case OP_COINSTAKE:
+                {
+                    CBigNum bn(txTo.IsCoinStake() ? 1 : 0);
+                    stack.push_back(bn.getvch());
+                }
+                break;
 
                 //
                 // Control
@@ -1455,57 +1464,6 @@ uint256 SignatureHash(CScript scriptCode, const CTransaction& txTo, unsigned int
     ss << txTmp << nHashType;
     return ss.GetHash();
 }
-
-
-bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType)
-{
-    assert(nIn < txTo.vin.size());
-    CTxIn& txin = txTo.vin[nIn];
-
-    // Leave out the signature from the hash, since a signature can't sign itself.
-    // The checksig op will also drop the signatures from its hash.
-    uint256 hash = SignatureHash(fromPubKey, txTo, nIn, nHashType);
-
-    txnouttype whichType;
-    if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType))
-        return false;
-
-    if (whichType == TX_SCRIPTHASH)
-    {
-        // Solver returns the subscript that need to be evaluated;
-        // the final scriptSig is the signatures from that
-        // and then the serialized subscript:
-        CScript subscript = txin.scriptSig;
-
-        // Recompute txn hash using subscript in place of scriptPubKey:
-        uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
-
-        txnouttype subType;
-        bool fSolved =
-            Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) && subType != TX_SCRIPTHASH;
-        // Append serialized subscript whether or not it is completely signed:
-        txin.scriptSig << static_cast<valtype>(subscript);
-        if (!fSolved) return false;
-    }
-
-    // Test solution
-    //return VerifyScript(txin.scriptSig, fromPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, SignatureChecker(txTo, nIn));
-    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0);
-}
-
-bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
-{
-    assert(nIn < txTo.vin.size());
-    CTxIn& txin = txTo.vin[nIn];
-    assert(txin.prevout.n < txFrom.vout.size());
-    const CTxOut& txout = txFrom.vout[txin.prevout.n];
-
-    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
-}
-
-
-
-
 // Valid signature cache, to avoid doing expensive ECDSA signature checking
 // twice for every transaction (once when accepted into memory pool, and
 // again when accepted into the block chain)
@@ -1619,6 +1577,9 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
 
         // Sender provides N pubkeys, receivers provides M signatures
         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
+
+         // Denarius: Cold staking script
+        mTemplates.insert(make_pair(TX_COLDSTAKING, CScript() << OP_DUP << OP_HASH160 << OP_COINSTAKE << OP_IF << OP_PUBKEYHASH << OP_ELSE << OP_PUBKEYHASH << OP_ENDIF << OP_EQUALVERIFY << OP_CHECKSIG));
 
         // Empty, provably prunable, data-carrying output
         mTemplates.insert(make_pair(TX_NULL_DATA, CScript() << OP_RETURN));
@@ -1764,7 +1725,7 @@ bool SignN(const vector<valtype>& multisigdata, const CKeyStore& keystore, uint2
 // Returns false if scriptPubKey could not be completely satisfied.
 //
 bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash, int nHashType,
-                  CScript& scriptSigRet, txnouttype& whichTypeRet)
+                  CScript& scriptSigRet, txnouttype& whichTypeRet, bool fCoinStake = false)
 {
     scriptSigRet.clear();
 
@@ -1798,8 +1759,64 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash
     case TX_MULTISIG:
         scriptSigRet << OP_0; // workaround CHECKMULTISIG bug
         return (SignN(vSolutions, keystore, hash, nHashType, scriptSigRet));
+    case TX_COLDSTAKING: // Cold Staking - D E N A R I U S
+        keyID = CKeyID(uint160(vSolutions[fCoinStake ? 0 : 1]));
+        if (Sign1(keyID, keystore, hash, nHashType, scriptSigRet))
+        {
+            CPubKey vch;
+            keystore.GetPubKey(keyID, vch);
+            scriptSigRet << vch;
+            return true;
+        }
+        return false;
     }
     return false;
+}
+
+bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType)
+{
+    assert(nIn < txTo.vin.size());
+    CTxIn& txin = txTo.vin[nIn];
+
+    // Leave out the signature from the hash, since a signature can't sign itself.
+    // The checksig op will also drop the signatures from its hash.
+    uint256 hash = SignatureHash(fromPubKey, txTo, nIn, nHashType);
+
+    txnouttype whichType;
+    if (!Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType, txTo.IsCoinStake()))
+        return false;
+
+    if (whichType == TX_SCRIPTHASH)
+    {
+        // Solver returns the subscript that need to be evaluated;
+        // the final scriptSig is the signatures from that
+        // and then the serialized subscript:
+        CScript subscript = txin.scriptSig;
+
+        // Recompute txn hash using subscript in place of scriptPubKey:
+        uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
+
+        txnouttype subType;
+        bool fSolved =
+            Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType, txTo.IsCoinStake()) && subType != TX_SCRIPTHASH;
+        // Append serialized subscript whether or not it is completely signed:
+        txin.scriptSig << static_cast<valtype>(subscript);
+        if (!fSolved) return false;
+    }
+
+    // Test solution
+    //return VerifyScript(txin.scriptSig, fromPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, SignatureChecker(txTo, nIn));
+    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0);
+}
+
+bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
+{
+    assert(nIn < txTo.vin.size());
+    CTxIn& txin = txTo.vin[nIn];
+    assert(txin.prevout.n < txFrom.vout.size());
+    const CTxOut& txout = txFrom.vout[txin.prevout.n];
+
+    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
 }
 
 int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions)
@@ -1812,6 +1829,7 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c
     case TX_PUBKEY:
         return 1;
     case TX_PUBKEYHASH:
+    case TX_COLDSTAKING:
         return 2;
     case TX_MULTISIG:
         if (vSolutions.size() < 1 || vSolutions[0].size() < 1)
@@ -1928,11 +1946,46 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
             return MINE_SPENDABLE;
         break;
     }
+    case TX_COLDSTAKING:
+    {
+        CKeyID spendingKeyID = CKeyID(uint160(vSolutions[1]));
+        if (keystore.HaveKey(spendingKeyID))
+            return MINE_SPENDABLE;
+        break;
+    }
     }
 
     if (keystore.HaveWatchOnly(scriptPubKey))
         return MINE_WATCH_ONLY;
     return MINE_NO;
+}
+
+// Cold Staking IsMineForStakingOnly()
+bool IsMineForStakingOnly(const CKeyStore &keystore, const CScript& scriptPubKey)
+{
+    vector<valtype> vSolutions;
+    txnouttype whichType;
+    if (!Solver(scriptPubKey, whichType, vSolutions))
+        return false;
+
+    switch (whichType)
+    {
+    case TX_SCRIPTHASH:
+    {
+        CScript subscript;
+        if (!keystore.GetCScript(CScriptID(uint160(vSolutions[0])), subscript))
+            return false;
+        return IsMineForStakingOnly(keystore, subscript);
+    }
+    case TX_COLDSTAKING:
+    {
+        CKeyID stakingKeyID = CKeyID(uint160(vSolutions[0]));
+        CKeyID spendingKeyID = CKeyID(uint160(vSolutions[1]));
+        return keystore.HaveKey(stakingKeyID) && !keystore.HaveKey(spendingKeyID);
+    }
+    default:
+        return false;
+    }
 }
 
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
@@ -2218,6 +2271,7 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,
         return PushAll(sigs2);
     case TX_PUBKEY:
     case TX_PUBKEYHASH:
+    case TX_COLDSTAKING:
         // Signatures are bigger than placeholders or empty scripts:
         if (sigs1.empty() || sigs1[0].empty())
             return PushAll(sigs2);
@@ -2409,6 +2463,23 @@ public:
 void CScript::SetDestination(const CTxDestination& dest)
 {
     boost::apply_visitor(CScriptVisitor(this), dest);
+}
+
+void CScript::SetColdStaking(const CKeyID& stakingKey, const CKeyID& spendingKey)
+{
+    clear();
+
+    *this
+        << OP_DUP
+        << OP_HASH160
+        << OP_COINSTAKE
+        << OP_IF
+        << stakingKey
+        << OP_ELSE
+        << spendingKey
+        << OP_ENDIF
+        << OP_EQUALVERIFY
+        << OP_CHECKSIG;
 }
 
 void CScript::SetMultisig(int nRequired, const std::vector<CKey>& keys)

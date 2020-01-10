@@ -578,7 +578,7 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                 CWalletTx& wtx = (*mi).second;
                 if (txin.prevout.n >= wtx.vout.size())
                     printf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
-                else if (!wtx.IsSpent(txin.prevout.n) && IsMine(wtx.vout[txin.prevout.n]))
+                else if (!wtx.IsSpent(txin.prevout.n) && (IsMine(wtx.vout[txin.prevout.n]) || IsMineForStakingOnly(wtx.vout[txin.prevout.n])))
                 {
                     printf("WalletUpdateSpent found spent coins\n");
                     wtx.MarkSpent(txin.prevout.n);
@@ -806,7 +806,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
             };
         };
 
-        if (fExisted || fIsMine || IsMine(tx) || IsFromMe(tx))
+        if (fExisted || fIsMine || IsMine(tx) || IsFromMe(tx) || IsMineForStakingOnly(tx))
         {
             CWalletTx wtx(this, tx);
 
@@ -1541,6 +1541,22 @@ int64_t CWallet::GetBalance() const
     return nTotal;
 }
 
+int64_t CWallet::GetStakingOnlyBalance() const
+{
+    int64_t nTotal = 0;
+    {
+        LOCK(cs_wallet);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
+            const CWalletTx* pcoin = &(*it).second;
+            if (pcoin->IsTrusted())
+                nTotal += pcoin->GetAvailableCreditForStakingOnly();
+        }
+    }
+
+    return nTotal;
+}
+
 int64_t CWallet::GetAnonBalance() const
 {
     int64_t nTotal = 0;
@@ -1666,7 +1682,7 @@ int64_t CWallet::GetImmatureWatchOnlyBalance() const
 }
 
 // populate vCoins with vector of spendable COutputs
-void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl) const
+void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, bool fStakingOnly) const
 {
     vCoins.clear();
 
@@ -1708,6 +1724,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                 //if (!(IsSpent(i)) && mine &&
                 if (!(pcoin->IsSpent(i)) && mine != MINE_NO &&
                     !IsLockedCoin((*it).first, i) && pcoin->vout[i].nValue >= nMinimumInputValue &&
+                    (fStakingOnly ? IsMineForStakingOnly(pcoin->vout[i]) : IsMine(pcoin->vout[i])) && // Cold Staking
                     (!coinControl || !coinControl->HasSelected() || coinControl->IsSelected((*it).first, i)))
                         vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
             }
@@ -1874,6 +1891,7 @@ int64_t CWallet::GetStake() const
         const CWalletTx* pcoin = &(*it).second;
         if (pcoin->IsCoinStake() && pcoin->GetBlocksToMaturity() > 0 && pcoin->GetDepthInMainChain() > 0)
             nTotal += pcoin->GetCredit(ISMINE_SPENDABLE);
+            nTotal += CWallet::GetStakingOnlyCredit(*pcoin);
     }
     return nTotal;
 }
@@ -2292,6 +2310,30 @@ bool CWallet::SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, set<pai
     return (SelectCoinsMinConf(nTargetValue, nSpendTime, 1, 10, vCoins, setCoinsRet, nValueRet) ||
             SelectCoinsMinConf(nTargetValue, nSpendTime, 1, 1, vCoins, setCoinsRet, nValueRet) ||
             SelectCoinsMinConf(nTargetValue, nSpendTime, 0, 1, vCoins, setCoinsRet, nValueRet));
+}
+
+bool CWallet::SelectStakingOnlyCoins(unsigned int nSpendTime, set<pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl* coinControl) const
+{
+    vector<COutput> vCoins;
+    AvailableCoins(vCoins, true, coinControl, true);
+
+    setCoinsRet.clear();
+    nValueRet = 0;
+
+    BOOST_FOREACH(COutput output, vCoins)
+    {
+        const CWalletTx *pcoin = output.tx;
+
+        int i = output.i;
+        int64_t n = pcoin->vout[i].nValue;
+
+        pair<int64_t,pair<const CWalletTx*,unsigned int> > coin = make_pair(n,make_pair(pcoin, i));
+
+        setCoinsRet.insert(coin.second);
+        nValueRet += coin.first;
+    }
+
+    return true;
 }
 
 // Select some coins without random shuffle or best subset approximation
@@ -3493,8 +3535,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     // Choose coins to use
     int64_t nBalance = GetBalance();
+    int64_t nStakingOnlyBalance = GetStakingOnlyBalance();
 
-    if (nBalance <= nReserveBalance)
+    if (nBalance <= nReserveBalance && nStakingOnlyBalance == 0)
         return false;
 
     vector<const CWalletTx*> vwtxPrev;
@@ -3510,11 +3553,20 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         return false;
     }
 
+    if (nStakingOnlyBalance > 0)
+    {
+        int64_t nStakingOnlyValueIn = 0;
+        if (!SelectStakingOnlyCoins(txNew.nTime, setCoins, nStakingOnlyValueIn))
+            return false;
+        nValueIn += nStakingOnlyValueIn;
+    }
+
     if (setCoins.empty())
         return false;
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
+    bool fStakingOnly = false;
     CTxDB txdb("r");
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
@@ -3563,12 +3615,35 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 }
                 if (fDebug && GetBoolArg("-printcoinstake"))
                     printf("CreateCoinStake() : parsed kernel type=%d\n", whichType);
-                if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
+                // Cold Staking
+                txnouttype subType = TX_NONSTANDARD;
+                if (whichType == TX_SCRIPTHASH)
+                {
+                    CScript subScript;
+                    if (!keystore.GetCScript(CScriptID(uint160(vSolutions[0])), subScript))
+                    {
+                        if (fDebug && GetBoolArg("-printcoinstake"))
+                            printf("CreateCoinStake : failed get script\n");
+                        break;
+                    }
+                    if (!Solver(subScript, subType, vSolutions))
+                    {
+                        if (fDebug && GetBoolArg("-printcoinstake"))
+                            printf("CreateCoinStake : failed parse script\n");
+                        break;
+                    }
+                    if (fDebug && GetBoolArg("-printcoinstake"))
+                        printf("CreateCoinStake : parsed sub script kernel type=%d\n", whichType);
+                }
+                if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH && subType != TX_COLDSTAKING)
                 {
                     if (fDebug && GetBoolArg("-printcoinstake"))
-                        printf("CreateCoinStake() : no support for kernel type=%d\n", whichType);
-                    break;  // only support pay to public key and pay to address
+                        printf("CreateCoinStake() : no support for kernel type=%d (subtype=%d)\n", whichType, subType);
+                    break;  // only support pay to public key, pay to address and cold staking
                 }
+                fStakingOnly = (subType == TX_COLDSTAKING);
+                if (fStakingOnly)
+                    break; // Cold Staking will not be accepted yet
                 if (whichType == TX_PUBKEYHASH) // pay to address type
                 {
                     // convert to pay to public key type
@@ -3621,7 +3696,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
 
 
-    if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
+    if (nCredit == 0 || (nCredit > nBalance - nReserveBalance && !fStakingOnly))
         return false;
 
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)

@@ -246,6 +246,8 @@ public:
     void SetCompressedPubKey();
     void SetUnCompressedPubKey();
 
+    void Reset();
+
     // Construct an invalid private key.
     CKey();
 
@@ -321,6 +323,9 @@ public:
 
     // Load private key and check that public key matches.
     bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck);
+
+    // Verify signature
+    bool Verify(uint256 hash, const std::vector<unsigned char>& vchSig);
 
     // Check whether an element of a signature (r or s) is valid.
     static bool CheckSignatureElement(const unsigned char *vch, int len, bool half);

@@ -384,6 +384,7 @@ static const CRPCCommand vRPCCommands[] =
     { "smsgbuckets",            &smsgbuckets,            false,  false},
 
     { "proofofdata",          &proofofdata,              false,  true  },
+    { "addcoldstakeaddress",  &addcoldstakeaddress,      false,  false },
 
     // Denarius Jupiter IPFS
     { "jupiterversion",       &jupiterversion,           true,   false },
