@@ -13,6 +13,7 @@
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
+#include <QStringList>
 
 #include <openssl/crypto.h>
 
@@ -302,6 +303,18 @@ void RPCConsole::setClientModel(ClientModel *model)
         ui->isNativeTor->setChecked(model->isNativeTor());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
+
+        // Auto Complete
+        QStringList wordList;
+        std::vector<std::string> commandList = tableRPC.listCommands();
+        for (size_t i = 0; i < commandList.size(); ++i)
+        {
+            wordList << commandList[i].c_str();
+        }
+
+        autoCompleter = new QCompleter(wordList, this);
+        ui->lineEdit->setCompleter(autoCompleter);
+
     }
 }
 
