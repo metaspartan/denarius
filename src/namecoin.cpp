@@ -1338,6 +1338,14 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
             scriptPubKey = GetScriptForDestination(vchPubKey.GetID());
         }
         nameScript += scriptPubKey;
+
+        // verify namescript
+        NameTxInfo nti;
+        if (!DecodeNameScript(nameScript, nti))
+        {
+            ret.err_msg = nti.err_msg;
+            return ret;
+        }
         
         std::string sNarr;
 		sNarr = "Name New OP";
@@ -1354,6 +1362,10 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
             ret.err_msg = strError;
             return ret;
         }
+
+        // set fee and send!
+        //CAmount nameFee = GetNameOpFee(nBestHeight, nRentalDays, op, name, value);
+        //SendName(nameScript, MIN_TXOUT_AMOUNT, wtx, wtxIn, nameFee);
     }
 
     //success! collect info and return

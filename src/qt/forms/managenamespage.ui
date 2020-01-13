@@ -215,7 +215,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Names in your DNR wallet:</string>
+        <string>Names in your Denarius wallet:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

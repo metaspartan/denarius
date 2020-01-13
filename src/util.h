@@ -205,6 +205,7 @@ extern std::map<std::string, std::string> mapArgs;
 extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
+extern bool fDebugDNS;
 extern bool fDebugSmsg;
 extern bool fDebugFS;
 extern bool fDebugChain;

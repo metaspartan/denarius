@@ -2,7 +2,7 @@
  * Simple DNS server for Denarius, dubbed: EgeriaDNS
  *
  * Lookup for names like "dns:some-nake" in the local nameindex database.
- * Database is updates from blockchain, and keeps NMC-transactions.
+ * Database is updated from blockchain, and keeps D NMC styled-transactions.
  *
  * Supports standard RFC1034 UDP DNS protocol only
  *
@@ -190,7 +190,7 @@ EgeriaDns::EgeriaDns(const char *bind_ip, uint16_t port_no,
 	if(c == '.') {
 	  if(p[1] > 040) { // if allowed domain is not empty - save it into ht
 	    step |= 1;
-	    if(m_verbose > 3)
+	    if(fDebugDNS)
 	      printf("\tEgeriaDns::EgeriaDns: Insert TLD=%s: pos=%u step=%u\n", p + 1, pos, step);
 	    do 
 	      pos += step;
@@ -221,7 +221,7 @@ EgeriaDns::EgeriaDns(const char *bind_ip, uint16_t port_no,
 	  step = ((step << 5) - step) ^ *p_h; // (step * 31) ^ c
         } // while
 	step |= 1;
-	if(m_verbose > 3)
+	if(fDebugDNS)
 	  printf("\tEgeriaDns::EgeriaDns: Insert Local:[%s]->[%s] pos=%u step=%u\n", p, p_eq, pos, step);
 	do 
 	  pos += step;
@@ -231,10 +231,8 @@ EgeriaDns::EgeriaDns(const char *bind_ip, uint16_t port_no,
       } // while
     } //  if(local_len)
 
-    if(m_verbose > 0)
-	 printf("EgeriaDns::EgeriaDns: Created/Attached: %s:%u; Qty=%u:%u\n",
-		 m_address.sin_addr.s_addr == INADDR_ANY? "INADDR_ANY" : bind_ip, 
-		 port_no, m_allowed_qty, local_qty);
+    if(fDebugDNS)
+	    printf("EgeriaDns::EgeriaDns: Created/Attached: %s:%u; Qty=%u:%u\n", m_address.sin_addr.s_addr == INADDR_ANY? "INADDR_ANY" : bind_ip, port_no, m_allowed_qty, local_qty);
 
     m_status = 1; // Active 
 } // EgeriaDns::EgeriaDns
@@ -251,8 +249,8 @@ EgeriaDns::~EgeriaDns() {
     // m_thread.join();
     free(m_value);
     free(m_dap_ht);
-    if(m_verbose > 0)
-	 printf("EgeriaDns::~EgeriaDns: Destroyed OK\n");
+    if(fDebugDNS)
+	    printf("EgeriaDns::~EgeriaDns: Destroyed OK\n");
 } // EgeriaDns::~EgeriaDns
 
 
@@ -266,7 +264,7 @@ void EgeriaDns::StatRun(void *p) {
 
 /*---------------------------------------------------*/
 void EgeriaDns::Run() {
-  if(m_verbose > 2) printf("EgeriaDns::Run: started\n");
+  if(fDebugDNS) printf("EgeriaDns::Run: started\n");
 
   while(m_status == 0)
       MilliSleep(133);
@@ -292,14 +290,14 @@ void EgeriaDns::Run() {
     } // dap check
   } // for
 
-  if(m_verbose > 2) printf("EgeriaDns::Run: Received Exit packet_len=%d\n", m_rcvlen);
+  if(fDebugDNS) printf("EgeriaDns::Run: Received Exit packet_len=%d\n", m_rcvlen);
 
 } //  EgeriaDns::Run
 
 /*---------------------------------------------------*/
 
 void EgeriaDns::HandlePacket() {
-  if(m_verbose > 2) printf("EgeriaDns::HandlePacket: Handle packet_len=%d\n", m_rcvlen);
+  if(fDebugDNS) printf("EgeriaDns::HandlePacket: Handle packet_len=%d\n", m_rcvlen);
 
   m_hdr = (DNSHeader *)m_buf;
   // Decode input header from network format
@@ -308,7 +306,7 @@ void EgeriaDns::HandlePacket() {
   m_rcv = m_buf + sizeof(DNSHeader);
   m_rcvend = m_snd = m_buf + m_rcvlen;
 
-  if(m_verbose > 3) {
+  if(fDebugDNS) {
     printf("\tEgeriaDns::HandlePacket: msgID  : %d\n", m_hdr->msgID);
     printf("\tEgeriaDns::HandlePacket: Bits   : %04x\n", m_hdr->Bits);
     printf("\tEgeriaDns::HandlePacket: QDCount: %d\n", m_hdr->QDCount);
@@ -402,13 +400,13 @@ uint16_t EgeriaDns::HandleQuery() {
   }
   *--key_end = 0; // Remove last dot, set EOLN
 
-  if(m_verbose > 3) 
+  if(fDebugDNS)
     printf("EgeriaDns::HandleQuery: Translated domain name: [%s]; DomainsQty=%d\n", key, (int)(domain_ndx_p - domain_ndx));
 
   uint16_t qtype  = *m_rcv++; qtype  = (qtype  << 8) + *m_rcv++; 
   uint16_t qclass = *m_rcv++; qclass = (qclass << 8) + *m_rcv++;
 
-  if(m_verbose > 0) 
+  if(fDebugDNS)
     printf("EgeriaDns::HandleQuery: Key=%s QType=%x QClass=%x\n", key, qtype, qclass);
 
   if(qclass != 1)
@@ -442,7 +440,7 @@ uint16_t EgeriaDns::HandleQuery() {
 
   uint8_t *p = key_end;
 
-  if(m_verbose > 3) 
+  if(fDebugDNS)
     printf("EgeriaDns::HandleQuery: After TLD-suffix cut: [%s]\n", key);
 
   while(p > key) {
@@ -466,17 +464,17 @@ uint16_t EgeriaDns::HandleQuery() {
     // Check domain by tld filters, if activated. Otherwise, pass to nameindex as is.
     if(m_allowed_qty) { // Activated TLD-filter
       if(*p != '.') {
-        if(m_verbose > 3) 
-      printf("EgeriaDns::HandleQuery: TLD-suffix=[.%s] is not specified in given key=%s; return NXDOMAIN\n", p, key);
-	return 3; // TLD-suffix is not specified, so NXDOMAIN
+        if(fDebugDNS)
+          printf("EgeriaDns::HandleQuery: TLD-suffix=[.%s] is not specified in given key=%s; return NXDOMAIN\n", p, key);
+	      return 3; // TLD-suffix is not specified, so NXDOMAIN
       } 
       p++; // Set PTR after dot, to the suffix
       do {
         pos += step;
         if(m_ht_offset[pos] == 0) {
-          if(m_verbose > 3) 
-  	    printf("EgeriaDns::HandleQuery: TLD-suffix=[.%s] in given key=%s is not allowed; return NXDOMAIN\n", p, key);
-	  return 3; // Reached EndOfList, so NXDOMAIN
+          if(fDebugDNS)
+  	        printf("EgeriaDns::HandleQuery: TLD-suffix=[.%s] in given key=%s is not allowed; return NXDOMAIN\n", p, key);
+	        return 3; // Reached EndOfList, so NXDOMAIN
         } 
       } while(m_ht_offset[pos] < 0 || strcmp((const char *)p, m_allowed_base + m_ht_offset[pos]) != 0);
     } // if(m_allowed_qty)
@@ -626,7 +624,7 @@ void EgeriaDns::Answer_ALL(uint16_t qtype, char *buf) {
   char *tokens[MAX_TOK];
   int tokQty = Tokenize(key, ",", tokens, buf);
 
-  if(m_verbose > 0) printf("EgeriaDns::Answer_ALL(QT=%d, key=%s); TokenQty=%d\n", qtype, key, tokQty);
+  if(fDebugDNS) printf("EgeriaDns::Answer_ALL(QT=%d, key=%s); TokenQty=%d\n", qtype, key, tokQty);
 
   // Shuffle tokens for randomization output order
   for(int i = tokQty; i > 1; ) {
@@ -638,8 +636,8 @@ void EgeriaDns::Answer_ALL(uint16_t qtype, char *buf) {
   }
 
   for(int tok_no = 0; tok_no < tokQty; tok_no++) {
-      if(m_verbose > 1) 
-	printf("\tEgeriaDns::Answer_ALL: Token:%u=[%s]\n", tok_no, tokens[tok_no]);
+      if(fDebugDNS)
+	      printf("\tEgeriaDns::Answer_ALL: Token:%u=[%s]\n", tok_no, tokens[tok_no]);
       Out2(m_label_ref);
       Out2(qtype); // A record, or maybe something else
       Out2(1); //  INET
@@ -725,7 +723,7 @@ void EgeriaDns::Fill_RD_DName(char *txt, uint8_t mxsz, int8_t txtcor) {
 /*---------------------------------------------------*/
 
 int EgeriaDns::Search(uint8_t *key) {
-  if(m_verbose > 1) 
+  if(fDebugDNS)
     printf("EgeriaDns::Search(%s)\n", key);
 
   string value;
@@ -739,14 +737,14 @@ int EgeriaDns::Search(uint8_t *key) {
 /*---------------------------------------------------*/
 
 int EgeriaDns::LocalSearch(const uint8_t *key, uint8_t pos, uint8_t step) {
-  if(m_verbose > 1) 
+  if(fDebugDNS) 
     printf("EgeriaDns::LocalSearch(%s, %u, %u) called\n", key, pos, step);
     do {
       pos += step;
       if(m_ht_offset[pos] == 0) {
-        if(m_verbose > 3) 
-  	  printf("EgeriaDns::LocalSearch: Local key=[%s] not found; go to nameindex search\n", key);
-         return 0; // Reached EndOfList 
+        if(fDebugDNS)
+  	      printf("EgeriaDns::LocalSearch: Local key=[%s] not found; go to nameindex search\n", key);
+        return 0; // Reached EndOfList 
       } 
     } while(m_ht_offset[pos] > 0 || strcmp((const char *)key, m_local_base - m_ht_offset[pos]) != 0);
 

@@ -604,6 +604,7 @@ bool AppInit2()
     fDebugChain = GetBoolArg("-debugchain");
     fDebugFS = GetBoolArg("-debugfs");
     fDebugRingSig = GetBoolArg("-debugringsig");
+    fDebugDNS = GetBoolArg("-debugdns");
 
     fNoSmsg = GetBoolArg("-nosmsg");
     fDisableStealth = GetBoolArg("-disablestealth"); // force-disable stealth transaction scanning
@@ -1320,8 +1321,7 @@ bool AppInit2()
         string bind_ip = GetArg("-egeriabindip", "");
         string allowed = GetArg("-egeriaallowed", "");
         string localcf = GetArg("-egerialocalcf", "");
-        egeriadns = new EgeriaDns(bind_ip.c_str(), port,
-                            suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        egeriadns = new EgeriaDns(bind_ip.c_str(), port, suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
         printf("Denarius Egeria DNS server started...\n");
     }
 
