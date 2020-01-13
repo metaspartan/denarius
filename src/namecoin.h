@@ -7,7 +7,7 @@ class CBitcoinAddress;
 class CKeyStore;
 struct NameIndexStats;
 
-static const int NAMECOIN_TX_VERSION = 0x0333; //0x0333 is initial version
+static const int NAMECOIN_TX_VERSION = 0x0666; //0x0666 is initial version tx version 1
 static const unsigned int MAX_NAME_LENGTH = 512;
 static const unsigned int MAX_VALUE_LENGTH = 20*1024;
 static const int MAX_RENTAL_DAYS = 100*365; //100 years
