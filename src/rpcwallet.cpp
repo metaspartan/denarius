@@ -87,6 +87,62 @@ string AccountFromValue(const Value& value)
     return strAccount;
 }
 
+Value deletetransaction(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+                "deletetransaction <txid>\nNormally used when a transaction cannot be confirmed due to a double spend.\n"
+        );
+
+    if (params.size() != 1)
+        throw runtime_error("missing txid");
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    uint256 hash;
+    hash.SetHex(params[0].get_str());
+    if (!pwalletMain->mapWallet.count(hash))
+        throw runtime_error("transaction not in wallet");
+
+    if (!mempool.exists(hash))
+    {
+        CTransaction tx;
+        uint256 hashBlock = 0;
+        if (GetTransaction(hash, tx, hashBlock) && hashBlock != 0)
+            throw runtime_error("transaction is already in blockchain");
+    }
+    CWalletTx wtx = pwalletMain->mapWallet[hash];
+
+    Object result;
+    bool ret;
+
+    ret = mempool.remove(wtx);
+    result.push_back(Pair("removing tx from memory pool", ret));
+
+    ret = pwalletMain->EraseFromWallet(wtx.GetHash());
+    result.push_back(Pair("erasing tx from wallet.dat", ret));
+
+    ret = hooks->deletePendingName(wtx);
+    result.push_back(Pair("removing name tx (if this is name tx) from pending name operations", ret));
+
+    int nMismatchSpent;
+    int64_t nBalanceInQuestion;
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
+
+    if (nMismatchSpent != 0)
+    {
+        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
+        result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
+    }
+    result.push_back(Pair("done", "true"));
+
+#ifdef QT_GUI
+    // notify GUI
+    pwalletMain->UpdatedTransaction(wtx.GetHash());
+#endif
+
+    return result;
+}
+
 Value getinfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)

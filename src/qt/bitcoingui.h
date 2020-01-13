@@ -14,6 +14,7 @@ class TransactionView;
 class MintingView;
 class FortunastakeManager;
 class MultisigDialog;
+class ManageNamesPage;
 class OverviewPage;
 class AddressBookPage;
 class MessagePage;
@@ -108,6 +109,7 @@ private:
     MessagePage *messagePage;
     SendCoinsDialog *sendCoinsPage;
     SignVerifyMessageDialog *signVerifyMessageDialog;
+    ManageNamesPage *manageNamesPage;
 
     ActiveLabel *labelEncryptionIcon;
     QLabel *labelStakingIcon;
@@ -123,15 +125,16 @@ private:
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;
-	QAction *statisticsAction;
-	QAction *blockAction;
-	QAction *marketAction;
+	  QAction *statisticsAction;
+	  QAction *blockAction;
+	  QAction *marketAction;
     QAction *historyAction;
-	QAction *mintingAction;
-	QAction *multisigAction;
+	  QAction *mintingAction;
+	  QAction *multisigAction;
     QAction *proofOfImageAction;
+    QAction *manageNamesAction;
     QAction *jupiterAction;
-	QAction *fortunastakeManagerAction;
+	  QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -151,7 +154,8 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
-	QAction *openInfoAction;
+
+	  QAction *openInfoAction;
     QAction *openGraphAction;
     QAction *openPeerAction;
     QAction *openConfEditorAction;
@@ -160,7 +164,7 @@ private:
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
-	MintingView *mintingView;
+	  MintingView *mintingView;
     RPCConsole *rpcConsole;
 
     QMovie *syncIconMovie;
@@ -238,6 +242,8 @@ private slots:
 	void gotoFortunastakeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
+    /** Switch to manage names page */
+    void gotoManageNamesPage();
 	/** Switch to Jupiter page */
 	void gotoJupiterPage();
 

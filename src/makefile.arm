@@ -335,6 +335,8 @@ OBJS= \
     obj/fortuna.o \
   	obj/eccryptoverify.o \
     obj/ringsig.o \
+    obj/namecoin.o \
+    obj/egeriadns.o \
     obj/bloom.o \
   	obj/state.o \
     obj/ipfs.o \

@@ -16,6 +16,8 @@
 #include "uint256.h"
 #include "state.h"
 
+#define EGERIADNS_PORT  3333
+
 extern bool fTestNet;
 static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
 {

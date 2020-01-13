@@ -333,6 +333,8 @@ OBJS= \
     obj/fortuna.o \
     obj/eccryptoverify.o \
     obj/ringsig.o \
+    obj/namecoin.o \
+    obj/egeriadns.o \
     obj/bloom.o \
     obj/state.o \
     obj/ipfs.o \
@@ -368,7 +370,7 @@ OBJS= \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
     obj/rpcsmessage.o \
-	obj/rpcjupiter.o \
+	  obj/rpcjupiter.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
@@ -395,7 +397,9 @@ OBJS= \
     obj/state.o \
     obj/ipfs.o \
     obj/ipfscurl.o  \
-    obj/stun.o
+    obj/stun.o \
+    obj/namecoin.o \
+    obj/egeriadns.o
 endif
 
 

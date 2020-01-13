@@ -28,6 +28,7 @@
 #include "fortuna.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
+#include "managenamespage.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -185,12 +186,14 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     // Create tabs
     overviewPage = new OverviewPage();
-	statisticsPage = new StatisticsPage(this);
-	blockBrowser = new BlockBrowser(this);
+	  statisticsPage = new StatisticsPage(this);
+	  blockBrowser = new BlockBrowser(this);
     marketBrowser = new MarketBrowser(this);
-	multisigPage = new MultisigDialog(this);
+	  multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
+    manageNamesPage = new ManageNamesPage(this);
     jupiterPage = new Jupiter(this);
+
 	//chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -199,7 +202,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     vbox->addWidget(transactionView);
     transactionsPage->setLayout(vbox);
 
-	mintingPage = new QWidget(this);
+	  mintingPage = new QWidget(this);
     QVBoxLayout *vboxMinting = new QVBoxLayout();
     mintingView = new MintingView(this);
     vboxMinting->addWidget(mintingView);
@@ -219,18 +222,19 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget = new QStackedWidget(this);
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
-	centralWidget->addWidget(mintingPage);
+	  centralWidget->addWidget(mintingPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
     centralWidget->addWidget(messagePage);
-    centralWidget->addWidget(statisticsPage);
-	centralWidget->addWidget(blockBrowser);
+    centralWidget->addWidget(manageNamesPage);
+	  centralWidget->addWidget(statisticsPage);
+	  centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(fortunastakeManagerPage);
-	centralWidget->addWidget(marketBrowser);
+	  centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
     centralWidget->addWidget(jupiterPage);
-	//centralWidget->addWidget(chatWindow);
+	  //centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -346,6 +350,12 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 
+    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage Names"), this);
+    manageNamesAction->setToolTip(tr("Manage name values registered via Denarius Egeria DNS"));
+    manageNamesAction->setCheckable(true);
+    manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(manageNamesAction);
+
 	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     marketAction->setToolTip(tr("Market Data"));
     marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
@@ -424,15 +434,15 @@ void BitcoinGUI::createActions()
 
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
-	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
-	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
-	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
-	//connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
+	  connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+	  connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
+	  connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
+	  //connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
-	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+	  connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(gotoFortunastakeManagerPage()));
@@ -442,10 +452,12 @@ void BitcoinGUI::createActions()
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));
-	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+	  connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(gotoManageNamesPage()));
     connect(jupiterAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(jupiterAction, SIGNAL(triggered()), this, SLOT(gotoJupiterPage()));
 
@@ -465,30 +477,30 @@ void BitcoinGUI::createActions()
     toggleHideAction = new QAction(QIcon(":/icons/bitcoin"), tr("&Show / Hide"), this);
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt or decrypt wallet"));
-	encryptWalletAction->setStatusTip(tr("Encrypt wallet"));
+	  encryptWalletAction->setStatusTip(tr("Encrypt wallet"));
     encryptWalletAction->setCheckable(true);
     backupWalletAction = new QAction(QIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
     backupWalletAction->setToolTip(tr("Backup wallet to another location"));
     changePassphraseAction = new QAction(QIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setToolTip(tr("Change the passphrase used for wallet encryption"));
-	changePassphraseAction->setStatusTip(tr("Change your passphrase"));
+	  changePassphraseAction->setStatusTip(tr("Change your passphrase"));
     unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this);
     unlockWalletAction->setToolTip(tr("Unlock wallet"));
-	unlockWalletAction->setStatusTip(tr("Unlock wallet"));
+	  unlockWalletAction->setStatusTip(tr("Unlock wallet"));
     lockWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Lock Wallet"), this);
     lockWalletAction->setToolTip(tr("Lock wallet"));
-	lockWalletAction->setStatusTip(tr("Lock wallet"));
+	  lockWalletAction->setStatusTip(tr("Lock wallet"));
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
     verifyMessageAction = new QAction(QIcon(":/icons/transaction_0"), tr("&Verify message..."), this);
 
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
-	exportAction->setStatusTip(tr("Export the data to a file"));
+	  exportAction->setStatusTip(tr("Export the data to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
-	openRPCConsoleAction->setStatusTip(tr("Show Debug Console"));
+	  openRPCConsoleAction->setStatusTip(tr("Show Debug Console"));
 
-	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
+	  openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
     openInfoAction->setStatusTip(tr("Show diagnostic information"));
     openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
     openGraphAction->setStatusTip(tr("Show Network Monitor"));
@@ -584,6 +596,7 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(historyAction);
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(statisticsAction);
+    mainToolbar->addAction(manageNamesAction);
     mainToolbar->addAction(fortunastakeManagerAction);
     mainToolbar->addAction(proofOfImageAction);
     mainToolbar->addAction(jupiterAction);
@@ -696,6 +709,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		marketBrowser->setModel(clientModel);
         fortunastakeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
+        manageNamesPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -753,6 +767,7 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addAction(receiveCoinsAction);
 	trayIconMenu->addSeparator();
 	trayIconMenu->addAction(multisigAction);
+    trayIconMenu->addAction(manageNamesAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(signMessageAction);
     trayIconMenu->addAction(verifyMessageAction);
@@ -1155,6 +1170,16 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 
+}
+
+void BitcoinGUI::gotoManageNamesPage()
+{
+    manageNamesAction->setChecked(true);
+    centralWidget->setCurrentWidget(manageNamesPage);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), manageNamesPage, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoProofOfImagePage()

@@ -345,8 +345,10 @@ QModelIndex AddressTableModel::index(int row, int column, const QModelIndex &par
 
 void AddressTableModel::updateEntry(const QString &address, const QString &label, bool isMine, int status)
 {
+    beginResetModel();
     // Update address book model from Bitcoin core
     priv->updateEntry(address, label, isMine, status);
+    endResetModel();
 }
 
 QString AddressTableModel::addRow(const QString &type, const QString &label, const QString &address, int addressType)
