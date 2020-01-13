@@ -308,6 +308,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
 	{ "getblockheader",         &getblockheader,         false,  false },
+    { "setbestblockbyheight",   &setbestblockbyheight,   false,  false },
     { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
@@ -393,6 +394,17 @@ static const CRPCCommand vRPCCommands[] =
     { "smsginbox",              &smsginbox,              false,  false},
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
+
+    { "proofofdata",          &proofofdata,              false,  true  },
+
+    // Denarius Jupiter IPFS
+    { "jupiterversion",       &jupiterversion,           true,   false },
+    { "jupiterupload",        &jupiterupload,            false,  false },
+    { "jupiterpod",           &jupiterpod,               false,  true  },
+    { "jupiterduo",           &jupiterduo,               false,  false },
+    { "jupiterduopod",        &jupiterduopod,            false,  true  },
+    { "jupitergetblock",      &jupitergetblock,          false,  false },
+    { "jupitergetstat",       &jupitergetstat,           false,  false },
 
 
 
@@ -1225,6 +1237,18 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 }
 
+//D E N A R I U S - Autocomplete in Debug Window
+
+std::vector<std::string> CRPCTable::listCommands() const
+{
+    std::vector<std::string> commandList;
+    typedef std::map<std::string, const CRPCCommand*> commandMap;
+
+    std::transform( mapCommands.begin(), mapCommands.end(),
+                   std::back_inserter(commandList),
+                   boost::bind(&commandMap::value_type::first,_1) );
+    return commandList;
+}
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
@@ -1395,6 +1419,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
+
     //Egeria Names
     if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
     if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
@@ -1404,6 +1429,9 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
     if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
     if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
+
+    if (strMethod == "setbestblockbyheight"   && n > 0) ConvertTo<int64_t>(params[0]);
+
 
     return params;
 }

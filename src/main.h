@@ -975,9 +975,6 @@ public:
     int64_t nMint;
     int64_t nMoneySupply;
 
-    // (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
-    uint256 nChainWork;
-
     // Number of transactions in this block.
     // Note: in a potential headers-first mode, this number cannot be relied upon
     unsigned int nTx;
@@ -1018,9 +1015,6 @@ public:
         nBlockPos = 0;
         nHeight = 0;
         nChainTrust = 0;
-        nChainWork = 0;
-        nTx = 0;
-        nChainTx = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
@@ -1046,9 +1040,6 @@ public:
         nBlockPos = nBlockPosIn;
         nHeight = 0;
         nChainTrust = 0;
-        nChainWork = 0;
-        nTx = 0;
-        nChainTx = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;

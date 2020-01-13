@@ -264,7 +264,7 @@ void OverviewPage::setBalance(qint64 balance, qint64 lockedbalance, qint64 stake
 	
 	QString news;
 	news = dnrnewsfeed;
-	ui->labelNewsFeed->setText(news);
+	ui->labelNewsFeed->setText(news);    
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users

@@ -26,6 +26,7 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class ProofOfImage;
+class Jupiter;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -94,14 +95,15 @@ private:
     QStackedWidget *centralWidget;
 
     OverviewPage *overviewPage;
-	  StatisticsPage *statisticsPage;
-	  BlockBrowser *blockBrowser;
-	  MarketBrowser *marketBrowser;
+	StatisticsPage *statisticsPage;
+	BlockBrowser *blockBrowser;
+	MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
-	  QWidget *mintingPage;
-	  MultisigDialog *multisigPage;
-	  ProofOfImage *proofOfImagePage;
-	  FortunastakeManager *fortunastakeManagerPage;
+	QWidget *mintingPage;
+	MultisigDialog *multisigPage;
+	ProofOfImage *proofOfImagePage;
+    Jupiter *jupiterPage;
+	FortunastakeManager *fortunastakeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
@@ -123,15 +125,16 @@ private:
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;
-	QAction *statisticsAction;
-	QAction *blockAction;
-	QAction *marketAction;
+	  QAction *statisticsAction;
+	  QAction *blockAction;
+	  QAction *marketAction;
     QAction *historyAction;
-	QAction *mintingAction;
-	QAction *multisigAction;
+	  QAction *mintingAction;
+	  QAction *multisigAction;
     QAction *proofOfImageAction;
-    QAction *fortunastakeManagerAction;
     QAction *manageNamesAction;
+    QAction *jupiterAction;
+	  QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
@@ -151,7 +154,8 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
-    QAction *openInfoAction;
+
+	  QAction *openInfoAction;
     QAction *openGraphAction;
     QAction *openPeerAction;
     QAction *openConfEditorAction;
@@ -240,6 +244,9 @@ private slots:
 	void gotoProofOfImagePage();
     /** Switch to manage names page */
     void gotoManageNamesPage();
+	/** Switch to Jupiter page */
+	void gotoJupiterPage();
+
 
     //void gotoChatPage();
 

@@ -19,8 +19,7 @@ StatisticsPage::StatisticsPage(QWidget *parent) :
     ui->setupUi(this);
     
     setFixedSize(400, 420);
-    
-    connect(ui->startButton, SIGNAL(pressed()), this, SLOT(updateStatistics()));
+    connect(ui->startButton, SIGNAL(pressed()), this, SLOT(updateStatistics()));    
 }
 
 int heightPrevious = -1;
@@ -38,45 +37,50 @@ QString rewardPrevious = "";
 
 void StatisticsPage::updateStatistics()
 {
+    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
+
     double pHardness = GetDifficulty();
     double pHardness2 = GetDifficulty(GetLastBlockIndex(pindexBest, true));
+    int64_t volume = ((pindexBest->nMoneySupply)/100000000);
+    int nHeight = pindexBest->nHeight;
     int pPawrate = GetPoWMHashPS();
     double pPawrate2 = 0.000;
-    int nHeight = pindexBest->nHeight;
-    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
+    pPawrate2 = (double)pPawrate;
+
+    
     pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
     uint64_t nNetworkWeight = GetPoSKernelPS();
-    int64_t volume = ((pindexBest->nMoneySupply)/100000000);
 	int64_t marketcap = dnrmarket.toDouble();
     int peers = this->model->getNumConnections();
-    pPawrate2 = (double)pPawrate;
+
     QString height = QString::number(nHeight);
     QString stakemin = QString::number(nMinWeight);
     QString stakemax = QString::number(nNetworkWeight);
     QString phase = "";
-    if (pindexBest->nHeight < 3000000)
+
+    if (nHeight < 3000000)
     {
         phase = "Tribus Proof of Work with Proof of Stake";
     }
-    else if (pindexBest->nHeight > 3000000)
+    else if (nHeight > 3000000)
     {
         phase = "Proof of Stake";
     }
 
     QString subsidy = "";
-	if (pindexBest->nHeight < 1000000)
+	if (nHeight < 1000000)
     {
         subsidy = "3 D per block";
     }
-	else if (pindexBest->nHeight < 2000000)
+	else if (nHeight < 2000000)
     {
         subsidy = "4 D per block";
     }
-	else if (pindexBest->nHeight < 3000000)
+	else if (nHeight < 3000000)
     {
         subsidy = "3 D per block";
     }
-    else if (pindexBest->nHeight > 3000000)
+    else if (nHeight > 3000000)
     {
         subsidy = "No PoW Reward";
     }
@@ -208,8 +212,9 @@ void StatisticsPage::updatePrevious(int nHeight, int nMinWeight, int nNetworkWei
 }
 
 void StatisticsPage::setModel(ClientModel *model)
-{
+{   
     updateStatistics();
+    
     this->model = model;
 }
 

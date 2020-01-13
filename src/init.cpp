@@ -32,7 +32,10 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 
-
+#include <string>
+#include <iostream> 
+#include <sstream>
+#include <stdexcept>
 
 #ifndef WIN32
 #include <signal.h>
@@ -367,6 +370,7 @@ std::string HelpMessage()
         "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n" +
         "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n" +
         "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n" +
+        "  -zapwallettxes         " + _("Clear list of wallet transactions (diagnostic tool; implies -rescan)") + "\n" +
         "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n" +
         "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 2500, 0 = all)") + "\n" +
         "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n" +
@@ -520,8 +524,7 @@ bool AppInit2()
 
     fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
-
-    //if (fTestNet)
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (mapArgs.count("-bind"))
     {
@@ -562,6 +565,13 @@ bool AppInit2()
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
+    
+    // -zapwallettx implies a rescan
+    if (GetBoolArg("-zapwallettxes", false)) {
+        if (SoftSetBoolArg("-rescan", true))
+            printf("AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\n");
+    }
+
     // Process Fortunastake config
     std::string err;
     fortunastakeConfig.read(err);
@@ -668,10 +678,16 @@ bool AppInit2()
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
 
+    //Init Name Hooks
     hooks = InitHook();
-    printf("\n\n");
+
+    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("Denarius (D) version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) //WIP OpenSSL 1.0.x only, OpenSSL 1.1 not supported yet
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
+#else
+    printf("Using OpenSSL version %s\n", OpenSSL_version(OPENSSL_VERSION));
+#endif
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
@@ -705,6 +721,10 @@ bool AppInit2()
         fprintf(stdout, "Denarius server starting\n");
 
     int64_t nStart;
+
+    // SMSG_RELAY Node Enum
+    if (fNoSmsg)
+        nLocalServices &= ~(SMSG_RELAY);
 
     // Anonymous Ring Signatures ~ D e n a r i u s - v3.0.0.0
     if (initialiseRingSigs() != 0)
@@ -748,7 +768,7 @@ bool AppInit2()
 
     // ********************************************************* Step 6: network initialization
 
-    //nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
+    nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
 
     int nSocksVersion = GetArg("-socks", 5);
 
@@ -1011,8 +1031,22 @@ bool AppInit2()
 
     // ********************************************************* Step 8: load wallet
 
-    uiInterface.InitMessage(_("Loading wallet..."));
-    printf("Loading wallet...\n");
+    if (GetBoolArg("-zapwallettxes", false)) {
+        uiInterface.InitMessage(_("Zapping all transactions from D wallet..."));
+
+        pwalletMain = new CWallet("wallet.dat");
+        DBErrors nZapWalletRet = pwalletMain->ZapWalletTx();
+        if (nZapWalletRet != DB_LOAD_OK) {
+            uiInterface.InitMessage(_("Error loading wallet.dat: D Wallet corrupted"));
+            return false;
+        }
+
+        delete pwalletMain;
+        pwalletMain = NULL;
+    }
+
+    uiInterface.InitMessage(_("Loading D wallet..."));
+    printf("Loading D wallet...\n");
     nStart = GetTimeMillis();
     bool fFirstRun = true;
     pwalletMain = new CWallet(strWalletFileName);
@@ -1105,6 +1139,9 @@ bool AppInit2()
     // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
+    // Init Bloom Filters
+    //pwalletMain->InitBloomFilter();
+
     // ********************************************************* Step 9: import blocks
 
     if (mapArgs.count("-loadblock"))
@@ -1163,6 +1200,7 @@ bool AppInit2()
         return InitError(strErrors.str());
 
     fFortunaStake = GetBoolArg("-fortunastake", false);
+    strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
     if(fFortunaStake) {
         printf("Fortunastake Enabled\n");
         strFortunaStakeAddr = GetArg("-fortunastakeaddr", "");
@@ -1176,23 +1214,24 @@ bool AppInit2()
             }
         }
 
-        strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
-        if(!strFortunaStakePrivKey.empty()){
-            std::string errorMessage;
-
-            CKey key;
-            CPubKey pubkey;
-
-            if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
-            {
-                return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
-            }
-
-            activeFortunastake.pubKeyFortunastake = pubkey;
-
-        } else {
+        if(strFortunaStakePrivKey.empty()){
             return InitError(_("You must specify a fortunastakeprivkey in the configuration. Please see documentation for help."));
         }
+    }
+
+    if(!strFortunaStakePrivKey.empty()){
+        std::string errorMessage;
+
+        CKey key;
+        CPubKey pubkey;
+
+        if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
+        {
+            return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
+        }
+
+        activeFortunastake.pubKeyFortunastake = pubkey;
+
     }
 
     if (pwalletMain) {

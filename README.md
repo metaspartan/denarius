@@ -5,7 +5,8 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 [![GitHub version](https://img.shields.io/github/release/carsenk/denarius.svg)](https://badge.fury.io/gh/carsenk%2Fdenarius)
 [![License: GPL v3](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/carsenk/denarius/blob/master/COPYING)
-[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg?maxAge=2592000)](https://github.com/carsenk/denarius/releases)
+[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg)](https://github.com/carsenk/denarius/releases)
+[![Denarius lateat release downloads](https://img.shields.io/github/downloads/carsenk/denarius/latest/total)](https://github.com/carsenk/denarius/releases)
 [![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
 
 [![HitCount](http://hits.dwyl.io/carsenk/denarius.svg)](http://hits.dwyl.io/carsenk/denarius)
@@ -23,12 +24,26 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 Intro
 ==========================
-Denarius is a true optional anonymous, untraceable, and secure hybrid cryptocurrency.
+Denarius is a true optionally anonymous, untraceable, and secure hybrid cryptocurrency.
 
 Ticker: D
 
 Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
 10,000,000 D will be created in approx. about 3 years during the PoW phase.
+
+Supported Operating Systems
+==========================
+* Linux 64-bit
+* Windows 64-bit
+* macOS 10.11+
+
+Install Denarius with Snap on any Linux Distro
+==========================
+* `sudo apt install snapd`
+* `sudo snap install denarius`
+
+* `denarius` for running the QT
+* `denarius.daemon` for running denariusd
 
 Specifications
 ==========================
@@ -38,11 +53,18 @@ Specifications
 * Confirmations: 10 blocks
 * Maturity: 30 blocks (15 minutes)
 * Min stake age: 8 hours
+
 * Cost of Hybrid Fortuna Stakes: 5,000 D
 * Hybrid Fortuna Stake Reward: 33% of the current block reward
 * P2P Port: 33369, Testnet Port: 33368
 * RPC Port: 32369, Testnet RPC Port: 32368
 * Fortuna Stake Port: 9999, Testnet Port: 19999
+
+* D Magic Number: 0xb4eff2fa
+* BIP44 CoinType: 116
+* Base58 Pubkey Decimal: 30
+* Base58 Scriptkey Decimal: 90
+* Base58 Privkey Decimal: 158
 
 Technology
 ==========================
@@ -53,12 +75,13 @@ Technology
 * Encrypted Messaging
 * Multi-Signature Addresses & TXs
 * Atomic Swaps using UTXOs (BIP65 CLTV)
-* BIP39 Support (Coin Type 114)
+* BIP39 Support (Coin Type 116)
 * Proof of Data (Image/Data Timestamping)
 * Fast 30 Second Block Times
 * New/First Tribus PoW Algorithm comprising of 3 NIST5 algorithms
 * Tribus PoW/PoS Hybrid
 * Full decentralization
+* Jupiter - IPFS API Implementation with Anonymous Decentralized File Uploads (UI and RPC)
 
 LINKS
 ==========================
@@ -75,7 +98,7 @@ ASCII CAST TUTORIALS
 
 denariusqtubuntu.sh by Buzzkillb
 ===========================
-Compile the latest Denarius QT (Graphical Wallet) Ubuntu 16.04 or Ubuntu 18.04.1
+Compile the latest Denarius QT (Graphical Wallet) Ubuntu 16.04 or Ubuntu 18.04+
 
 Credits to Buzzkillb for the creation of this bash script, original repository: https://github.com/buzzkillb/denarius-qt/
 

@@ -84,7 +84,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
         obj.push_back(Pair("version", stats.nVersion));
         obj.push_back(Pair("subver", stats.strSubVer));
         obj.push_back(Pair("inbound", stats.fInbound));
-        obj.push_back(Pair("startingheight", stats.nStartingHeight));
+        obj.push_back(Pair("chainheight", stats.nChainHeight));
         obj.push_back(Pair("banscore", stats.nMisbehavior));
 
         ret.push_back(obj);

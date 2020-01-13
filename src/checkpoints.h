@@ -23,6 +23,7 @@ class CSyncCheckpoint;
  */
 namespace Checkpoints
 {
+    typedef std::map<int, uint256> MapCheckpoints;
     /** Checkpointing mode */
     enum CPMode
     {
@@ -40,21 +41,25 @@ namespace Checkpoints
     // Return conservative estimate of total number of blocks, 0 if unknown
     int GetTotalBlocksEstimate();
 
-    double GuessVerificationProgress(CBlockIndex *pindex, bool fSigchecks = true);
-
     // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
 
     extern uint256 hashSyncCheckpoint;
+    extern uint256 hashPendingCheckpoint;
     extern CSyncCheckpoint checkpointMessage;
     extern uint256 hashInvalidCheckpoint;
     extern CCriticalSection cs_hashSyncCheckpoint;
 
+    extern MapCheckpoints mapCheckpoints;
+    extern MapCheckpoints mapCheckpointsTestnet;
+
     CBlockIndex* GetLastSyncCheckpoint();
     bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
     bool AcceptPendingSyncCheckpoint();
+
     bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
     const CBlockIndex* AutoSelectSyncCheckpoint();
+
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
     bool ResetSyncCheckpoint();
     void AskForPendingSyncCheckpoint(CNode* pfrom);
@@ -151,6 +156,7 @@ public:
 
     bool CheckSignature();
     bool ProcessSyncCheckpoint(CNode* pfrom);
+    bool ProcessSyncCheckpointHeaders(CNode* pfrom);
 };
 
 #endif

@@ -7,6 +7,7 @@
 #include "sync.h"
 #include "strlcpy.h"
 #include "version.h"
+#include "state.h"
 #include "ui_interface.h"
 #include <boost/algorithm/string/join.hpp>
 
@@ -63,7 +64,7 @@ string strFortunaStakePrivKey = "";
 string strFortunaStakeAddr = "";
 int nFortunaRounds = 2;
 
-int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
+int nMinStakeInterval = 60;         // in seconds, min time between successful stakes
 
 /** Spork enforcement enabled time */
 int64_t enforceFortunastakePaymentsTime = 4085657524;
@@ -92,6 +93,7 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
+bool fJupiterLocal = false;
 bool fFSLock = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
@@ -204,6 +206,11 @@ uint64_t GetRand(uint64_t nMax)
 int GetRandInt(int nMax)
 {
     return GetRand(nMax);
+}
+
+uint32_t GetRandUInt32()
+{
+    return GetRand(numeric_limits<uint32_t>::max());
 }
 
 uint256 GetRandHash()
@@ -557,6 +564,19 @@ bool ParseMoney(const char* pszIn, int64_t& nRet)
     return true;
 }
 
+// safeChars chosen to allow simple messages/URLs/email addresses, but avoid anything
+// even possibly remotely dangerous like & or >
+static string safeChars("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890 .,;_/:?@");
+string SanitizeString(const string& str)
+{
+    string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (safeChars.find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
+}
 
 static const signed char phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -711,6 +731,12 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("1"));
     else
         return SoftSetArg(strArg, std::string("0"));
+}
+
+bool SetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg] = strValue;
+    return true;
 }
 
 
@@ -1114,6 +1140,7 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
+
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Denarius
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Denarius
     // Mac: ~/Library/Application Support/Denarius
@@ -1179,24 +1206,28 @@ void WriteConfigFile(FILE* configFile)
     fputs ("daemon=1\n", configFile);
     fputs ("listen=1\n", configFile);
     fputs ("server=1\n", configFile);
-    fputs ("addnode=149.28.51.135\n", configFile); //mining.cafe
-    fputs ("addnode=144.136.70.136\n", configFile);
-    fputs ("addnode=104.238.179.184\n", configFile);
-    fputs ("addnode=116.203.60.24\n", configFile);
-    fputs ("addnode=134.3.128.167\n", configFile);
-    fputs ("addnode=140.82.60.123\n", configFile);
-    fputs ("addnode=51.38.112.208\n", configFile);
-    fputs ("addnode=144.202.108.83:33369\n", configFile);
-    fputs ("addnode=89.142.75.60:333691\n", configFile);
-    fputs ("addnode=77.165.171.219:33369\n", configFile);
-    fputs ("addnode=54.39.98.175:33369\n", configFile);
-    fputs ("addnode=51.83.83.216:33369\n", configFile);
-    fputs ("addnode=45.77.59.115:33369\n", configFile);
-    fputs ("addnode=31.220.42.242:33369\n", configFile);
-    fputs ("addnode=24.205.81.255:33369\n", configFile);
-    fputs ("addnode=207.189.31.106:33369\n", configFile);
-    fputs ("addnode=207.148.86.124:33369\n", configFile);
-    fputs ("addnode=207.180.213.175:33369\n", configFile);
+    fputs ("fortunastake=0\n", configFile); //input fs=0 by default
+    fputs ("fortunastakeaddr=\n", configFile);
+    fputs ("fortunastakeprivkey=\n", configFile);
+    fputs ("addnode=144.130.111.71\n", configFile);
+    fputs ("addnode=163.172.157.116\n", configFile);
+    fputs ("addnode=173.244.36.3\n", configFile);
+    fputs ("addnode=24.205.81.255\n", configFile);
+    fputs ("addnode=51.15.210.145\n", configFile);
+    fputs ("addnode=51.15.52.235\n", configFile);
+    fputs ("addnode=115.70.121.168:33369\n", configFile);
+    fputs ("addnode=140.82.13.39:333691\n", configFile);
+    fputs ("addnode=164.68.113.76:33369\n", configFile);
+    fputs ("addnode=173.249.20.4:33369\n", configFile);
+    fputs ("addnode=178.63.60.7:33369\n", configFile);
+    fputs ("addnode=185.233.107.233:33369\n", configFile);
+    fputs ("addnode=203.186.122.175:33369\n", configFile);
+    fputs ("addnode=24.35.250.163:33369\n", configFile);
+    fputs ("addnode=46.166.162.45:33369\n", configFile);
+    fputs ("addnode=93.115.26.186:33369\n", configFile);
+    fputs ("addnode=51.38.112.208:33369\n", configFile);
+    fputs ("addnode=51.158.101.32\n", configFile); //pos.watch
+    fputs ("addnode=[2001:bc8:47a8:2519::1]\n", configFile); //pos.watch
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
@@ -1324,6 +1355,25 @@ void FileCommit(FILE *fileout)
     fsync(fileno(fileout));
 #endif
 }
+
+std::string bytesReadable(uint64_t nBytes)
+{
+    char buffer[128];
+    if (nBytes >= 1024ll*1024ll*1024ll*1024ll)
+        snprintf(buffer, sizeof(buffer), "%.2f TB", nBytes/1024.0/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f GB", nBytes/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f MB", nBytes/1024.0/1024.0);
+    else
+    if (nBytes >= 1024)
+        snprintf(buffer, sizeof(buffer), "%.2f KB", nBytes/1024.0);
+    else
+        snprintf(buffer, sizeof(buffer), "%"PRIu64" B", nBytes);
+    return std::string(buffer);
+};
 
 void ShrinkDebugFile()
 {

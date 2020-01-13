@@ -8,6 +8,7 @@
 USE_LEVELDB:=1
 USE_UPNP:=1
 USE_NATIVETOR:=-
+USE_IPFS:=1
 
 LINK:=$(CXX)
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
@@ -37,6 +38,7 @@ LIBS += \
    -l boost_program_options$(BOOST_LIB_SUFFIX) \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
    -l db_cxx$(BDB_LIB_SUFFIX) \
+   -l curl \
    -l ssl \
    -l crypto \
    -l event
@@ -46,6 +48,13 @@ ifndef USE_NATIVETOR
 endif
 ifneq (${USE_NATIVETOR}, -)
   DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)
+endif
+
+ifndef USE_IPFS
+  override USE_IPFS = -
+endif
+ifneq (${USE_IPFS}, -)
+  DEFS += $(addprefix -I,$(CURDIR)/ipfs) -DUSE_IPFS=$(USE_IPFS)
 endif
 
 ifndef USE_UPNP
@@ -303,6 +312,7 @@ OBJS= \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
     obj/rpcsmessage.o \
+    obj/rpcjupiter.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
@@ -325,9 +335,14 @@ OBJS= \
     obj/fortuna.o \
   	obj/eccryptoverify.o \
     obj/ringsig.o \
-    obj/stun.o \
     obj/namecoin.o \
-    obj/egeriadns.o
+    obj/egeriadns.o \
+    obj/bloom.o \
+  	obj/state.o \
+    obj/ipfs.o \
+    obj/ipfscurl.o  \
+    obj/stun.o
+
 
 all: denariusd
 
@@ -401,6 +416,15 @@ ifeq (${USE_NATIVETOR}, 1)
     rm -f $(@:%.o=%.d)
 endif
 
+ifeq (${USE_IPFS}, 1)
+obj/%.o: %.cc
+	$(CC) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	-e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+	rm -f $(@:%.o=%.d)
+endif
+
 denariusd: $(OBJS:obj/%=obj/%)
 	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
@@ -409,7 +433,7 @@ clean:
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/*.d
-	-rm -f obj/build.h -rm -f obj/tor/*.o -rm -f obj/tor/*.P
+	-rm -f obj/build.h -rm -f obj/tor/*.o -rm -f obj/tor/*.P -rm -f obj/ipfs/*.o -rm -f obj/ipfs/*.P
 	-cd leveldb && $(MAKE) clean || true
 
 FORCE:

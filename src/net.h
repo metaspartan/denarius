@@ -191,7 +191,7 @@ public:
     int nTypeInd;
     std::string strSubVer;
     bool fInbound;
-    int nStartingHeight;
+    int nChainHeight;
     int nMisbehavior;
     bool fSyncNode;
     double dPingTime;
@@ -338,7 +338,7 @@ public:
     std::vector<CBlockIndex*> getBlocksIndex;
     std::vector<uint256> getBlocksHash;
     uint256 hashLastGetBlocksEnd;
-    int nStartingHeight;
+    int nChainHeight;
 	bool fStartSync;
 	int nMisbehavior;
 
@@ -395,8 +395,8 @@ public:
         hashContinue = 0;
         pindexLastGetBlocksBegin = 0;
         hashLastGetBlocksEnd = 0;
-        nStartingHeight = -1;
-		    fStartSync = false;
+        nChainHeight = -1;
+		fStartSync = false;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;

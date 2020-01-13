@@ -35,7 +35,8 @@ public:
     ~CTxDB() {
         // Note that this is not the same as Close() because it deletes only
         // data scoped to this TxDB object.
-        delete activeBatch;
+        if (activeBatch)
+            delete activeBatch;
     }
 
     // Destroys the underlying shared global state accessed by this TxDB.
@@ -197,7 +198,7 @@ public:
     bool ReadAnonOutput(CPubKey& pkCoin, CAnonOutput& ao);
     bool EraseAnonOutput(CPubKey& pkCoin);
 
-	  bool ReadAddrIndex(uint160 addrHash, std::vector<uint256>& txHashes);
+	bool ReadAddrIndex(uint160 addrHash, std::vector<uint256>& txHashes);
     bool WriteAddrIndex(uint160 addrHash, uint256 txHash);
     bool ReadTxIndex(uint256 hash, CTxIndex& txindex);
     bool UpdateTxIndex(uint256 hash, const CTxIndex& txindex);
@@ -209,8 +210,11 @@ public:
     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx, CTxIndex& txindex);
     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx);
     bool WriteBlockIndex(const CDiskBlockIndex& blockindex);
+    bool EraseBlockIndex(const uint256& blockhash);
     bool ReadHashBestChain(uint256& hashBestChain);
     bool WriteHashBestChain(uint256 hashBestChain);
+    bool ReadHashBestHeaderChain(uint256& hashBestChain);
+    bool WriteHashBestHeaderChain(uint256 hashBestChain);
     bool ReadBestInvalidTrust(CBigNum& bnBestInvalidTrust);
     bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
     bool ReadSyncCheckpoint(uint256& hashCheckpoint);

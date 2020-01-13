@@ -51,7 +51,7 @@ void ProcessFortunastakeConnections(){
         if(forTunaPool.submittedToFortunastake == pnode->addr) continue;
 
         if( pnode->fForTunaMaster ||
-            (pnode->addr.GetPort() == 9999 && pnode->nStartingHeight > (nBestHeight - 120)) // disconnect fortunastakes that were in sync when they connected recently
+            (pnode->addr.GetPort() == 9999 && pnode->nChainHeight > (nBestHeight - 120)) // disconnect fortunastakes that were in sync when they connected recently
                 )
         {
             printf("Closing fortunastake connection %s \n", pnode->addr.ToString().c_str());

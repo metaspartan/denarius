@@ -8,7 +8,7 @@ case $choice in
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy
+sudo apt-get --assume-yes install git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy libcurl4-openssl-dev
 
 echo "Installing Denarius Wallet"
 git clone https://github.com/carsenk/denarius
@@ -30,9 +30,9 @@ echo -e "daemon=1\listen=1\rpcuser=user\rpcpassword=changethispassword\nativetor
 echo "Get Chaindata"
 cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
-wget https://github.com/carsenk/denarius/releases/download/v3.3.9.1/chaindata2022527.zip
-unzip chaindata2022527.zip
-rm -rf chaindata2022527.zip
+wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
+unzip chaindata2290877.zip
+rm -rf chaindata2290877.zip
 echo "Back to Compiled denariusd Binary Folder"
 cd ~/denarius/src
                 ;;
@@ -56,7 +56,7 @@ cd ~/denarius/src
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy libssl-dev
+sudo apt-get --assume-yes install git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev obfs4proxy libssl-dev libcurl4-openssl-dev
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
@@ -90,9 +90,9 @@ echo -e "daemon=1\listen=1\rpcuser=user\rpcpassword=changethispassword\nativetor
 echo "Get Chaindata"
 cd ~/.denarius
 rm -rf database txleveldb smsgDB
-wget https://github.com/carsenk/denarius/releases/download/v3.3.9.1/chaindata2022527.zip
-unzip chaindata2022527.zip
-rm -rf chaindata2022527.zip
+wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
+unzip chaindata2290877.zip
+rm -rf chaindata2290877.zip
 echo "Back to Compiled denariusd Binary Folder"
 cd ~/denarius/src
                 ;;
