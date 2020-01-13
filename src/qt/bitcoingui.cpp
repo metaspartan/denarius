@@ -28,6 +28,7 @@
 #include "fortuna.h"
 #include "mintingview.h"
 #include "multisigdialog.h"
+#include "managenamespage.h"
 #include "bitcoinunits.h"
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
@@ -142,14 +143,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     nBlocksInLastPeriod(0),
     nLastBlocks(0)
 {
-    if(GetBoolArg("-thinmode"))
-    {
-        resize(300, 300);        
-        setWindowTitle(tr("Denarius") + " - " + tr("Thin Wallet Beta"));
-    } else {
-        resize(600, 400);
-        setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
-    }
+    resize(600, 400);
+    setWindowTitle(tr("Denarius") + " - " + tr("Wallet"));
+    
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/denarius"));
     setWindowIcon(QIcon(":icons/denarius"));
@@ -185,17 +181,19 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     createTrayIcon();
     
     fFSLock = GetBoolArg("-fsconflock");
-    fThinMode = GetBoolArg("-thinmode");
     fNativeTor = GetBoolArg("-nativetor");
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     // Create tabs
     overviewPage = new OverviewPage();
-	statisticsPage = new StatisticsPage(this);
-	blockBrowser = new BlockBrowser(this);
+	  statisticsPage = new StatisticsPage(this);
+	  blockBrowser = new BlockBrowser(this);
     marketBrowser = new MarketBrowser(this);
-	multisigPage = new MultisigDialog(this);
+	  multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
+    manageNamesPage = new ManageNamesPage(this);
     jupiterPage = new Jupiter(this);
+
 	//chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -204,7 +202,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     vbox->addWidget(transactionView);
     transactionsPage->setLayout(vbox);
 
-	mintingPage = new QWidget(this);
+	  mintingPage = new QWidget(this);
     QVBoxLayout *vboxMinting = new QVBoxLayout();
     mintingView = new MintingView(this);
     vboxMinting->addWidget(mintingView);
@@ -224,18 +222,19 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget = new QStackedWidget(this);
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
-	centralWidget->addWidget(mintingPage);
+	  centralWidget->addWidget(mintingPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
     centralWidget->addWidget(messagePage);
-    centralWidget->addWidget(statisticsPage);
-	centralWidget->addWidget(blockBrowser);
+    centralWidget->addWidget(manageNamesPage);
+	  centralWidget->addWidget(statisticsPage);
+	  centralWidget->addWidget(blockBrowser);
     centralWidget->addWidget(fortunastakeManagerPage);
-	centralWidget->addWidget(marketBrowser);
+	  centralWidget->addWidget(marketBrowser);
     centralWidget->addWidget(proofOfImagePage);
     centralWidget->addWidget(jupiterPage);
-	//centralWidget->addWidget(chatWindow);
+	  //centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -255,11 +254,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     labelBlocksIcon = new QLabel();
     labelConnectTypeIcon = new QLabel();
     labelFSLockIcon = new QLabel();
-    labelThinMode = new QLabel();
     frameBlocksLayout->addStretch();
-    if (fThinMode)
-        frameBlocksLayout->addWidget(labelThinMode);
-        frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelEncryptionIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelConnectTypeIcon);
@@ -274,7 +269,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     frameBlocksLayout->addWidget(labelBlocksIcon);
     frameBlocksLayout->addStretch();
 
-    if (GetBoolArg("-staking", true) && !fThinMode)
+    if (GetBoolArg("-staking", true))
     {
         QTimer *timerStakingIcon = new QTimer(labelStakingIcon);
         connect(timerStakingIcon, SIGNAL(timeout()), this, SLOT(updateStakingIcon()));
@@ -355,6 +350,12 @@ void BitcoinGUI::createActions()
     blockAction->setCheckable(true);
     tabGroup->addAction(blockAction);
 
+    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage Names"), this);
+    manageNamesAction->setToolTip(tr("Manage name values registered via Denarius Egeria DNS"));
+    manageNamesAction->setCheckable(true);
+    manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(manageNamesAction);
+
 	marketAction = new QAction(QIcon(":/icons/mark"), tr("&Market"), this);
     marketAction->setToolTip(tr("Market Data"));
     marketAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
@@ -433,15 +434,15 @@ void BitcoinGUI::createActions()
 
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
-	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
-	connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
-	connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
-	//connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
+	  connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+	  connect(statisticsAction, SIGNAL(triggered()), this, SLOT(gotoStatisticsPage()));
+	  connect(marketAction, SIGNAL(triggered()), this, SLOT(gotoMarketBrowser()));
+	  //connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
-	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+	  connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(gotoFortunastakeManagerPage()));
@@ -451,10 +452,12 @@ void BitcoinGUI::createActions()
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));
-	connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+	  connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(proofOfImageAction, SIGNAL(triggered()), this, SLOT(gotoProofOfImagePage()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(gotoManageNamesPage()));
     connect(jupiterAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(jupiterAction, SIGNAL(triggered()), this, SLOT(gotoJupiterPage()));
 
@@ -474,30 +477,30 @@ void BitcoinGUI::createActions()
     toggleHideAction = new QAction(QIcon(":/icons/bitcoin"), tr("&Show / Hide"), this);
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt or decrypt wallet"));
-	encryptWalletAction->setStatusTip(tr("Encrypt wallet"));
+	  encryptWalletAction->setStatusTip(tr("Encrypt wallet"));
     encryptWalletAction->setCheckable(true);
     backupWalletAction = new QAction(QIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
     backupWalletAction->setToolTip(tr("Backup wallet to another location"));
     changePassphraseAction = new QAction(QIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setToolTip(tr("Change the passphrase used for wallet encryption"));
-	changePassphraseAction->setStatusTip(tr("Change your passphrase"));
+	  changePassphraseAction->setStatusTip(tr("Change your passphrase"));
     unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this);
     unlockWalletAction->setToolTip(tr("Unlock wallet"));
-	unlockWalletAction->setStatusTip(tr("Unlock wallet"));
+	  unlockWalletAction->setStatusTip(tr("Unlock wallet"));
     lockWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Lock Wallet"), this);
     lockWalletAction->setToolTip(tr("Lock wallet"));
-	lockWalletAction->setStatusTip(tr("Lock wallet"));
+	  lockWalletAction->setStatusTip(tr("Lock wallet"));
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
     verifyMessageAction = new QAction(QIcon(":/icons/transaction_0"), tr("&Verify message..."), this);
 
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
-	exportAction->setStatusTip(tr("Export the data to a file"));
+	  exportAction->setStatusTip(tr("Export the data to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
-	openRPCConsoleAction->setStatusTip(tr("Show Debug Console"));
+	  openRPCConsoleAction->setStatusTip(tr("Show Debug Console"));
 
-	openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
+	  openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
     openInfoAction->setStatusTip(tr("Show diagnostic information"));
     openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
     openGraphAction->setStatusTip(tr("Show Network Monitor"));
@@ -587,29 +590,20 @@ void BitcoinGUI::createToolBars()
     mainToolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     mainToolbar->addWidget(mainIcon);
 
-    if (GetBoolArg("-thinmode"))
-    {
-        mainToolbar->addAction(overviewAction);
-        mainToolbar->addAction(sendCoinsAction);
-        mainToolbar->addAction(receiveCoinsAction);
-        mainToolbar->addAction(historyAction);
-        mainToolbar->addAction(addressBookAction);
-        mainToolbar->addAction(jupiterAction);
-    } else {
-        mainToolbar->addAction(overviewAction);
-        mainToolbar->addAction(sendCoinsAction);
-        mainToolbar->addAction(receiveCoinsAction);
-        mainToolbar->addAction(historyAction);
-        mainToolbar->addAction(addressBookAction);
-        mainToolbar->addAction(statisticsAction);
-	    mainToolbar->addAction(fortunastakeManagerAction);
-        mainToolbar->addAction(proofOfImageAction);
-        mainToolbar->addAction(jupiterAction);
-	    mainToolbar->addAction(marketAction);
-        mainToolbar->addAction(blockAction);
-	    mainToolbar->addAction(messageAction);
-	    mainToolbar->addAction(mintingAction);
-    }
+    mainToolbar->addAction(overviewAction);
+    mainToolbar->addAction(sendCoinsAction);
+    mainToolbar->addAction(receiveCoinsAction);
+    mainToolbar->addAction(historyAction);
+    mainToolbar->addAction(addressBookAction);
+    mainToolbar->addAction(statisticsAction);
+    mainToolbar->addAction(manageNamesAction);
+    mainToolbar->addAction(fortunastakeManagerAction);
+    mainToolbar->addAction(proofOfImageAction);
+    mainToolbar->addAction(jupiterAction);
+    mainToolbar->addAction(marketAction);
+    mainToolbar->addAction(blockAction);
+    mainToolbar->addAction(messageAction);
+    mainToolbar->addAction(mintingAction);    
 
     secondaryToolbar = addToolBar(tr("Actions toolbar"));
     secondaryToolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -703,8 +697,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 
         // Put transaction list in tabs
         transactionView->setModel(walletModel);
-        if(!fThinMode)
-            mintingView->setModel(walletModel);
+        mintingView->setModel(walletModel);
 
         overviewPage->setModel(walletModel);
         addressBookPage->setModel(walletModel->getAddressTableModel());
@@ -716,6 +709,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		marketBrowser->setModel(clientModel);
         fortunastakeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
+        manageNamesPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -773,6 +767,7 @@ void BitcoinGUI::createTrayIcon()
     trayIconMenu->addAction(receiveCoinsAction);
 	trayIconMenu->addSeparator();
 	trayIconMenu->addAction(multisigAction);
+    trayIconMenu->addAction(manageNamesAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(signMessageAction);
     trayIconMenu->addAction(verifyMessageAction);
@@ -850,9 +845,6 @@ void BitcoinGUI::setNumConnections(int count)
     if (fFSLock == true) {
         labelFSLockIcon->setPixmap(QIcon(":/icons/fs").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
     }
-    if (fThinMode == true) {
-        labelThinMode->setText(tr("THIN"));
-    }
 }
 
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
@@ -860,244 +852,120 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     // don't bother showing anything if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0)
     {
-        if (nNodeMode == NT_FULL) {
-            progressBarLabel->setText(tr("Connecting to the Denarius network..."));
-        } else {
-            progressBarLabel->setText(tr("Connecting to the Denarius network in Thin Mode..."));
-        }
+        progressBarLabel->setText(tr("Connecting to the Denarius network..."));
         progressBarLabel->setVisible(true);
         progressBar->setVisible(false);
         return;
-    }    
-
-    if(GetBoolArg("-thinmode") && nNodeMode != NT_FULL)
-    {
-        QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
-        QString tooltip;
-        QString nRemainingTime;
-
-        if (nLastBlocks == 0)
-        {
-            nLastBlocks = pwalletMain->nLastFilteredHeight;
-        }
-
-        if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
-            nBlocksInLastPeriod = count - nLastBlocks;
-            nLastBlocks = count;
-            nClientUpdateTime = GetTime();
-        }
-        if (nBlocksInLastPeriod>0)
-            nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
-        else
-            nBlocksPerSec = 0;
-
-        if (nBlocksPerSec>0) {
-            nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
-        }
-
-        QDateTime lastBlockDate = clientModel->getLastBlockThinDate();
-        int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
-        QString text;
-
-        // Represent time from last generated block or header in human readable text
-        if(secs <= 0)
-        {
-            // Fully up to date. Leave text empty.
-        }
-        else if(secs < 60)
-        {
-            text = tr("%n second(s) ago","",secs);
-        }
-        else if(secs < 60*60)
-        {
-            text = tr("%n minute(s) ago","",secs/60);
-        }
-        else if(secs < 24*60*60)
-        {
-            text = tr("%n hour(s) ago","",secs/(60*60));
-        }
-        else
-        {
-            text = tr("%n day(s) ago","",secs/(60*60*24));
-        }
-
-        if (IsInitialBlockDownload() || pwalletMain->nLastFilteredHeight < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
-        {
-            int nRemainingBlocks = nTotalBlocks - pwalletMain->nLastFilteredHeight;
-            float nPercentageDone = pwalletMain->nLastFilteredHeight / (nTotalBlocks * 0.01f);
-
-            if (strStatusBarWarnings.isEmpty())
-            {
-                progressBarLabel->setText(tr("Synchronizing in thin mode..."));
-                progressBarLabel->setVisible(true);
-                if (nBlocksPerSec>0)
-                    progressBar->setFormat(tr("~%1 header(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
-                else
-                    progressBar->setFormat(tr("~%1 header(s) remaining").arg(nRemainingBlocks));
-                progressBar->setMaximum(nTotalBlocks);
-                progressBar->setValue(pwalletMain->nLastFilteredHeight);
-                progressBar->setVisible(true);
-            }
-
-            tooltip = tr("Catching up...") + QString("<br>") + tooltip;
-
-            if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
-                labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-                spinnerFrame = (spinnerFrame + 1) % 36;
-                nLastUpdateTime = GetTimeMicros();
-            }
-
-            overviewPage->showOutOfSyncWarning(true);
-            tooltip = tr("Downloaded %1 of %2 headers of transaction history (%3% done).").arg(pwalletMain->nLastFilteredHeight).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
-        }
-        else
-        {
-            if (strStatusBarWarnings.isEmpty())
-                progressBarLabel->setVisible(false);
-
-            tooltip = tr("Up to date") + QString(".<br>") + tooltip;
-            labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-            overviewPage->showOutOfSyncWarning(false);
-            progressBar->setVisible(false);
-            tooltip = tr("Downloaded %1 headers of transaction history.").arg(pwalletMain->nLastFilteredHeight);
-
-        }
-
-        // Override progressBarLabel text and hide progress bar, when we have warnings to display
-        if (!strStatusBarWarnings.isEmpty())
-        {
-            progressBarLabel->setText(strStatusBarWarnings);
-            progressBarLabel->setVisible(true);
-            progressBar->setVisible(false);
-        }
-
-        if(!text.isEmpty())
-        {
-            tooltip += QString("<br>");
-            tooltip += tr("Last received block was generated %1.").arg(text);
-        }
-
-        // Don't word-wrap this (fixed-width) tooltip
-        tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
-
-        labelBlocksIcon->setToolTip(tooltip);
-        progressBarLabel->setToolTip(tooltip);
-        progressBar->setToolTip(tooltip);
-
-    } else {
-        
-        QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
-        QString tooltip;
-        QString nRemainingTime;
-
-        if (nLastBlocks == 0)
-        {
-            nLastBlocks = pindexBest->nHeight;
-        }
-
-        if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
-            nBlocksInLastPeriod = count - nLastBlocks;
-            nLastBlocks = count;
-            nClientUpdateTime = GetTime();
-        }
-        if (nBlocksInLastPeriod>0)
-            nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
-        else
-            nBlocksPerSec = 0;
-
-        if (nBlocksPerSec>0) {
-            nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
-        }
-
-        QDateTime lastBlockDate = clientModel->getLastBlockDate();
-        int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
-        QString text;
-
-        // Represent time from last generated block or header in human readable text
-        if(secs <= 0)
-        {
-            // Fully up to date. Leave text empty.
-        }
-        else if(secs < 60)
-        {
-            text = tr("%n second(s) ago","",secs);
-        }
-        else if(secs < 60*60)
-        {
-            text = tr("%n minute(s) ago","",secs/60);
-        }
-        else if(secs < 24*60*60)
-        {
-            text = tr("%n hour(s) ago","",secs/(60*60));
-        }
-        else
-        {
-            text = tr("%n day(s) ago","",secs/(60*60*24));
-        }
-
-        if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
-        {
-            int nRemainingBlocks = nTotalBlocks - count;
-            float nPercentageDone = count / (nTotalBlocks * 0.01f);
-            if (strStatusBarWarnings.isEmpty())
-            {
-
-                progressBarLabel->setText(tr("Synchronizing with the network..."));
-                progressBarLabel->setVisible(true);
-                if (nBlocksPerSec>0)
-                    progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
-                else
-                    progressBar->setFormat(tr("~%1 block(s) remaining").arg(nRemainingBlocks));
-
-                progressBar->setMaximum(nTotalBlocks);
-                progressBar->setValue(count);
-                progressBar->setVisible(true);
-            }
-
-            tooltip = tr("Catching up...") + QString("<br>") + tooltip;
-
-            if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
-                labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-                spinnerFrame = (spinnerFrame + 1) % 36;
-                nLastUpdateTime = GetTimeMicros();
-            }
-
-            overviewPage->showOutOfSyncWarning(true);
-            tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
-        }
-        else
-        {
-            if (strStatusBarWarnings.isEmpty())
-                progressBarLabel->setVisible(false);
-
-            tooltip = tr("Up to date") + QString(".<br>") + tooltip;
-            labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-            overviewPage->showOutOfSyncWarning(false);
-            progressBar->setVisible(false);
-            tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
-        }
-
-        // Override progressBarLabel text and hide progress bar, when we have warnings to display
-        if (!strStatusBarWarnings.isEmpty())
-        {
-            progressBarLabel->setText(strStatusBarWarnings);
-            progressBarLabel->setVisible(true);
-            progressBar->setVisible(false);
-        }
-
-        if(!text.isEmpty())
-        {
-            tooltip += QString("<br>");
-            tooltip += tr("Last received block was generated %1.").arg(text);
-        }
-
-        // Don't word-wrap this (fixed-width) tooltip
-        tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
-
-        labelBlocksIcon->setToolTip(tooltip);
-        progressBarLabel->setToolTip(tooltip);
-        progressBar->setToolTip(tooltip);
     }
+
+    QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
+    QString tooltip;
+    QString nRemainingTime;
+
+    if (nLastBlocks == 0)
+        nLastBlocks = pindexBest->nHeight;
+
+    if (count > nLastBlocks && GetTime() - nClientUpdateTime > BPS_PERIOD) {
+        nBlocksInLastPeriod = count - nLastBlocks;
+        nLastBlocks = count;
+        nClientUpdateTime = GetTime();
+    }
+    if (nBlocksInLastPeriod>0)
+        nBlocksPerSec = nBlocksInLastPeriod / BPS_PERIOD;
+    else
+        nBlocksPerSec = 0;
+
+    if (nBlocksPerSec>0) {
+        nRemainingTime = QDateTime::fromTime_t((nTotalBlocks - count) / nBlocksPerSec).toUTC().toString("hh'h'mm'm'");
+    }
+
+    QDateTime lastBlockDate = clientModel->getLastBlockDate();
+    int secs = lastBlockDate.secsTo(QDateTime::currentDateTime());
+    QString text;
+
+    // Represent time from last generated block in human readable text
+    if(secs <= 0)
+    {
+        // Fully up to date. Leave text empty.
+    }
+    else if(secs < 60)
+    {
+        text = tr("%n second(s) ago","",secs);
+    }
+    else if(secs < 60*60)
+    {
+        text = tr("%n minute(s) ago","",secs/60);
+    }
+    else if(secs < 24*60*60)
+    {
+        text = tr("%n hour(s) ago","",secs/(60*60));
+    }
+    else
+    {
+        text = tr("%n day(s) ago","",secs/(60*60*24));
+    }
+
+    if (IsInitialBlockDownload() || count < nTotalBlocks-30) // if we're in initial download or more than 30 blocks behind
+    {
+        int nRemainingBlocks = nTotalBlocks - count;
+        float nPercentageDone = count / (nTotalBlocks * 0.01f);
+        if (strStatusBarWarnings.isEmpty())
+        {
+            progressBarLabel->setText(tr("Synchronizing with the network..."));
+            progressBarLabel->setVisible(true);
+            if (nBlocksPerSec>0)
+                progressBar->setFormat(tr("~%1 block(s) remaining (est: %2 at %3 blocks/sec)").arg(nRemainingBlocks).arg(nRemainingTime).arg(nBlocksPerSec));
+            else
+                progressBar->setFormat(tr("~%1 block(s) remaining").arg(nRemainingBlocks));
+            progressBar->setMaximum(nTotalBlocks);
+            progressBar->setValue(count);
+            progressBar->setVisible(true);
+        }
+
+        tooltip = tr("Catching up...") + QString("<br>") + tooltip;
+
+        if (GetTimeMicros() > nLastUpdateTime + 27000) { // 27ms per spinner frame = 1 sec per 'spin'
+            labelBlocksIcon->setPixmap(QIcon(QString(":/movies/res/movies/spinner-%1.png").arg(spinnerFrame, 3, 10, QChar('0'))).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+            spinnerFrame = (spinnerFrame + 1) % 36;
+            nLastUpdateTime = GetTimeMicros();
+        }
+
+        overviewPage->showOutOfSyncWarning(true);
+
+        tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+    }
+    else
+    {
+        if (strStatusBarWarnings.isEmpty())
+            progressBarLabel->setVisible(false);
+
+        tooltip = tr("Up to date") + QString(".<br>") + tooltip;
+        labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+        overviewPage->showOutOfSyncWarning(false);
+        progressBar->setVisible(false);
+        tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
+    }
+
+    // Override progressBarLabel text and hide progress bar, when we have warnings to display
+    if (!strStatusBarWarnings.isEmpty())
+    {
+        progressBarLabel->setText(strStatusBarWarnings);
+        progressBarLabel->setVisible(true);
+        progressBar->setVisible(false);
+    }
+
+    if(!text.isEmpty())
+    {
+        tooltip += QString("<br>");
+        tooltip += tr("Last received block was generated %1.").arg(text);
+    }
+
+    // Don't word-wrap this (fixed-width) tooltip
+    tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
+
+    labelBlocksIcon->setToolTip(tooltip);
+    progressBarLabel->setToolTip(tooltip);
+    progressBar->setToolTip(tooltip);
 }
 
 void BitcoinGUI::error(const QString &title, const QString &message, bool modal)
@@ -1302,6 +1170,16 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 
+}
+
+void BitcoinGUI::gotoManageNamesPage()
+{
+    manageNamesAction->setChecked(true);
+    centralWidget->setCurrentWidget(manageNamesPage);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), manageNamesPage, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoProofOfImagePage()
@@ -1704,8 +1582,6 @@ void BitcoinGUI::updateStakingIcon()
             labelStakingIcon->setToolTip(tr("Not staking because wallet is offline"));
         else if (IsInitialBlockDownload())
             labelStakingIcon->setToolTip(tr("Not staking because wallet is syncing"));
-        else if (nNodeMode == NT_THIN)
-            labelStakingIcon->setToolTip(tr("Not staking because wallet is in thin mode"));
         else if (!nWeight)
             labelStakingIcon->setToolTip(tr("Not staking because you don't have mature coins<br>Coins take 8 hours to mature."));
         else

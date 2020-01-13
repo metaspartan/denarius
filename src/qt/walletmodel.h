@@ -7,11 +7,13 @@
 
 #include "allocators.h" /* for SecureString */
 #include "wallet.h"
+#include "namecoin.h"
 
 class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
 class MintingTableModel;
+class NameTableModel;
 class CWallet;
 class CKeyID;
 class CPubKey;
@@ -68,6 +70,7 @@ public:
     AddressTableModel *getAddressTableModel();
     TransactionTableModel *getTransactionTableModel();
 	MintingTableModel *getMintingTableModel();
+    NameTableModel *getNameTableModel();
 
     qint64 getBalance() const;
     qint64 getLockedBalance() const;
@@ -102,6 +105,12 @@ public:
 
     // Send coins to a list of recipients
     SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL);
+
+    // Register new name or update it
+    // Requires unlocked wallet; can throw exception instead of returning error
+    NameTxReturn nameNew(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress);
+    NameTxReturn nameUpdate(const QString &name, const std::vector<unsigned char> &vchValue, int days, QString newAddress = "");
+    NameTxReturn nameDelete(const QString &name);
 
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
@@ -152,7 +161,8 @@ private:
 
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
-	  MintingTableModel *mintingTableModel;
+	MintingTableModel *mintingTableModel;
+    NameTableModel *nameTableModel;
 
     //Watch Only
     bool fHaveWatchOnly;
@@ -179,7 +189,6 @@ private:
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
     void checkBalanceChanged();
-    void checkBalanceChangedThin();
 
 
 public slots:
@@ -197,8 +206,6 @@ public slots:
 signals:
     // Signal that balance in wallet changed
     void balanceChanged(qint64 balance, qint64 lockedbalance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance,  qint64 watchOnlyBalance, qint64 watchUnconfBalance, qint64 watchImmatureBalance);
-
-    void balanceChangedThin(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);

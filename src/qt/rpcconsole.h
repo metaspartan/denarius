@@ -7,6 +7,7 @@
 #include "net.h"
 
 #include <QDialog>
+#include <QCompleter>
 
 class ClientModel;
 
@@ -103,6 +104,7 @@ private:
     ClientModel *clientModel;
     QStringList history;
     int historyPtr;
+    QCompleter *autoCompleter;
     NodeId cachedNodeid;
     void startExecutor();
 };

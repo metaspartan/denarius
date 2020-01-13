@@ -19,13 +19,10 @@
 #include "netbase.h"
 #include "protocol.h"
 #include "addrman.h"
-#include "bloom.h"
-#include "state.h"
 
 class CRequestTracker;
 class CNode;
 class CBlockIndex;
-class CBlockThinIndex;
 extern int nBestHeight;
 
 
@@ -145,7 +142,7 @@ enum threadId
 
 extern bool fDiscover;
 extern bool fUseUPnP;
-//extern uint64_t nLocalServices;
+extern uint64_t nLocalServices;
 extern uint64_t nLocalHostNonce;
 extern CAddress addrSeenByPeer;
 extern boost::array<int, THREAD_MAX> vnThreadsRunning;
@@ -182,7 +179,6 @@ class CNodeStats
 {
 public:
     NodeId nodeid;
-    int nTypeInd;
     uint64_t nServices;
     int64_t nLastSend;
     int64_t nLastRecv;
@@ -192,6 +188,7 @@ public:
     int64_t nTimeOffset;
     std::string addrName;
     int nVersion;
+    int nTypeInd;
     std::string strSubVer;
     bool fInbound;
     int nChainHeight;
@@ -301,7 +298,6 @@ public:
     std::string addrName;
     CService addrLocal;
     int nVersion;
-    int nTypeInd;
     std::string strSubVer;
     //bool fWhitelisted; // This peer can bypass DoS banning.
     bool fOneShot;
@@ -340,10 +336,9 @@ public:
     uint256 hashContinue;
     CBlockIndex* pindexLastGetBlocksBegin;
     std::vector<CBlockIndex*> getBlocksIndex;
-    CBlockThinIndex* pindexLastGetBlockThinsBegin;
     std::vector<uint256> getBlocksHash;
     uint256 hashLastGetBlocksEnd;
-    int nChainHeight; // updates only with ping message, every 2 mins
+    int nChainHeight;
 	bool fStartSync;
 	int nMisbehavior;
 
@@ -372,9 +367,6 @@ public:
     // Whether a ping is requested.
     bool fPingQueued;
 
-    CCriticalSection cs_filter;
-    CBloomFilter* pfilter; // Boom Filter Thin Mode
-
     CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : ssSend(SER_NETWORK, INIT_PROTO_VERSION), setAddrKnown(5000)
     {
         nServices = 0;
@@ -389,7 +381,6 @@ public:
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
-        nTypeInd = NT_FULL;
         strSubVer = "";
         fOneShot = false;
         fClient = false; // set by version message
@@ -398,7 +389,6 @@ public:
         fNetworkNode = false;
         fSuccessfullyConnected = false;
         fDisconnect = false;
-        fRelayTxes = false;
         nRefCount = 0;
         nSendSize = 0;
         nSendOffset = 0;
@@ -414,9 +404,9 @@ public:
         nPingNonceSent = 0;
         nPingUsecStart = 0;
         nPingUsecTime = 0;
-        pfilter = NULL;
         fPingQueued = false;
         fForTunaMaster = false;
+        fRelayTxes = false;
         nLastDseg = GetTime();
 
         // Be shy and don't send version until we hear
@@ -797,17 +787,11 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
 
 	void PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd);
 
-    // Thin Mode Push Blocks
-    void PushGetBlocks(uint256& hashBegin, uint256 hashEnd);
-    void PushGetBlocks(CBlockThinIndex* pindexBegin, uint256 hashEnd);
-    void PushGetHeaders(CBlockThinIndex* pindexBegin, uint256 hashEnd);
-
     bool IsSubscribed(unsigned int nChannel);
     void Subscribe(unsigned int nChannel, unsigned int nHops=0);
     void CancelSubscribe(unsigned int nChannel);
     void CloseSocketDisconnect();
 	void Cleanup();
-    void TryFlushSend();
 
     // Denial-of-service detection/prevention
     // The idea is to detect peers that are behaving
@@ -827,7 +811,6 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
     static bool IsBanned(CNetAddr ip);
     static bool Ban(const CNetAddr &ip); //new addnode ban command
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
-    bool SoftBan();
     void copyStats(CNodeStats &stats);
 
     // Network stats
@@ -858,6 +841,16 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
     // in case of no limit, it will always response 0
     static uint64_t GetMaxOutboundTimeLeftInCycle();
 };
+
+inline void RelayInventory(const CInv& inv)
+{
+    // Put on lists to offer to the other nodes
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodes)
+            pnode->PushInventory(inv);
+    }
+}
 
 class CTransaction;
 void RelayTransaction(const CTransaction& tx, const uint256& hash);

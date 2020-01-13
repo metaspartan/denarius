@@ -747,7 +747,7 @@ int CFortunaStake::SetPayRate(int nHeight)
      payValue = 0;
      payRate = 0;
 
-     if (payData.size()>0) {
+     if (payData.size() > 0) {
          // printf("Using fortunastake cached payments data for pay rate");
          // printf(" (payInfo:%d@%f)...", payCount, payRate);
          int64_t amount = 0;

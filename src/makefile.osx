@@ -21,6 +21,8 @@ LIBPATHS= \
 
 USE_LEVELDB:=1
 USE_UPNP:=1
+USE_NATIVETOR:=1
+USE_IPFS:=1
 
 LIBS= -dead_strip
 
@@ -45,6 +47,20 @@ LIBS += \
  -lcrypto
 endif
 
+ifndef USE_NATIVETOR
+  override USE_NATIVETOR = -
+endif
+ifneq (${USE_NATIVETOR}, -)
+  DEFS += $(addprefix -I,$(CURDIR)/tor) -DUSE_NATIVETOR=$(USE_NATIVETOR)
+endif
+
+ifndef USE_IPFS
+  override USE_IPFS = -
+endif
+ifneq (${USE_IPFS}, -)
+  DEFS += $(addprefix -I,$(CURDIR)/ipfs) -DUSE_IPFS=$(USE_IPFS)
+endif
+
 DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE
 
 ifdef RELEASE
@@ -60,11 +76,172 @@ endif
 CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-unused-parameter \
     $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 
+ifeq (${USE_IPFS}, 1)
 OBJS= \
+     obj/ipfs.o \
+     obj/ipfscurl.o
+endif
+
+ifeq (${USE_NATIVETOR}, 1)
+OBJS= \
+	obj/address.o \
+	obj/addressmap.o \
+	obj/aes.o \
+	obj/anonymize.o \
+	obj/backtrace.o \
+	obj/blinding.o \
+	obj/bridges.o \
+	obj/buffers.o \
+	obj/cell_common.o \
+	obj/cell_establish_intro.o \
+	obj/cell_introduce1.o \
+	obj/channel.o \
+	obj/channeltls.o \
+	obj/circpathbias.o \
+	obj/circuitbuild.o \
+	obj/circuitlist.o \
+	obj/circuitmux.o \
+	obj/circuitmux_ewma.o \
+	obj/circuitstats.o \
+	obj/circuituse.o \
+	obj/command.o \
+	obj/compat_libevent.o \
+	obj/compat_pthreads.o \
+	obj/compat_threads.o \
+	obj/compat_time.o \
+	obj/config.o \
+	obj/confparse.o \
+	obj/connection.o \
+	obj/connection_edge.o \
+	obj/connection_or.o \
+	obj/container.o \
+	obj/control.o \
+	obj/crypto.o \
+	obj/crypto_curve25519.o \
+	obj/crypto_ed25519.o \
+	obj/crypto_format.o \
+	obj/crypto_pwbox.o \
+	obj/crypto_s2k.o \
+	obj/cpuworker.o \
+	obj/csiphash.o \
+	obj/curve25519-donna.o \
+	obj/di_ops.o \
+	obj/dircollate.o \
+	obj/directory.o \
+	obj/dirserv.o \
+	obj/dirvote.o \
+	obj/dns.o \
+	obj/dnsserv.o \
+	obj/ed25519_cert.o \
+	obj/ed25519_tor.o \
+	obj/entrynodes.o \
+	obj/ext_orport.o \
+	obj/fe_copy.o \
+	obj/fe_cmov.o \
+	obj/fe_isnegative.o \
+	obj/fe_sq.o \
+	obj/fe_pow22523.o \
+	obj/fe_isnonzero.o \
+	obj/fe_neg.o \
+	obj/fe_frombytes.o \
+	obj/fe_invert.o \
+	obj/fe_sub.o \
+	obj/fe_add.o \
+	obj/fe_1.o \
+	obj/fe_mul.o \
+	obj/fe_tobytes.o \
+	obj/fe_0.o \
+	obj/fe_sq2.o \
+	obj/fp_pair.o \
+	obj/ge_scalarmult_base.o \
+	obj/ge_p3_tobytes.o \
+	obj/ge_frombytes.o \
+	obj/ge_double_scalarmult.o \
+	obj/ge_tobytes.o \
+	obj/ge_p3_to_cached.o \
+	obj/ge_p3_to_p2.o \
+	obj/ge_p3_dbl.o \
+	obj/ge_p3_0.o \
+	obj/ge_p1p1_to_p2.o \
+	obj/ge_p1p1_to_p3.o \
+	obj/ge_add.o \
+	obj/ge_p2_0.o \
+	obj/ge_p2_dbl.o \
+	obj/ge_madd.o \
+	obj/ge_msub.o \
+	obj/ge_sub.o \
+	obj/ge_precomp_0.o \
+	obj/geoip.o \
+	obj/hibernate.o \
+	obj/hs_cache.o \
+	obj/hs_circuitmap.o \
+	obj/hs_common.o \
+	obj/hs_descriptor.o \
+	obj/hs_intropoint.o \
+	obj/hs_service.o \
+	obj/keyconv.o \
+	obj/keypair.o \
+	obj/keypin.o \
+	obj/keccak-tiny-unrolled.o \
+	obj/link_handshake.o \
+	obj/log.o \
+	obj/tormain.o \
+	obj/memarea.o \
+	obj/microdesc.o \
+	obj/networkstatus.o \
+	obj/nodelist.o \
+	obj/ntmain.o \
+	obj/onion.o \
+	obj/onion_fast.o \
+	obj/onion_ntor.o \
+	obj/onion_tap.o \
+	obj/open.o \
+	obj/parsecommon.o \
+	obj/periodic.o \
+	obj/policies.o \
+	obj/procmon.o \
+	obj/protover.o \
+	obj/pwbox.o \
+	obj/reasons.o \
+	obj/readpassphrase.o \
+	obj/relay.o \
+	obj/rendcache.o \
+	obj/rendclient.o \
+	obj/rendcommon.o \
+	obj/rendmid.o \
+	obj/rendservice.o \
+	obj/rephist.o \
+	obj/replaycache.o \
+	obj/router.o \
+	obj/routerkeys.o \
+	obj/routerlist.o \
+	obj/routerparse.o \
+	obj/routerset.o \
+	obj/sandbox.o \
+	obj/sc_reduce.o \
+	obj/sc_muladd.o \
+	obj/scheduler.o \
+	obj/shared_random.o \
+	obj/shared_random_state.o \
+	obj/sign.o \
+	obj/statefile.o \
+	obj/status.o \
+	obj/torcert.o \
+	obj/torcompat.o \
+	obj/tor_main.o \
+	obj/torgzip.o \
+	obj/tortls.o \
+	obj/torutil.o \
+	obj/transports.o \
+	obj/trunnel.o \
+	obj/util_bug.o \
+	obj/util_format.o \
+	obj/util_process.o \
+	obj/workqueue.o \
     obj/echo.o \
     obj/jh.o \
     obj/keccak.o \
-	  obj/alert.o \
+    obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -79,7 +256,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	  obj/core.o \
+    obj/core.o \
     obj/protocol.o \
     obj/denariusrpc.o \
     obj/rpcdump.o \
@@ -88,6 +265,7 @@ OBJS= \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
+	obj/rpcjupiter.o \
     obj/rpcsmessage.o \
     obj/script.o \
     obj/sync.o \
@@ -103,14 +281,77 @@ OBJS= \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
     obj/stealth.o \
-	  obj/activefortunastake.o \
-	  obj/fortunastakeconfig.o \
+    obj/activefortunastake.o \
+    obj/fortunastakeconfig.o \
     obj/fortunastake.o \
     obj/rpcfortuna.o \
     obj/spork.o \
     obj/fortuna.o \
-	  obj/eccryptoverify.o \
-    obj/ringsig.o
+    obj/eccryptoverify.o \
+    obj/ringsig.o \
+    obj/bloom.o \
+    obj/state.o \
+    obj/ipfs.o \
+    obj/ipfscurl.o  \
+    obj/stun.o 
+else
+OBJS= \
+    obj/echo.o \
+    obj/jh.o \
+    obj/keccak.o \
+    obj/alert.o \
+    obj/version.o \
+    obj/checkpoints.o \
+    obj/netbase.o \
+    obj/addrman.o \
+    obj/crypter.o \
+    obj/key.o \
+    obj/hash.o \
+    obj/base58.o \
+    obj/db.o \
+    obj/init.o \
+    obj/keystore.o \
+    obj/miner.o \
+    obj/main.o \
+    obj/net.o \
+    obj/core.o \
+    obj/protocol.o \
+    obj/denariusrpc.o \
+    obj/rpcdump.o \
+    obj/rpcnet.o \
+    obj/rpcmining.o \
+    obj/rpcwallet.o \
+    obj/rpcblockchain.o \
+    obj/rpcrawtransaction.o \
+    obj/rpcsmessage.o \
+	obj/rpcjupiter.o \
+    obj/script.o \
+    obj/sync.o \
+    obj/util.o \
+    obj/wallet.o \
+    obj/walletdb.o \
+    obj/noui.o \
+    obj/kernel.o \
+    obj/pbkdf2.o \
+    obj/scrypt.o \
+    obj/scrypt-arm.o \
+    obj/scrypt-x86.o \
+    obj/scrypt-x86_64.o \
+    obj/smessage.o \
+    obj/stealth.o \
+    obj/activefortunastake.o \
+    obj/fortunastakeconfig.o \
+    obj/fortunastake.o \
+    obj/rpcfortuna.o \
+    obj/spork.o \
+    obj/fortuna.o \
+    obj/eccryptoverify.o \
+    obj/ringsig.o \
+    obj/bloom.o \
+    obj/state.o \
+    obj/ipfs.o \
+    obj/ipfscurl.o  \
+    obj/stun.o
 
 ifndef USE_UPNP
 	override USE_UPNP = -

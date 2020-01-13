@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 namespace ipfs {
 
 Client::Client(const std::string& host)
-    : url_prefix_("https://" + host + "/api/v0") {
+    : url_prefix_(host + "/api/v0") {
   http_ = new http::TransportCurl();
 }
 
@@ -203,7 +203,7 @@ void Client::FilesAdd(const std::vector<http::FileUpload>& files,
                       Json* result) {
   std::stringstream body;
 
-  http_->Fetch(MakeUrl("add", {{"progress", "true"}}), files, &body);
+  http_->Fetch(MakeUrl("add", {{"progress", "true"},{"pin", "true"}}), files, &body);
 
   /* The reply consists of multiple lines, each one of which is a JSON, for
   example:

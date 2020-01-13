@@ -341,6 +341,7 @@ static const CRPCCommand vRPCCommands[] =
     { "reservebalance",         &reservebalance,         false,  true},
     { "checkwallet",            &checkwallet,            false,  true},
     { "repairwallet",           &repairwallet,           false,  true},
+    { "deletetransaction",      &deletetransaction,      false,  true},
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "setdebug",               &setdebug,               true,   false },
@@ -354,7 +355,7 @@ static const CRPCCommand vRPCCommands[] =
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
 
-    // Ring Signatures - D e n a r i u s - v3.1.0
+    // Ring Signatures - D e n a r i u s
     { "senddtoanon",          	&senddtoanon,          	 false,  false},
     { "sendanontoanon",         &sendanontoanon,         false,  false},
     { "sendanontod",          	&sendanontod,         	 false,  false},
@@ -368,6 +369,17 @@ static const CRPCCommand vRPCCommands[] =
     { "getpoolinfo",            &getpoolinfo,            true,   false},
     { "masternode",           	&masternode,             true,   false},
     { "fortunastake",           &fortunastake,           true,   false},
+
+    // Egeria DNS Commands
+    { "name_new",               &name_new,               false },
+    { "name_update",            &name_update,            false },
+    { "name_delete",            &name_delete,            false },
+    { "sendtoname",             &sendtoname,             false },
+    { "name_list",              &name_list,              false },
+    { "name_scan",              &name_scan,              false },
+    { "name_filter",            &name_filter,            false },
+    { "name_show",              &name_show,              false },
+    { "name_debug",             &name_debug,             false },
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -383,14 +395,16 @@ static const CRPCCommand vRPCCommands[] =
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
 
-    // Denarius Thin Mode
-    { "thinscanmerkleblocks",   &thinscanmerkleblocks,   false,  false},
-    { "thinforcestate",         &thinforcestate,         false,  false},
+    { "proofofdata",          &proofofdata,              false,  true  },
 
     // Denarius Jupiter IPFS
     { "jupiterversion",       &jupiterversion,           true,   false },
     { "jupiterupload",        &jupiterupload,            false,  false },
-
+    { "jupiterpod",           &jupiterpod,               false,  true  },
+    { "jupiterduo",           &jupiterduo,               false,  false },
+    { "jupiterduopod",        &jupiterduopod,            false,  true  },
+    { "jupitergetblock",      &jupitergetblock,          false,  false },
+    { "jupitergetstat",       &jupitergetstat,           false,  false },
 
 
 
@@ -1223,6 +1237,18 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 }
 
+//D E N A R I U S - Autocomplete in Debug Window
+
+std::vector<std::string> CRPCTable::listCommands() const
+{
+    std::vector<std::string> commandList;
+    typedef std::map<std::string, const CRPCCommand*> commandMap;
+
+    std::transform( mapCommands.begin(), mapCommands.end(),
+                   std::back_inserter(commandList),
+                   boost::bind(&commandMap::value_type::first,_1) );
+    return commandList;
+}
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
@@ -1393,9 +1419,19 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
-    if (strMethod == "thinscanmerkleblocks"   && n > 0) ConvertTo<int64_t>(params[0]);
-    if (strMethod == "thinforcestate"         && n > 0) ConvertTo<int>(params[0]);
+
+    //Egeria Names
+    if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_update"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_update"            && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_filter"            && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
+    if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
+
     if (strMethod == "setbestblockbyheight"   && n > 0) ConvertTo<int64_t>(params[0]);
+
 
     return params;
 }

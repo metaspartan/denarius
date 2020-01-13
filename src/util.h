@@ -45,6 +45,7 @@ static const int64_t CENT = 1000000;
 
 typedef int64_t CAmount;
 
+//#define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -204,6 +205,7 @@ extern std::map<std::string, std::string> mapArgs;
 extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
+extern bool fDebugDNS;
 extern bool fDebugSmsg;
 extern bool fDebugFS;
 extern bool fDebugChain;
@@ -220,8 +222,8 @@ extern bool fCommandLine;
 extern std::string strMiscWarning;
 extern bool fTestNet;
 extern bool fNativeTor;
+extern bool fJupiterLocal;
 extern bool fFSLock;
-extern bool fThinMode;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
@@ -296,9 +298,6 @@ void WriteConfigFile(FILE* configFile);
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
-
-const char *GetNodeModeName(int modeInd);
-const char *GetNodeStateName(int stateInd);
 
 std::string bytesReadable(uint64_t nBytes);
 

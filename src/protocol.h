@@ -16,6 +16,8 @@
 #include "uint256.h"
 #include "state.h"
 
+#define EGERIADNS_PORT  3333
+
 extern bool fTestNet;
 static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
 {
@@ -64,13 +66,6 @@ class CMessageHeader
         char pchCommand[COMMAND_SIZE];
         unsigned int nMessageSize;
         unsigned int nChecksum;
-};
-
-/** reject codes */
-enum RejectCodes
-{
-    REJ_NEED_THIN_SUPPORT = 1,
-    REJ_MAX_THIN_PEERS,
 };
 
 /** A CService with information about it as peer */

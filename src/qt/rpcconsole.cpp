@@ -13,6 +13,7 @@
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
+#include <QStringList>
 
 #include <openssl/crypto.h>
 
@@ -300,9 +301,20 @@ void RPCConsole::setClientModel(ClientModel *model)
         setNumConnections(model->getNumConnections());
         ui->isTestNet->setChecked(model->isTestNet());
         ui->isNativeTor->setChecked(model->isNativeTor());
-        ui->isThinMode->setChecked(model->isThinMode());
 
         setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
+
+        // Auto Complete
+        QStringList wordList;
+        std::vector<std::string> commandList = tableRPC.listCommands();
+        for (size_t i = 0; i < commandList.size(); ++i)
+        {
+            wordList << commandList[i].c_str();
+        }
+
+        autoCompleter = new QCompleter(wordList, this);
+        ui->lineEdit->setCompleter(autoCompleter);
+
     }
 }
 
@@ -375,10 +387,7 @@ void RPCConsole::setNumBlocks(int count, int countOfPeers)
     ui->totalBlocks->setText(QString::number(countOfPeers));
 
     QDateTime lastBlockDate;
-    if (nNodeMode == NT_FULL)
-        lastBlockDate = clientModel->getLastBlockDate();
-    else
-        lastBlockDate = clientModel->getLastBlockThinDate();
+    lastBlockDate = clientModel->getLastBlockDate();
 
     if(clientModel)
     {

@@ -19,6 +19,7 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "egeriadns.h"
 
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
@@ -44,6 +45,7 @@
 using namespace std;
 using namespace boost;
 
+EgeriaDns* egeriadns = NULL;
 CWallet* pwalletMain = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
@@ -110,7 +112,8 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
-
+        if(egeriadns)
+            delete egeriadns;
         Finalise();
         /*
         SecureMsgShutdown();
@@ -399,18 +402,6 @@ std::string HelpMessage()
         "  -debugsmsg                               " + _("Log extra debug messages.") + "\n" +
         "  -smsgscanchain                           " + _("Scan the block chain for public key addresses on startup.") + "\n";
 
-        "\n" + _("Thin options:") + "\n" +
-        "  -thinmode              " + _("Operate in less secure, less resource hungry 'thin' mode") + "\n" +
-
-        "  -thinstake             " + _("Request data to enable staking in thin mode. (default: 0)") + "\n" +
-        "  -thinfullindex         " + _("Keep the entire block index in memory. (default: 0)") + "\n" +
-        "  -thinindexmax=<n>      " + _("When not thinfullindex, the max number of block headers to keep in memory. (default: 4096)") + "\n" +
-
-        "  -nothinssupport        " + _("Disable supporting thin nodes. (default: 0)") + "\n" +
-        "  -nothinstealth         " + _("Disable forwarding, or requesting all stealth txns. (default: 0)") + "\n" +
-        "  -nothinstake           " + _("Disable sending data to enable thin nodes to stake. (default: 0)") + "\n" +
-        "  -maxthinpeers=<n>      " + _("Don't connect to more than <n> thin peers (default: 8)") + "\n";
-
     return strUsage;
 }
 
@@ -533,13 +524,7 @@ bool AppInit2()
 
     fFSLock = GetBoolArg("-fsconflock");
     fNativeTor = GetBoolArg("-nativetor");
-    fThinMode = GetBoolArg("-thinmode");
-
-    if (fThinMode)
-    {
-        nNodeMode = NT_THIN;
-    }
-    //if (fTestNet)
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (mapArgs.count("-bind"))
     {
@@ -619,6 +604,7 @@ bool AppInit2()
     fDebugChain = GetBoolArg("-debugchain");
     fDebugFS = GetBoolArg("-debugfs");
     fDebugRingSig = GetBoolArg("-debugringsig");
+    fDebugDNS = GetBoolArg("-debugdns");
 
     fNoSmsg = GetBoolArg("-nosmsg");
     fDisableStealth = GetBoolArg("-disablestealth"); // force-disable stealth transaction scanning
@@ -692,15 +678,29 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
+
+    //Init Name Hooks
+    hooks = InitHook();
+
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
-    printf("Denarius Node Operating in %s mode.\n", GetNodeModeName(nNodeMode));
+    printf("Denarius (D) version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) //WIP OpenSSL 1.0.x only, OpenSSL 1.1 not supported yet
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
+#else
+    printf("Using OpenSSL version %s\n", OpenSSL_version(OPENSSL_VERSION));
+#endif
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
+
+    //  Create egeria dns name index - this must happen before ReacceptWalletTransactions())
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "namedb.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile))
+        createNameIndexFile();
+        printf("Created an Egeria DNS Name Database in the Denarius Data Directory\n");
 
     if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
@@ -723,79 +723,7 @@ bool AppInit2()
 
     int64_t nStart;
 
-    /* *********************************************************
-        Step 4.5: adjust parameters for nNodeMode ( D e n a r i u s NT_THIN or NT_FULL )
-    ********************************************************* */
-
-    switch (nNodeMode)
-    {
-        case NT_FULL:
-            if (GetBoolArg("-nothinssupport"))
-            {
-                printf("Thin support disabled.\n");
-                nLocalServices &= ~(THIN_SUPPORT);
-            };
-
-            if (GetBoolArg("-nothinstake"))
-            {
-                printf("Thin staking support disabled.\n");
-                nLocalServices &= ~(THIN_STAKE);
-            };
-
-            if (GetBoolArg("-nothinstealth"))
-            {
-                printf("Thin stealth support disabled.\n");
-                nLocalServices &= ~(THIN_STEALTH);
-            };
-            break;
-        case NT_THIN:
-            SetBoolArg("-staking", false);
-
-            // -- clear services
-            nLocalServices &= ~(NODE_NETWORK);
-            nLocalServices &= ~(THIN_SUPPORT);
-            nLocalServices &= ~(THIN_STAKE);
-            nLocalServices &= ~(THIN_STEALTH);
-
-            nLocalRequirements |= (THIN_SUPPORT);
-
-            if (GetBoolArg("-thinstake"))
-            {
-                printf("Thin staking enabled.\n");
-                nLocalRequirements |= (THIN_STAKE);
-            };
-
-            if (GetBoolArg("-thinfullindex"))
-            {
-                printf("Thin full index enabled.\n");
-                fThinFullIndex = true;
-            } else
-            {
-                nThinIndexWindow = GetArg("-thinindexmax", 4096);
-
-                if (nThinIndexWindow < 4096)
-                {
-                    printf("Thin index window minimum size is %d.\n", 4096);
-                    nThinIndexWindow = 4096;
-                };
-
-                printf("Thin index window size %d.\n", nThinIndexWindow);
-            };
-
-            if (GetBoolArg("-nothinstealth"))
-            {
-                printf("Thin stealth disabled.\n");
-            } else
-            {
-                nLocalRequirements |= (THIN_STEALTH);
-            };
-
-            break;
-        default:
-            break;
-    };
-
-    // -- thin and full
+    // SMSG_RELAY Node Enum
     if (fNoSmsg)
         nLocalServices &= ~(SMSG_RELAY);
 
@@ -840,8 +768,6 @@ bool AppInit2()
     };
 
     // ********************************************************* Step 6: network initialization
-
-    nMaxThinPeers = GetArg("-maxthinpeers", 8); // Maximum peers for thin node
 
     nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
 
@@ -1214,9 +1140,8 @@ bool AppInit2()
     // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
-    // Init Bloom Filters if the Node State isnt a Full Node
-    if (nNodeMode != NT_FULL)
-        pwalletMain->InitBloomFilter();
+    // Init Bloom Filters
+    //pwalletMain->InitBloomFilter();
 
     // ********************************************************* Step 9: import blocks
 
@@ -1378,11 +1303,27 @@ bool AppInit2()
 
     //// debug print
     printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
-    printf("mapBlockThinIndex.size() = %u\n",       mapBlockThinIndex.size());
     printf("nBestHeight = %d\n",            nBestHeight);
     printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
+
+    // Start Egeria DNS Server alongside Denarius
+    // init egeriadns. WARNING: this should be done after hooks initialization
+    if (GetBoolArg("-egeria", true)) //Add fEgeria bool
+    {
+        //#define EGERIADNS_PORT 3333 in protocol.h
+        int port = GetArg("-egeriaport", EGERIADNS_PORT);
+        int verbose = GetArg("-egeriaverbose", 1);
+        if (port <= 0)
+            port = EGERIADNS_PORT;
+        string suffix  = GetArg("-egeriasuffix", "");
+        string bind_ip = GetArg("-egeriabindip", "");
+        string allowed = GetArg("-egeriaallowed", "");
+        string localcf = GetArg("-egerialocalcf", "");
+        egeriadns = new EgeriaDns(bind_ip.c_str(), port, suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius Egeria DNS server started...\n");
+    }
 
     if(fNativeTor)
         printf("Native Tor Onion Relay Node Enabled\n");
@@ -1411,6 +1352,8 @@ bool AppInit2()
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
+    if(egeriadns)
+        egeriadns->Run();
     while (1)
         //MilliSleep(5000);
         sleep(5);
