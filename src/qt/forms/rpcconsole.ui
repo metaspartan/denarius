@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>740</width>
-    <height>450</height>
+    <width>667</width>
+    <height>453</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,23 +17,30 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_info">
       <attribute name="title">
        <string>&amp;Information</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_9">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
+       <item row="8" column="1">
+        <widget class="QCheckBox" name="isTestNet">
+         <property name="enabled">
+          <bool>false</bool>
          </property>
          <property name="text">
-          <string>Denarius Core</string>
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>Using OpenSSL version</string>
+         </property>
+         <property name="indent">
+          <number>10</number>
          </property>
         </widget>
        </item>
@@ -48,6 +55,19 @@
         <widget class="QLabel" name="label_6">
          <property name="text">
           <string>Client version</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Denarius Core</string>
          </property>
         </widget>
        </item>
@@ -67,18 +87,24 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_14">
-         <property name="text">
-          <string>Using OpenSSL version</string>
+       <item row="1" column="1">
+        <widget class="QLabel" name="clientName">
+         <property name="cursor">
+          <cursorShape>IBeamCursor</cursorShape>
          </property>
-         <property name="indent">
-          <number>10</number>
+         <property name="text">
+          <string>N/A</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::PlainText</enum>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="clientName">
+       <item row="4" column="1">
+        <widget class="QLabel" name="buildDate">
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
          </property>
@@ -100,22 +126,6 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QLabel" name="buildDate">
-         <property name="cursor">
-          <cursorShape>IBeamCursor</cursorShape>
-         </property>
-         <property name="text">
-          <string>N/A</string>
-         </property>
-         <property name="textFormat">
-          <enum>Qt::PlainText</enum>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="1">
         <widget class="QLabel" name="openSSLVersion">
          <property name="cursor">
@@ -129,13 +139,6 @@
          </property>
          <property name="textInteractionFlags">
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_13">
-         <property name="text">
-          <string>Startup time</string>
          </property>
         </widget>
        </item>
@@ -175,6 +178,13 @@
          </property>
         </widget>
        </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>Startup time</string>
+         </property>
+        </widget>
+       </item>
        <item row="7" column="1">
         <widget class="QLabel" name="numberOfConnections">
          <property name="cursor">
@@ -198,23 +208,6 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="0">
-        <widget class="QLabel" name="label_81">
-         <property name="text">
-          <string>Native Tor On/Off</string>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="1">
-        <widget class="QCheckBox" name="isTestNet">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
        <item row="9" column="1">
         <widget class="QCheckBox" name="isNativeTor">
          <property name="enabled">
@@ -225,14 +218,28 @@
          </property>
         </widget>
        </item>
-       <item row="11" column="0">
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_81">
+         <property name="text">
+          <string>Native Tor On/Off</string>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Current number of blocks</string>
          </property>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="14" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Estimated total blocks</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0">
         <widget class="QLabel" name="label_10">
          <property name="font">
           <font>
@@ -245,7 +252,7 @@
          </property>
         </widget>
        </item>
-       <item row="11" column="1">
+       <item row="13" column="1">
         <widget class="QLabel" name="numberOfBlocks">
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
@@ -261,21 +268,33 @@
          </property>
         </widget>
        </item>
-       <item row="12" column="0">
-        <widget class="QLabel" name="label_4">
+       <item row="16" column="0">
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="19" column="0">
+        <widget class="QLabel" name="labelCLOptions">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
          <property name="text">
-          <string>Estimated total blocks</string>
+          <string>Command-line options</string>
          </property>
         </widget>
        </item>
-       <item row="13" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Last block time</string>
-         </property>
-        </widget>
-       </item>
-       <item row="13" column="1">
+       <item row="15" column="1">
         <widget class="QLabel" name="lastBlockTime">
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
@@ -291,7 +310,14 @@
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="15" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Last block time</string>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="1">
         <widget class="QLabel" name="totalBlocks">
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
@@ -307,33 +333,20 @@
          </property>
         </widget>
        </item>
-       <item row="14" column="0">
-        <spacer name="verticalSpacer_2">
+       <item row="21" column="0">
+        <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>20</height>
+           <height>40</height>
           </size>
          </property>
         </spacer>
        </item>
-       <item row="17" column="0">
-        <widget class="QLabel" name="labelCLOptions">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Command-line options</string>
-         </property>
-        </widget>
-       </item>
-       <item row="16" column="0">
+       <item row="18" column="0">
         <widget class="QPushButton" name="openDebugLogfileButton">
          <property name="toolTip">
           <string>Open the Denarius debug log file from the current data directory. This can take a few seconds for large log files.</string>
@@ -346,20 +359,7 @@
          </property>
         </widget>
        </item>
-       <item row="15" column="0">
-        <widget class="QLabel" name="labelDebugLogfile">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Debug log file</string>
-         </property>
-        </widget>
-       </item>
-       <item row="18" column="0">
+       <item row="20" column="0">
         <widget class="QPushButton" name="showCLOptionsButton">
          <property name="toolTip">
           <string>Show the Denarius-Qt help message to get a list with possible Denarius command-line options.</string>
@@ -372,18 +372,18 @@
          </property>
         </widget>
        </item>
-       <item row="19" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+       <item row="17" column="0">
+        <widget class="QLabel" name="labelDebugLogfile">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
+         <property name="text">
+          <string>Debug log file</string>
          </property>
-        </spacer>
+        </widget>
        </item>
       </layout>
      </widget>

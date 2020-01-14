@@ -22,6 +22,7 @@
 #include "bignum.h"
 #include "key.h"
 #include "script.h"
+#include "state.h"
 /**
  * Encode a byte sequence as a base58-encoded string.
  * pbegin and pend cannot be NULL, unless both are.

@@ -176,7 +176,7 @@ bool CWallet::LoadCScript(const CScript& redeemScript)
     if (redeemScript.size() > MAX_SCRIPT_ELEMENT_SIZE)
     {
         std::string strAddr = CBitcoinAddress(redeemScript.GetID()).ToString();
-        printf("%s: Warning: This wallet contains a redeemScript of size %"PRIszu" which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
+        printf("%s: Warning: This wallet contains a redeemScript of size %" PRIszu" which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n",
             __func__, redeemScript.size(), MAX_SCRIPT_ELEMENT_SIZE, strAddr.c_str());
         return true;
     }
@@ -1036,7 +1036,7 @@ int CWalletTx::GetRequestCount() const
 }
 
 void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
-                           list<COutputEntry>& listSent, int64_t& nFee, string& strSentAccount, const isminefilter& filter) const
+                           list<COutputEntry>& listSent, int64_t& nFee, string& strSentAccount, const isminefilter& filter, bool ignoreNameTx) const
 {
     nFee = 0;
     listReceived.clear();
@@ -1072,7 +1072,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
                 listSent.push_back(output);
 
             // If we are receiving the output, add it as a "received" entry
-            if (fIsMine)
+            if (fIsMine || (!ignoreNameTx && hooks->IsMine(txout)))
                 listReceived.push_back(output);
 
             continue;
@@ -1119,7 +1119,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
             listSent.push_back(output);
 
         // If we are receiving the output, add it as a "received" entry
-        if (fIsMine)
+        if (fIsMine || (!ignoreNameTx && hooks->IsMine(txout)))
             listReceived.push_back(output);
     };
 
@@ -1401,7 +1401,7 @@ void CWallet::ReacceptWalletTransactions()
                 // Update fSpent if a tx got spent somewhere else by a copy of wallet.dat
                 if (txindex.vSpent.size() != wtx.vout.size())
                 {
-                    printf("ERROR: ReacceptWalletTransactions() : txindex.vSpent.size() %"PRIszu" != wtx.vout.size() %"PRIszu"\n", txindex.vSpent.size(), wtx.vout.size());
+                    printf("ERROR: ReacceptWalletTransactions() : txindex.vSpent.size() %" PRIszu" != wtx.vout.size() %" PRIszu"\n", txindex.vSpent.size(), wtx.vout.size());
                     continue;
                 }
                 for (unsigned int i = 0; i < txindex.vSpent.size(); i++)
@@ -2196,6 +2196,10 @@ bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, 
 
         int64_t n = pcoin->vout[i].nValue;
 
+        // ignore namecoin TxOut
+        if (hooks->IsNameTx(pcoin->nVersion) && hooks->IsNameScript(pcoin->vout[i].scriptPubKey))
+            continue;
+
         if (tryDenom == 0 && IsDenominatedAmount(n)) continue; // we don't want denom values on first run
 
         pair<int64_t,pair<const CWalletTx*,unsigned int> > coin = make_pair(n,make_pair(pcoin, i));
@@ -2271,6 +2275,255 @@ bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, 
     return true;
     }
     return false;
+}
+
+static bool CmpDepth(const CWalletTx* a, const CWalletTx* b) { return a->nTime > b->nTime; }
+
+bool CWallet::SelectCoinsMinConf2(int64_t nTargetValue, unsigned int nSpendTime, int nConfMine, int nConfTheirs, set<pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const
+{
+    setCoinsRet.clear();
+    nValueRet = 0;
+
+    // Maximap DP array size
+    static uint32_t nMaxDP = 0;
+    if(nMaxDP == 0)
+        nMaxDP = GetArg("-maxdp", 8 * 1024 * 1024);
+
+    // List of values less than target
+    pair<int64_t, pair<const CWalletTx*,unsigned int> > coinLowestLarger;
+    coinLowestLarger.first = std::numeric_limits<int64_t>::max();
+    coinLowestLarger.second.first = NULL;
+    vector<pair<int64_t, pair<const CWalletTx*,unsigned int> > > vValue;
+    int64_t nTotalLower = 0;
+
+    {
+        LOCK(cs_wallet);
+        vector<const CWalletTx*> vCoins;
+        vCoins.reserve(mapWallet.size());
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+            vCoins.push_back(&(*it).second);
+        //   random_shuffle(vCoins.begin(), vCoins.end(), GetRandInt);
+
+        static int sortir = -1;
+        if(sortir < 0)
+            sortir = GetArg("-sortir", 0);
+
+        switch(sortir) {
+            case 1:
+                sort(vCoins.begin(), vCoins.end(), CmpDepth);
+                break;
+            default:
+                random_shuffle(vCoins.begin(), vCoins.end(), GetRandInt);
+                break;
+        } // switch
+
+
+        BOOST_FOREACH(const CWalletTx* pcoin, vCoins)
+        {
+            if (!pcoin->IsFinal() || !pcoin->IsTrusted())
+                continue;
+
+            if ((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0)
+                continue;
+
+            int nDepth = pcoin->GetDepthInMainChain();
+            if (nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? nConfMine : nConfTheirs))
+                continue;
+
+            for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+            {
+                if (pcoin->IsSpent(i) || !IsMine(pcoin->vout[i]))
+                    continue;
+
+                if (pcoin->nTime > nSpendTime)
+                    continue;  // ppcoin: timestamp must not exceed spend time
+
+                int64_t n = pcoin->vout[i].nValue;
+
+                if (n <= 0)
+                    continue;
+
+                // ignore namecoin TxOut
+                if (hooks->IsNameTx(pcoin->nVersion) && hooks->IsNameScript(pcoin->vout[i].scriptPubKey))
+                    continue;
+
+                pair<int64_t,pair<const CWalletTx*,unsigned int> > coin = make_pair(n,make_pair(pcoin,i));
+
+                if (n == nTargetValue)
+                {
+                    setCoinsRet.insert(coin.second);
+                    nValueRet += coin.first;
+                    return true;
+                }
+                else if (n < nTargetValue + CENT)
+                {
+                    vValue.push_back(coin);
+                    nTotalLower += n;
+                }
+                else if (n < coinLowestLarger.first)
+                {
+                    coinLowestLarger = coin;
+                }
+            }
+        }
+    }
+
+    // Payoff all available UTXOs
+    if (nTotalLower >= nTargetValue && nTotalLower <= nTargetValue + CENT)
+    {
+        for (unsigned int i = 0; i < vValue.size(); ++i)
+        {
+            setCoinsRet.insert(vValue[i].second);
+            nValueRet += vValue[i].first;
+        }
+        return true;
+    }
+
+    if (nTotalLower < nTargetValue + (coinLowestLarger.second.first ? CENT : 0))
+    {
+        if (coinLowestLarger.second.first == NULL)
+            return false;
+        setCoinsRet.insert(coinLowestLarger.second);
+        nValueRet += coinLowestLarger.first;
+        return true;
+    }
+
+    // If possible, solve subset sum by dynamic programming
+    // Adeed by maxihatop
+    uint16_t *dp;	// dynamic programming array
+    uint32_t dp_tgt = nTargetValue / MIN_RELAY_TX_FEE;
+    if(dp_tgt < nMaxDP && (dp = (uint16_t*)calloc(dp_tgt + 1, sizeof(uint16_t))) != NULL) {
+        dp[0] = 1; // Zero CENTs can be reached anyway
+        uint32_t rlimit = 0; // Current Right Borer limit
+        uint16_t max_utxo_qty((1 << 16) - 2);
+        if(vValue.size() < max_utxo_qty)
+            max_utxo_qty = vValue.size();
+        uint32_t min_over_utxo =  0;
+        uint32_t min_over_sum  = ~0;
+        // Apply UTXOs to DP array, until exact sum will be found
+        for(uint16_t utxo_no = 0; utxo_no < max_utxo_qty && dp[dp_tgt] == 0; utxo_no++) {
+            uint32_t offset = vValue[utxo_no].first / MIN_RELAY_TX_FEE;
+            for(int32_t ndx = rlimit; ndx >= 0; ndx--)
+                if(dp[ndx]) {
+                    uint32_t nxt = ndx + offset;
+                    if(nxt <= dp_tgt) {
+                        if(dp[nxt] == 0)
+                            dp[nxt] = utxo_no + 1;
+                    } else
+                    if(nxt < min_over_sum) {
+                        min_over_sum = nxt;
+                        min_over_utxo = utxo_no + 1;
+                    }
+                } // if(dp[ndx])
+            rlimit += offset;
+            if(rlimit >= dp_tgt)
+                rlimit = dp_tgt - 1;
+        } // for - UTXOs
+
+        if(dp[dp_tgt] != 0)  // Found exactly sum without payback
+            min_over_utxo = dp[min_over_sum = dp_tgt];
+
+        while(min_over_sum) {
+            uint16_t utxo_no = min_over_utxo - 1;
+            if (fDebug && GetBoolArg("-printselectcoin"))
+                printf("SelectCoins() DP Added #%u: Val=%s\n", utxo_no, FormatMoney(vValue[utxo_no].first).c_str());
+            setCoinsRet.insert(vValue[utxo_no].second);
+            nValueRet += vValue[utxo_no].first;
+            min_over_sum -= vValue[utxo_no].first / MIN_RELAY_TX_FEE;
+            min_over_utxo = dp[min_over_sum];
+        }
+
+        free(dp);
+
+        if(nValueRet >= nTargetValue) {
+            //// debug print
+            if (fDebug && GetBoolArg("-printselectcoin"))
+                printf("SelectCoins() DP subset: Target=%s Found=%s Payback=%s Qty=%u\n",
+                       FormatMoney(nTargetValue).c_str(),
+                       FormatMoney(nValueRet).c_str(),
+                       FormatMoney(nValueRet - nTargetValue).c_str(),
+                       (unsigned)setCoinsRet.size()
+                );
+            return true; // sum found by DP
+        } else {
+            nValueRet = 0;
+            setCoinsRet.clear();
+        }
+    } // DP compute
+
+#if 1
+    // maxihatop: don't understand, why add extra cent to TARGET
+    if (nTotalLower >= nTargetValue + CENT)
+        nTargetValue += CENT;
+#endif
+    // Solve subset sum by stochastic approximation
+    sort(vValue.rbegin(), vValue.rend());
+    vector<char> vfIncluded;
+    vector<char> vfBest(vValue.size(), true);
+    int64_t nBest = nTotalLower;
+
+    for (int nRep = 0; nRep < 1000 && nBest != nTargetValue; nRep++)
+    {
+        vfIncluded.assign(vValue.size(), false);
+        int64_t nTotal = 0;
+        bool fReachedTarget = false;
+        for (int nPass = 0; nPass < 2 && !fReachedTarget; nPass++)
+        {
+            for (unsigned int i = 0; i < vValue.size(); i++)
+            {
+                if (nPass == 0 ? rand() % 2 : !vfIncluded[i])
+                {
+                    nTotal += vValue[i].first;
+                    vfIncluded[i] = true;
+                    if (nTotal >= nTargetValue)
+                    {
+                        fReachedTarget = true;
+                        if (nTotal < nBest)
+                        {
+                            nBest = nTotal;
+                            vfBest = vfIncluded;
+                        }
+                        nTotal -= vValue[i].first;
+                        vfIncluded[i] = false;
+                    }
+                }
+            }
+        }
+    }
+
+    // If the next larger is still closer, return it
+    if (coinLowestLarger.second.first && coinLowestLarger.first - nTargetValue <= nBest - nTargetValue)
+    {
+        setCoinsRet.insert(coinLowestLarger.second);
+        nValueRet += coinLowestLarger.first;
+    }
+    else {
+        for (unsigned int i = 0; i < vValue.size(); i++)
+            if (vfBest[i])
+            {
+                setCoinsRet.insert(vValue[i].second);
+                nValueRet += vValue[i].first;
+            }
+
+        //// debug print
+        if (fDebug && GetBoolArg("-printselectcoin"))
+        {
+            printf("SelectCoins() stochastic best subset: ");
+            for (unsigned int i = 0; i < vValue.size(); i++)
+                if (vfBest[i])
+                    printf("%s ", FormatMoney(vValue[i].first).c_str());
+            printf("total %s\n", FormatMoney(nBest).c_str());
+        }
+    }
+
+    return true;
+}
+
+bool CWallet::SelectCoins2(int64_t nTargetValue, unsigned int nSpendTime, set<pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const
+{
+    return (SelectCoinsMinConf2(nTargetValue, nSpendTime, 1, 6, setCoinsRet, nValueRet) ||
+            SelectCoinsMinConf2(nTargetValue, nSpendTime, 1, 1, setCoinsRet, nValueRet) ||
+            SelectCoinsMinConf2(nTargetValue, nSpendTime, 0, 1, setCoinsRet, nValueRet));
 }
 
 bool CWallet::SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, set<pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl* coinControl) const
@@ -2556,8 +2809,16 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                     return false;
                 BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
                 {
+                    //Fix priority calculation in CreateTransaction
+                    //Make this projection of priority in 1 block match the
+                    //calculation in the low priority reject code.
                     int64_t nCredit = pcoin.first->vout[pcoin.second].nValue;
-                    dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
+                    //But mempool inputs might still be in the mempool, so their age stays 0
+                    int age = pcoin.first->GetDepthInMainChain();
+                    if (age != 0)
+                        age += 1;
+                    //dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
+                    dPriority += (double)nCredit * age;
                 }
 
                 int64_t nChange = nValueIn - nValue - nFeeRet;
@@ -3134,9 +3395,9 @@ bool CWallet::SendStealthMoneyToDestination(CStealthAddress& sxAddress, int64_t 
 
     if (fDebug)
     {
-        printf("Stealth send to generated pubkey %"PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
+        printf("Stealth send to generated pubkey %" PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
         printf("hash %s\n", addrTo.ToString().c_str());
-        printf("ephem_pubkey %"PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
+        printf("ephem_pubkey %" PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
     };
 
     std::vector<unsigned char> vchNarr;
@@ -3277,7 +3538,7 @@ bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNar
                     printf("StealthSecret failed.\n");
                     continue;
                 };
-                //printf("pkExtracted %"PRIszu": %s\n", pkExtracted.size(), HexStr(pkExtracted).c_str());
+                //printf("pkExtracted %" PRIszu": %s\n", pkExtracted.size(), HexStr(pkExtracted).c_str());
 
                 CPubKey cpkE(pkExtracted);
 
@@ -3964,6 +4225,29 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     return DB_LOAD_OK;
 }
 
+DBErrors CWallet::ZapWalletTx()
+{
+    if (!fFileBacked)
+        return DB_LOAD_OK;
+    DBErrors nZapWalletTxRet = CWalletDB(strWalletFile,"cr+").ZapWalletTx(this);
+    if (nZapWalletTxRet == DB_NEED_REWRITE)
+    {
+        if (CDB::Rewrite(strWalletFile, "\x04pool"))
+        {
+            LOCK(cs_wallet);
+            setKeyPool.clear();
+            // Note: can't top-up keypool here, because wallet is locked.
+            // Users will be prompted to unlock wallet the next operation
+            // that requires a new key.
+        }
+    }
+
+    if (nZapWalletTxRet != DB_LOAD_OK)
+        return nZapWalletTxRet;
+
+    return DB_LOAD_OK;
+}
+
 //D E N A R I U S
 bool CWallet::SetAddressBookName(const CTxDestination& address, const string& strName)
 {
@@ -4020,12 +4304,12 @@ void CWallet::PrintWallet(const CBlock& block)
         if (block.IsProofOfWork() && mapWallet.count(block.vtx[0].GetHash()))
         {
             CWalletTx& wtx = mapWallet[block.vtx[0].GetHash()];
-            printf("    mine:  %d  %d  %"PRId64"", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), FormatMoney(wtx.GetCredit()).c_str());
+            printf("    mine:  %d  %d  %" PRId64"", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), FormatMoney(wtx.GetCredit()).c_str());
         }
         if (block.IsProofOfStake() && mapWallet.count(block.vtx[1].GetHash()))
         {
             CWalletTx& wtx = mapWallet[block.vtx[1].GetHash()];
-            printf("    stake: %d  %d  %"PRId64"", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), FormatMoney(wtx.GetCredit()).c_str());
+            printf("    stake: %d  %d  %" PRId64"", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), FormatMoney(wtx.GetCredit()).c_str());
          }
 
     }
@@ -4092,7 +4376,7 @@ bool CWallet::NewKeyPool()
             walletdb.WritePool(nIndex, CKeyPool(GenerateNewKey()));
             setKeyPool.insert(nIndex);
         }
-        printf("CWallet::NewKeyPool wrote %"PRId64" new keys\n", nKeys);
+        printf("CWallet::NewKeyPool wrote %" PRId64" new keys\n", nKeys);
     }
     return true;
 }
@@ -4123,7 +4407,7 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
             if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
                 throw runtime_error("TopUpKeyPool() : writing generated key failed");
             setKeyPool.insert(nEnd);
-            printf("keypool added key %"PRId64", size=%"PRIszu"\n", nEnd, setKeyPool.size());
+            printf("keypool added key %" PRId64", size=%" PRIszu"\n", nEnd, setKeyPool.size());
 
 			if(!fSuccessfullyLoaded) {
 			    double dProgress = nEnd / 10.f;
@@ -4159,7 +4443,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
             throw runtime_error("ReserveKeyFromKeyPool() : unknown key in key pool");
         assert(keypool.vchPubKey.IsValid());
         if (fDebug && GetBoolArg("-printkeypool"))
-            printf("keypool reserve %"PRId64"\n", nIndex);
+            printf("keypool reserve %" PRId64"\n", nIndex);
     }
 }
 
@@ -4187,7 +4471,7 @@ void CWallet::KeepKey(int64_t nIndex)
         walletdb.ErasePool(nIndex);
     }
     if(fDebug)
-        printf("keypool keep %"PRId64"\n", nIndex);
+        printf("keypool keep %" PRId64"\n", nIndex);
 }
 
 void CWallet::ReturnKey(int64_t nIndex)
@@ -4198,7 +4482,7 @@ void CWallet::ReturnKey(int64_t nIndex)
         setKeyPool.insert(nIndex);
     }
     if(fDebug)
-        printf("keypool return %"PRId64"\n", nIndex);
+        printf("keypool return %" PRId64"\n", nIndex);
 }
 
 bool CWallet::GetKeyFromPool(CPubKey& result, bool fAllowReuse)
@@ -5332,9 +5616,9 @@ bool CWallet::CreateStealthOutput(CStealthAddress* sxAddress, int64_t nValue, st
 
     if (fDebug)
     {
-        printf("CreateStealthOutput() to generated pubkey %"PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
+        printf("CreateStealthOutput() to generated pubkey %" PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
         printf("hash %s\n", addrTo.ToString().c_str());
-        printf("ephem_pubkey %"PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
+        printf("ephem_pubkey %" PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
     };
 
     std::vector<unsigned char> vchENarr;
@@ -5471,7 +5755,7 @@ bool CWallet::CreateAnonOutputs(CStealthAddress* sxAddress, int64_t nValue, std:
             CKeyID ckidTo = cpkTo.GetID();
             CBitcoinAddress addrTo(ckidTo);
 
-            printf("CreateAnonOutput to generated pubkey %"PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
+            printf("CreateAnonOutput to generated pubkey %" PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
             if (!sxAddress)
                 printf("Test Mode\n");
             printf("hash %s\n", addrTo.ToString().c_str());
@@ -5607,7 +5891,7 @@ static bool checkCombinations(int64_t nReq, int m, std::vector<COwnedAnonOutput*
 
                 if (fDebugRingSig && !(nCount % 500))
                 {
-                    printf("checkCombinations() nCount: %"PRId64" - l: %d, n: %d, m: %d, i: %d, nReq: %"PRId64", v[0]: %d, nTotal: %"PRId64" \n", nCount, l, n, m, i, nReq, v[0], nTotal);
+                    printf("checkCombinations() nCount: %" PRId64" - l: %d, n: %d, m: %d, i: %d, nReq: %" PRId64", v[0]: %d, nTotal: %" PRId64" \n", nCount, l, n, m, i, nReq, v[0], nTotal);
                     for (i = m; i--;) printf("%d%c", v[i], i ? ' ': '\n');
                 };
             };

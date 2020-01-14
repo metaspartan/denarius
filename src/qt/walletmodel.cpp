@@ -5,6 +5,8 @@
 #include "mintingtablemodel.h"
 #include "transactiontablemodel.h"
 
+#include "nametablemodel.h"
+
 #include "ui_interface.h"
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
@@ -15,6 +17,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QDebug>
+#include <vector>
 
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
@@ -29,6 +32,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
 
     addressTableModel = new AddressTableModel(wallet, this);
     mintingTableModel = new MintingTableModel(wallet, this);
+    nameTableModel = new NameTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(wallet, this);
 
     // This timer will be fired repeatedly to update the balance
@@ -133,8 +137,12 @@ void WalletModel::pollBalanceChanged()
         cachedNumBlocks = nBestHeight;
 
         checkBalanceChanged();
+
         //if(transactionTableModel)
             //transactionTableModel->updateConfirmations();
+        //TODO: perhaps redo this. Currently it rescans all tx available in wallet - ideally we do not need such scan.
+        if (nameTableModel)
+            nameTableModel->update();
     }
 
     fForceBalanceCheck = false;
@@ -316,9 +324,9 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
 
                     if (fDebug)
                     {
-                        printf("Stealth send to generated pubkey %"PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
+                        printf("Stealth send to generated pubkey %" PRIszu": %s\n", pkSendTo.size(), HexStr(pkSendTo).c_str());
                         printf("hash %s\n", addrTo.ToString().c_str());
-                        printf("ephem_pubkey %"PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
+                        printf("ephem_pubkey %" PRIszu": %s\n", ephem_pubkey.size(), HexStr(ephem_pubkey).c_str());
                     };
 
                     CScript scriptPubKey;
@@ -471,6 +479,27 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     return SendCoinsReturn(OK, 0, hex);
 }
 
+NameTxReturn WalletModel::nameNew(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays, QString newAddress)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_new(vchName, vchValue, nRentalDays, newAddress.toStdString());
+}
+
+NameTxReturn WalletModel::nameUpdate(const QString &name, const vector<unsigned char> &vchValue, int nRentalDays, QString newAddress)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_update(vchName, vchValue, nRentalDays, newAddress.toStdString());
+}
+
+NameTxReturn WalletModel::nameDelete(const QString &name)
+{
+    string strName = name.toStdString();
+    vector<unsigned char> vchName(strName.begin(), strName.end());
+    return name_delete(vchName);
+}
+
 OptionsModel *WalletModel::getOptionsModel()
 {
     return optionsModel;
@@ -479,6 +508,11 @@ OptionsModel *WalletModel::getOptionsModel()
 AddressTableModel *WalletModel::getAddressTableModel()
 {
     return addressTableModel;
+}
+
+NameTableModel *WalletModel::getNameTableModel()
+{
+    return nameTableModel;
 }
 
 MintingTableModel *WalletModel::getMintingTableModel()

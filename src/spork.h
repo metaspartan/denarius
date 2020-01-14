@@ -95,8 +95,8 @@ private:
 public:
 
     CSporkManager() {
-        strMainPubKey = "0417d4b095e451d08bd83111d9ddc7f648af93d8f72e4391940bfa97bde644c0504e1f04a9e7e89be7e1c54c8995f8905be76f50d43fb4a31a7abba5e5291fbc63";
-        strTestPubKey = "0417d4b095e451d08bd83111d9ddc7f648af93d8f72e4391940bfa97bde644c0504e1f04a9e7e89be7e1c54c8995f8905be76f50d43fb4a31a7abba5e5291fbc63";
+        strMainPubKey = "invalid"; //Sporks deprecated for dFPS Decentralized Denarius Fortuna Stake system
+        strTestPubKey = "invalid";
     }
 
     std::string GetSporkNameByID(int id);

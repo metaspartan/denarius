@@ -14,6 +14,7 @@ class TransactionView;
 class MintingView;
 class FortunastakeManager;
 class MultisigDialog;
+class ManageNamesPage;
 class OverviewPage;
 class AddressBookPage;
 class MessagePage;
@@ -25,6 +26,7 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class ProofOfImage;
+class Jupiter;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -93,25 +95,28 @@ private:
     QStackedWidget *centralWidget;
 
     OverviewPage *overviewPage;
-	  StatisticsPage *statisticsPage;
-	  BlockBrowser *blockBrowser;
-	  MarketBrowser *marketBrowser;
+	StatisticsPage *statisticsPage;
+	BlockBrowser *blockBrowser;
+	MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
-	  QWidget *mintingPage;
-	  MultisigDialog *multisigPage;
-	  ProofOfImage *proofOfImagePage;
-	  FortunastakeManager *fortunastakeManagerPage;
+	QWidget *mintingPage;
+	MultisigDialog *multisigPage;
+	ProofOfImage *proofOfImagePage;
+    Jupiter *jupiterPage;
+	FortunastakeManager *fortunastakeManagerPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     MessagePage *messagePage;
     SendCoinsDialog *sendCoinsPage;
     SignVerifyMessageDialog *signVerifyMessageDialog;
+    ManageNamesPage *manageNamesPage;
 
     ActiveLabel *labelEncryptionIcon;
     QLabel *labelStakingIcon;
     QLabel *labelConnectionsIcon;
     QLabel *labelBlocksIcon;
     QLabel *labelConnectTypeIcon;
+    QLabel *labelFSLockIcon;
     QLabel *progressBarLabel;
     QLabel *mainIcon;
     QToolBar *mainToolbar;
@@ -127,6 +132,8 @@ private:
 	  QAction *mintingAction;
 	  QAction *multisigAction;
     QAction *proofOfImageAction;
+    QAction *manageNamesAction;
+    QAction *jupiterAction;
 	  QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
@@ -147,6 +154,7 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
+
 	  QAction *openInfoAction;
     QAction *openGraphAction;
     QAction *openPeerAction;
@@ -166,6 +174,7 @@ private:
     int spinnerFrame;
 
     int64_t nClientUpdateTime;
+    int64_t nLastUpdateTime;
     int nBlocksInLastPeriod;
     int nLastBlocks;
     int nBlocksPerSec;
@@ -233,6 +242,11 @@ private slots:
 	void gotoFortunastakeManagerPage();
 	/** Switch to proof of image page */
 	void gotoProofOfImagePage();
+    /** Switch to manage names page */
+    void gotoManageNamesPage();
+	/** Switch to Jupiter page */
+	void gotoJupiterPage();
+
 
     //void gotoChatPage();
 

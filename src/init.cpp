@@ -8,7 +8,7 @@
 #include "main.h"
 #include "txdb.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "net.h"
 #include "init.h"
 #include "util.h"
@@ -19,6 +19,7 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "egeriadns.h"
 
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
@@ -31,7 +32,10 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 
-
+#include <string>
+#include <iostream> 
+#include <sstream>
+#include <stdexcept>
 
 #ifndef WIN32
 #include <signal.h>
@@ -41,6 +45,7 @@
 using namespace std;
 using namespace boost;
 
+EgeriaDns* egeriadns = NULL;
 CWallet* pwalletMain = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
@@ -107,7 +112,8 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
-
+        if(egeriadns)
+            delete egeriadns;
         Finalise();
         /*
         SecureMsgShutdown();
@@ -303,6 +309,7 @@ std::string HelpMessage()
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
         "  -port=<port>           " + _("Listen for connections on <port> (default: 33369 or testnet: 33368)") + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
+        "  -maxuploadtarget=<n>   " + _("Set a max upload target for your D node, 100 = 100MB (default: 0 unlimited)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
         "  -seednode=<ip>         " + _("Connect to a node to retrieve peer addresses, and disconnect") + "\n" +
@@ -363,6 +370,7 @@ std::string HelpMessage()
         "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n" +
         "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n" +
         "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n" +
+        "  -zapwallettxes         " + _("Clear list of wallet transactions (diagnostic tool; implies -rescan)") + "\n" +
         "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n" +
         "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 2500, 0 = all)") + "\n" +
         "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n" +
@@ -372,6 +380,8 @@ std::string HelpMessage()
         "  -blockminsize=<n>      "   + _("Set minimum block size in bytes (default: 0)") + "\n" +
         "  -blockmaxsize=<n>      "   + _("Set maximum block size in bytes (default: 250000)") + "\n" +
         "  -blockprioritysize=<n> "   + _("Set maximum size of high-priority/low-fee transactions in bytes (default: 27000)") + "\n" +
+        "  -maxorphantx=<n>       "   + strprintf(_("Keep at most <n> unconnectable transactions in memory (default: %u)"), DEFAULT_MAX_ORPHAN_TRANSACTIONS) + "\n" +
+        "  -maxorphanblocks=<n>   "   + strprintf(_("Keep at most <n> unconnectable blocks in memory (default: %u)"), DEFAULT_MAX_ORPHAN_BLOCKS) + "\n" +
 
         "\n" + _("SSL options: (see the Bitcoin Wiki for SSL setup instructions)") + "\n" +
         "  -rpcssl                                  " + _("Use OpenSSL (https) for JSON-RPC connections") + "\n" +
@@ -382,7 +392,6 @@ std::string HelpMessage()
         "\n" + _("Fortunastake options:") + "\n" +
         "  -fortunastake=<n>            " + _("Enable the client to act as a fortunastake (0-1, default: 0)") + "\n" +
         "  -mnconf=<file>             " + _("Specify fortunastake configuration file (default: fortunastake.conf)") + "\n" +
-        "  -mnconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fsconflock=<n>            " + _("Lock fortunastakes from fortunastake configuration file (default: 1)") +
         "  -fortunastakeprivkey=<n>     " + _("Set the fortunastake private key") + "\n" +
         "  -fortunastakeaddr=<n>        " + _("Set external address:port to get to this fortunastake (example: address:port)") + "\n" +
@@ -489,7 +498,7 @@ bool AppInit2()
     // Fee-per-kilobyte amount considered the same as "free"
     // Be careful setting this: if you set it to zero then
     // a transaction spammer can cheaply fill blocks using
-    // 1-satoshi-fee transactions. It should be set above the real
+    // 1-denarii-fee transactions. It should be set above the real
     // cost to you of processing a transaction.
     if (mapArgs.count("-mintxfee"))
         ParseMoney(mapArgs["-mintxfee"], nMinTxFee);
@@ -512,9 +521,10 @@ bool AppInit2()
     nDerivationMethodIndex = 0;
 
     fTestNet = GetBoolArg("-testnet");
-    fNativeTor = GetBoolArg("-nativetor");
 
-    //if (fTestNet)
+    fFSLock = GetBoolArg("-fsconflock");
+    fNativeTor = GetBoolArg("-nativetor");
+    fJupiterLocal = GetBoolArg("-jupiterlocal");
 
     if (mapArgs.count("-bind"))
     {
@@ -555,6 +565,13 @@ bool AppInit2()
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
+    
+    // -zapwallettx implies a rescan
+    if (GetBoolArg("-zapwallettxes", false)) {
+        if (SoftSetBoolArg("-rescan", true))
+            printf("AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\n");
+    }
+
     // Process Fortunastake config
     std::string err;
     fortunastakeConfig.read(err);
@@ -587,6 +604,7 @@ bool AppInit2()
     fDebugChain = GetBoolArg("-debugchain");
     fDebugFS = GetBoolArg("-debugfs");
     fDebugRingSig = GetBoolArg("-debugringsig");
+    fDebugDNS = GetBoolArg("-debugdns");
 
     fNoSmsg = GetBoolArg("-nosmsg");
     fDisableStealth = GetBoolArg("-disablestealth"); // force-disable stealth transaction scanning
@@ -660,14 +678,29 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
+
+    //Init Name Hooks
+    hooks = InitHook();
+
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("Denarius version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+    printf("Denarius (D) version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) //WIP OpenSSL 1.0.x only, OpenSSL 1.1 not supported yet
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
+#else
+    printf("Using OpenSSL version %s\n", OpenSSL_version(OPENSSL_VERSION));
+#endif
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
+
+    //  Create egeria dns name index - this must happen before ReacceptWalletTransactions())
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "namedb.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile))
+        createNameIndexFile();
+        printf("Created an Egeria DNS Name Database in the Denarius Data Directory\n");
 
     if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
@@ -680,10 +713,19 @@ bool AppInit2()
     //ignore fortunastakes below protocol version
     CFortunaStake::minProtoVersion = GetArg("-fortunastakeminprotocol", MIN_MN_PROTO_VERSION);
 
+    // Added maxuploadtarget=MB Tries to keep outbound traffic under the given target (in MiB per 24h), 0 = no limit
+    if (mapArgs.count("-maxuploadtarget")) {
+        CNode::SetMaxOutboundTarget(GetArg("-maxuploadtarget", 0)*1024*1024);
+    }
+
     if (fDaemon)
         fprintf(stdout, "Denarius server starting\n");
 
     int64_t nStart;
+
+    // SMSG_RELAY Node Enum
+    if (fNoSmsg)
+        nLocalServices &= ~(SMSG_RELAY);
 
     // Anonymous Ring Signatures ~ D e n a r i u s - v3.0.0.0
     if (initialiseRingSigs() != 0)
@@ -727,7 +769,7 @@ bool AppInit2()
 
     // ********************************************************* Step 6: network initialization
 
-    //nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
+    nBloomFilterElements = GetArg("-bloomfilterelements", 1536);
 
     int nSocksVersion = GetArg("-socks", 5);
 
@@ -957,7 +999,7 @@ bool AppInit2()
         printf("Shutdown requested. Exiting.\n");
         return false;
     };
-    printf(" block index %15"PRId64"ms\n", GetTimeMillis() - nStart);
+    printf(" block index %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
@@ -990,8 +1032,22 @@ bool AppInit2()
 
     // ********************************************************* Step 8: load wallet
 
-    uiInterface.InitMessage(_("Loading wallet..."));
-    printf("Loading wallet...\n");
+    if (GetBoolArg("-zapwallettxes", false)) {
+        uiInterface.InitMessage(_("Zapping all transactions from D wallet..."));
+
+        pwalletMain = new CWallet("wallet.dat");
+        DBErrors nZapWalletRet = pwalletMain->ZapWalletTx();
+        if (nZapWalletRet != DB_LOAD_OK) {
+            uiInterface.InitMessage(_("Error loading wallet.dat: D Wallet corrupted"));
+            return false;
+        }
+
+        delete pwalletMain;
+        pwalletMain = NULL;
+    }
+
+    uiInterface.InitMessage(_("Loading D wallet..."));
+    printf("Loading D wallet...\n");
     nStart = GetTimeMillis();
     bool fFirstRun = true;
     pwalletMain = new CWallet(strWalletFileName);
@@ -1056,7 +1112,7 @@ bool AppInit2()
     };
 
     printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15"PRId64"ms\n", GetTimeMillis() - nStart);
+    printf(" wallet      %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     RegisterWallet(pwalletMain);
 
@@ -1078,11 +1134,14 @@ bool AppInit2()
         printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
-        printf(" rescan      %15"PRId64"ms\n", GetTimeMillis() - nStart);
+        printf(" rescan      %15" PRId64"ms\n", GetTimeMillis() - nStart);
     };
 
     // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
+
+    // Init Bloom Filters
+    //pwalletMain->InitBloomFilter();
 
     // ********************************************************* Step 9: import blocks
 
@@ -1123,7 +1182,7 @@ bool AppInit2()
             printf("Invalid or missing peers.dat; recreating\n");
     }
 
-    printf("Loaded %i addresses from peers.dat  %"PRId64"ms\n",
+    printf("Loaded %i addresses from peers.dat  %" PRId64"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 
 
@@ -1142,6 +1201,7 @@ bool AppInit2()
         return InitError(strErrors.str());
 
     fFortunaStake = GetBoolArg("-fortunastake", false);
+    strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
     if(fFortunaStake) {
         printf("Fortunastake Enabled\n");
         strFortunaStakeAddr = GetArg("-fortunastakeaddr", "");
@@ -1155,44 +1215,46 @@ bool AppInit2()
             }
         }
 
-        strFortunaStakePrivKey = GetArg("-fortunastakeprivkey", "");
-        if(!strFortunaStakePrivKey.empty()){
-            std::string errorMessage;
-
-            CKey key;
-            CPubKey pubkey;
-
-            if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
-            {
-                return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
-            }
-
-            activeFortunastake.pubKeyFortunastake = pubkey;
-
-        } else {
+        if(strFortunaStakePrivKey.empty()){
             return InitError(_("You must specify a fortunastakeprivkey in the configuration. Please see documentation for help."));
         }
     }
 
-    if(GetBoolArg("-mnconflock", true) && pwalletMain || GetBoolArg("-fsconflock", true) && pwalletMain) {
-        LOCK(pwalletMain->cs_wallet);
-        printf("Locking Fortunastakes:\n");
-        uint256 mnTxHash;
-        int outputIndex;
-        BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
-            mnTxHash.SetHex(mne.getTxHash());
-            outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
-            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
-            // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
-            if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
-                printf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
-                continue;
-            }
-            pwalletMain->LockCoin(outpoint);
-            printf("  %s %s - locked successfully\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+    if(!strFortunaStakePrivKey.empty()){
+        std::string errorMessage;
+
+        CKey key;
+        CPubKey pubkey;
+
+        if(!forTunaSigner.SetKey(strFortunaStakePrivKey, errorMessage, key, pubkey))
+        {
+            return InitError(_("Invalid fortunastakeprivkey. Please see documenation."));
         }
+
+        activeFortunastake.pubKeyFortunastake = pubkey;
+
     }
 
+    if (pwalletMain) {
+        if(GetBoolArg("-fsconflock", true)) {
+            LOCK(pwalletMain->cs_wallet);
+            printf("Locking Fortunastakes:\n");
+            uint256 mnTxHash;
+            int outputIndex;
+            BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
+                mnTxHash.SetHex(mne.getTxHash());
+                outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+                COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+                // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
+                if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                    printf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+                    continue;
+                }
+                pwalletMain->LockCoin(outpoint);
+                printf("  %s %s - locked successfully\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str());
+            }
+        }
+    }
 
     // Add any fortunastake.conf fortunastakes to the adrenaline nodes
     BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries())
@@ -1235,26 +1297,43 @@ bool AppInit2()
         pblockAddrIndex = pblockAddrIndex->pprev;
     }
 
-    printf("Rebuilt address index of %i blocks in %"PRId64"ms\n",
+    printf("Rebuilt address index of %i blocks in %" PRId64"ms\n",
            pblockAddrIndex->nHeight, GetTimeMillis() - nStart);
     }
 
     //// debug print
-    printf("mapBlockIndex.size() = %"PRIszu"\n",   mapBlockIndex.size());
+    printf("mapBlockIndex.size() = %" PRIszu"\n",   mapBlockIndex.size());
     printf("nBestHeight = %d\n",            nBestHeight);
-    printf("setKeyPool.size() = %"PRIszu"\n",      pwalletMain->setKeyPool.size());
-    printf("mapWallet.size() = %"PRIszu"\n",       pwalletMain->mapWallet.size());
-    printf("mapAddressBook.size() = %"PRIszu"\n",  pwalletMain->mapAddressBook.size());
+    printf("setKeyPool.size() = %" PRIszu"\n",      pwalletMain->setKeyPool.size());
+    printf("mapWallet.size() = %" PRIszu"\n",       pwalletMain->mapWallet.size());
+    printf("mapAddressBook.size() = %" PRIszu"\n",  pwalletMain->mapAddressBook.size());
+
+    // Start Egeria DNS Server alongside Denarius
+    // init egeriadns. WARNING: this should be done after hooks initialization
+    if (GetBoolArg("-egeria", true)) //Add fEgeria bool
+    {
+        //#define EGERIADNS_PORT 3333 in protocol.h
+        int port = GetArg("-egeriaport", EGERIADNS_PORT);
+        int verbose = GetArg("-egeriaverbose", 1);
+        if (port <= 0)
+            port = EGERIADNS_PORT;
+        string suffix  = GetArg("-egeriasuffix", "");
+        string bind_ip = GetArg("-egeriabindip", "");
+        string allowed = GetArg("-egeriaallowed", "");
+        string localcf = GetArg("-egerialocalcf", "");
+        egeriadns = new EgeriaDns(bind_ip.c_str(), port, suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius Egeria DNS server started...\n");
+    }
 
     if(fNativeTor)
-        printf("Native Tor Onion Relay Node Enabled");
+        printf("Native Tor Onion Relay Node Enabled\n");
     else
-        printf("Native Tor Onion Relay Disabled, Using Regular Peers...");
+        printf("Native Tor Onion Relay Disabled, Using Regular Peers...\n");
 
     if (fDebug)
-        printf("Debugging is Enabled.");
+        printf("Debugging is Enabled.\n");
 	else
-        printf("Debugging is not enabled.");
+        printf("Debugging is not enabled.\n");
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
@@ -1273,6 +1352,8 @@ bool AppInit2()
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
+    if(egeriadns)
+        egeriadns->Run();
     while (1)
         //MilliSleep(5000);
         sleep(5);

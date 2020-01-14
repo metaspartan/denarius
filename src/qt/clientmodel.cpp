@@ -41,6 +41,7 @@ int ClientModel::getNumConnections() const
 
 int ClientModel::getNumBlocks() const
 {
+    LOCK(cs_main);
     return nBestHeight;
 }
 
@@ -82,7 +83,7 @@ void ClientModel::updateTimer()
     int newNumBlocks = getNumBlocks();
     int newNumBlocksOfPeers = getNumBlocksOfPeers();
 
-    if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
+    if (cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
     {
         cachedNumBlocks = newNumBlocks;
         cachedNumBlocksOfPeers = newNumBlocksOfPeers;
@@ -98,9 +99,9 @@ void ClientModel::updateNumBlocks(int newNumBlocks, int newNumBlocksOfPeers)
     // Get required lock upfront. This avoids the GUI from getting stuck on
     // periodical polls if the core is holding the locks for a longer time -
     // for example, during a wallet rescan.
-    TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
-        return;
+//    TRY_LOCK(cs_main, lockMain);
+//    if(!lockMain)
+//        return;
 
     emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
@@ -138,6 +139,11 @@ bool ClientModel::isTestNet() const
 bool ClientModel::isNativeTor() const
 {
     return fNativeTor;
+}
+
+bool ClientModel::isFSLock() const
+{
+    return fFSLock;
 }
 
 bool ClientModel::inInitialBlockDownload() const

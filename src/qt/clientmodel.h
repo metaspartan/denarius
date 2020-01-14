@@ -40,6 +40,9 @@ public:
     //! Return true if client connected to Tor
     bool isNativeTor() const;
 
+    //! Return true if client has locked FS inputs
+    bool isFSLock() const;
+
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;
     //! Return conservative estimate of total number of blocks, or 0 if unknown

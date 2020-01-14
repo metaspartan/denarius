@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.8.6
+VERSION = 3.3.9.7
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
@@ -39,6 +39,8 @@ QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
 LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
 LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
+LIBCURL_INCLUDE_PATH=C:/deps/libcurl/include
+LIBCURL_LIB_PATH=C:/deps/libcurl/lib
 }
 
 # for boost 1.37, add -mt to the boost libraries
@@ -79,6 +81,25 @@ win32:QMAKE_LFLAGS *= -static
 #win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 #win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
+
+# use: qmake "USE_IPFS=1" ( enabled by default; default)
+#  or: qmake "USE_IPFS=0" (disabled by default)
+#  or: qmake "USE_IPFS=-" (not supported)
+# D E N A R I U S IPFS - USE_IPFS=- to not compile with the IPFS C Library located in src/ipfs
+contains(USE_IPFS, -) {
+    message(Building without IPFS support)
+} else {
+    message(Building with IPFS support)
+    count(USE_IPFS, 0) {
+        USE_IPFS=1
+    }
+    DEFINES += USE_IPFS=$$USE_IPFS
+    INCLUDEPATH += src/ipfs
+	
+	###IPFS C Library native integration sources
+	SOURCES += src/ipfs.cc \
+		src/ipfscurl.cc
+}
 
 
 # use: qmake "USE_NATIVETOR=1" ( enabled by default; default)
@@ -325,7 +346,6 @@ contains(USE_LEVELDB, -) {
 	message(Building with Berkeley DB transaction index)
 
 	    SOURCES += src/txdb-bdb.cpp \
-		src/bloom.cpp \
 		src/hash.cpp \
 		src/aes_helper.c \
 		src/echo.c \
@@ -343,7 +363,6 @@ contains(USE_LEVELDB, -) {
     INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 	LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 	SOURCES += src/txdb-leveldb.cpp \
-		src/bloom.cpp \
 		src/hash.cpp \
 		src/aes_helper.c \
 		src/echo.c \
@@ -418,9 +437,15 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
     src/qt/proofofimage.h \
+    src/qt/jupiter.h \
     src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
+    src/hooks.h \
+    src/namecoin.h \
+    src/qt/nametablemodel.h \
+    src/qt/managenamespage.h \
+    src/egeriadns.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -440,6 +465,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/smessage.h \
     src/main.h \
     src/core.h \
+    src/state.h \
     src/ringsig.h \
     src/miner.h \
     src/net.h \
@@ -479,7 +505,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
-    src/bitcoinrpc.h \
+    src/denariusrpc.h \
     src/qt/overviewpage.h \
     src/qt/csvmodelwriter.h \
     src/crypter.h \
@@ -547,8 +573,14 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/proofofimage.cpp \
+    src/qt/jupiter.cpp \
     src/qt/termsofuse.cpp \
+    src/namecoin.cpp \
+    src/qt/nametablemodel.cpp \
+    src/qt/managenamespage.cpp \
+    src/egeriadns.cpp \
     src/alert.cpp \
+    src/stun.cpp \
     src/base58.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -559,6 +591,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/script.cpp \
     src/main.cpp \
     src/core.cpp \
+    src/bloom.cpp \
+    src/state.cpp \
     src/ringsig.cpp \
     src/miner.cpp \
     src/init.cpp \
@@ -582,12 +616,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
     src/qt/walletmodel.cpp \
-    src/bitcoinrpc.cpp \
+    src/denariusrpc.cpp \
     src/rpcdump.cpp \
     src/rpcnet.cpp \
     src/rpcmining.cpp \
     src/rpcwallet.cpp \
     src/rpcfortuna.cpp \
+    src/rpcjupiter.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
     src/rpcsmessage.cpp \
@@ -653,6 +688,7 @@ FORMS += \
     src/qt/forms/blockbrowser.ui \
     src/qt/forms/marketbrowser.ui \
     src/qt/forms/proofofimage.ui \
+    src/qt/forms/jupiter.ui \
     src/qt/forms/termsofuse.ui \
     src/qt/forms/fortunastakemanager.ui \
     src/qt/forms/addeditadrenalinenode.ui \
@@ -660,6 +696,7 @@ FORMS += \
     src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
+    src/qt/forms/managenamespage.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
     src/qt/plugins/mrichtexteditor/mrichtextedit.ui
@@ -758,9 +795,9 @@ macx:QMAKE_CXXFLAGS += -stdlib=libc++
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH $$LIBCURL_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,) $$join(LIBCURL_LIB_PATH,,-L,)
+LIBS += -lcurl -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
 LIBS += -lz -levent
 
 # -lgdi32 has to happen after -lcrypto (see  #681)

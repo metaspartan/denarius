@@ -8,7 +8,6 @@ src/leveldb/*.a
 src/leveldb/build_config.mk
 parts
 prime
-snap
 stage
 *.snap
 *.tar.bz2
@@ -41,3 +40,6 @@ PortIndex*
 dist
 *.app
 *.dmg
+.idea
+.vscode
+

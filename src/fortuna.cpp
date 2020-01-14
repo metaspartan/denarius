@@ -40,12 +40,12 @@ CActiveFortunastake activeFortunastake;
 int RequestedFortunaStakeList = 0;
 
 //MIN_MN_PROTO_VERSION
-int MIN_MN_PROTO_VERSION = 31000;
+int MIN_MN_PROTO_VERSION = 33900; // D v3.3.9.2 - Proto - 33900
 
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
-    Copyright 2018, Denarius Developers
+    Copyright 2018-2019, Denarius Developers
         carsenk - admin@denarius.io
         enkayz - enkayz@denarius.io
 */
@@ -286,7 +286,7 @@ bool CForTunaPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
         int n = found;
         txNew.vin[n].scriptSig = newSig;
         if(fDebug) printf("CForTunaPool::SignatureValid() - Sign with sig %s\n", newSig.ToString().substr(0,24).c_str());
-        if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, txNew, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, 0)){
+        if (!VerifyScript(txNew.vin[n].scriptSig, sigPubKey, txNew, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, true, 0)){
             if(fDebug) printf("CForTunaPool::SignatureValid() - Signing - Error signing input %u\n", n);
             return false;
         }
@@ -798,7 +798,7 @@ int CForTunaPool::GetDenominationsByAmount(int64_t nAmount, int nDenomTarget){
 
 bool CForTunaSigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey){
 	bool fIsInitialDownload = IsInitialBlockDownload();
-    if(fIsInitialDownload) return;
+    if(fIsInitialDownload) return nullptr; // Needs to return a value, so returns null pointer v3.3.9.1 - macOS
 	
     CScript payee2;
     payee2= GetScriptForDestination(pubkey.GetID());

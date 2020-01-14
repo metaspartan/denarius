@@ -8,7 +8,7 @@
 #include "sync.h"
 #include "ui_interface.h"
 #include "base58.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "db.h"
 
 #undef printf
@@ -262,9 +262,15 @@ static const CRPCCommand vRPCCommands[] =
     { "help",                   &help,                   true,   true },
     { "stop",                   &stop,                   true,   true },
     { "getbestblockhash",       &getbestblockhash,       true,   false },
+    { "getblockchaininfo",      &getblockchaininfo,      true,   false },
     { "getblockcount",          &getblockcount,          true,   false },
     { "getconnectioncount",     &getconnectioncount,     true,   false },
     { "getpeerinfo",            &getpeerinfo,            true,   false },
+    { "getaddednodeinfo",       &getaddednodeinfo,       true,   true },
+    { "ping",                   &ping,                   true,   true },
+    { "getnettotals",           &getnettotals,           true,   false },
+    { "disconnectnode",         &disconnectnode,         true,   false },
+    { "getnetworkinfo",         &getnetworkinfo,         true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
     { "dumpbootstrap",          &dumpbootstrap,          false,  false },
@@ -301,7 +307,8 @@ static const CRPCCommand vRPCCommands[] =
     { "addredeemscript",        &addredeemscript,        false,  false },
     { "getrawmempool",          &getrawmempool,          true,   false },
     { "getblock",               &getblock,               false,  false },
-	  { "getblockheader",         &getblockheader,         false,  false },
+	{ "getblockheader",         &getblockheader,         false,  false },
+    { "setbestblockbyheight",   &setbestblockbyheight,   false,  false },
     { "getblock_old",           &getblock_old,           false,  false },
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
@@ -334,6 +341,7 @@ static const CRPCCommand vRPCCommands[] =
     { "reservebalance",         &reservebalance,         false,  true},
     { "checkwallet",            &checkwallet,            false,  true},
     { "repairwallet",           &repairwallet,           false,  true},
+    { "deletetransaction",      &deletetransaction,      false,  true},
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "setdebug",               &setdebug,               true,   false },
@@ -347,7 +355,7 @@ static const CRPCCommand vRPCCommands[] =
     { "clearwallettransactions",&clearwallettransactions,false,  false},
     { "scanforalltxns",         &scanforalltxns,         false,  false},
 
-    // Ring Signatures - D e n a r i u s - v3.1.0
+    // Ring Signatures - D e n a r i u s
     { "senddtoanon",          	&senddtoanon,          	 false,  false},
     { "sendanontoanon",         &sendanontoanon,         false,  false},
     { "sendanontod",          	&sendanontod,         	 false,  false},
@@ -359,9 +367,19 @@ static const CRPCCommand vRPCCommands[] =
 
     /* Fortunastake features */
     { "getpoolinfo",            &getpoolinfo,            true,   false},
-    { "spork",                  &spork,                  true,   false},
     { "masternode",           	&masternode,             true,   false},
     { "fortunastake",           &fortunastake,           true,   false},
+
+    // Egeria DNS Commands
+    { "name_new",               &name_new,               false },
+    { "name_update",            &name_update,            false },
+    { "name_delete",            &name_delete,            false },
+    { "sendtoname",             &sendtoname,             false },
+    { "name_list",              &name_list,              false },
+    { "name_scan",              &name_scan,              false },
+    { "name_filter",            &name_filter,            false },
+    { "name_show",              &name_show,              false },
+    { "name_debug",             &name_debug,             false },
 
     { "smsgenable",             &smsgenable,             false,  false},
     { "smsgdisable",            &smsgdisable,            false,  false},
@@ -376,6 +394,17 @@ static const CRPCCommand vRPCCommands[] =
     { "smsginbox",              &smsginbox,              false,  false},
     { "smsgoutbox",             &smsgoutbox,             false,  false},
     { "smsgbuckets",            &smsgbuckets,            false,  false},
+
+    { "proofofdata",          &proofofdata,              false,  true  },
+
+    // Denarius Jupiter IPFS
+    { "jupiterversion",       &jupiterversion,           true,   false },
+    { "jupiterupload",        &jupiterupload,            false,  false },
+    { "jupiterpod",           &jupiterpod,               false,  true  },
+    { "jupiterduo",           &jupiterduo,               false,  false },
+    { "jupiterduopod",        &jupiterduopod,            false,  true  },
+    { "jupitergetblock",      &jupitergetblock,          false,  false },
+    { "jupitergetstat",       &jupitergetstat,           false,  false },
 
 
 
@@ -468,7 +497,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "HTTP/1.1 %d %s\r\n"
             "Date: %s\r\n"
             "Connection: %s\r\n"
-            "Content-Length: %"PRIszu"\r\n"
+            "Content-Length: %" PRIszu"\r\n"
             "Content-Type: application/json\r\n"
             "Server: denarius-json-rpc/%s\r\n"
             "\r\n"
@@ -1208,6 +1237,18 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 }
 
+//D E N A R I U S - Autocomplete in Debug Window
+
+std::vector<std::string> CRPCTable::listCommands() const
+{
+    std::vector<std::string> commandList;
+    typedef std::map<std::string, const CRPCCommand*> commandMap;
+
+    std::transform( mapCommands.begin(), mapCommands.end(),
+                   std::back_inserter(commandList),
+                   boost::bind(&commandMap::value_type::first,_1) );
+    return commandList;
+}
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
@@ -1314,7 +1355,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
-	  if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
+	if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
@@ -1365,8 +1406,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendanontoanon"         && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendanontod"        	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontod"        	  && n > 2) ConvertTo<int64_t>(params[2]);
-	  if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
-	  if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
+	if (strMethod == "estimateanonfee"        && n > 0) ConvertTo<double>(params[0]);
+	if (strMethod == "estimateanonfee"        && n > 1) ConvertTo<int64_t>(params[1]);
 
     if (strMethod == "getpoolinfo"            && n > 0) ConvertTo<int64_t>(params[0]);
 
@@ -1377,6 +1418,20 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 
     if (strMethod == "scanforalltxns"         && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
+
+
+    //Egeria Names
+    if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_update"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_update"            && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_filter"            && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
+    if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
+
+    if (strMethod == "setbestblockbyheight"   && n > 0) ConvertTo<int64_t>(params[0]);
+
 
     return params;
 }

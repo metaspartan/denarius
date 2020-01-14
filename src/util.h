@@ -47,6 +47,7 @@ static const int64_t CENT = 1000000;
 
 typedef int64_t CAmount;
 
+//#define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -206,6 +207,7 @@ extern std::map<std::string, std::string> mapArgs;
 extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
+extern bool fDebugDNS;
 extern bool fDebugSmsg;
 extern bool fDebugFS;
 extern bool fDebugChain;
@@ -222,6 +224,8 @@ extern bool fCommandLine;
 extern std::string strMiscWarning;
 extern bool fTestNet;
 extern bool fNativeTor;
+extern bool fJupiterLocal;
+extern bool fFSLock;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
@@ -259,6 +263,7 @@ bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
 void PrintException(std::exception* pex, const char* pszThread);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
 void ParseString(const std::string& str, char c, std::vector<std::string>& v);
+std::string SanitizeString(const std::string& str);
 std::string FormatMoney(int64_t n, bool fPlus=false);
 bool ParseMoney(const std::string& str, int64_t& nRet);
 bool ParseMoney(const char* pszIn, int64_t& nRet);
@@ -276,8 +281,10 @@ std::string EncodeBase32(const std::string& str);
 void ParseParameters(int argc, const char*const argv[]);
 bool WildcardMatch(const char* psz, const char* mask);
 bool WildcardMatch(const std::string& str, const std::string& mask);
+
 void FileCommit(FILE *fileout);
 bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest);
+
 boost::filesystem::path GetDefaultDataDir();
 const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
 boost::filesystem::path GetConfigFile();
@@ -285,12 +292,20 @@ boost::filesystem::path GetPidFile();
 #ifndef WIN32
 void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
 #endif
+
 void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet);
+void WriteConfigFile(FILE* configFile);
+
+
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
+
+std::string bytesReadable(uint64_t nBytes);
+
 void ShrinkDebugFile();
 int GetRandInt(int nMax);
+uint32_t GetRandUInt32();
 void GetRandBytes(unsigned char* buf, int num);
 uint64_t GetRand(uint64_t nMax);
 uint256 GetRandHash();
@@ -304,12 +319,10 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime);
 void runCommand(std::string strCommand);
 
 
-
-
-
-
-
-
+namespace d
+{
+    void* memrchr(const void *s, int c, size_t n);
+}
 
 inline std::string i64tostr(int64_t n)
 {
@@ -495,6 +508,21 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  * @return true if argument gets set, false if it already had a value
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
+
+/**
+ * Set an argument
+ * for boolean arguments use "1" / "0"
+ *
+ * @param strArg Argument to set (e.g. "-foo")
+ * @param strValue Value (e.g. "1")
+ * @return true
+ */
+bool SetArg(const std::string& strArg, const std::string& strValue);
+
+inline bool SetBoolArg(const std::string& strArg, bool fValue)
+{
+    return SetArg(strArg, fValue ? "1" : "0");
+};
 
 /**
  * MWC RNG of George Marsaglia

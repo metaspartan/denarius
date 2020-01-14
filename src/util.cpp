@@ -7,6 +7,7 @@
 #include "sync.h"
 #include "strlcpy.h"
 #include "version.h"
+#include "state.h"
 #include "ui_interface.h"
 #include <boost/algorithm/string/join.hpp>
 
@@ -63,7 +64,7 @@ string strFortunaStakePrivKey = "";
 string strFortunaStakeAddr = "";
 int nFortunaRounds = 2;
 
-int nMinStakeInterval = 0;         // in seconds, min time between successful stakes
+int nMinStakeInterval = 60;         // in seconds, min time between successful stakes
 
 /** Spork enforcement enabled time */
 int64_t enforceFortunastakePaymentsTime = 4085657524;
@@ -76,6 +77,7 @@ map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
+bool fDebugDNS = false;
 bool fDebugSmsg = false;
 bool fDebugFS = false;
 bool fDebugChain = false;
@@ -92,6 +94,8 @@ bool fCommandLine = false;
 string strMiscWarning;
 bool fTestNet = false;
 bool fNativeTor = false;
+bool fJupiterLocal = false;
+bool fFSLock = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
@@ -203,6 +207,11 @@ uint64_t GetRand(uint64_t nMax)
 int GetRandInt(int nMax)
 {
     return GetRand(nMax);
+}
+
+uint32_t GetRandUInt32()
+{
+    return GetRand(numeric_limits<uint32_t>::max());
 }
 
 uint256 GetRandHash()
@@ -494,7 +503,7 @@ string FormatMoney(int64_t n, bool fPlus)
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs/COIN;
     int64_t remainder = n_abs%COIN;
-    string str = strprintf("%"PRId64".%08"PRId64, quotient, remainder);
+    string str = strprintf("%" PRId64".%08" PRId64, quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;
@@ -556,6 +565,19 @@ bool ParseMoney(const char* pszIn, int64_t& nRet)
     return true;
 }
 
+// safeChars chosen to allow simple messages/URLs/email addresses, but avoid anything
+// even possibly remotely dangerous like & or >
+static string safeChars("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890 .,;_/:?@");
+string SanitizeString(const string& str)
+{
+    string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (safeChars.find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
+}
 
 static const signed char phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -710,6 +732,12 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("1"));
     else
         return SoftSetArg(strArg, std::string("0"));
+}
+
+bool SetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg] = strValue;
+    return true;
 }
 
 
@@ -1113,6 +1141,7 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
+
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Denarius
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Denarius
     // Mac: ~/Library/Application Support/Denarius
@@ -1137,6 +1166,71 @@ boost::filesystem::path GetDefaultDataDir()
     return pathRet / ".denarius";
 #endif
 #endif
+}
+
+//
+// Write denarius.conf by CircuitBreaker88
+//
+
+static std::string GenerateRandomString(unsigned int len) {
+    if (len == 0){
+        len = 24;
+    }
+    srand(time(NULL) + len); //seed srand before using
+    std::vector<unsigned char> vchRandString;
+    static const unsigned char alphanum[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+
+    for (unsigned int i = 0; i < len; ++i) {
+        vchRandString.push_back(alphanum[rand() % (sizeof(alphanum) - 1)]);
+    }
+    std::string strPassword(vchRandString.begin(), vchRandString.end());
+    return strPassword;
+}
+
+static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
+{
+    srand(time(NULL) + nMax); //seed srand before using
+    return nMin + rand() % (nMax - nMin) + 1;
+}
+
+void WriteConfigFile(FILE* configFile)
+{
+    std::string sRPCpassword = "rpcpassword=" + GenerateRandomString(RandomIntegerRange(18, 24)) + "\n";
+    std::string sUserID = "rpcuser=" + GenerateRandomString(RandomIntegerRange(7, 11)) + "\n";
+    fputs (sUserID.c_str(), configFile);
+    fputs (sRPCpassword.c_str(), configFile);
+    fputs ("rpcport=32369\n", configFile);
+    fputs ("port=33369\n", configFile);
+    fputs ("daemon=1\n", configFile);
+    fputs ("listen=1\n", configFile);
+    fputs ("server=1\n", configFile);
+    fputs ("fortunastake=0\n", configFile); //input fs=0 by default
+    fputs ("fortunastakeaddr=\n", configFile);
+    fputs ("fortunastakeprivkey=\n", configFile);
+    fputs ("addnode=144.130.111.71\n", configFile);
+    fputs ("addnode=163.172.157.116\n", configFile);
+    fputs ("addnode=173.244.36.3\n", configFile);
+    fputs ("addnode=24.205.81.255\n", configFile);
+    fputs ("addnode=51.15.210.145\n", configFile);
+    fputs ("addnode=51.15.52.235\n", configFile);
+    fputs ("addnode=115.70.121.168:33369\n", configFile);
+    fputs ("addnode=140.82.13.39:333691\n", configFile);
+    fputs ("addnode=164.68.113.76:33369\n", configFile);
+    fputs ("addnode=173.249.20.4:33369\n", configFile);
+    fputs ("addnode=178.63.60.7:33369\n", configFile);
+    fputs ("addnode=185.233.107.233:33369\n", configFile);
+    fputs ("addnode=203.186.122.175:33369\n", configFile);
+    fputs ("addnode=24.35.250.163:33369\n", configFile);
+    fputs ("addnode=46.166.162.45:33369\n", configFile);
+    fputs ("addnode=93.115.26.186:33369\n", configFile);
+    fputs ("addnode=51.38.112.208:33369\n", configFile);
+    fputs ("addnode=51.158.101.32\n", configFile); //pos.watch
+    fputs ("addnode=[2001:bc8:47a8:2519::1]\n", configFile); //pos.watch
+    fclose(configFile);
+    ReadConfigFile(mapArgs, mapMultiArgs);
 }
 
 const boost::filesystem::path &GetDataDir(bool fNetSpecific)
@@ -1183,7 +1277,7 @@ boost::filesystem::path GetConfigFile()
 
 boost::filesystem::path GetFortunastakeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-mnconf", "fortunastake.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-fsconf", "fortunastake.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -1192,8 +1286,19 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
-    if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+    if (!streamConfig.good()){
+        // Create empty denarius.conf if it does not exist
+        FILE* configFile = fopen(GetConfigFile().string().c_str(), "a");
+        if (configFile != NULL) {
+            WriteConfigFile(configFile);
+            //fclose(configFile);
+            printf("WriteConfigFile() Denarius.conf Setup Successfully!");
+            ReadConfigFile(mapSettingsRet, mapMultiSettingsRet);
+        } else {
+            printf("WriteConfigFile() denarius.conf file could not be created");
+            return; // Nothing to read, so just return
+        }
+    }
 
     set<string> setOptions;
     setOptions.insert("*");
@@ -1251,6 +1356,25 @@ void FileCommit(FILE *fileout)
     fsync(fileno(fileout));
 #endif
 }
+
+std::string bytesReadable(uint64_t nBytes)
+{
+    char buffer[128];
+    if (nBytes >= 1024ll*1024ll*1024ll*1024ll)
+        snprintf(buffer, sizeof(buffer), "%.2f TB", nBytes/1024.0/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f GB", nBytes/1024.0/1024.0/1024.0);
+    else
+    if (nBytes >= 1024*1024)
+        snprintf(buffer, sizeof(buffer), "%.2f MB", nBytes/1024.0/1024.0);
+    else
+    if (nBytes >= 1024)
+        snprintf(buffer, sizeof(buffer), "%.2f KB", nBytes/1024.0);
+    else
+        snprintf(buffer, sizeof(buffer), "%"PRIu64" B", nBytes);
+    return std::string(buffer);
+};
 
 void ShrinkDebugFile()
 {
@@ -1318,7 +1442,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
 
     // Add data
     vTimeOffsets.input(nOffsetSample);
-    printf("Added time data, samples %d, offset %+"PRId64" (%+"PRId64" minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
+    printf("Added time data, samples %d, offset %+" PRId64" (%+" PRId64" minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
     if (vTimeOffsets.size() >= 5 && vTimeOffsets.size() % 2 == 1)
     {
         int64_t nMedian = vTimeOffsets.median();
@@ -1353,10 +1477,10 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
         }
         if (fDebug) {
             BOOST_FOREACH(int64_t n, vSorted)
-                printf("%+"PRId64"  ", n);
+                printf("%+" PRId64"  ", n);
             printf("|  ");
         }
-        printf("nTimeOffset = %+"PRId64"  (%+"PRId64" minutes)\n", nTimeOffset, nTimeOffset/60);
+        printf("nTimeOffset = %+" PRId64"  (%+" PRId64" minutes)\n", nTimeOffset, nTimeOffset/60);
     }
 }
 

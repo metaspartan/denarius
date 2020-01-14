@@ -42,6 +42,8 @@ class uint256;
 #define FORTUNASTAKE_FAIR_PAYMENT_MINIMUM         200
 #define FORTUNASTAKE_FAIR_PAYMENT_ROUNDS          3
 
+#define FORTUNASTAKE_ACTIVETIME_FIXHEIGHT         2200000 // Still WIP
+
 using namespace std;
 
 class CFortunastakePaymentWinner;
@@ -201,7 +203,7 @@ public:
 
     void UpdateLastSeen(int64_t override=0)
     {
-        if(override == 0){
+        if (override == 0 || override > GetAdjustedTime()) {
             lastTimeSeen = GetAdjustedTime();
         } else {
             lastTimeSeen = override;
@@ -260,6 +262,7 @@ public:
 // Get the current winner for this block
 int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
+bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
 int64_t avg2(std::vector<CFortunaStake> const& v);
 int GetFortunastakeByVin(CTxIn& vin);
 int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
@@ -340,8 +343,8 @@ private:
 public:
 
     CFortunastakePayments() {
-        strMainPubKey = "04af2b6c63d5e5937266a4ce630ab6ced73a0f6a5ff5611ef9b5cfc4f9e264e4a8a4840ab4da4d3ded243ef9f80f114d335dad9a87a50431004b35c01b2c68ea49";
-        strTestPubKey = "0406d6c9580d20c4daaacbade0f5bbe4448c511c5860f6dc27a1bf2a8c043b2ad27f3831f8e24750488f0c715100cc5a5811ffd578029f3af62633d9e1c51be384";
+        strMainPubKey = "";
+        strTestPubKey = "";
         enabled = false;
     }
 

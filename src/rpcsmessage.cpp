@@ -3,12 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "main.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 
 #include <boost/lexical_cast.hpp>
 
 #include "smessage.h"
 #include "init.h" // pwalletMain
+#include "util.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -805,7 +806,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
                 std::string sBucket = boost::lexical_cast<std::string>(it->first);
                 std::string sFile = sBucket + "_01.dat";
                 
-                snprintf(cbuf, sizeof(cbuf), "%"PRIszu, tokenSet.size());
+                snprintf(cbuf, sizeof(cbuf), "%" PRIszu, tokenSet.size());
                 std::string snContents(cbuf);
                 
                 std::string sHash = boost::lexical_cast<std::string>(it->second.hash);
@@ -837,7 +838,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
                         uint64_t nFBytes = 0;
                         nFBytes = boost::filesystem::file_size(fullPath);
                         nBytes += nFBytes;
-                        objM.push_back(Pair("file size", fsReadable(nFBytes)));
+                        objM.push_back(Pair("file size", bytesReadable(nFBytes)));
                     } catch (const boost::filesystem::filesystem_error& ex)
                     {
                         objM.push_back(Pair("file size, error", ex.what()));
@@ -855,7 +856,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
         Object objM;
         objM.push_back(Pair("buckets", snBuckets));
         objM.push_back(Pair("messages", snMessages));
-        objM.push_back(Pair("size", fsReadable(nBytes)));
+        objM.push_back(Pair("size", bytesReadable(nBytes)));
         result.push_back(Pair("total", objM));
         
     } else

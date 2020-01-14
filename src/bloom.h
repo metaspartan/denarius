@@ -44,7 +44,7 @@ enum bloomflags
  */
 class CBloomFilter
 {
-private:
+public:
     std::vector<unsigned char> vData;
     bool isFull;
     bool isEmpty;
@@ -53,8 +53,6 @@ private:
     unsigned char nFlags;
 
     unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char>& vDataToHash) const;
-
-public:
     // Creates a new bloom filter which will provide the given fp rate when filled with the given number of elements
     // Note that if the given parameters will result in a filter outside the bounds of the protocol limits,
     // the filter created will be as close to the given parameters as possible within the protocol limits.
@@ -73,6 +71,9 @@ public:
         READWRITE(nFlags);
     )
 
+    bool IsFull() {return isFull;};
+    unsigned int GetSize() {return vData.size();};
+
     void insert(const std::vector<unsigned char>& vKey);
     void insert(const COutPoint& outpoint);
     void insert(const uint256& hash);
@@ -86,7 +87,7 @@ public:
     bool IsWithinSizeConstraints() const;
 
     // Also adds any outputs which match the filter to the filter (to match their spending txes)
-    bool IsRelevantAndUpdate(const CTransaction& tx, const uint256& hash);
+    bool IsRelevantAndUpdate(const CTransaction& tx);
 
     // Checks for empty and full filters to avoid wasting cpu
     void UpdateEmptyFull();

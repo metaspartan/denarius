@@ -8,7 +8,7 @@ case $choice in
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get install -y git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
+sudo apt-get install -y git unzip build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake  libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default libcurl4-openssl-dev
 
 echo "Installing Denarius Wallet"
 git clone https://github.com/carsenk/denarius
@@ -31,9 +31,9 @@ cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
-unzip chaindata1799510.zip
-rm chaindata1799510.zip
+wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
+unzip chaindata2290877.zip
+rm -rf chaindata2290877.zip
 Echo "Back to Compiled QT Binary Folder"
 cd ~/denarius/src
                 ;;
@@ -55,7 +55,7 @@ cd ~/denarius
 echo "Updating linux packages"
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-sudo apt-get install -y git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default
+sudo apt-get install -y git unzip build-essential libdb++-dev libboost-all-dev libqrencode-dev libminiupnpc-dev libevent-dev autogen automake libtool libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools qt5-default libcurl4-openssl-dev
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
@@ -90,9 +90,9 @@ cd ~/.denarius
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://github.com/carsenk/denarius/releases/download/v3.3.7/chaindata1799510.zip
-unzip chaindata1799510.zip
-rm chaindata1799510.zip
+wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
+unzip chaindata2290877.zip
+rm -rf chaindata2290877.zip
 Echo "Back to Compiled QT Binary Folder"
 cd ~/denarius/src
                 ;;

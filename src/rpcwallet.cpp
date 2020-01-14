@@ -6,7 +6,7 @@
 
 #include "wallet.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "init.h"
 #include "base58.h"
 #include "stealth.h"
@@ -57,6 +57,7 @@ void EnsureWalletIsUnlocked()
 
 void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
 {
+    entry.push_back(Pair("version", wtx.nVersion));
     int confirms = wtx.GetDepthInMainChain();
     entry.push_back(Pair("confirmations", confirms));
     if (wtx.IsCoinBase() || wtx.IsCoinStake())
@@ -65,8 +66,11 @@ void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
     {
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", (int64_t)(mapBlockIndex[wtx.hashBlock]->nTime)));
-    }
+        int64_t nTime = 0;
+        nTime = mapBlockIndex[wtx.hashBlock]->nTime;        
+
+        entry.push_back(Pair("blocktime", nTime));
+    };
     entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
     entry.push_back(Pair("time", (int64_t)wtx.GetTxTime()));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
@@ -81,6 +85,62 @@ string AccountFromValue(const Value& value)
     if (strAccount == "*")
         throw JSONRPCError(RPC_WALLET_INVALID_ACCOUNT_NAME, "Invalid account name");
     return strAccount;
+}
+
+Value deletetransaction(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+                "deletetransaction <txid>\nNormally used when a transaction cannot be confirmed due to a double spend.\n"
+        );
+
+    if (params.size() != 1)
+        throw runtime_error("missing txid");
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    uint256 hash;
+    hash.SetHex(params[0].get_str());
+    if (!pwalletMain->mapWallet.count(hash))
+        throw runtime_error("transaction not in wallet");
+
+    if (!mempool.exists(hash))
+    {
+        CTransaction tx;
+        uint256 hashBlock = 0;
+        if (GetTransaction(hash, tx, hashBlock) && hashBlock != 0)
+            throw runtime_error("transaction is already in blockchain");
+    }
+    CWalletTx wtx = pwalletMain->mapWallet[hash];
+
+    Object result;
+    bool ret;
+
+    ret = mempool.remove(wtx);
+    result.push_back(Pair("removing tx from memory pool", ret));
+
+    ret = pwalletMain->EraseFromWallet(wtx.GetHash());
+    result.push_back(Pair("erasing tx from wallet.dat", ret));
+
+    ret = hooks->deletePendingName(wtx);
+    result.push_back(Pair("removing name tx (if this is name tx) from pending name operations", ret));
+
+    int nMismatchSpent;
+    int64_t nBalanceInQuestion;
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
+
+    if (nMismatchSpent != 0)
+    {
+        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
+        result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
+    }
+    result.push_back(Pair("done", "true"));
+
+#ifdef QT_GUI
+    // notify GUI
+    pwalletMain->UpdatedTransaction(wtx.GetHash());
+#endif
+
+    return result;
 }
 
 Value getinfo(const Array& params, bool fHelp)
@@ -99,15 +159,17 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("anonbalance",   ValueFromAmount(pwalletMain->GetAnonBalance())));
+    obj.push_back(Pair("reserve",       ValueFromAmount(nReserveBalance)));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
-    obj.push_back(Pair("reserve",       ValueFromAmount(nReserveBalance)));
     obj.push_back(Pair("unconfirmed",   ValueFromAmount(pwalletMain->GetUnconfirmedBalance())));
     obj.push_back(Pair("immature",      ValueFromAmount(pwalletMain->GetImmatureBalance())));
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("timeoffset",    (int64_t)GetTimeOffset()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));	
     obj.push_back(Pair("connections",   (int)vNodes.size()));
+    obj.push_back(Pair("datareceived",  bytesReadable(CNode::GetTotalBytesRecv())));
+    obj.push_back(Pair("datasent",      bytesReadable(CNode::GetTotalBytesSent())));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     if(fNativeTor)
     {
@@ -127,15 +189,26 @@ Value getinfo(const Array& params, bool fHelp)
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("fortunastake",    fFortunaStake));
+    obj.push_back(Pair("fortunastake",  fFortunaStake));
+    obj.push_back(Pair("fslock",        fFSLock));
     obj.push_back(Pair("nativetor",     fNativeTor));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
     obj.push_back(Pair("mininput",      ValueFromAmount(nMinimumInputValue)));
+    obj.push_back(Pair("datadir",       GetDataDir().string()));
+	obj.push_back(Pair("initialblockdownload",  IsInitialBlockDownload()));
+    if(fDebug) 
+	{
+    	obj.push_back(Pair("debug",             fDebug));
+        obj.push_back(Pair("debugnet",          fDebugNet));
+        obj.push_back(Pair("debugchain",        fDebugChain));
+        obj.push_back(Pair("debugringsig",      fDebugRingSig));
+	}
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
@@ -336,7 +409,13 @@ Value sendtoaddress(const Array& params, bool fHelp)
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
-    //EnsureWalletIsUnlocked();
+    EnsureWalletIsUnlocked();
+    
+    /*
+    if (params[0].get_str().length() > 75
+        && IsStealthAddress(params[0].get_str()))
+        return sendtostealthaddress(params, false);
+    */
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
@@ -748,7 +827,7 @@ Value sendfrom(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 7)
         throw runtime_error(
-            "sendfrom <fromaccount> <toshadowcoinaddress> <amount> [minconf=1] [comment] [comment-to] [narration] \n"
+            "sendfrom <fromaccount> <todenariusaddress> <amount> [minconf=1] [comment] [comment-to] [narration] \n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -883,7 +962,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     if ((int)keys.size() < nRequired)
         throw runtime_error(
             strprintf("not enough keys supplied "
-                      "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
+                      "(got %" PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CKey> pubkeys;
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++)
@@ -2077,6 +2156,10 @@ Value importstealthaddress(const Array& params, bool fHelp)
     std::string sSpendSecret = params[1].get_str();
     std::string sLabel;
 
+    if (pwalletMain->IsLocked())
+    {
+        throw runtime_error("Failed: Wallet must be unlocked.");
+    }
 
     if (params.size() > 2)
     {
@@ -2301,7 +2384,7 @@ Value scanforalltxns(const Array& params, bool fHelp)
         throw runtime_error(
             "scanforalltxns [fromHeight]\n"
             "Scan blockchain for owned transactions.");
-
+    
     Object result;
     int32_t nFromHeight = 0;
 

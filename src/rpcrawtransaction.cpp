@@ -6,7 +6,7 @@
 #include <boost/assign/list_of.hpp>
 
 #include "base58.h"
-#include "bitcoinrpc.h"
+#include "denariusrpc.h"
 #include "txdb.h"
 #include "init.h"
 #include "main.h"
@@ -214,6 +214,9 @@ Value listunspent(const Array& params, bool fHelp)
             if (!setAddress.count(address))
                 continue;
         }
+        // ignore namecoin TxOut
+        if (hooks->IsNameTx(out.tx->nVersion) && hooks->IsNameScript(out.tx->vout[out.i].scriptPubKey))
+            continue;
 
         int64_t nValue = out.tx->vout[out.i].nValue;
         const CScript& pk = out.tx->vout[out.i].scriptPubKey;
@@ -405,7 +408,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
     bool fComplete = true;
 
     // Fetch previous transactions (inputs):
-    map<COutPoint, CScript> mapPrevOut;
+    std::map<COutPoint, CScript> mapPrevOut;
     for (unsigned int i = 0; i < mergedTx.vin.size(); i++)
     {
         CTransaction tempTx;
@@ -536,7 +539,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
         {
             txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);
         }
-		if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
+		if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, true, 0))
             fComplete = false;
     }
 
