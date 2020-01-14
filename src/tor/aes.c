@@ -115,7 +115,11 @@ aes_cipher_free(aes_cnt_cipher_t *cipher_)
   if (!cipher_)
     return;
   EVP_CIPHER_CTX *cipher = (EVP_CIPHER_CTX *) cipher_;
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  EVP_CIPHER_CTX_reset(cipher);
+#else
   EVP_CIPHER_CTX_cleanup(cipher);
+#endif
   EVP_CIPHER_CTX_free(cipher);
 }
 void

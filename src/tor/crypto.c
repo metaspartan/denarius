@@ -41,6 +41,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/dh.h>
 #include <openssl/conf.h>
 #include <openssl/hmac.h>
+#include <openssl/ssl.h>
 
 ENABLE_GCC_WARNING(redundant-decls)
 
@@ -307,9 +308,15 @@ crypto_early_init(void)
 
     crypto_early_initialized_ = 1;
 
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+    OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
+                     OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+                     OPENSSL_INIT_ADD_ALL_CIPHERS |
+                     OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+#else
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
-
+#endif
     setup_openssl_threading();
 
     unsigned long version_num = OpenSSL_version_num();
@@ -3418,11 +3425,15 @@ setup_openssl_threading(void)
 int
 crypto_global_cleanup(void)
 {
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   EVP_cleanup();
+#endif
 #ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
 #endif
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   ERR_free_strings();
+#endif
 
   if (dh_param_p)
     BN_clear_free(dh_param_p);
@@ -3432,11 +3443,15 @@ crypto_global_cleanup(void)
     BN_clear_free(dh_param_g);
 
 #ifndef DISABLE_ENGINES
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   ENGINE_cleanup();
+#endif
 #endif
 
   CONF_modules_unload(1);
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   CRYPTO_cleanup_all_ex_data();
+#endif
 
 #ifndef NEW_THREAD_API
   if (n_openssl_mutexes_) {
