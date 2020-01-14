@@ -391,44 +391,22 @@ void CKey::MakeNewKey(bool fCompressedIn)
 // This is expensive.
 CPrivKey CKey::GetPrivKey() const
 {
-    int nSize = i2d_ECPrivateKey(pkey, NULL);
-    if (!nSize)
-        throw key_error("CKey::GetPrivKey() : i2d_ECPrivateKey failed");
-    CPrivKey vchPrivKey(nSize, 0);
-    unsigned char* pbegin = &vchPrivKey[0];
-    if (i2d_ECPrivateKey(pkey, &pbegin) != nSize)
-        throw key_error("CKey::GetPrivKey() : i2d_ECPrivateKey returned unexpected size");
-    return vchPrivKey;
-    /*
     assert(fValid);
     CPrivKey privkey;
     CECKey key;
     key.SetSecretBytes(vch);
     key.GetPrivKey(privkey, fCompressed);
     return privkey;
-    */
 }
 
-// Convert the private key to a CPrivKey (serialized OpenSSL private key data).
-// This is expensive.
 CPubKey CKey::GetPubKey() const
 {
-    int nSize = i2o_ECPublicKey(pkey, NULL);
-    if (!nSize)
-        throw key_error("CKey::GetPubKey() : i2o_ECPublicKey failed");
-    std::vector<unsigned char> vchPubKey(nSize, 0);
-    unsigned char* pbegin = &vchPubKey[0];
-    if (i2o_ECPublicKey(pkey, &pbegin) != nSize)
-        throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
-    return CPubKey(vchPubKey);
-    /*
     assert(fValid);
     CPubKey pubkey;
     CECKey key;
     key.SetSecretBytes(vch);
     key.GetPubKey(pubkey, fCompressed);
     return pubkey;
-    */
 }
 
 // Create a DER-serialized signature.
@@ -443,13 +421,11 @@ bool CKey::Sign(uint256 hash, std::vector<unsigned char>& vchSig) const
     }
     vchSig.resize(nSize); // Shrink to fit actual size
     return true;
-    /*
     if (!fValid)
         return false;
     CECKey key;
     key.SetSecretBytes(vch);
     return key.Sign(hash, vchSig);
-    */
 }
 
 // Create a compact signature (65 bytes), which allows reconstructing the used public key.
@@ -709,15 +685,22 @@ void CECKey::GetSecretBytes(unsigned char vch[32]) const {
     memset(vch, 0, 32 - nBytes);
 }
 
-/*
+
 void CECKey::SetSecretBytes(const unsigned char vch[32]) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L //OpenSSL 1.0.1 and 1.1.1 compat
     BIGNUM bn;
     BN_init(&bn);
     assert(BN_bin2bn(vch, 32, &bn));
     assert(EC_KEY_regenerate_key(pkey, &bn));
     BN_clear_free(&bn);
+#else
+    BIGNUM *bn;
+    bn = BN_new();
+    assert(BN_bin2bn(vch, 32, bn));
+    assert(EC_KEY_regenerate_key(pkey, bn));
+    BN_clear_free(bn);
+#endif
 }
-*/
 
 void CECKey::GetPrivKey(CPrivKey &privkey, bool fCompressed) {
     EC_KEY_set_conv_form(pkey, fCompressed ? POINT_CONVERSION_COMPRESSED : POINT_CONVERSION_UNCOMPRESSED);
@@ -760,8 +743,8 @@ bool CECKey::SetPubKey(const CPubKey &pubkey) {
     return o2i_ECPublicKey(&pkey, &pbegin, pubkey.size());
 }
 
-/*
 bool CECKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L //OpenSSL 1.0.1 and 1.1.1 compat
     vchSig.clear();
     ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
     if (sig == NULL)
@@ -786,8 +769,18 @@ bool CECKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) {
     ECDSA_SIG_free(sig);
     vchSig.resize(nSize); // Shrink to fit actual size
     return true;
+#else
+    unsigned int nSize = ECDSA_size(pkey);
+    vchSig.resize(nSize); // Make sure it is big enough
+    if (!ECDSA_sign(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], &nSize, pkey))
+    {
+        vchSig.clear();
+        return false;
+    }
+    vchSig.resize(nSize); // Shrink to fit actual size
+    return true;
+#endif
 }
-*/
 
 bool CECKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) {
     // -1 = error, 0 = bad sig, 1 = good
@@ -802,27 +795,39 @@ bool CECKey::SignCompact(const uint256 &hash, unsigned char *p64, int &rec) {
     ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
     if (sig==NULL)
         return false;
-    memset(p64, 0, 64);
-    int nBitsR = BN_num_bits(sig->r);
-    int nBitsS = BN_num_bits(sig->s);
-    if (nBitsR <= 256 && nBitsS <= 256) {
-        CPubKey pubkey;
-        GetPubKey(pubkey, true);
-        for (int i=0; i<4; i++) {
-            CECKey keyRec;
-            if (ECDSA_SIG_recover_key_GFp(keyRec.pkey, sig, (unsigned char*)&hash, sizeof(hash), i, 1) == 1) {
-                CPubKey pubkeyRec;
-                keyRec.GetPubKey(pubkeyRec, true);
-                if (pubkeyRec == pubkey) {
-                    rec = i;
-                    fOk = true;
+    vchSig.clear();
+    vchSig.resize(65,0);
+
+    const BIGNUM *ecsig_r = NULL;
+    const BIGNUM *ecsig_s = NULL;
+    ECDSA_SIG_get0(sig, &ecsig_r, &ecsig_s);
+
+    int nBitsR = BN_num_bits(ecsig_r);
+    int nBitsS = BN_num_bits(ecsig_s);
+    if (nBitsR <= 256 && nBitsS <= 256)
+    {
+        int nRecId = -1;
+        for (int i=0; i<4; i++)
+        {
+            CKey keyRec;
+            keyRec.fSet = true;
+            if (fCompressedPubKey)
+                keyRec.SetCompressedPubKey();
+            if (ECDSA_SIG_recover_key_GFp(keyRec.pkey, sig, (unsigned char*)&hash, sizeof(hash), i, 1) == 1)
+                if (keyRec.GetPubKey() == this->GetPubKey())
+                {
+                    nRecId = i;
                     break;
                 }
-            }
         }
-        assert(fOk);
-        BN_bn2bin(sig->r,&p64[32-(nBitsR+7)/8]);
-        BN_bn2bin(sig->s,&p64[64-(nBitsS+7)/8]);
+
+        if (nRecId == -1)
+            throw key_error("CKey::SignCompact() : unable to construct recoverable key");
+
+        vchSig[0] = nRecId+27+(fCompressedPubKey ? 4 : 0);
+        BN_bn2bin(ecsig_r,&vchSig[33-(nBitsR+7)/8]);
+        BN_bn2bin(ecsig_s,&vchSig[65-(nBitsS+7)/8]);
+        fOk = true;
     }
     ECDSA_SIG_free(sig);
     return fOk;

@@ -354,7 +354,7 @@ public:
 
     void GetSecretBytes(unsigned char vch[32]) const;
 
-    //void SetSecretBytes(const unsigned char vch[32]);
+    void SetSecretBytes(const unsigned char vch[32]);
 
     void GetPrivKey(CPrivKey &privkey, bool fCompressed);
 
@@ -364,7 +364,7 @@ public:
 
     bool SetPubKey(const CPubKey &pubkey);
 
-    //bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig);
+    bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig);
 
     bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig);
 
