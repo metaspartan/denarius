@@ -68,8 +68,8 @@ public:
 /** An encapsulated public key. */
 class CPubKey {
 private:
-    //std::vector<unsigned char> vchPubKey;
-    //friend class CKey;
+    std::vector<unsigned char> vchPubKey;
+    friend class CKey;
 	// Just store the serialized data.
     // Its length can very cheaply be computed from the first byte.
     unsigned char vch[65];
@@ -281,6 +281,9 @@ public:
     const unsigned char *begin() const { return vch; }
     const unsigned char *end() const { return vch + size(); }
 
+    // Reset ()
+    void Reset();
+
     // Check whether this private key is valid.
     bool IsValid() const;
 
@@ -328,7 +331,7 @@ public:
     // Ensure that signature is DER-encoded
     static bool ReserealizeSignature(std::vector<unsigned char>& vchSig);
 
-    // Why does this exist?
+    // Get ECKey from CKey in key.cpp
     EC_KEY* GetECKey();
 };
 
@@ -347,11 +350,11 @@ public:
         EC_KEY_free(pkey);
     }
 
-    EC_KEY* GetECKey() {return pkey;};
+    //EC_KEY* GetECKey() {return pkey;};
 
     void GetSecretBytes(unsigned char vch[32]) const;
 
-    void SetSecretBytes(const unsigned char vch[32]);
+    //void SetSecretBytes(const unsigned char vch[32]);
 
     void GetPrivKey(CPrivKey &privkey, bool fCompressed);
 
@@ -361,11 +364,11 @@ public:
 
     bool SetPubKey(const CPubKey &pubkey);
 
-    bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig);
+    //bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig);
 
     bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig);
 
-    bool SignCompact(const uint256 &hash, unsigned char *p64, int &rec);
+    //bool SignCompact(const uint256 &hash, unsigned char *p64, int &rec);
 
     // reconstruct public key from a compact signature
     // This is only slightly more CPU intensive than just verifying it.

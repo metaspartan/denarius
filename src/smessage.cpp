@@ -3392,12 +3392,12 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
     CKey keyR;
     keyR.MakeNewKey(true); // make compressed key
 
-    CECKey ecKeyR;
-    ecKeyR.SetSecretBytes(keyR.begin());
+    //CECKey ecKeyR;
+    //ecKeyR.SetSecretBytes(keyR.begin());
 
     // -- Do an EC point multiply with public key K and private key r. This gives you public key P.
-    CECKey ecKeyK;
-    if (!ecKeyK.SetPubKey(cpkDestK))
+    CKey keyK;
+    if (!keyK.SetPubKey(cpkDestK))
     {
         printf("Could not set pubkey for K: %s.\n", ValueString(cpkDestK.Raw()).c_str());
         return 4; // address to is invalid
@@ -3405,8 +3405,8 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
 
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyr = ecKeyR.GetECKey();
-    EC_KEY* pkeyK = ecKeyK.GetECKey();
+    EC_KEY* pkeyr = keyR.GetECKey();
+    EC_KEY* pkeyK = keyK.GetECKey();
 
     // always seems to be 32, worth checking?
     //int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(pkeyr));
@@ -3796,31 +3796,35 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
 
 
 
-    CPubKey cpkR(psmsg->cpkR, psmsg->cpkR+33);
+    CKey keyR;
+    std::vector<unsigned char> vchR(psmsg->cpkR, psmsg->cpkR+33); // would be neater to override CPubKey() instead
+    CPubKey cpkR(vchR);
     if (!cpkR.IsValid())
     {
         printf("Could not get public key for key R.\n");
         return 1;
     };
 
-    CECKey ecKeyR;
-    if (!ecKeyR.SetPubKey(cpkR))
+    if (!keyR.SetPubKey(cpkR))
     {
         printf("Could not set pubkey for R: %s.\n", ValueString(cpkR.Raw()).c_str());
         return 1;
     };
 
-    CECKey ecKeyDest;
-    ecKeyDest.SetSecretBytes(keyDest.begin());
-
-
+    cpkR = keyR.GetPubKey();
+    if (!cpkR.IsValid()
+        || !cpkR.IsCompressed())
+    {
+        printf("Could not get compressed public key for key R.\n");
+        return 1;
+    };
 
 
     // -- Do an EC point multiply with private key k and public key R. This gives you public key P.
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyk = ecKeyDest.GetECKey();
-    EC_KEY* pkeyR = ecKeyR.GetECKey();
+    EC_KEY* pkeyk = keyDest.GetECKey();
+    EC_KEY* pkeyR = keyR.GetECKey();
 
     EC_KEY_SET_DEFAULT_METHOD(pkeyk);
     int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, NULL);

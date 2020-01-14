@@ -344,16 +344,16 @@
 #define HAVE_SSL_CIPHER_FIND 1
 
 /* Define to 1 if you have the `SSL_get_client_ciphers' function. */
-/* #define HAVE_SSL_GET_CLIENT_CIPHERS 0 */
+#define HAVE_SSL_GET_CLIENT_CIPHERS 0
 
 /* Define to 1 if you have the `SSL_get_client_random' function. */
-/* #define HAVE_SSL_GET_CLIENT_RANDOM 0 */
+#define HAVE_SSL_GET_CLIENT_RANDOM 0 
 
 /* Define to 1 if you have the `SSL_get_server_random' function. */
-/* #define HAVE_SSL_GET_SERVER_RANDOM 0 */
+#define HAVE_SSL_GET_SERVER_RANDOM 0 
 
 /* Define to 1 if you have the `SSL_SESSION_get_master_key' function. */
-/* #define HAVE_SSL_SESSION_GET_MASTER_KEY 0 */
+#define HAVE_SSL_SESSION_GET_MASTER_KEY 0
 
 /* Define to 1 if `state' is a member of `SSL'. */
 /* #undef HAVE_SSL_STATE */
