@@ -684,11 +684,8 @@ bool AppInit2()
 
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("Denarius (D) version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) //WIP OpenSSL 1.0.x only, OpenSSL 1.1 not supported yet
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
-#else
-    printf("Using OpenSSL version %s\n", OpenSSL_version(OPENSSL_VERSION));
-#endif
+
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
@@ -700,7 +697,7 @@ bool AppInit2()
     extern void createNameIndexFile();
     if (!filesystem::exists(nameindexfile))
         createNameIndexFile();
-        printf("Created an Egeria DNS Name Database in the Denarius Data Directory\n");
+        printf("Initialized the Egeria DNS Name Database in the Denarius Data Directory - namedb.dat\n");
 
     if (mapArgs.count("-fortunastakepaymentskey")) // fortunastake payments priv key
     {
