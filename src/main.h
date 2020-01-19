@@ -69,9 +69,9 @@ static const unsigned int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
 static const unsigned int MAX_TX_SIGOPS = MAX_BLOCK_SIGOPS/5;
 //static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100; deprecated
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
-static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 10000; //Was 100, lets handle 10k
+static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100; //Was 10k, lets handle 100
 /** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
-static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 1000; //Default 750, Lets handle 1000
+static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750; //Default 750, Lets handle 1000 maybe?
 static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
 static const int64_t MIN_TX_FEE_ANON = 10000;
