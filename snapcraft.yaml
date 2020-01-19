@@ -1,9 +1,9 @@
-# Denarius - Snapcraft Build - Known to build in most Ubuntu versions - WIP Currently as of Denarius v3.3.9.4
+# Denarius - Snapcraft Build - Known to build in most Ubuntu versions
 # https://denarius.io
 # https://github.com/carsenk/denarius
 # By Carsen Klock
 name: denarius
-version: '3.3.9.6'
+version: '3.3.9.7'
 summary: Denarius
 description: |
   An open source hybrid cryptocurrency called Denarius, which features Fortuna Stakes (Masternodes), Staking, Mining, Multisig, and much more!
