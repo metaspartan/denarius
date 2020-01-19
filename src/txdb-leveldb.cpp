@@ -79,7 +79,7 @@ CTxDB::CTxDB(const char* pszMode)
     bool fCreate = strchr(pszMode, 'c');
 
     options = GetOptions();
-    options.create_if_missing = fCreate;
+    options.create_if_missing = true; //fCreate
     options.filter_policy = leveldb::NewBloomFilterPolicy(10);
 
     init_blockindex(options); // Init directory
