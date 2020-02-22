@@ -100,6 +100,7 @@ Value jupitergetblock(const Array& params, bool fHelp)
         */
     }
 }
+
 Value jupiterversion(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -108,8 +109,9 @@ Value jupiterversion(const Array& params, bool fHelp)
             "Returns the version of the connected IPFS node within the Denarius Jupiter");
 
     ipfs::Json version;
+    ipfs::Json id;
     bool connected = false;
-    Object obj;
+    Object obj, peerinfo;
 
     fJupiterLocal = GetBoolArg("-jupiterlocal");
 
@@ -126,11 +128,18 @@ Value jupiterversion(const Array& params, bool fHelp)
         if (version["Version"].dump() != "") {
             connected = true;
         }
+
+        client.Id(&id);
         
         obj.push_back(Pair("connected",          connected));
         obj.push_back(Pair("jupiterlocal",       "true"));
         obj.push_back(Pair("ipfspeer",           ipfsip));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
+
+        peerinfo.push_back(Pair("peerid",             id["ID"].dump().c_str()));
+        peerinfo.push_back(Pair("addresses",          id["Addresses"].dump().c_str()));
+        peerinfo.push_back(Pair("publickey",          id["PublicKey"].dump().c_str()));
+        obj.push_back(Pair("peerinfo",                peerinfo));
 
         return obj;
     } else {
@@ -149,6 +158,7 @@ Value jupiterversion(const Array& params, bool fHelp)
         obj.push_back(Pair("jupiterlocal",       "false"));
         obj.push_back(Pair("ipfspeer",           "https://ipfs.infura.io:5001"));
         obj.push_back(Pair("ipfsversion",        version["Version"].dump().c_str()));
+        obj.push_back(Pair("peerinfo",           "Peer ID Info only supported with jupiterlocal=1"));
 
         return obj;
     }
