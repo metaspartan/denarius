@@ -165,6 +165,7 @@ parts:
       - qttools5-dev-tools
       - qt5-default
       - qtbase5-dev-tools
+      - qt5wayland
     stage-packages:
       - g++
       - jq
@@ -189,6 +190,7 @@ parts:
       - qttools5-dev-tools
       - qt5-default
       - qtbase5-dev-tools
+      - qt5wayland
     override-build: |
       set -x
       ARCH=$(uname -m)
