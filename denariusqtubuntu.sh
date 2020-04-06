@@ -31,9 +31,9 @@ cd ~/.denarius || exit
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
-unzip chaindata2290877.zip
-rm -rf chaindata2290877.zip
+wget hhttps://denarii.cloud/chaindata.zip
+unzip chaindata.zip
+rm -rf chaindata.zip
 Echo "Back to Compiled QT Binary Folder"
 cd ~/denarius/src
                 ;;
@@ -59,7 +59,7 @@ sudo apt-get install -y git unzip build-essential libdb++-dev libboost-all-dev l
 
 echo "Downgrade libssl-dev"
 sudo apt-get install make
-wget https://www.openssl.org/source/openssl-1.0.1j.tar.gz
+wget https://ftp.openssl.org/source/old/1.0.1/openssl-1.0.1j.tar.gz
 tar -xzvf openssl-1.0.1j.tar.gz
 cd openssl-1.0.1j
 ./config
@@ -90,9 +90,9 @@ cd ~/.denarius
 rm -rf database txleveldb smsgDB
 #wget http://d.hashbag.cc/chaindata.zip
 #unzip chaindata.zip
-wget https://gitlab.com/denarius/chain/raw/master/chaindata2290877.zip
-unzip chaindata2290877.zip
-rm -rf chaindata2290877.zip
+wget https://denarii.cloud/chaindata.zip
+unzip chaindata.zip
+rm -rf chaindata.zip
 Echo "Back to Compiled QT Binary Folder"
 cd ~/denarius/src
                 ;;
