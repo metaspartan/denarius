@@ -126,7 +126,7 @@ Value getinfo(const Array& params, bool fHelp)
 
         ifstream file(hostname_path.string().c_str());
         file >> automatic_onion;
-        obj.push_back(Pair("tor",       (automatic_onion)));
+        obj.push_back(Pair("ip",       (automatic_onion)));
     }
     if(!fNativeTor)
         obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
@@ -153,8 +153,16 @@ Value getinfo(const Array& params, bool fHelp)
         obj.push_back(Pair("debugchain",        fDebugChain));
         obj.push_back(Pair("debugringsig",      fDebugRingSig));
 	}
+	if (!pwalletMain->IsCrypted())
+        obj.push_back(Pair("wallet_status", "unencrypted"));
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
+	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && !fWalletUnlockStakingOnly)
+		obj.push_back(Pair("wallet_status", "unlocked"));
+	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && fWalletUnlockStakingOnly)
+		obj.push_back(Pair("wallet_status", "stakingonly"));
+	if (pwalletMain->IsLocked() && pwalletMain->IsCrypted())
+		obj.push_back(Pair("wallet_status", "locked"));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     return obj;
 }
@@ -1652,6 +1660,7 @@ Value walletpassphrase(const Array& params, bool fHelp)
 
     if (!pwalletMain->IsLocked())
         throw JSONRPCError(RPC_WALLET_ALREADY_UNLOCKED, "Error: Wallet is already unlocked, use walletlock first if need to change unlock settings.");
+	
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
@@ -1671,13 +1680,15 @@ Value walletpassphrase(const Array& params, bool fHelp)
 
     NewThread(ThreadTopUpKeyPool, NULL);
     int64_t* pnSleepTime = new int64_t(params[1].get_int64());
+	//LOCK(cs_nWalletUnlockTime);
+	//nWalletUnlockTime = GetTime() + pnSleepTime;
     NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
-
-    // ppcoin: if user OS account compromised prevent trivial sendmoney commands
-    if (params.size() > 2)
-        fWalletUnlockStakingOnly = params[2].get_bool();
-    else
-        fWalletUnlockStakingOnly = false;
+	
+    fWalletUnlockStakingOnly = false;
+	
+    // Denarius: if user OS account compromised prevent trivial sendmoney commands
+    if (params.size() > 2 && params[2].get_bool() == true)
+        fWalletUnlockStakingOnly = true;
 
     return Value::null;
 }
