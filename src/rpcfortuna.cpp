@@ -265,6 +265,7 @@ Value fortunastake(const Array& params, bool fHelp)
                 list.push_back(Pair("active",        (int)mn.IsActive()));
                 list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
                 list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
+				list.push_back(Pair("ip",       		mn.addr.ToString().c_str()));
 
                 CScript pubkey;
                 pubkey =GetScriptForDestination(mn.pubkey.GetID());
