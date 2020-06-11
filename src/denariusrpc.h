@@ -148,7 +148,7 @@ extern std::string HexBits(unsigned int nBits);
 extern std::string HelpRequiringPassphrase();
 extern void EnsureWalletIsUnlocked();
 
-//
+// Q0FSU0VOIEtMT0NL
 // Utilities: convert hex-encoded Values
 // (throws error if not hex).
 //
@@ -193,7 +193,7 @@ extern json_spirit::Value signmessage(const json_spirit::Array& params, bool fHe
 extern json_spirit::Value verifymessage(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getreceivedbyaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getreceivedbyaccount(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value fetchbalance(const json_spirit::Array& params, bool fHelp); // D e n a r i u s
+extern json_spirit::Value fetchbalance(const json_spirit::Array& params, bool fHelp); // D e n a r i u s - Q0FSU0VOIEtMT0NL
 extern json_spirit::Value getbalance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value movecmd(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendfrom(const json_spirit::Array& params, bool fHelp);
@@ -213,6 +213,7 @@ extern json_spirit::Value walletpassphrase(const json_spirit::Array& params, boo
 extern json_spirit::Value walletpassphrasechange(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value walletlock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value encryptwallet(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value walletstatus(const json_spirit::Array& params, bool fHelp); //Q0FSU0VOIEtMT0NL
 extern json_spirit::Value validateaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value reservebalance(const json_spirit::Array& params, bool fHelp);
@@ -265,7 +266,7 @@ extern json_spirit::Value importstealthaddress(const json_spirit::Array& params,
 extern json_spirit::Value clearwallettransactions(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value scanforalltxns(const json_spirit::Array& params, bool fHelp);
 
-//RPC Ring Sigs - D e n a r i u s
+//RPC Ring Sigs - D e n a r i u s - Q0FSU0VOIEtMT0NL
 extern json_spirit::Value senddtoanon(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendanontoanon(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendanontod(const json_spirit::Array& params, bool fHelp);

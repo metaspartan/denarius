@@ -1202,6 +1202,7 @@ void WriteConfigFile(FILE* configFile)
     fputs (sUserID.c_str(), configFile);
     fputs (sRPCpassword.c_str(), configFile);
     fputs ("rpcport=32369\n", configFile);
+	fputs ("rpcallowip=127.0.0.1\n", configFile); //Highly Recommended to only allow local connections to RPC
     fputs ("port=33369\n", configFile);
     fputs ("daemon=1\n", configFile);
     fputs ("listen=1\n", configFile);
