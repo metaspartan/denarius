@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2017-2018 Denarius developers
+// Copyright (c) 2017-2020 Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -153,10 +153,11 @@ Value getinfo(const Array& params, bool fHelp)
         obj.push_back(Pair("debugchain",        fDebugChain));
         obj.push_back(Pair("debugringsig",      fDebugRingSig));
 	}
+	//Q0FSU0VOIEtMT0NL
+	if (pwalletMain->IsCrypted())
+        obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
 	if (!pwalletMain->IsCrypted())
         obj.push_back(Pair("wallet_status", "unencrypted"));
-    if (pwalletMain->IsCrypted())
-        obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
 	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && !fWalletUnlockStakingOnly)
 		obj.push_back(Pair("wallet_status", "unlocked"));
 	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && fWalletUnlockStakingOnly)
@@ -167,6 +168,30 @@ Value getinfo(const Array& params, bool fHelp)
     return obj;
 }
 
+//Denarius (D) Wallet Lock Status RPC
+//F*** all of you whom rip my code off and do not give credit. Q0FSU0VOIEtMT0NL
+//Q0FSU0VOIEtMT0NL
+Value walletstatus(const Array& params, bool fHelp)
+{
+	if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "walletstatus\n"
+			"Returns the current wallet lock and encryption status.");
+	
+	Object obj;
+    if (pwalletMain->IsCrypted())
+        obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
+	if (!pwalletMain->IsCrypted())
+        obj.push_back(Pair("wallet_status", "unencrypted"));
+	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && !fWalletUnlockStakingOnly)
+		obj.push_back(Pair("wallet_status", "unlocked"));
+	if (!pwalletMain->IsLocked() && pwalletMain->IsCrypted() && fWalletUnlockStakingOnly)
+		obj.push_back(Pair("wallet_status", "stakingonly"));
+	if (pwalletMain->IsLocked() && pwalletMain->IsCrypted())
+		obj.push_back(Pair("wallet_status", "locked"));
+	
+	return obj;
+}
 
 Value getnewpubkey(const Array& params, bool fHelp)
 {
