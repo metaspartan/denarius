@@ -567,6 +567,11 @@ Value fortunastake(const Array& params, bool fHelp)
             CTxDestination address1;
             ExtractDestination(pubkey, address1);
             CBitcoinAddress address2(address1);
+			
+			uint256 mnTxHash;
+			int outputIndex;
+			
+			
             if (activeFortunastake.pubKeyFortunastake.IsFullyValid()) {
                 CScript pubkey;
                 CTxDestination address1;
@@ -637,6 +642,10 @@ Value fortunastake(const Array& params, bool fHelp)
                 std::string errorMessage;
                 std::string forTunaError;
                 std::string vinError;
+				
+				mnTxHash.SetHex(mne.getTxHash());
+				outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+				COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
 
                 if(!forTunaSigner.SetKey(mne.getPrivKey(), forTunaError, keyFortunastake, pubKeyFortunastake))
                 {
@@ -655,23 +664,71 @@ Value fortunastake(const Array& params, bool fHelp)
                 remoteObj.push_back(Pair("alias", mne.getAlias()));
                 remoteObj.push_back(Pair("ipaddr", address));
 				
-				if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
-					remoteObj.push_back(Pair("collateral", "Wallet is Locked"));
-				} else {
-					remoteObj.push_back(Pair("collateral", address2.ToString()));
-				}
+				// if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
+					// remoteObj.push_back(Pair("collateral1", "Wallet is Locked"));
+				// } else {
+					// remoteObj.push_back(Pair("collateral1", address2.ToString())); //Incorrect address?
+				// }
+				
+				// CWalletTx tx;
+				// if (pwalletMain->GetTransaction(mnTxHash, tx))
+				// {
+					// CTxOut vout = tx.vout[outputIndex];
+				// }
+				
                 //remoteObj.push_back(Pair("collateral", address2.ToString()));
-				//remoteObj.push_back(Pair("collateral", CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString()));
+				//remoteObj.push_back(Pair("collateral", CBitcoinAddress(mne->pubKeyCollateralAddress.GetID()).ToString()));
+
+                //DENARIUS - Q0FSU0VOIEtMT0NL
 
                 bool mnfound = false;
                 BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
                 {
                     if (mn.addr.ToString() == mne.getIp()) {
-                        remoteObj.push_back(Pair("status", "online"));
+                        //remoteObj.push_back(Pair("status", "online"));
+                        if (mn.IsActive()) {
+                            //nstatus = QString::fromStdString("Active for payment");
+                            remoteObj.push_back(Pair("status", "online"));
+                        } else if (mn.status == "OK") {
+                            if (mn.lastDseep > 0) {
+                                //nstatus = QString::fromStdString("Verified");
+                                remoteObj.push_back(Pair("status", "verified"));
+                            } else {
+                                //nstatus = QString::fromStdString("Registered");
+                                remoteObj.push_back(Pair("status", "registered"));
+                            }
+                        } else if (mn.status == "Expired") {
+                            //nstatus = QString::fromStdString("Expired");
+                            remoteObj.push_back(Pair("status", "expired"));
+                        } else if (mn.status == "Inactive, expiring soon") {
+                            //nstatus = QString::fromStdString("Inactive, expiring soon");
+                            remoteObj.push_back(Pair("status", "inactive"));
+                        } else {
+                            //nstatus = QString::fromStdString(mn.status);
+                            remoteObj.push_back(Pair("status", mn.status));
+                        }
                         remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
+						CScript pubkey;
+						pubkey =GetScriptForDestination(mn.pubkey.GetID());
+						CTxDestination address3;
+						ExtractDestination(pubkey, address3);
+						CBitcoinAddress address4(address3);
+						if(pwalletMain->IsLocked() || fWalletUnlockStakingOnly) {
+							remoteObj.push_back(Pair("collateral", "Wallet is Locked"));
+							remoteObj.push_back(Pair("txid", "Wallet is Locked"));
+						} else {
+							remoteObj.push_back(Pair("collateral", address4.ToString().c_str()));
+							remoteObj.push_back(Pair("txid",mn.vin.prevout.hash.ToString().c_str()));
+						}
+						//remoteObj.push_back(Pair("txid",mn.vin.prevout.hash.ToString().c_str()));
+						remoteObj.push_back(Pair("outputindex", (int64_t)mn.vin.prevout.n));
 						remoteObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+						remoteObj.push_back(Pair("roundpayments", mn.payCount));
 						remoteObj.push_back(Pair("earnings", mn.payValue));
+						remoteObj.push_back(Pair("daily", mn.payRate));
                         remoteObj.push_back(Pair("version",mn.protocolVersion));
+						
+						//printf("FortunastakeSTATUS:: %s %s - found %s - %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address4.ToString().c_str(), address2.ToString().c_str(), mne.getAlias().c_str());
                         mnfound = true;
                         break;
                     }
