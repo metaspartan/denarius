@@ -685,7 +685,28 @@ Value fortunastake(const Array& params, bool fHelp)
                 BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
                 {
                     if (mn.addr.ToString() == mne.getIp()) {
-                        remoteObj.push_back(Pair("status", "online"));
+                        //remoteObj.push_back(Pair("status", "online"));
+                        if (mn.IsActive()) {
+                            //nstatus = QString::fromStdString("Active for payment");
+                            remoteObj.push_back(Pair("status", "online"));
+                        } else if (mn.status == "OK") {
+                            if (mn.lastDseep > 0) {
+                                //nstatus = QString::fromStdString("Verified");
+                                remoteObj.push_back(Pair("status", "verified"));
+                            } else {
+                                //nstatus = QString::fromStdString("Registered");
+                                remoteObj.push_back(Pair("status", "registered"));
+                            }
+                        } else if (mn.status == "Expired") {
+                            //nstatus = QString::fromStdString("Expired");
+                            remoteObj.push_back(Pair("status", "expired"));
+                        } else if (mn.status == "Inactive, expiring soon") {
+                            //nstatus = QString::fromStdString("Inactive, expiring soon");
+                            remoteObj.push_back(Pair("status", "inactive"));
+                        } else {
+                            //nstatus = QString::fromStdString(mn.status);
+                            remoteObj.push_back(Pair("status", mn.status));
+                        }
                         remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
 						CScript pubkey;
 						pubkey =GetScriptForDestination(mn.pubkey.GetID());
