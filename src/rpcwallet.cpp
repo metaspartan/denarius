@@ -461,6 +461,31 @@ Value listaddressgroupings(const Array& params, bool fHelp)
     return jsonGroupings;
 }
 
+Value listaddressgroups(const Array& params, bool fHelp)
+{
+    if (fHelp)
+        throw runtime_error(
+            "listaddressgroups\n"
+            "Lists groups of addresses which have had their common ownership\n"
+            "made public by common use as inputs or as the resulting change\n"
+            "in past transactions");
+
+
+	Object obj, addr;
+	Array ret;
+    map<CTxDestination, int64_t> balances = pwalletMain->GetAddressBalances();
+    BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings())
+    {
+        BOOST_FOREACH(CTxDestination address, grouping)
+        {
+			obj.push_back(Pair("address", CBitcoinAddress(address).ToString()));
+			obj.push_back(Pair("amount", ValueFromAmount(balances[address])));			
+        }
+    }
+	ret.push_back(obj);	
+    return ret;
+}
+
 Value signmessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)

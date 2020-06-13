@@ -669,6 +669,8 @@ Value fortunastake(const Array& params, bool fHelp)
                     if (mn.addr.ToString() == mne.getIp()) {
                         remoteObj.push_back(Pair("status", "online"));
                         remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
+						remoteObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
+						remoteObj.push_back(Pair("earnings", mn.payValue));
                         remoteObj.push_back(Pair("version",mn.protocolVersion));
                         mnfound = true;
                         break;
