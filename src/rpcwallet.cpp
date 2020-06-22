@@ -1734,11 +1734,15 @@ Value walletpassphrase(const Array& params, bool fHelp)
 	//nWalletUnlockTime = GetTime() + pnSleepTime;
     NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
 	
-    fWalletUnlockStakingOnly = false;
+    //fWalletUnlockStakingOnly = false;
 	
     // Denarius: if user OS account compromised prevent trivial sendmoney commands
-    if (params.size() > 2 && params[2].get_bool() == true)
-        fWalletUnlockStakingOnly = true;
+    // if (params.size() > 2 && params[2].get_bool() == true)
+        // fWalletUnlockStakingOnly = true;
+	if (params.size() > 2)
+        fWalletUnlockStakingOnly = params[2].get_bool();
+    else
+        fWalletUnlockStakingOnly = false;
 
     return Value::null;
 }
