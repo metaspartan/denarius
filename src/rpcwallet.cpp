@@ -96,6 +96,9 @@ Value getinfo(const Array& params, bool fHelp)
 
     proxyType proxy;
     GetProxy(NET_IPV4, proxy);
+	
+	uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
+    pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
 
     Object obj, diff;
     obj.push_back(Pair("version",       FormatFullVersion()));
@@ -135,6 +138,10 @@ Value getinfo(const Array& params, bool fHelp)
     diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     
     obj.push_back(Pair("difficulty",    diff));
+	obj.push_back(Pair("netmhashps",     GetPoWMHashPS()));
+	obj.push_back(Pair("netstakeweight", GetPoSKernelPS()));
+	
+	obj.push_back(Pair("weight", (uint64_t)nWeight));
 
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("fortunastake",  fFortunaStake));
