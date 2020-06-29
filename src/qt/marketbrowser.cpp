@@ -29,6 +29,7 @@ QString bitcoing;
 QString dnrnewsfeed;
 QString dnrmarket;
 QString dollarg;
+QString eurog;
 int mode=1;
 int o = 0;
 
@@ -84,7 +85,7 @@ void MarketBrowser::parseNetworkResponse(QNetworkReply *finished )
         emit networkError( finished->error() );
         return;
     }
-	
+
 if (what == kBaseUrl) // Denarius Price
 {
 
@@ -92,7 +93,7 @@ if (what == kBaseUrl) // Denarius Price
     QString denarius = finished->readAll();
     denarius2 = (denarius.toDouble());
     denarius = QString::number(denarius2, 'f', 2);
-	
+
     if(denarius > denariusp)
     {
         ui->denarius->setText("<font color=\"yellow\">$" + denarius + "</font>");
@@ -132,7 +133,7 @@ if (what == kBaseUrl2) // Denarius Market Cap
     QString dnrmc = finished->readAll();
     dnrmc2 = (dnrmc.toDouble());
     dnrmc = QString::number(dnrmc2, 'f', 2);
-	
+
     if(dnrmc > dnrmcp)
     {
         ui->dnrmc->setText("<font color=\"yellow\">$" + dnrmc + "</font>");
@@ -153,7 +154,7 @@ if (what == kBaseUrl3) // Denarius BTC Price
     QString dnrbtc = finished->readAll();
     dnrbtc2 = (dnrbtc.toDouble());
     dnrbtc = QString::number(dnrbtc2, 'f', 8);
-	
+
     if(dnrbtc > dnrbtcp)
     {
         ui->dnrbtc->setText("<font color=\"yellow\">" + dnrbtc + " BTC</font>");
