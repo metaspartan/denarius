@@ -477,7 +477,7 @@ Value burn(const Array& params, bool fHelp)
     CReserveKey reservekey(pwalletMain);
     int64_t nFeeRequired;
     std::string strError = "CreateTransaction() failed.";
-    std::string sNarr = ""
+    std::string sNarr = "";
 
     if (!pwalletMain->CreateTransaction(burnScript, nAmount, sNarr, wtx, reservekey, nFeeRequired, nullptr)) {
         if (nAmount + nFeeRequired > pwalletMain->GetBalance())
