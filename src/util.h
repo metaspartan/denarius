@@ -161,18 +161,17 @@ static inline int LogPrint(const char* category, const char* format)
     return LogPrintStr(format);
 }
 
-/*
-static inline bool error(const char* format)
-{
-    LogPrintStr(std::string("ERROR: ") + format + "\n");
-    return false;
-}
+
+// static inline bool error(const char* format)
+// {
+    // LogPrintStr(std::string("ERROR: ") + format + "\n");
+    // return false;
+// }
 static inline int errorN(int n, const char* format)
 {
     LogPrintStr(std::string("ERROR: ") + format + "\n");
     return n;
 }
-*/
 
 /* This GNU C extension enables the compiler to check the format string against the parameters provided.
  * X is the number of the "format string" parameter, and Y is the number of the first variadic parameter.
