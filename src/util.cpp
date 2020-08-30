@@ -1211,10 +1211,8 @@ void WriteConfigFile(FILE* configFile)
     fputs ("fortunastakeaddr=\n", configFile);
     fputs ("fortunastakeprivkey=\n", configFile);
     fputs ("addnode=144.130.111.71\n", configFile);
-    fputs ("addnode=163.172.157.116\n", configFile);
     fputs ("addnode=173.244.36.3\n", configFile);
     fputs ("addnode=24.205.81.255\n", configFile);
-    fputs ("addnode=51.15.210.145\n", configFile);
     fputs ("addnode=51.15.52.235\n", configFile);
     fputs ("addnode=115.70.121.168:33369\n", configFile);
     fputs ("addnode=140.82.13.39:333691\n", configFile);
@@ -1227,8 +1225,10 @@ void WriteConfigFile(FILE* configFile)
     fputs ("addnode=46.166.162.45:33369\n", configFile);
     fputs ("addnode=93.115.26.186:33369\n", configFile);
     fputs ("addnode=51.38.112.208:33369\n", configFile);
-    fputs ("addnode=51.158.101.32\n", configFile); //pos.watch
-    fputs ("addnode=[2001:bc8:47a8:2519::1]\n", configFile); //pos.watch
+    fputs ("addnode=161.97.72.221\n", configFile); //electrumx1
+    fputs ("addnode=173.249.28.223\n", configFile); //electrumx2
+    fputs ("addnode=161.97.72.253\n", configFile); //electrumx3
+    fputs ("addnode=161.97.91.249\n", configFile); //denarii.cloud
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
