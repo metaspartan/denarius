@@ -618,6 +618,10 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+    if (mn.payCount > 33) {
+        printf("%d - PAYCOUNT TOO HIGH CheckFSPayment()\n", mn.payCount);
+        return false; //Don't let the payment through if the FS has received more than 33 payments
+    }
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -632,6 +636,10 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
 
 bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+    if (mn.payCount > 33) {
+        printf("%d - PAYCOUNT TOO HIGH CheckPoSFSPayment()\n", mn.payCount);
+        return false; //Don't let the payment through if the FS has received more than 33 payments
+    }
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
