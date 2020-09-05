@@ -264,6 +264,7 @@ int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CF
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
 bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
 int64_t avg2(std::vector<CFortunaStake> const& v);
+int64_t avgCount(std::vector<CFortunaStake> const& v);
 int GetFortunastakeByVin(CTxIn& vin);
 int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);

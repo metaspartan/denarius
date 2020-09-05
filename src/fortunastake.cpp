@@ -40,6 +40,7 @@ std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
 unsigned int mnCount = 0;
 int64_t nAverageFSIncome;
+int64_t nAveragePayCount;
 
 // manage the fortunastake connections
 void ProcessFortunastakeConnections(){
@@ -618,10 +619,7 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
-    if (mn.payCount > 33) {
-        printf("%d - PAYCOUNT TOO HIGH CheckFSPayment()\n", mn.payCount);
-        return false; //Don't let the payment through if the FS has received more than 33 payments
-    }
+
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -631,15 +629,23 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (value > max) {
         return false;
     }
+
+    // calculate pay count average across FS
+    // check if pay count is > 25% higher than the avg
+    nAveragePayCount = avgCount(vecFortunastakeScoresList);
+    if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
+    int64_t maxed = nAveragePayCount * 10 / 8;
+    if (mn.payCount > maxed) {
+        printf("%d PAYCOUNT HIGHER THAN MAX %d AVG CheckFSPayment()\n", mn.payCount, nAveragePayCount);
+        return false;
+    }
+
     return true;
 }
 
 bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
-    if (mn.payCount > 33) {
-        printf("%d - PAYCOUNT TOO HIGH CheckPoSFSPayment()\n", mn.payCount);
-        return false; //Don't let the payment through if the FS has received more than 33 payments
-    }
+
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -651,6 +657,17 @@ bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
         return false;
     }
     */
+
+    // calculate pay count average across FS
+    // check if pay count is > 25% higher than the avg
+    nAveragePayCount = avgCount(vecFortunastakeScoresList);
+    if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
+    int64_t maxed = nAveragePayCount * 10 / 8;
+    if (mn.payCount > maxed) {
+        printf("%d PAYCOUNT HIGHER THAN MAX %d AVG CheckPoSFSPayment()\n", mn.payCount, nAveragePayCount);
+        return false;
+    }
+
     return true;
 }
 
@@ -663,6 +680,19 @@ int64_t avg2(std::vector<CFortunaStake> const& v) {
         //TODO: implement in mandatory update, will reduce average & lead to rejections
         //if (v[i].payValue > 2*COIN) { continue; } // don't consider payees above 2.00000000D (pos only / lucky payees)
         if (v[i].payValue < 1*COIN) { continue; } // don't consider payees below 1.00000000D (pos only / new payees)
+        mean += delta/++n;
+    }
+    return mean;
+}
+
+int64_t avgCount(std::vector<CFortunaStake> const& v) {
+    int n = 0;
+    int64_t mean = 0;
+    for (int i = 0; i < v.size(); i++) {
+        int64_t x = v[i].payCount;
+        int64_t delta = x - mean;
+        //TODO: implement in mandatory update, will reduce average & lead to rejections
+        if (v[i].payCount < 1) { continue; } // don't consider payees below 1 payment (pos only / new payees)
         mean += delta/++n;
     }
     return mean;
