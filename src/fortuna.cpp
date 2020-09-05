@@ -45,7 +45,7 @@ int MIN_MN_PROTO_VERSION = 33900; // D v3.3.9.2 - Proto - 33900
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers
         eduffield - evan@darkcoin.io
-    Copyright 2018-2019, Denarius Developers
+    Copyright 2018-2020, Denarius Developers
         carsenk - admin@denarius.io
         enkayz - enkayz@denarius.io
 */

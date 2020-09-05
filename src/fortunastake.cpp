@@ -620,6 +620,8 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
 
+    //if (mn.nBlockLastPaid - vFortunastakes.count()) return false; 
+
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
