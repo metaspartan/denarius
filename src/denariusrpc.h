@@ -251,6 +251,7 @@ extern json_spirit::Value getblockbynumber(const json_spirit::Array& params, boo
 extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gettxout(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importaddress(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value burn(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value proofofdata(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp
 
 extern json_spirit::Value jupiterversion(const json_spirit::Array& params, bool fHelp); // in rpcjupiter.cpp Denarius Jupiter

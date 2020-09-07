@@ -189,6 +189,7 @@ parts:
       - qttools5-dev-tools
       - qt5-default
       - qtbase5-dev-tools
+      - qtwayland5
     override-build: |
       set -x
       ARCH=$(uname -m)
