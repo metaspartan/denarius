@@ -291,7 +291,7 @@ Value fortunastake(const Array& params, bool fHelp)
 
     if (strCommand == "start")
     {
-        if(!fFortunaStake) return "you must set fortunastake=1 in the configuration";
+        if(!fFortunaStake) return "You must set fortunastake=1 in your denarius.conf";
 
         if(pwalletMain->IsLocked()) {
             SecureString strWalletPass;
@@ -305,7 +305,7 @@ Value fortunastake(const Array& params, bool fHelp)
             }
 
             if(!pwalletMain->Unlock(strWalletPass)){
-                return "incorrect passphrase";
+                return "Incorrect passphrase";
             }
         }
 

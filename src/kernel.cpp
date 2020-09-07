@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2013 The Peercoin developers
-// Copyright (c) 2017-2018 The Denarius developers
+// Copyright (c) 2017-2020 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,6 +20,7 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
 		( 1000000, 0x0164bdb4 )
 		( 1701527, 0xb64daf99 )
         ( 2487918, 0x518704f3 )
+        ( 3692427, 0x20a869c0 )
         //( 640106, 0x491697be ) Example of bad modifier checkpoint, must have proof-of-stake flag
     ;
 

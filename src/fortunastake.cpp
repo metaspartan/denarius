@@ -40,6 +40,7 @@ std::map<int64_t, uint256> mapCacheBlockHashes;
 CMedianFilter<unsigned int> mnMedianCount(10, 0);
 unsigned int mnCount = 0;
 int64_t nAverageFSIncome;
+int64_t nAveragePayCount;
 
 // manage the fortunastake connections
 void ProcessFortunastakeConnections(){
@@ -618,6 +619,9 @@ int GetFortunastakeRank(CFortunaStake &tmn, CBlockIndex* pindex, int minProtocol
 
 bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+
+    //if (mn.nBlockLastPaid - vFortunastakes.count()) return false; 
+
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -627,11 +631,29 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (value > max) {
         return false;
     }
+
+    CScript pubScript;
+    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(pubScript, address1);
+    CBitcoinAddress address2(address1);
+
+    // calculate pay count average across FS
+    // check if pay count is > 50% higher than the avg
+    nAveragePayCount = avgCount(vecFortunastakeScoresList);
+    if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
+    int64_t maxed = nAveragePayCount * 12 / 8;
+    if (mn.payCount > maxed) {
+        printf("CheckFSPayment() Current payCount of %s FS is %d - payCount Overall Average %d\n", address2.ToString().c_str(), mn.payCount, nAveragePayCount);
+        return false;
+    }
+
     return true;
 }
 
 bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
     if (mn.nBlockLastPaid == 0) return true; // if we didn't find a payment for this MN, let it through regardless of rate
+
     // find height
     // calculate average payment across all FS
     // check if value is > 25% higher
@@ -643,6 +665,22 @@ bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
         return false;
     }
     */
+    CScript pubScript;
+    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(pubScript, address1);
+    CBitcoinAddress address2(address1);
+
+    // calculate pay count average across FS
+    // check if pay count is > 50% higher than the avg
+    nAveragePayCount = avgCount(vecFortunastakeScoresList);
+    if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
+    int64_t maxed = nAveragePayCount * 12 / 8;
+    if (mn.payCount > maxed) {
+        printf("CheckPoSFSPayment() Current payCount of %s is %d - payCount Overall Average %d\n", address2.ToString().c_str(), mn.payCount, nAveragePayCount);
+        return false;
+    }
+
     return true;
 }
 
@@ -655,6 +693,19 @@ int64_t avg2(std::vector<CFortunaStake> const& v) {
         //TODO: implement in mandatory update, will reduce average & lead to rejections
         //if (v[i].payValue > 2*COIN) { continue; } // don't consider payees above 2.00000000D (pos only / lucky payees)
         if (v[i].payValue < 1*COIN) { continue; } // don't consider payees below 1.00000000D (pos only / new payees)
+        mean += delta/++n;
+    }
+    return mean;
+}
+
+int64_t avgCount(std::vector<CFortunaStake> const& v) {
+    int n = 0;
+    int64_t mean = 0;
+    for (int i = 0; i < v.size(); i++) {
+        int64_t x = v[i].payCount;
+        int64_t delta = x - mean;
+        //TODO: implement in mandatory update, will reduce average & lead to rejections
+        if (v[i].payCount < 1) { continue; } // don't consider payees below 1 payment (pos only / new payees)
         mean += delta/++n;
     }
     return mean;
@@ -998,7 +1049,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
                 // TODO HERE: Scan the block for fortunastake payment amount
                 BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
-                        nBlockLastPaid = BlockReading->nHeight;\
+                        nBlockLastPaid = BlockReading->nHeight;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         int value = txout.nValue;
                         // TODO HERE: Check the nValue for the fortunastake payment amount
@@ -1019,7 +1070,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
 }
 
 //
-// Deterministically calculate a given "score" for a fortunastake depending on how close it's hash is to
+// Deterministically calculate a given "score" for a fortunastake with tribus depending on how close it's hash is to
 // the proof of work for that block. The further away they are the better, the furthest will win the election
 // and get paid this block
 //
