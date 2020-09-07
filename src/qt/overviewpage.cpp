@@ -23,7 +23,7 @@
 const QString BaseURL = "http://denarius.io/dnrusd.php";
 const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
 const QString BaseURL3 = "http://denarius.io/newsfeed.php";
-const QString BaseURL4 = "http://denarius.io/dnreur.php"
+const QString BaseURL4 = "http://denarius.io/dnreur.php";
 double denariusx;
 double dnreurx;
 double dnrbtcx;
