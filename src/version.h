@@ -30,20 +30,20 @@ static const int DATABASE_VERSION = 21212;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 33900; //Protocol is now 33900 as of D v3.3.9.2
+static const int PROTOCOL_VERSION = 33933; //Protocol is now 33933 as of D v3.3.9.8
 
 // intial proto version, to be increased after version/verack negotiation
-static const int INIT_PROTO_VERSION = 33900; // Bumped up from 21212 to 33900 v3.3.9.2
+static const int INIT_PROTO_VERSION = 33933; // Bumped up from 21212 to 33933 v3.3.9.8
 
 // disconnect from peers older than this proto version
-static const int MIN_PEER_PROTO_VERSION = 33900;
+static const int MIN_PEER_PROTO_VERSION = 33933;
 
 // Don't forget to change proto in FORTUNA.h as well!! On Block 1.5m this will be 31005
 extern int MIN_MN_PROTO_VERSION;
 
 // nTime field added to CAddress, starting with this version;
 // if possible, avoid requesting addresses nodes older than this
-static const int CADDR_TIME_VERSION = 33900; // start sharing node timeinfo with this proto version 33500
+static const int CADDR_TIME_VERSION = 33933; // start sharing node timeinfo with this proto version 33500
 
 // only request blocks from nodes outside this range of versions
 static const int NOBLKS_VERSION_START = 70002;

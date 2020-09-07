@@ -40,7 +40,7 @@ CActiveFortunastake activeFortunastake;
 int RequestedFortunaStakeList = 0;
 
 //MIN_MN_PROTO_VERSION
-int MIN_MN_PROTO_VERSION = 33900; // D v3.3.9.2 - Proto - 33900
+int MIN_MN_PROTO_VERSION = 33933; // D v3.3.9.8 - Proto - 33933
 
 /* *** BEGIN FORTUNA MAGIC  **********
     Copyright 2014, Darkcoin Developers

@@ -3709,7 +3709,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
     //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
     if(nBestHeight >= 1500000) {
-        MIN_MN_PROTO_VERSION = 33900;
+        MIN_MN_PROTO_VERSION = 33933;
     }
 
     // ppcoin: if responsible for sync-checkpoint send it
