@@ -632,13 +632,19 @@ bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
         return false;
     }
 
+    CScript pubScript;
+    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(pubScript, address1);
+    CBitcoinAddress address2(address1);
+
     // calculate pay count average across FS
-    // check if pay count is > 25% higher than the avg
+    // check if pay count is > 50% higher than the avg
     nAveragePayCount = avgCount(vecFortunastakeScoresList);
     if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
-    int64_t maxed = nAveragePayCount * 10 / 8;
+    int64_t maxed = nAveragePayCount * 12 / 8;
     if (mn.payCount > maxed) {
-        printf("%d PAYCOUNT HIGHER THAN MAX %d AVG CheckFSPayment()\n", mn.payCount, nAveragePayCount);
+        printf("CheckFSPayment() Current payCount of %s FS is %d - payCount Overall Average %d\n", address2.ToString().c_str(), mn.payCount, nAveragePayCount);
         return false;
     }
 
@@ -659,14 +665,19 @@ bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn) {
         return false;
     }
     */
+    CScript pubScript;
+    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+    CTxDestination address1;
+    ExtractDestination(pubScript, address1);
+    CBitcoinAddress address2(address1);
 
     // calculate pay count average across FS
-    // check if pay count is > 25% higher than the avg
+    // check if pay count is > 50% higher than the avg
     nAveragePayCount = avgCount(vecFortunastakeScoresList);
     if (nAveragePayCount < 1) return true; // if the pay count is less than 1 just let it through
-    int64_t maxed = nAveragePayCount * 10 / 8;
+    int64_t maxed = nAveragePayCount * 12 / 8;
     if (mn.payCount > maxed) {
-        printf("%d PAYCOUNT HIGHER THAN MAX %d AVG CheckPoSFSPayment()\n", mn.payCount, nAveragePayCount);
+        printf("CheckPoSFSPayment() Current payCount of %s is %d - payCount Overall Average %d\n", address2.ToString().c_str(), mn.payCount, nAveragePayCount);
         return false;
     }
 
@@ -1038,7 +1049,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
                 // TODO HERE: Scan the block for fortunastake payment amount
                 BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
-                        nBlockLastPaid = BlockReading->nHeight;\
+                        nBlockLastPaid = BlockReading->nHeight;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
                         int value = txout.nValue;
                         // TODO HERE: Check the nValue for the fortunastake payment amount
@@ -1059,7 +1070,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
 }
 
 //
-// Deterministically calculate a given "score" for a fortunastake depending on how close it's hash is to
+// Deterministically calculate a given "score" for a fortunastake with tribus depending on how close it's hash is to
 // the proof of work for that block. The further away they are the better, the furthest will win the election
 // and get paid this block
 //
