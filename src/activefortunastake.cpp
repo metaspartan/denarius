@@ -75,7 +75,7 @@ void CActiveFortunastake::ManageStatus()
             //    return;
             //}
 
-            printf("CActiveFortunastake::ManageStatus() - Is capable master node!\n");
+            printf("CActiveFortunastake::ManageStatus() - Is a capable FortunaStake!\n");
 
             status = FORTUNASTAKE_IS_CAPABLE;
             notCapableReason = "";
