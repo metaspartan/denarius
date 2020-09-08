@@ -160,6 +160,10 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
             }
         }
 
+        sort(vecFortunastakes.begin(), vecFortunastakes.end());
+        vecFortunastakes.erase(unique(vecFortunastakes.begin(), vecFortunastakes.end() ), vecFortunastakes.end());
+        // printf("Sorted and removed duplicate FS out of the vector!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
         if (count > 0) {
             mnMedianCount.input(count);
             mnCount = mnMedianCount.median();
