@@ -2668,7 +2668,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                                 } else {
                                                     printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
-                                                break;
+                                                //break;
                                             } else {
                                                 if (fDebug) printf("CheckBlock-POS() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                             }
@@ -2794,7 +2794,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                             } else {
                                                 printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                             }
-                                            break;
+                                            //break;
                                         } else {
                                             if (fDebug) printf("CheckBlock-POW() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                         }
