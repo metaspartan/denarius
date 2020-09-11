@@ -281,8 +281,12 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
     bool found = false;
     LOCK(cs_fortunastakes);
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-        if(mn.vin == vin)
+    {
+        if(mn.vin == vin && mn.pubkey == pubKeyCollateralAddress) {
             found = true;
+            printf('Found FS VIN and PUBKEY in vecFortunaStakes List - Marking Found as true (does not register)');
+        }
+    }
 
     if(!found) {
         printf("CActiveFortunastake::Register() - Adding to fortunastake list service: %s - vin: %s\n", service.ToString().c_str(), vin.ToString().c_str());
