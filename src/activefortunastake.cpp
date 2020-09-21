@@ -279,12 +279,24 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
     }
 
     bool found = false;
+    bool dup = false;
     LOCK(cs_fortunastakes);
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
     {
-        if(mn.vin == vin && mn.pubkey == pubKeyCollateralAddress) {
+        if(mn.pubkey == pubKeyCollateralAddress) {
+            dup = true;
+        }
+    }
+    if (dup) {
+        retErrorMessage = "Failed, Duplicate FS you wookie, use a different pubkey";
+        printf("CActiveFortunastake::Register() FAILED! DUPLICATE PUBKEY. Change your collateral address to a different address for this FS.\n", retErrorMessage.c_str());
+        return false;
+    }
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    {
+        if(mn.vin == vin) {
+            printf("Found FS VIN in FortunaStakes List\n");
             found = true;
-            printf('Found FS VIN and PUBKEY in vecFortunaStakes List - Marking Found as true (does not register)');
         }
     }
 
