@@ -1210,25 +1210,26 @@ void WriteConfigFile(FILE* configFile)
     fputs ("fortunastake=0\n", configFile); //input fs=0 by default
     fputs ("fortunastakeaddr=\n", configFile);
     fputs ("fortunastakeprivkey=\n", configFile);
-    fputs ("addnode=144.130.111.71\n", configFile);
-    fputs ("addnode=163.172.157.116\n", configFile);
-    fputs ("addnode=173.244.36.3\n", configFile);
-    fputs ("addnode=24.205.81.255\n", configFile);
-    fputs ("addnode=51.15.210.145\n", configFile);
-    fputs ("addnode=51.15.52.235\n", configFile);
-    fputs ("addnode=115.70.121.168:33369\n", configFile);
-    fputs ("addnode=140.82.13.39:333691\n", configFile);
-    fputs ("addnode=164.68.113.76:33369\n", configFile);
-    fputs ("addnode=173.249.20.4:33369\n", configFile);
-    fputs ("addnode=178.63.60.7:33369\n", configFile);
-    fputs ("addnode=185.233.107.233:33369\n", configFile);
-    fputs ("addnode=203.186.122.175:33369\n", configFile);
-    fputs ("addnode=24.35.250.163:33369\n", configFile);
-    fputs ("addnode=46.166.162.45:33369\n", configFile);
-    fputs ("addnode=93.115.26.186:33369\n", configFile);
-    fputs ("addnode=51.38.112.208:33369\n", configFile);
-    fputs ("addnode=51.158.101.32\n", configFile); //pos.watch
-    fputs ("addnode=[2001:bc8:47a8:2519::1]\n", configFile); //pos.watch
+    fputs ("addnode=161.97.72.221\n", configFile);
+    fputs ("addnode=173.249.28.223\n", configFile);
+    fputs ("addnode=161.97.72.253\n", configFile);
+    fputs ("addnode=207.244.229.82\n", configFile);
+    fputs ("addnode=209.141.43.29\n", configFile);
+    fputs ("addnode=51.15.96.25\n", configFile);
+    fputs ("addnode=51.15.96.25\n", configFile);
+    fputs ("addnode=51.89.149.82\n", configFile);
+    fputs ("addnode=83.84.1.24:33369\n", configFile);
+    fputs ("addnode=185.107.47.215\n", configFile);
+    fputs ("addnode=161.97.116.177\n", configFile);
+    fputs ("addnode=83.221.211.116:33369\n", configFile);
+    fputs ("addnode=188.134.76.173:33369\n", configFile);
+    fputs ("addnode=lewjorvej47sd4ad.onion:33369\n", configFile);
+    fputs ("addnode=185.244.20.142\n", configFile);
+    fputs ("addnode=72.203.101.202\n", configFile);
+    fputs ("addnode=95.111.226.75\n", configFile);
+    fputs ("addnode=116.202.132.28\n", configFile);
+    fputs ("addnode=83.221.211.116:33369\n", configFile);
+    fputs ("addnode=46.166.162.45\n", configFile);
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
