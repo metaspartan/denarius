@@ -30,10 +30,10 @@ static const int DATABASE_VERSION = 21212;
 // network protocol versioning
 //
 
-static const int PROTOCOL_VERSION = 33933; //Protocol is now 33933 as of D v3.3.9.8
+static const int PROTOCOL_VERSION = 33933; //Protocol is now 33933 as of D v3.3.9.9
 
 // intial proto version, to be increased after version/verack negotiation
-static const int INIT_PROTO_VERSION = 33933; // Bumped up from 21212 to 33933 v3.3.9.8
+static const int INIT_PROTO_VERSION = 33933; // Bumped up from 21212 to 33933 v3.3.9.9
 
 // disconnect from peers older than this proto version
 static const int MIN_PEER_PROTO_VERSION = 33933;

@@ -279,10 +279,26 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
     }
 
     bool found = false;
+    bool dup = false;
     LOCK(cs_fortunastakes);
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
-        if(mn.vin == vin)
+    {
+        if(mn.pubkey == pubKeyCollateralAddress) {
+            dup = true;
+        }
+    }
+    if (dup) {
+        retErrorMessage = "Failed, FS already in list you wookie, use a different pubkey";
+        printf("CActiveFortunastake::Register() FAILED! FS Already in List. Change your collateral address to a different address for this FS.\n", retErrorMessage.c_str());
+        return false;
+    }
+    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    {
+        if(mn.vin == vin) {
+            printf("Found FS VIN in FortunaStakes List\n");
             found = true;
+        }
+    }
 
     if(!found) {
         printf("CActiveFortunastake::Register() - Adding to fortunastake list service: %s - vin: %s\n", service.ToString().c_str(), vin.ToString().c_str());
@@ -334,6 +350,19 @@ bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& 
             CBitcoinAddress address2(address1);
             int remain = FORTUNASTAKE_MIN_CONFIRMATIONS_NOPAY - selectedOutput->nDepth;
             printf("CActiveFortunastake::GetFortunaStakeVin - Transaction for MN %s is too young (%d more confirms required)", address2.ToString().c_str(), remain);
+            return false;
+        }
+        //Check the list
+        bool dup = false;
+        LOCK(cs_fortunastakes);
+        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+        {
+            if(mn.pubkey == pubkey) {
+                dup = true;
+            }
+        }
+        if (dup) {
+            printf("CActiveFortunastake::Register() FAILED! FS ALREADY IN LIST.\n");
             return false;
         }
     } else {
