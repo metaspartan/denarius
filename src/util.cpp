@@ -1230,6 +1230,7 @@ void WriteConfigFile(FILE* configFile)
     fputs ("addnode=116.202.132.28\n", configFile);
     fputs ("addnode=83.221.211.116:33369\n", configFile);
     fputs ("addnode=46.166.162.45\n", configFile);
+    fputs ("addnode=161.97.91.249\n", configFile); //denarii.cloud
     fclose(configFile);
     ReadConfigFile(mapArgs, mapMultiArgs);
 }
