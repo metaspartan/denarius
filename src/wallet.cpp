@@ -3675,11 +3675,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     // start fortunastake payments
     bool bFortunaStakePayment = false;
 
-    if (fTestNet){
-        if (pindexPrev->nHeight+1 > BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET ){
+    if (fTestNet) {
+        if (pindexPrev->nHeight+1 > BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET ) {
             bFortunaStakePayment = true;
         }
-    }else{
+    } else {
         if (pindexPrev->nHeight+1 > BLOCK_START_FORTUNASTAKE_PAYMENTS){
             bFortunaStakePayment = true;
         }

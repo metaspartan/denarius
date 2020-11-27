@@ -178,11 +178,11 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 	//Only if it isn't Proof of Stake?
 	if (!fProofOfStake)
     {
-		if (fTestNet){
+		if (fTestNet) {
 			if (nHeight >= BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET){
 				bFortunaStakePayment = true;
 			}
-		}else{
+		} else {
 			if (nHeight >= BLOCK_START_FORTUNASTAKE_PAYMENTS){
 				bFortunaStakePayment = true;
 			}

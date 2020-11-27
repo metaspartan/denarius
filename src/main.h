@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2017-2018 The Denarius developers
+// Copyright (c) 2017-2021 The Denarius developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_MAIN_H
@@ -18,9 +18,9 @@
 
 class CValidationState;
 
-#define BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET 81500 // Testnet Fortunastake payments enabled block 81k5
+#define BLOCK_START_FORTUNASTAKE_PAYMENTS_TESTNET 301 // Testnet Fortunastake payments enabled block 81k5
 #define BLOCK_START_FORTUNASTAKE_PAYMENTS 645000 //Mainnet Fortunastake payments not enabled until block 645k
-#define BLOCK_START_FORTUNASTAKE_DELAYPAY 1350000 //Activates a delay in payment for MNs - D E N A R I U S Block 1.35 Million
+#define BLOCK_START_FORTUNASTAKE_DELAYPAY 1350000 //Unused
 
 //#define START_FORTUNASTAKE_PAYMENTS_TESTNET 1519430400  //Sat, 24 Feb 2018 00:00:00 GMT
 //#define START_FORTUNASTAKE_PAYMENTS 1520985600  //Wed, 14 Mar 2018 00:00:00 GMT
@@ -81,6 +81,7 @@ static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
 static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1450000; // Enforce fortunastake payments after this height - BLOCK 1.45 Million
+static const int MN_ENFORCEMENT_ACTIVE_HEIGHT_TESTNET = 301; //Enforce FS payments after this height for Denarius Testnet!
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
@@ -91,7 +92,7 @@ static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20
 static const unsigned int MAX_P2SH_SIGOPS = 15;
 
 static const uint256 hashGenesisBlock("0x00000d5dbbda01621cfc16bbc1f9bf3264d641a5dbf0de89fd0182c2c4828fcd");
-static const uint256 hashGenesisBlockTestNet("0x000086bfe8264d241f7f8e5393f747784b8ca2aa98bdd066278d590462a4fdb4");
+static const uint256 hashGenesisBlockTestNet("0x0000bc788d6f53034d3260619deb89c042c2dd4e36db9b024eec88e85377bec1"); //Old Testnet 0x000086bfe8264d241f7f8e5393f747784b8ca2aa98bdd066278d590462a4fdb4
 
 //inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
 //inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }
