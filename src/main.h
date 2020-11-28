@@ -81,7 +81,7 @@ static const int64_t COIN_YEAR_REWARD = 0.06 * COIN; // 6% per year
 
 static const int64_t MAINNET_POSFIX = 640000; //Mainnet Proof of Stake update not enabled until block 640k
 static const int MN_ENFORCEMENT_ACTIVE_HEIGHT = 1450000; // Enforce fortunastake payments after this height - BLOCK 1.45 Million
-static const int MN_ENFORCEMENT_ACTIVE_HEIGHT_TESTNET = 301; //Enforce FS payments after this height for Denarius Testnet!
+static const int MN_ENFORCEMENT_ACTIVE_HEIGHT_TESTNET = 1000; //Enforce FS payments after this height for Denarius Testnet!
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
@@ -92,7 +92,7 @@ static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20
 static const unsigned int MAX_P2SH_SIGOPS = 15;
 
 static const uint256 hashGenesisBlock("0x00000d5dbbda01621cfc16bbc1f9bf3264d641a5dbf0de89fd0182c2c4828fcd");
-static const uint256 hashGenesisBlockTestNet("0x0000bc788d6f53034d3260619deb89c042c2dd4e36db9b024eec88e85377bec1"); //Old Testnet 0x000086bfe8264d241f7f8e5393f747784b8ca2aa98bdd066278d590462a4fdb4
+static const uint256 hashGenesisBlockTestNet("0x00009714e0a6e766630dfb8d98a91fe62a9635dcff61a361cb82393d7e0a8da8"); //Old Testnet 0x000086bfe8264d241f7f8e5393f747784b8ca2aa98bdd066278d590462a4fdb4
 
 //inline bool IsProtocolV1RetargetingFixed(int nHeight) { return fTestNet || nHeight > 0; }
 //inline bool IsProtocolV2(int nHeight) { return fTestNet || nHeight > 0; }

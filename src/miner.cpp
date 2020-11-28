@@ -722,7 +722,7 @@ void StakeMiner(CWallet *pwallet)
             continue;
         };
 
-        if (vecFortunastakes.size() == 0)
+        if (vecFortunastakes.size() == 0 && !fTestNet)
         {
             if (fDebug && GetBoolArg("-printcoinstake")) printf("StakeMiner() waiting for FS list.");
             vnThreadsRunning[THREAD_STAKE_MINER]--;

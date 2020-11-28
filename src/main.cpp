@@ -1558,10 +1558,10 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
             nSubsidy = 3000000 * COIN;  // 3m D Premine for Testnet for testing and fund distribution
         else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
             nSubsidy = 1 * COIN/2;
-        else if (pindexBest->nHeight <= 300)
+        else if (pindexBest->nHeight <= 4000)
             nSubsidy = 3 * COIN;
-        else if (pindexBest->nHeight > 300) // Block 300
-            nSubsidy = 0; // PoW Ends
+        else if (pindexBest->nHeight > 4000) // Block 4000 Testnet PoW Rewards End
+            nSubsidy = 0; // PoW Reward Ends
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1579,7 +1579,7 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
         else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
             nSubsidy = 3 * COIN;
         else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
-            nSubsidy = 0; // PoW Ends
+            nSubsidy = 0; // PoW Reward Ends
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -3726,7 +3726,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     //After block 1.5m, The Minimum FortunaStake Protocol Version is 31005
-    if(nBestHeight >= 1500000) {
+    if(nBestHeight >= 1500000 || fTestNet) {
         MIN_MN_PROTO_VERSION = 33933;
     }
 
@@ -3915,10 +3915,10 @@ bool LoadBlockIndex(bool fAllowNew)
 
         if(fTestNet)
         {
-            const char* pszTimestampTestNet = "https://www.coindesk.com/satoshi-nakamoto-hal-finney-emails";
+            const char* pszTimestampTestNet = "https://blockforums.org/topic/417-denarius-cryptocurrency-marketing-images-pdf-svg-jpg-png/";
             CTransaction txNewTestNet;
 
-            txNewTestNet.nTime = 1606505743;
+            txNewTestNet.nTime = 1606593576;
             txNewTestNet.vin.resize(1);
             txNewTestNet.vout.resize(1);
             txNewTestNet.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestampTestNet, (const unsigned char*)pszTimestampTestNet + strlen(pszTimestampTestNet));
@@ -3928,10 +3928,10 @@ bool LoadBlockIndex(bool fAllowNew)
             blocktest.vtx.push_back(txNewTestNet);
             blocktest.hashPrevBlock = 0;
             blocktest.hashMerkleRoot = blocktest.BuildMerkleTree();
-            blocktest.nTime    = 1606505743; //1497476511 - New D Testnet on 11/27/2020
+            blocktest.nTime    = 1606593576; //1497476511 - New D Testnet on 11/27/2020
             blocktest.nVersion = 1;
             blocktest.nBits    = bnProofOfWorkLimit.GetCompact();
-            blocktest.nNonce   = 25640; //13278
+            blocktest.nNonce   = 4950; //13278
 
             if (false && (blocktest.GetHash() != hashGenesisBlockTestNet)) {
             // This will figure out a valid hash and Nonce if you're
@@ -3955,7 +3955,7 @@ bool LoadBlockIndex(bool fAllowNew)
 
 
             //// debug print
-            assert(blocktest.hashMerkleRoot == uint256("0x844eb990208614fa067144c1dc036af20be4b80192a4cd6937ceb37a32d361e0"));
+            assert(blocktest.hashMerkleRoot == uint256("0x4de1a91e22664438d714ca7a01eab02ead6eb8c6fe63eab508849ffb4cb0e5dc"));
             blocktest.print();
             assert(blocktest.GetHash() == hashGenesisBlockTestNet);
             assert(blocktest.CheckBlock());
