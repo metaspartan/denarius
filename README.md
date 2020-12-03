@@ -86,7 +86,7 @@ Technology
 LINKS
 ==========================
 * Official Website(https://denarius.io/)
-* Official Forums(https://denariustalk.org/)
+* Official Forums(https://blockforums.org/)
 * Denarius Twitter(https://twitter.com/denariuscoin)
 * Denarius Discord Chat(https://discord.gg/C64HXbc)
 
