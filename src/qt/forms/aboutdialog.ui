@@ -131,7 +131,7 @@ This product includes software developed by the OpenSSL Project for use in the O
      <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>Join us on the forums at &lt;a href=&quot;https://denariustalk.org&quot; style=&quot;color: #FFF;&quot;&gt;https://denariustalk.org&lt;/a&gt;</string>
+        <string>Join us on the forums at &lt;a href=&quot;https://blockforums.org&quot; style=&quot;color: #FFF;&quot;&gt;https://blockforums.org&lt;/a&gt;</string>
        </property>
        <property name="openExternalLinks">
         <bool>true</bool>
