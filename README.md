@@ -1,5 +1,6 @@
 # Denarius [D]
-Tribus Algo PoW/PoS Hybrid Cryptocurrency
+Tribus Algo PoW/PoS Hybrid P2P Cryptocurrency
+Genesis 2017
 
 ![logo](http://i.imgur.com/gIe5vnw.png)
 
@@ -14,7 +15,7 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
 
-[![Snap Status](https://build.snapcraft.io/badge/carsenk/denarius.svg)](https://build.snapcraft.io/user/carsenk/denarius)
+[![Denarius Snap](https://snapcraft.io/denarius/badge.svg)](https://snapcraft.io/denarius)
 
 ![Code Climate](https://codeclimate.com/github/carsenk/denarius/badges/gpa.svg)
 
@@ -28,7 +29,7 @@ Denarius is a true optionally anonymous, untraceable, and secure hybrid cryptocu
 
 Ticker: D
 
-Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
+Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency with FortunaStake nodes.
 10,000,000 D will be created in approx. about 3 years during the PoW phase.
 
 Supported Operating Systems
@@ -42,8 +43,8 @@ Install Denarius with Snap on any Linux Distro
 * `sudo apt install snapd`
 * `sudo snap install denarius`
 
-* `denarius` for running the QT
-* `denarius.daemon` for running denariusd
+* `denarius` for running the QT (or via a shortcut)
+* `denarius.daemon` for running denariusd (useful for server and headless installs)
 
 Specifications
 ==========================
@@ -68,7 +69,7 @@ Specifications
 
 Technology
 ==========================
-* Hybrid PoW/PoS Fortuna Stakes
+* Hybrid PoW/PoS FortunaStakes
 * Stealth addresses
 * Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)
@@ -90,7 +91,7 @@ LINKS
 * Denarius Twitter(https://twitter.com/denariuscoin)
 * Denarius Discord Chat(https://discord.gg/C64HXbc)
 
-ASCII CAST TUTORIALS
+OLD ASCII CAST TUTORIALS
 ==========================
 [![asciicast](https://asciinema.org/a/179356.png)](https://asciinema.org/a/179356)
 [![asciicast](https://asciinema.org/a/179362.png)](https://asciinema.org/a/179362)

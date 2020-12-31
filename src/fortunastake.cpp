@@ -560,7 +560,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 
 bool CalculateRanks(CBlockIndex* pindex) {
     LOCK(cs_fortunastakes);
-    if (fDebug) printf("CalculateRanks: ");
+    //if (fDebug) printf("CalculateRanks: ");
     if (!pindex || pindex == NULL || pindex->pprev == NULL || IsInitialBlockDownload() || vecFortunastakes.size() == 0) return true;
     if (vecFortunastakeScores.size() && vecFortunastakeScoresCacheHeight != pindex) {
         vecFortunastakeScoresCacheHeight = pindex;
