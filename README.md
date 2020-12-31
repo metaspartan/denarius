@@ -2,6 +2,8 @@
 Tribus Algo PoW/PoS Hybrid P2P Cryptocurrency
 Genesis 2017
 
+Official Website: https://denarius.io
+
 ![logo](http://i.imgur.com/gIe5vnw.png)
 
 [![GitHub version](https://img.shields.io/github/release/carsenk/denarius.svg)](https://badge.fury.io/gh/carsenk%2Fdenarius)

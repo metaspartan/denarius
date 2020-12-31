@@ -1574,11 +1574,11 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
     }
     if (fDebug) printf("Calculating payrates (%d ms)\n",GetTimeMillis() - nStart);
 
-    // // do pay rate loops
-    // BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
-    // {
-    //     mn->SetPayRate(pindex->nHeight);
-    // }
+    // do pay rate loops
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
+    {
+        mn->SetPayRate(pindex->nHeight);
+    }
 
     if (fDebug) printf("Finished FS payments. (%d ms)\n",GetTimeMillis() - nStart);
 

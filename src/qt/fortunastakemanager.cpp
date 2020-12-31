@@ -300,8 +300,10 @@ void FortunastakeManager::updateNodeList()
         int mnRank = GetFortunastakeRank(mn->vin, pindexBest);
         //int mnRank = mn->nRank;
         int64_t value = mn->payValue;
+        //int64_t othervalue = mn->payRate;
         //mn.GetPaymentInfo(pindexBest, value, rate);
         QString payrate = QString::fromStdString(strprintf("%s D", FormatMoney(value).c_str()));
+        //QString payrate2 = QString::fromStdString(strprintf("%s D", FormatMoney(othervalue).c_str()));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
