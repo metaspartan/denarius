@@ -226,63 +226,63 @@ Value fortunastake(const Array& params, bool fHelp)
         }
 
         Object obj;
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
-            mn.Check();
+        BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+            mn->Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsActive()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int)mn->IsActive()));
             } else if (strCommand == "txid") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
                 CScript pubkey;
-                pubkey =GetScriptForDestination(mn.pubkey.GetID());
+                pubkey =GetScriptForDestination(mn->pubkey.GetID());
                 CTxDestination address1;
                 ExtractDestination(pubkey, address1);
                 CBitcoinAddress address2(address1);
 
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       address2.ToString().c_str()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       address2.ToString().c_str()));
             } else if (strCommand == "protocol") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.protocolVersion));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->protocolVersion));
             } else if (strCommand == "n") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.vin.prevout.n));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->vin.prevout.n));
             } else if (strCommand == "lastpaid") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.nBlockLastPaid));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->nBlockLastPaid));
             } else if (strCommand == "lastseen") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.lastTimeSeen));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->lastTimeSeen));
             } else if (strCommand == "activeseconds") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)(mn->lastTimeSeen - mn->now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn->vin, pindexBest))));
             } else if (strCommand == "roundpayments") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payCount));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->payCount));
             } else if (strCommand == "roundearnings") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payRate));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->payRate));
             } else if (strCommand == "dailyrate") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.payValue));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->payValue));
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsActive()));
-                list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
-                list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
-				list.push_back(Pair("ip",       		mn.addr.ToString().c_str()));
+                list.push_back(Pair("active",        (int)mn->IsActive()));
+                list.push_back(Pair("txid",           mn->vin.prevout.hash.ToString().c_str()));
+                list.push_back(Pair("n",       (int64_t)mn->vin.prevout.n));
+				list.push_back(Pair("ip",       		mn->addr.ToString().c_str()));
 
                 CScript pubkey;
-                pubkey =GetScriptForDestination(mn.pubkey.GetID());
+                pubkey =GetScriptForDestination(mn->pubkey.GetID());
                 CTxDestination address1;
                 ExtractDestination(pubkey, address1);
                 CBitcoinAddress address2(address1);
 
                 list.push_back(Pair("pubkey",         address2.ToString().c_str()));
-                list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
-                list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
-                list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
-                list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
-                list.push_back(Pair("roundpayments",       mn.payCount));
-                list.push_back(Pair("roundearnings",       mn.payValue));
-                list.push_back(Pair("dailyrate",       mn.payRate));
-                obj.push_back(Pair(mn.addr.ToString().c_str(), list));
+                list.push_back(Pair("protocolversion",       (int64_t)mn->protocolVersion));
+                list.push_back(Pair("lastseen",       (int64_t)mn->lastTimeSeen));
+                list.push_back(Pair("activeseconds",  (int64_t)(mn->lastTimeSeen - mn->now)));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn->vin, pindexBest))));
+                list.push_back(Pair("lastpaid",       mn->nBlockLastPaid));
+                list.push_back(Pair("roundpayments",       mn->payCount));
+                list.push_back(Pair("roundearnings",       mn->payValue));
+                list.push_back(Pair("dailyrate",       mn->payRate));
+                obj.push_back(Pair(mn->addr.ToString().c_str(), list));
             }
         }
         return obj;
@@ -466,7 +466,7 @@ Value fortunastake(const Array& params, bool fHelp)
     {
         int winner = GetCurrentFortunaStake(1);
         if(winner >= 0) {
-            return vecFortunastakes[winner].addr.ToString().c_str();
+            return vecFortunastakes[winner]->addr.ToString().c_str();
         }
 
         return "unknown";
@@ -581,21 +581,21 @@ Value fortunastake(const Array& params, bool fHelp)
                 localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
                 localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
                 LOCK(cs_fortunastakes);
-                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
-                    if (mn.vin == activeFortunastake.vin) {
+                BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+                    if (mn->vin == activeFortunastake.vin) {
                         //int mnRank = GetFortunastakeRank(mn, pindexBest);
-                        pubkey = GetScriptForDestination(mn.pubkey.GetID());
+                        pubkey = GetScriptForDestination(mn->pubkey.GetID());
                         ExtractDestination(pubkey, address1);
                         CBitcoinAddress address2(address1);
                         address = address2.ToString();
                         localObj.push_back(Pair("payment_address", address));
                         //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
-                        localObj.push_back(Pair("network_status", mn.IsActive() ? "active" : "registered"));
-                        if (mn.IsActive()) {
-                          localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+                        localObj.push_back(Pair("network_status", mn->IsActive() ? "active" : "registered"));
+                        if (mn->IsActive()) {
+                          localObj.push_back(Pair("activetime",(mn->lastTimeSeen - mn->now)));
 
                         }
-                        localObj.push_back(Pair("earnings", mn.payValue));
+                        localObj.push_back(Pair("earnings", mn->payValue));
                         found = true;
                         break;
                     }
@@ -682,34 +682,34 @@ Value fortunastake(const Array& params, bool fHelp)
                 //DENARIUS - Q0FSU0VOIEtMT0NL
 
                 bool mnfound = false;
-                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
                 {
-                    if (mn.addr.ToString() == mne.getIp()) {
+                    if (mn->addr.ToString() == mne.getIp()) {
                         //remoteObj.push_back(Pair("status", "online"));
-                        if (mn.IsActive()) {
+                        if (mn->IsActive()) {
                             //nstatus = QString::fromStdString("Active for payment");
                             remoteObj.push_back(Pair("status", "online"));
-                        } else if (mn.status == "OK") {
-                            if (mn.lastDseep > 0) {
+                        } else if (mn->status == "OK") {
+                            if (mn->lastDseep > 0) {
                                 //nstatus = QString::fromStdString("Verified");
                                 remoteObj.push_back(Pair("status", "verified"));
                             } else {
                                 //nstatus = QString::fromStdString("Registered");
                                 remoteObj.push_back(Pair("status", "registered"));
                             }
-                        } else if (mn.status == "Expired") {
+                        } else if (mn->status == "Expired") {
                             //nstatus = QString::fromStdString("Expired");
                             remoteObj.push_back(Pair("status", "expired"));
-                        } else if (mn.status == "Inactive, expiring soon") {
+                        } else if (mn->status == "Inactive, expiring soon") {
                             //nstatus = QString::fromStdString("Inactive, expiring soon");
                             remoteObj.push_back(Pair("status", "inactive"));
                         } else {
                             //nstatus = QString::fromStdString(mn.status);
-                            remoteObj.push_back(Pair("status", mn.status));
+                            remoteObj.push_back(Pair("status", mn->status));
                         }
-                        remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
+                        remoteObj.push_back(Pair("lastpaidblock",mn->nBlockLastPaid));
 						CScript pubkey;
-						pubkey =GetScriptForDestination(mn.pubkey.GetID());
+						pubkey =GetScriptForDestination(mn->pubkey.GetID());
 						CTxDestination address3;
 						ExtractDestination(pubkey, address3);
 						CBitcoinAddress address4(address3);
@@ -718,15 +718,15 @@ Value fortunastake(const Array& params, bool fHelp)
 							remoteObj.push_back(Pair("txid", "Wallet is Locked"));
 						} else {
 							remoteObj.push_back(Pair("collateral", address4.ToString().c_str()));
-							remoteObj.push_back(Pair("txid",mn.vin.prevout.hash.ToString().c_str()));
+							remoteObj.push_back(Pair("txid",mn->vin.prevout.hash.ToString().c_str()));
 						}
 						//remoteObj.push_back(Pair("txid",mn.vin.prevout.hash.ToString().c_str()));
-						remoteObj.push_back(Pair("outputindex", (int64_t)mn.vin.prevout.n));
-						remoteObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
-						remoteObj.push_back(Pair("roundpayments", mn.payCount));
-						remoteObj.push_back(Pair("earnings", mn.payValue));
-						remoteObj.push_back(Pair("daily", mn.payRate));
-                        remoteObj.push_back(Pair("version",mn.protocolVersion));
+						remoteObj.push_back(Pair("outputindex", (int64_t)mn->vin.prevout.n));
+						remoteObj.push_back(Pair("rank", GetFortunastakeRank(mn->vin, pindexBest)));
+						remoteObj.push_back(Pair("roundpayments", mn->payCount));
+						remoteObj.push_back(Pair("earnings", mn->payValue));
+						remoteObj.push_back(Pair("daily", mn->payRate));
+                        remoteObj.push_back(Pair("version",mn->protocolVersion));
 						
 						//printf("FortunastakeSTATUS:: %s %s - found %s - %s for alias %s\n", mne.getTxHash().c_str(), mne.getOutputIndex().c_str(), address4.ToString().c_str(), address2.ToString().c_str(), mne.getAlias().c_str());
                         mnfound = true;
@@ -941,53 +941,53 @@ Value masternode(const Array& params, bool fHelp)
         }
 
         Object obj;
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
-            mn.Check();
+        BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+            mn->Check();
 
             if(strCommand == "active"){
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)mn.IsEnabled()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int)mn->IsEnabled()));
             } else if (strCommand == "txid") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.vin.prevout.hash.ToString().c_str()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->vin.prevout.hash.ToString().c_str()));
             } else if (strCommand == "pubkey") {
                 CScript pubkey;
-                pubkey =GetScriptForDestination(mn.pubkey.GetID());
+                pubkey =GetScriptForDestination(mn->pubkey.GetID());
                 CTxDestination address1;
                 ExtractDestination(pubkey, address1);
                 CBitcoinAddress address2(address1);
 
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       address2.ToString().c_str()));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       address2.ToString().c_str()));
             } else if (strCommand == "protocol") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.protocolVersion));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->protocolVersion));
             } else if (strCommand == "n") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.vin.prevout.n));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->vin.prevout.n));
             } else if (strCommand == "lastpaid") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       mn.nBlockLastPaid));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       mn->nBlockLastPaid));
             } else if (strCommand == "lastseen") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)mn.lastTimeSeen));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)mn->lastTimeSeen));
             } else if (strCommand == "activeseconds") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int64_t)(mn.lastTimeSeen - mn.now)));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int64_t)(mn->lastTimeSeen - mn->now)));
             } else if (strCommand == "rank") {
-                obj.push_back(Pair(mn.addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn, pindexBest))));
+                obj.push_back(Pair(mn->addr.ToString().c_str(),       (int)(GetFortunastakeRank(mn->vin, pindexBest))));
             }
 			else if (strCommand == "full") {
                 Object list;
-                list.push_back(Pair("active",        (int)mn.IsEnabled()));
-                list.push_back(Pair("txid",           mn.vin.prevout.hash.ToString().c_str()));
-                list.push_back(Pair("n",       (int64_t)mn.vin.prevout.n));
+                list.push_back(Pair("active",        (int)mn->IsEnabled()));
+                list.push_back(Pair("txid",           mn->vin.prevout.hash.ToString().c_str()));
+                list.push_back(Pair("n",       (int64_t)mn->vin.prevout.n));
 
                 CScript pubkey;
-                pubkey =GetScriptForDestination(mn.pubkey.GetID());
+                pubkey =GetScriptForDestination(mn->pubkey.GetID());
                 CTxDestination address1;
                 ExtractDestination(pubkey, address1);
                 CBitcoinAddress address2(address1);
 
                 list.push_back(Pair("pubkey",         address2.ToString().c_str()));
-                list.push_back(Pair("protocolversion",       (int64_t)mn.protocolVersion));
-                list.push_back(Pair("lastseen",       (int64_t)mn.lastTimeSeen));
-                list.push_back(Pair("activeseconds",  (int64_t)(mn.lastTimeSeen - mn.now)));
-                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn, pindexBest))));
-                list.push_back(Pair("lastpaid",       mn.nBlockLastPaid));
-                obj.push_back(Pair(mn.addr.ToString().c_str(), list));
+                list.push_back(Pair("protocolversion",       (int64_t)mn->protocolVersion));
+                list.push_back(Pair("lastseen",       (int64_t)mn->lastTimeSeen));
+                list.push_back(Pair("activeseconds",  (int64_t)(mn->lastTimeSeen - mn->now)));
+                list.push_back(Pair("rank",           (int)(GetFortunastakeRank(mn->vin, pindexBest))));
+                list.push_back(Pair("lastpaid",       mn->nBlockLastPaid));
+                obj.push_back(Pair(mn->addr.ToString().c_str(), list));
             }
         }
         return obj;
@@ -1171,7 +1171,7 @@ Value masternode(const Array& params, bool fHelp)
     {
         int winner = GetCurrentFortunaStake(1);
         if(winner >= 0) {
-            return vecFortunastakes[winner].addr.ToString().c_str();
+            return vecFortunastakes[winner]->addr.ToString().c_str();
         }
 
         return "unknown";
@@ -1281,21 +1281,21 @@ Value masternode(const Array& params, bool fHelp)
             localObj.push_back(Pair("vin", activeFortunastake.vin.ToString().c_str()));
             localObj.push_back(Pair("service", activeFortunastake.service.ToString().c_str()));
             LOCK(cs_fortunastakes);
-            BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
-                if (mn.vin == activeFortunastake.vin) {
+            BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+                if (mn->vin == activeFortunastake.vin) {
                     //int mnRank = GetFortunastakeRank(mn, pindexBest);
-                    pubkey = GetScriptForDestination(mn.pubkey.GetID());
+                    pubkey = GetScriptForDestination(mn->pubkey.GetID());
                     ExtractDestination(pubkey, address1);
                     CBitcoinAddress address2(address1);
                     address = address2.ToString();
                     localObj.push_back(Pair("payment_address", address));
                     //localObj.push_back(Pair("rank", GetFortunastakeRank(mn, pindexBest)));
-                    localObj.push_back(Pair("network_status", mn.IsActive() ? "active" : "registered"));
-                    if (mn.IsActive()) {
-                        localObj.push_back(Pair("activetime",(mn.lastTimeSeen - mn.now)));
+                    localObj.push_back(Pair("network_status", mn->IsActive() ? "active" : "registered"));
+                    if (mn->IsActive()) {
+                        localObj.push_back(Pair("activetime",(mn->lastTimeSeen - mn->now)));
 
                     }
-                    localObj.push_back(Pair("earnings", mn.payValue));
+                    localObj.push_back(Pair("earnings", mn->payValue));
                     found = true;
                     break;
                 }
@@ -1369,12 +1369,12 @@ Value masternode(const Array& params, bool fHelp)
             //remoteObj.push_back(Pair("collateral", CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString()));
 
             bool mnfound = false;
-            BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+            BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
             {
-                if (mn.addr.ToString() == mne.getIp()) {
+                if (mn->addr.ToString() == mne.getIp()) {
                     remoteObj.push_back(Pair("status", "online"));
-                    remoteObj.push_back(Pair("lastpaidblock",mn.nBlockLastPaid));
-                    remoteObj.push_back(Pair("version",mn.protocolVersion));
+                    remoteObj.push_back(Pair("lastpaidblock",mn->nBlockLastPaid));
+                    remoteObj.push_back(Pair("version",mn->protocolVersion));
                     mnfound = true;
                     break;
                 }

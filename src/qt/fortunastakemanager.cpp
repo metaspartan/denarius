@@ -191,12 +191,12 @@ void FortunastakeManager::updateAdrenalineNode(QString alias, QString addr, QStr
         collateral = QString::fromStdString(errorMessage);
     }
 
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
-        if (mn.addr.ToString().c_str() == addr){
-            rank = GetFortunastakeRank(mn, pindexBest);
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+        if (mn->addr.ToString().c_str() == addr){
+            rank = GetFortunastakeRank(mn->vin, pindexBest);
             status = QString::fromStdString("Online");
             collateral = QString::fromStdString(address2.ToString().c_str());
-            payrate = QString::fromStdString(strprintf("%sD/day", FormatMoney(mn.payRate).c_str()));
+            payrate = QString::fromStdString(strprintf("%sD/day", FormatMoney(mn->payRate).c_str()));
         }
     }
 
@@ -276,13 +276,13 @@ void FortunastakeManager::updateNodeList()
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
 
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
     {
         bool bFound = false;
         int nodeRow = 0;
         for(int i=0; i < ui->tableWidget->rowCount(); i++)
         {
-            if(ui->tableWidget->item(i, 0)->text() == QString::fromStdString(mn.addr.ToString()))
+            if(ui->tableWidget->item(i, 0)->text() == QString::fromStdString(mn->addr.ToString()))
             {
                 bFound = true;
                 nodeRow = i;
@@ -297,29 +297,29 @@ void FortunastakeManager::updateNodeList()
         }
 
         //ui->tableWidget->insertRow(0);
-        //int mnRank = GetFortunastakeRank(mn, pindexBest);
-        int mnRank = mn.nRank;
-        int64_t value = mn.payValue;
+        int mnRank = GetFortunastakeRank(mn->vin, pindexBest);
+        //int mnRank = mn->nRank;
+        int64_t value = mn->payValue;
         //mn.GetPaymentInfo(pindexBest, value, rate);
-        QString payrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
+        QString payrate = QString::fromStdString(strprintf("%s D", FormatMoney(value).c_str()));
         // populate list
         // Address, Rank, Active, Active Seconds, Last Seen, Pub Key
         QTableWidgetItem *activeItem = new QTableWidgetItem();
-        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn.IsActive() ? "Y" : "N"));
+        activeItem->setData(Qt::DisplayRole, QString::fromStdString(mn->IsActive() ? "Y" : "N"));
         QTableWidgetItem *addressItem = new QTableWidgetItem();
-        addressItem->setData(Qt::EditRole, QString::fromStdString(mn.addr.ToString()));
+        addressItem->setData(Qt::EditRole, QString::fromStdString(mn->addr.ToString()));
         SortedWidgetItem *rankItem = new SortedWidgetItem();
         rankItem->setData(Qt::UserRole, mnRank);
         rankItem->setData(Qt::DisplayRole, QString("%2 (%1)").arg(QString::number(mnRank)).arg(payrate));
         SortedWidgetItem *activeSecondsItem = new SortedWidgetItem();
-        activeSecondsItem->setData(Qt::UserRole, (qint64)(mn.lastTimeSeen - mn.now));
-        activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
+        activeSecondsItem->setData(Qt::UserRole, (qint64)(mn->lastTimeSeen - mn->now));
+        activeSecondsItem->setData(Qt::DisplayRole, seconds_to_DHMS((qint64)(mn->lastTimeSeen - mn->now)));
         SortedWidgetItem *lastSeenItem = new SortedWidgetItem();
-        lastSeenItem->setData(Qt::UserRole, (qint64)mn.lastTimeSeen);
-        lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn.lastTimeSeen)));
+        lastSeenItem->setData(Qt::UserRole, (qint64)mn->lastTimeSeen);
+        lastSeenItem->setData(Qt::DisplayRole, QString::fromStdString(DateTimeStrFormat(mn->lastTimeSeen)));
 
         CScript pubkey;
-        pubkey =GetScriptForDestination(mn.pubkey.GetID());
+        pubkey =GetScriptForDestination(mn->pubkey.GetID());
         CTxDestination address1;
         ExtractDestination(pubkey, address1);
         CBitcoinAddress address2(address1);
@@ -340,35 +340,35 @@ void FortunastakeManager::updateNodeList()
         QString npayrate;
         QString nalias;
         QString naddr;
-        int nrank = 0;
+        //int nrank = 0;
         LOCK(cs_adrenaline);
         BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
-            if (mn.vin.prevout.hash.ToString() == mne.getTxHash() && mn.vin.prevout.n == boost::lexical_cast<unsigned int>(mne.getOutputIndex()))
+            if (mn->vin.prevout.hash.ToString() == mne.getTxHash() && mn->vin.prevout.n == boost::lexical_cast<unsigned int>(mne.getOutputIndex()))
             {
                 CTxDestination address1;
-                ExtractDestination(GetScriptForDestination(mn.pubkey.GetID()), address1);
+                ExtractDestination(GetScriptForDestination(mn->pubkey.GetID()), address1);
                 CBitcoinAddress address2(address1);
                 found = true;
                 nalias = QString::fromStdString(mne.getAlias());
                 naddr = QString::fromStdString(mne.getIp());
-                if (mn.IsActive()) {
+                if (mn->IsActive()) {
                     nstatus = QString::fromStdString("Active for payment");
-                } else if (mn.status == "OK") {
-                    if (mn.lastDseep > 0) {
+                } else if (mn->status == "OK") {
+                    if (mn->lastDseep > 0) {
                         nstatus = QString::fromStdString("Verified");
                     } else {
                         nstatus = QString::fromStdString("Registered");
                     }
-                } else if (mn.status == "Expired") {
+                } else if (mn->status == "Expired") {
 					nstatus = QString::fromStdString("Expired");
-                } else if (mn.status == "Inactive, expiring soon") {
+                } else if (mn->status == "Inactive, expiring soon") {
 					nstatus = QString::fromStdString("Inactive, expiring soon");
 				} else {
-					nstatus = QString::fromStdString(mn.status);
+					nstatus = QString::fromStdString(mn->status);
 				}
-                npayrate = QString::fromStdString("");
+                npayrate = QString::fromStdString("Calculating...");
                 if (value > 0) {
-                    npayrate = QString::fromStdString(strprintf("%sD", FormatMoney(value).c_str()));
+                    npayrate = QString::fromStdString(strprintf("%s D", FormatMoney(value).c_str()));
                 }
                 ncollateral = QString::fromStdString(address2.ToString().c_str());
                 found = true;
@@ -378,7 +378,7 @@ void FortunastakeManager::updateNodeList()
         }
 
         if (!found) {
-            nstatus = QString::fromStdString("Stake node not started");
+            nstatus = QString::fromStdString("FortunaStake not started");
         } else {
             // find it in tableWidget_2
             if (errorMessage == "OK") {
@@ -409,6 +409,8 @@ void FortunastakeManager::updateNodeList()
             QTableWidgetItem *collateralItem = new QTableWidgetItem(ncollateral);
             SortedWidgetItem *nrankItem = new SortedWidgetItem();
             SortedWidgetItem *payrateItem = new SortedWidgetItem();
+            payrateItem->setData(Qt::UserRole, mnRank ? mnRank : 2000);
+            payrateItem->setData(Qt::DisplayRole, QString("%2").arg(payrate)); //WIP
 
             nrankItem->setData(Qt::UserRole, mnRank ? mnRank : 2000);
             nrankItem->setData(Qt::DisplayRole, mnRank > 0 && mnRank < 500000 ? QString::number(mnRank) : "");

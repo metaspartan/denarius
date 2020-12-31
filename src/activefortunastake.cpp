@@ -191,11 +191,11 @@ bool CActiveFortunastake::Dseep(CTxIn vin, CService service, CKey keyFortunastak
 
     // Update Last Seen timestamp in fortunastake list
     bool found = false;
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
-        //printf(" -- %s\n", mn.vin.ToString().c_str());
-        if(mn.vin == vin) {
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+        //printf(" -- %s\n", mn->vin.ToString().c_str());
+        if(mn->vin == vin) {
             found = true;
-            mn.UpdateLastSeen();
+            mn->UpdateLastSeen();
         }
     }
 
@@ -281,9 +281,9 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
     bool found = false;
     bool dup = false;
     LOCK(cs_fortunastakes);
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
     {
-        if(mn.pubkey == pubKeyCollateralAddress) {
+        if(mn->pubkey == pubKeyCollateralAddress) {
             dup = true;
         }
     }
@@ -292,9 +292,9 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
         printf("CActiveFortunastake::Register() FAILED! FS Already in List. Change your collateral address to a different address for this FS.\n", retErrorMessage.c_str());
         return false;
     }
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
     {
-        if(mn.vin == vin) {
+        if(mn->vin == vin) {
             printf("Found FS VIN in FortunaStakes List\n");
             found = true;
         }
@@ -302,8 +302,8 @@ bool CActiveFortunastake::Register(CTxIn vin, CService service, CKey keyCollater
 
     if(!found) {
         printf("CActiveFortunastake::Register() - Adding to fortunastake list service: %s - vin: %s\n", service.ToString().c_str(), vin.ToString().c_str());
-        CFortunaStake mn(service, vin, pubKeyCollateralAddress, vchFortunaStakeSignature, masterNodeSignatureTime, pubKeyFortunastake, PROTOCOL_VERSION);
-        mn.UpdateLastSeen(masterNodeSignatureTime);
+        CFortunaStake* mn = new CFortunaStake(service, vin, pubKeyCollateralAddress, vchFortunaStakeSignature, masterNodeSignatureTime, pubKeyFortunastake, PROTOCOL_VERSION);
+        mn->UpdateLastSeen(masterNodeSignatureTime);
         vecFortunastakes.push_back(mn);
     }
 
@@ -355,9 +355,9 @@ bool CActiveFortunastake::GetFortunaStakeVin(CTxIn& vin, CPubKey& pubkey, CKey& 
         //Check the list
         bool dup = false;
         LOCK(cs_fortunastakes);
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+        BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
         {
-            if(mn.pubkey == pubkey) {
+            if(mn->pubkey == pubkey) {
                 dup = true;
             }
         }

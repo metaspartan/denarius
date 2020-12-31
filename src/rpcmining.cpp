@@ -541,7 +541,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         //no fortunastake detected
 		bool found;
                 if (vecFortunastakes.size() > 0) {
-                GetFortunastakeRanks(pindexBest);
+                CalculateRanks(pindexBest);
                 BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                 {
                         if (s.second->nBlockLastPaid < pindexBest->nHeight - 10) {

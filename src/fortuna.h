@@ -159,9 +159,9 @@ public:
 
     bool GetAddress(CService &addr)
     {
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
-            if(mn.vin == vin){
-                addr = mn.addr;
+        BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+            if(mn->vin == vin){
+                addr = mn->addr;
                 return true;
             }
         }
@@ -170,9 +170,9 @@ public:
 
     bool GetProtocolVersion(int &protocolVersion)
     {
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
-            if(mn.vin == vin){
-                protocolVersion = mn.protocolVersion;
+        BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
+            if(mn->vin == vin){
+                protocolVersion = mn->protocolVersion;
                 return true;
             }
         }

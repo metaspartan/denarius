@@ -215,7 +215,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
             if(!fortunastakePayments.GetBlockPayee(pindexPrev->nHeight+1, payee)){
                 bool found;
                 if (vecFortunastakes.size() > 0) {
-                GetFortunastakeRanks(pindexBest);
+                CalculateRanks(pindexBest);
                 BOOST_FOREACH(PAIRTYPE(int, CFortunaStake*)& s, vecFortunastakeScores)
                 {
                         if (s.second->nBlockLastPaid < pindexBest->nHeight - 10) {

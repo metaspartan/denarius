@@ -918,13 +918,13 @@ bool CFortunaQueue::Relay()
 
 bool CFortunaQueue::CheckSignature()
 {
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes) {
 
-        if(mn.vin == vin) {
+        if(mn->vin == vin) {
             std::string strMessage = vin.ToString() + boost::lexical_cast<std::string>(nDenom) + boost::lexical_cast<std::string>(time) + boost::lexical_cast<std::string>(ready);
 
             std::string errorMessage = "";
-            if(!forTunaSigner.VerifyMessage(mn.pubkey2, vchSig, strMessage, errorMessage)){
+            if(!forTunaSigner.VerifyMessage(mn->pubkey2, vchSig, strMessage, errorMessage)){
                 return error("CFortunaQueue::CheckSignature() - Got bad fortunastake address signature %s \n", vin.ToString().c_str());
             }
 
@@ -965,18 +965,18 @@ void ThreadCheckForTunaPool(void* parg)
         {
 
         LOCK(cs_fortunastakes);
-            vector<CFortunaStake>::iterator it = vecFortunastakes.begin();
+            vector<CFortunaStake*>::iterator it = vecFortunastakes.begin();
             //check them separately
             while(it != vecFortunastakes.end()){
-                (*it).Check();
+                (*it)->Check();
                 ++it;
             }
 
             //remove inactive
             it = vecFortunastakes.begin();
             while(it != vecFortunastakes.end()){
-                if((*it).enabled == 4 || (*it).enabled == 3){
-                    printf("Removing inactive fortunastake %s\n", (*it).addr.ToString().c_str());
+                if((*it)->enabled == 4 || (*it)->enabled == 3){
+                    printf("Removing inactive fortunastake %s\n", (*it)->addr.ToString().c_str());
                     it = vecFortunastakes.erase(it);
                     mnCount = mnCount-1;
                 } else {
@@ -1023,7 +1023,7 @@ void ThreadCheckForTunaPool(void* parg)
         if(c % 60 == 0 && vecFortunastakes.size()) {
             //let's connect to a random fortunastake every minute!
             int fs = rand() % vecFortunastakes.size();
-            CService addr = vecFortunastakes[fs].addr;
+            CService addr = vecFortunastakes[fs]->addr;
             AddOneShot(addr.ToStringIPPort());
             if (fDebug) printf("added fortunastake at %s to connection attempts\n",addr.ToStringIPPort().c_str());
 
@@ -1033,7 +1033,7 @@ void ThreadCheckForTunaPool(void* parg)
                 int x = 25 - vNodes.size();
                 for (int i = x; i-- > 0; ) {
                     int fs = rand() % vecFortunastakes.size();
-                    CService addr = vecFortunastakes[fs].addr;
+                    CService addr = vecFortunastakes[fs]->addr;
                     if (addr.IsIPv4() && !addr.IsLocal()) {
                         AddOneShot(addr.ToStringIPPort());
                     }

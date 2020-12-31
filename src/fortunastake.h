@@ -49,7 +49,7 @@ using namespace std;
 class CFortunastakePaymentWinner;
 
 extern CCriticalSection cs_fortunastakes;
-extern std::vector<CFortunaStake> vecFortunastakes;
+extern std::vector<CFortunaStake*> vecFortunastakes;
 extern std::vector<pair<int, CFortunaStake*> > vecFortunastakeScores;
 extern std::vector<pair<int, CFortunaStake> > vecFortunastakeRanks;
 extern CFortunastakePayments fortunastakePayments;
@@ -192,7 +192,9 @@ public:
         payCount = 0;
     }
 
-    uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0);
+    ~CFortunaStake(); //Hmmm
+
+    uint256 CalculateScore(int mod=1, int64_t nBlockHeight=0) const;
 
     int SetPayRate(int nHeight);
     bool GetPaymentInfo(const CBlockIndex *pindex, int64_t &totalValue, double &actualRate);
@@ -255,20 +257,31 @@ public:
 
         return cacheInputAge+(pindex->nHeight-cacheInputAgeBlock);
     }
+
+    CFortunaStake(const CFortunaStake&);
+    void operator=(const CFortunaStake&);
+//hmmm also
+private:
+    boost::filesystem::path GetFortunastakeConfigFile;
+    std::string strMagicMessage;
+    // CFortunaStake(const CFortunaStake&);
+    // void operator=(const CFortunaStake&);
 };
 
 
 
 // Get the current winner for this block
 int GetCurrentFortunaStake(int mod=1, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
-bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
-bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake &mn);
+bool CheckFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake* mn);
+bool CheckPoSFSPayment(CBlockIndex* pindex, int64_t value, CFortunaStake* mn);
 int64_t avg2(std::vector<CFortunaStake> const& v);
 int64_t avgCount(std::vector<CFortunaStake> const& v);
 int GetFortunastakeByVin(CTxIn& vin);
-int GetFortunastakeRank(CFortunaStake& tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
+int GetFortunastakeRank(CTxIn& vin, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
+//int GetFortunastakeRank(CFortunaStake* tmn, CBlockIndex* pindex, int minProtocol=CFortunaStake::minProtoVersion);
 int GetFortunastakeByRank(int findRank, int64_t nBlockHeight=0, int minProtocol=CFortunaStake::minProtoVersion);
-bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
+//bool GetFortunastakeRanks(CBlockIndex* pindex=pindexBest);
+bool CalculateRanks(CBlockIndex* pindex=pindexBest);
 extern int64_t nAverageFSIncome;
 bool FindFSPayment(CScript& payee, CBlockIndex* pindex=pindexBest);
 
@@ -366,7 +379,7 @@ public:
     void Relay(CFortunastakePaymentWinner& winner);
     void Sync(CNode* node);
     void CleanPaymentList();
-    int LastPayment(CFortunaStake& mn);
+    int LastPayment(CFortunaStake* mn);
 
     //slow
     bool GetBlockPayee(int nBlockHeight, CScript& payee);

@@ -1736,7 +1736,7 @@ bool IsInitialBlockDownload()
     {
         lockIBDState = true;
         // do stuff required at end of sync
-        GetFortunastakeRanks(pindexBest);
+        CalculateRanks(pindexBest);
     }
     return state;
 
@@ -2621,7 +2621,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(pindexBest->GetBlockHash() == hashPrevBlock){
 
                 // make sure the ranks are updated to prev block
-                GetFortunastakeRanks(pindexBest);
+                CalculateRanks(pindexBest);
                 // Calculate Coin Age for Fortunastake Reward Calculation
                 uint64_t nCoinAge;
                 if (!vtx[1].GetCoinAge(txdb, nCoinAge))
@@ -2663,9 +2663,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                 ExtractDestination(vtx[1].vout[i].scriptPubKey, mnDest);
                                 CBitcoinAddress mnAddress(mnDest);
                                 if (fDebug) printf("CheckBlock-POS() : Found fortunastake payment: %s D to %s.\n",FormatMoney(vtx[1].vout[i].nValue).c_str(), mnAddress.ToString().c_str());
-                                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                                BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
                                 {
-                                    pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                                    pubScript = GetScriptForDestination(mn->pubkey.GetID());
                                     CTxDestination address1;
                                     ExtractDestination(pubScript, address1);
                                     CBitcoinAddress address2(address1);
@@ -2673,32 +2673,32 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                                     if (vtx[1].vout[i].scriptPubKey == pubScript)
                                     {
                                         int64_t value = vtx[1].vout[i].nValue;
-                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn.payRate, mn.nRank, mn.nBlockLastPaid);
+                                        if (fDebug) printf("CheckBlock-POS() : Fortunastake PoS payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(value).c_str(), mn->payRate, mn->nRank, mn->nBlockLastPaid);
 
                                         if (!fIsInitialDownload) {
                                             if (!CheckPoSFSPayment(pindex, vtx[1].vout[i].nValue, mn)) // CheckPoSFSPayment()
                                             {
                                                 if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT || pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT_TESTNET) { //Update PoS FS Payments to not go out of sync
 													//printf("CheckBlock-POS() : Out-of-cycle fortunastake payment detected, rejecting block.");
-                                                    printf("CheckBlock-POS() : Out-of-cycle FortunaStake payment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s payCount:%d\n",mn.nRank,FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn.payRate).c_str(), mn.payCount);
+                                                    printf("CheckBlock-POS() : Out-of-cycle FortunaStake payment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s payCount:%d\n",mn->nRank,FormatMoney(mn->payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn->payRate).c_str(), mn->payCount);
                                                 } else {
                                                     printf("CheckBlock-POS(): This fortunastake payment is too aggressive and will be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                                 }
                                                 //break;
                                             } else {
-                                                if (fDebug) printf("CheckBlock-POS() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
+                                                if (fDebug) printf("CheckBlock-POS() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn->payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                             }
                                         } else {
                                             if (fDebug) printf("CheckBlock-POS() : Wallet currently in startup mode, ignoring rate requirements.");
                                         }
                                         // add mn payment data
-                                        mn.nBlockLastPaid = pindex->nHeight;
+                                        mn->nBlockLastPaid = pindex->nHeight;
                                         CFortunaPayData data;
                                         data.height = pindex->nHeight;
                                         data.amount = value;
                                         data.hash = pindex->GetBlockHash();
-                                        mn.payData.push_back(data);
-                                        mn.SetPayRate(pindex->nHeight);
+                                        mn->payData.push_back(data);
+                                        mn->SetPayRate(pindex->nHeight);
                                         foundPayee = true;
                                         paymentOK = true;
                                         break;
@@ -2760,7 +2760,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             if(pindexBest->GetBlockHash() == hashPrevBlock){
 
                 // make sure the ranks are updated
-                GetFortunastakeRanks(pindexBest);
+                CalculateRanks(pindexBest);
 
                 int64_t fortunastakePaymentAmount = GetFortunastakePayment(pindex->nHeight, vtx[0].GetValueOut());
 
@@ -2791,40 +2791,40 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
                             CScript pubScript;
 
-                            BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                            BOOST_FOREACH(CFortunaStake* mn, vecFortunastakes)
                             {
-                                pubScript = GetScriptForDestination(mn.pubkey.GetID());
+                                pubScript = GetScriptForDestination(mn->pubkey.GetID());
                                 CTxDestination address1;
                                 ExtractDestination(pubScript, address1);
                                 CBitcoinAddress address2(address1);
 
                                 if (payee == pubScript)
                                 {
-                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn.payRate).c_str(), mn.nRank, mn.nBlockLastPaid);
+                                    if (fDebug) printf("CheckBlock-POW() : Fortunastake PoW payee found at block %d: %s who got paid %s D rate:%" PRId64" rank:%d lastpaid:%d\n", pindex->nHeight, address2.ToString().c_str(), FormatMoney(vtx[0].vout[i].nValue).c_str(), FormatMoney(mn->payRate).c_str(), mn->nRank, mn->nBlockLastPaid);
                                     if (!fIsInitialDownload) {
                                         if (!CheckFSPayment(pindex, vtx[0].vout[i].nValue, mn)) // if MN is being paid and it's bottom 50% ranked, don't let it be paid.
                                         {
                                             if (pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT || pindexBest->nHeight >= MN_ENFORCEMENT_ACTIVE_HEIGHT_TESTNET)
                                             {
-                                                printf("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s payCount:%d\n",mn.nRank,FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn.payRate).c_str(), mn.payCount);
+                                                printf("CheckBlock-POW() : Fortunastake overpayment detected, rejecting block. rank:%d value:%s avg:%s payRate:%s payCount:%d\n",mn->nRank,FormatMoney(mn->payValue).c_str(),FormatMoney(nAverageFSIncome).c_str(),FormatMoney(mn->payRate).c_str(), mn->payCount);
                                             } else {
                                                 printf("WARNING: This fortunastake payment is too aggressive and will not be accepted after block %d\n", MN_ENFORCEMENT_ACTIVE_HEIGHT);
                                             }
                                             //break;
                                         } else {
-                                            if (fDebug) printf("CheckBlock-POW() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn.payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
+                                            if (fDebug) printf("CheckBlock-POW() : Payment meets rate requirement: payee has earnt %s against average %s\n",FormatMoney(mn->payValue).c_str(),FormatMoney(nAverageFSIncome).c_str());
                                         }
                                     } else {
                                         if (fDebug) printf("CheckBlock-POW() : Wallet currently in startup mode, ignoring rate requirements.");
                                     }
 
-                                    mn.nBlockLastPaid = pindex->nHeight;
+                                    mn->nBlockLastPaid = pindex->nHeight;
                                     CFortunaPayData data;
                                     data.height = pindex->nHeight;
                                     data.amount = vtx[0].vout[i].nValue;
                                     data.hash = pindex->GetBlockHash();
-                                    mn.payData.push_back(data);
-                                    mn.SetPayRate(pindex->nHeight);
+                                    mn->payData.push_back(data);
+                                    mn->SetPayRate(pindex->nHeight);
                                     foundPayee = true;
                                     paymentOK = true;
                                     break;
@@ -3043,7 +3043,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         if (!block.ReadFromDisk(pindex))
             return error("Reorganize() : ReadFromDisk for connect failed");
 
-        if (!IsInitialBlockDownload()) GetFortunastakeRanks(pindex); // recalculate ranks for the this block hash if required
+        if (!IsInitialBlockDownload()) CalculateRanks(pindex); // recalculate ranks for the this block hash if required
 
         if (!block.ConnectBlock(txdb, pindex))
         {
