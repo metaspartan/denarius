@@ -509,6 +509,7 @@ int GetFortunastakeByVin(CTxIn& vin)
 
 int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
 {
+    if (IsInitialBlockDownload()) return 0;
     int i = 0;
     unsigned int score = 0;
     int winner = -1;
