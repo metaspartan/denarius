@@ -337,6 +337,8 @@ OBJS= \
     obj/ringsig.o \
     obj/bloom.o \
   	obj/state.o \
+    obj/ddns.o \
+    obj/namecoin.o \
     obj/ipfs.o \
     obj/ipfscurl.o  \
     obj/stun.o

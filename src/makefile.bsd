@@ -112,7 +112,7 @@ OBJS= \
     obj/miner.o \
     obj/main.o \
     obj/net.o \
-	  obj/core.o \
+	obj/core.o \
     obj/protocol.o \
     obj/denariusrpc.o \
     obj/rpcdump.o \
@@ -135,6 +135,8 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
     obj/smessage.o \
+    obj/ddns.o \
+    obj/namecoin.o \
     obj/stealth.o 
 
 all: denariusd

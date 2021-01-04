@@ -397,6 +397,16 @@ static const CRPCCommand vRPCCommands[] =
     { "jupitergetblock",      &jupitergetblock,          false,  false },
     { "jupitergetstat",       &jupitergetstat,           false,  false },
 
+    // Denarius Name Commands
+    { "name_new",               &name_new,               false,  true },
+    { "name_update",            &name_update,            false,  true },
+    { "name_delete",            &name_delete,            false,  true },
+    { "sendtoname",             &sendtoname,             false,  true },
+    { "name_list",              &name_list,              false,  false },
+    { "name_scan",              &name_scan,              false,  false },
+    { "name_filter",            &name_filter,            false,  false },
+    { "name_show",              &name_show,              false,  false },
+    { "name_debug",             &name_debug,             false,  false },
 
 
 };
@@ -1413,6 +1423,16 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
     if (strMethod == "setbestblockbyheight"   && n > 0) ConvertTo<int64_t>(params[0]);
+
+    //Denarius Name Commands
+    if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_update"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_update"            && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_filter"            && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
+    if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
 
     return params;
 }

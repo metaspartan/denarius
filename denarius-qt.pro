@@ -470,6 +470,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/stealth.h \
+    src/ddns.h \
+    src/hooks.h \
+	src/namecoin.h \
     src/fortuna.h \
     src/activefortunastake.h \
     src/fortunastake.h \
@@ -648,6 +651,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/stealth.cpp \
+    src/ddns.cpp \
+	src/namecoin.cpp \
     src/fortuna.cpp \
     src/activefortunastake.cpp \
     src/fortunastake.cpp \

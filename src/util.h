@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+typedef int pid_t; /* define for windows compatiblity */
 #endif
 
 #include <map>
@@ -45,6 +46,7 @@ static const int64_t CENT = 1000000;
 
 typedef int64_t CAmount;
 
+//#define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))

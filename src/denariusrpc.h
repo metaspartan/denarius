@@ -262,6 +262,16 @@ extern json_spirit::Value jupiterduopod(const json_spirit::Array& params, bool f
 extern json_spirit::Value jupitergetblock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jupitergetstat(const json_spirit::Array& params, bool fHelp);
 
+extern json_spirit::Value name_new(const json_spirit::Array& params, bool fHelp); // in namecoin.cpp Denairus Name commands
+extern json_spirit::Value name_update(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_delete(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value sendtoname(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_list(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_scan(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_filter(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_show(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value name_debug(const json_spirit::Array& params, bool fHelp);
+
 extern json_spirit::Value getnewstealthaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value liststealthaddresses(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importstealthaddress(const json_spirit::Array& params, bool fHelp);

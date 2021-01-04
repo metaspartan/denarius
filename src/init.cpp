@@ -19,6 +19,7 @@
 #include "spork.h"
 #include "smessage.h"
 #include "ringsig.h"
+#include "ddns.h"
 
 #ifdef USE_NATIVETOR
 #include "tor/anonymize.h" //Tor native optional integration (Flag -nativetor=1)
@@ -45,6 +46,7 @@ using namespace std;
 using namespace boost;
 
 CWallet* pwalletMain = NULL;
+DDns* ddns = NULL;
 CClientUIInterface uiInterface;
 bool fConfChange;
 bool fEnforceCanonical;
@@ -111,6 +113,9 @@ void Shutdown(void* parg)
     {
         fShutdown = true;
 
+        if(ddns) {
+            delete ddns;
+        }
         Finalise();
         /*
         SecureMsgShutdown();
@@ -662,7 +667,7 @@ bool AppInit2()
     if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName))
         return InitError(strprintf(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
 
-    // Make sure only a single Bitcoin process is using the data directory.
+    // Make sure only a single Denarius process is using the data directory.
     boost::filesystem::path pathLockFile = GetDataDir() / ".lock";
     FILE* file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file)
@@ -670,8 +675,9 @@ bool AppInit2()
 
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (!lock.try_lock())
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  Denarius is probably already running."), strDataDir.c_str()));
+        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. Denarius is probably already running."), strDataDir.c_str()));
 
+    hooks = InitHook(); //Initialized Denarius Name Hooks
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
@@ -1064,6 +1070,14 @@ bool AppInit2()
         };
     };
 
+    //Create Denarius Name index - this must happen before ReacceptWalletTransactions()
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnameindex.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile)) {
+        createNameIndexFile();
+        printf("Created Denarius Name DB");
+    }
+
     if (GetBoolArg("-upgradewallet", fFirstRun))
     {
         int nMaxVersion = GetArg("-upgradewallet", 0);
@@ -1097,7 +1111,7 @@ bool AppInit2()
     };
 
     printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15" PRId64"ms\n", GetTimeMillis() - nStart);
+    printf("Denarius Wallet %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     RegisterWallet(pwalletMain);
 
@@ -1309,6 +1323,23 @@ bool AppInit2()
     if (fServer)
         NewThread(ThreadRPCServer, NULL);
 
+    // Init Denarius DNS.
+    if (GetBoolArg("-ddns", true))
+    {
+        #define DDNS_PORT 5333
+        int port = GetArg("-ddnsport", DDNS_PORT);
+        int verbose = GetArg("-ddnsverbose", 1);
+        if (port <= 0)
+            port = DDNS_PORT;
+        string suffix  = GetArg("-ddnssuffix", "");
+        string bind_ip = GetArg("-ddnsbindip", "");
+        string allowed = GetArg("-ddnsallowed", "");
+        string localcf = GetArg("-ddnslocalcf", "");
+        ddns = new DDns(bind_ip.c_str(), port,
+        suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
+        printf("Denarius DNS Server started on port 5333!\n");
+    }
+
     // ********************************************************* Step 12: finished
 
     uiInterface.InitMessage(_("Done loading"));
@@ -1320,6 +1351,9 @@ bool AppInit2()
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
+    if(ddns) {
+	    ddns->Run();
+    }
     while (1)
         //MilliSleep(5000);
         sleep(5);
