@@ -1051,6 +1051,35 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         nFee = nDebit - nValueOut;
     };
 
+    // treat coinstake as a single "recieve" entry
+    if (IsCoinStake())
+    {
+        for (unsigned int i = 0; i < vout.size(); ++i)
+        {
+            const CTxOut& txout = vout[i];
+            isminetype fIsMine = pwallet->IsMine(txout);
+
+            // get my vout with positive output
+            if (!(fIsMine & filter) || txout.nValue <= 0)
+                        continue;
+
+            // get address
+            CTxDestination address = CNoDestination();
+            ExtractDestination(txout.scriptPubKey, address);
+
+            // nfee is negative for coinstake generation, because we are gaining money from it
+            COutputEntry output = {address, -nFee, (int)i};
+            listReceived.push_back(output);
+            nFee = 0;
+            return;
+        }
+
+        // if we reach here there is probably a mistake
+        COutputEntry output = {CNoDestination(), 0, 0};
+        listReceived.push_back(output);
+        return;
+    }
+
 	// Sent/received.
     for (unsigned int i = 0; i < vout.size(); ++i)
     {
@@ -1105,7 +1134,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
 
         // In either case, we need to get the destination address
         CTxDestination address;
-        if (!ExtractDestination(txout.scriptPubKey, address))
+        if (!ExtractDestination(txout.scriptPubKey, address) && !txout.scriptPubKey.IsUnspendable())
         {
             printf("CWalletTx::GetAmounts: Unknown transaction type found, txid %s\n",
                 this->GetHash().ToString().c_str());
@@ -1122,78 +1151,6 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         if (fIsMine)
             listReceived.push_back(output);
     };
-
-    /*
-    // Sent/received.
-    BOOST_FOREACH(const CTxOut& txout, vout)
-    {
-        // Skip special stake out
-        if (txout.scriptPubKey.empty())
-            continue;
-
-        opcodetype firstOpCode;
-        CScript::const_iterator pc = txout.scriptPubKey.begin();
-        if (txout.scriptPubKey.GetOp(pc, firstOpCode)
-            && firstOpCode == OP_RETURN)
-            continue;
-
-
-        bool fIsMine;
-        // Only need to handle txouts if AT LEAST one of these is true:
-        //   1) they debit from us (sent)
-        //   2) the output is to us (received)
-        if (nDebit > 0)
-        {
-            // Don't report 'change' txouts
-            if (pwallet->IsChange(txout))
-                continue;
-            fIsMine = pwallet->IsMine(txout);
-        }
-        else if (!(fIsMine = pwallet->IsMine(txout)))
-            continue;
-
-
-
-    // Sent/received.
-    for (unsigned int i = 0; i < vout.size(); ++i)
-    {
-        const CTxOut& txout = vout[i];
-        if (nVersion == ANON_TXN_VERSION
-            && txout.IsAnonOutput())
-            continue;
-        isminetype fIsMine = pwallet->IsMine(txout);
-        // Only need to handle txouts if AT LEAST one of these is true:
-        //   1) they debit from us (sent)
-        //   2) the output is to us (received)
-        if (nDebit > 0)
-        {
-            // Don't report 'change' txouts
-            if (pwallet->IsChange(txout))
-                continue;
-        }
-        else if (!(fIsMine & filter))
-            continue;
-
-        // In either case, we need to get the destination address
-        CTxDestination address;
-        if (!ExtractDestination(txout.scriptPubKey, address))
-        {
-            printf("CWalletTx::GetAmounts: Unknown transaction type found, txid %s\n",
-                   this->GetHash().ToString().c_str());
-            address = CNoDestination();
-        }
-
-        COutputEntry output = {address, txout.nValue, (int)i};
-
-        // If we are debited by the transaction, add the output as a "sent" entry
-        if (nDebit > 0)
-            listSent.push_back(output);
-
-        // If we are receiving the output, add it as a "received" entry
-        if (fIsMine & filter)
-            listReceived.push_back(output);
-    }
-	*/
 }
 
 void CWalletTx::GetAccountAmounts(const string& strAccount, int64_t& nReceived,
@@ -4102,7 +4059,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
                 coin.MarkSpent(txin.prevout.n);
                 coin.WriteToDisk();
                 NotifyTransactionChanged(this, coin.GetHash(), CT_UPDATED);
-				        vMintingWalletUpdated.push_back(coin.GetHash());
+				vMintingWalletUpdated.push_back(coin.GetHash());
             }
 
             if (fFileBacked)
