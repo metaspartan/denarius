@@ -895,14 +895,12 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
 
     
-    #define STANDARD_TX_ONLY
-    #ifdef STANDARD_TX_ONLY
-        bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
+    bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;
     if (!fTestNet && !IsStandardTx(tx, reason) && !isNameTx) //!IsStandardTx(tx, reason)
         return error("CTxMemPool::accept() : nonstandard transaction type");
-    #endif
+
     // Do we already have it?
     uint256 hash = tx.GetHash();
     {
@@ -961,11 +959,11 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
                 *pfMissingInputs = true;
             return false;
         }
-            #ifdef STANDARD_TX_ONLY
+
             // Check for non-standard pay-to-script-hash in inputs
             if (!AreInputsStandard(tx, mapInputs) && !fTestNet && !isNameTx)
                 return error("CTxMemPool::accept() : nonstandard transaction input");
-            #endif
+
             nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
             GetMinFee_mode feeMode = GMF_RELAY;

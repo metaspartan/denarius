@@ -139,14 +139,14 @@ bool NameActive(const vector<unsigned char> &vchName, int currentBlockHeight = -
 int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const vector<unsigned char> &vchName, const vector<unsigned char> &vchValue)
 {
     if (op == OP_NAME_DELETE)
-        return MIN_TX_FEE;
+        return MIN_NAME_FEE;
 
     const CBlockIndex* lastPoW = GetLastBlockIndex(pindexBlock, false);
 
     int64_t txMinFee = nRentalDays * lastPoW->nMint / (365 * 100); // 1% PoW per 365 days
 
     if (op == OP_NAME_NEW)
-        txMinFee += lastPoW->nMint / 100; // +1% PoW per operation itself
+        txMinFee += lastPoW->nMint; // +10% PoW per operation itself
 
     txMinFee = sqrt(txMinFee / CENT) * CENT; // square root is taken of the number of cents.
     txMinFee += (int)((vchName.size() + vchValue.size()) / 128) * CENT; // 1 cent per 128 bytes
@@ -156,7 +156,7 @@ int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int 
     txMinFee = (txMinFee / CENT) * CENT;
 
     // Fee should be at least MIN_TX_FEE
-    txMinFee = max(txMinFee, MIN_TX_FEE);
+    txMinFee = max(txMinFee, MIN_NAME_FEE); //100000000 = 1.0 D
 
     return txMinFee;
 }
@@ -1221,7 +1221,7 @@ bool IsWalletLocked(NameTxReturn& ret)
     if (fWalletUnlockStakingOnly)
     {
         ret.err_code = RPC_WALLET_UNLOCK_NEEDED;
-        ret.err_msg = "Error: Wallet unlocked for block minting only, unable to create transaction.";
+        ret.err_msg = "Error: Wallet unlocked for block staking only, unable to create transaction.";
         return true;
     }
     return false;
@@ -1235,7 +1235,7 @@ Value name_new(const Array& params, bool fHelp)
                 "Creates new key->value pair which expires after specified number of days.\n"
                 "[address] does not currently work but will be added in the future\n"
                 "If [valueAsFilepath] is non-zero it will interpret <value> as a filepath and try to write file contents in binary format\n"
-                "Cost is square root of (1% of last PoW + 1% per year of last PoW)."
+                "Cost is 1 D - 0.9 To TX Fees and 0.1 To Name Registration."
                 + HelpRequiringPassphrase());
 
     if (!IsSynchronized())
@@ -1287,6 +1287,11 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
 
     CWalletTx wtx;
     wtx.nVersion = NAMECOIN_TX_VERSION;
+
+    wtx.mapValue["comment"] = "New Name";
+    std::string sNarr = "DDNS";
+    wtx.mapValue["to"] = "DDNS";
+
     stringstream ss;
     CScript scriptPubKey;
 
@@ -1321,11 +1326,12 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
             return ret;
 
         nameScript += scriptPubKey;
-		std::string sNarr;
+		//std::string sNarr;
 		
         int64_t prevFee = nTransactionFee;
         nTransactionFee = GetNameOpFee(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
         string strError = pwalletMain->SendMoney(nameScript, CENT, sNarr, wtx, false);
+        //string strError = pwalletMain->CreateTransaction(nameScript, CENT, sNarr, wtx, reservekey, nFeeRequired, nullptr);
         nTransactionFee = prevFee;
 
         if (strError != "")
@@ -1342,7 +1348,7 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
     {
         ret.address = CBitcoinAddress(address).ToString();
     }
-    ret.hex = wtx.GetHash();
+    ret.hex = wtx.GetHash(); //wtx.GetHash().GetHex();
     ret.ok = true;
     return ret;
 }
@@ -1409,6 +1415,7 @@ NameTxReturn name_update(const vector<unsigned char> &vchName,
 
     CWalletTx wtx;
     wtx.nVersion = NAMECOIN_TX_VERSION;
+
     stringstream ss;
     CScript scriptPubKey;
 
@@ -1561,6 +1568,7 @@ NameTxReturn name_delete(const vector<unsigned char> &vchName)
 
     CWalletTx wtx;
     wtx.nVersion = NAMECOIN_TX_VERSION;
+    
     stringstream ss;
     CScript scriptPubKey;
 
