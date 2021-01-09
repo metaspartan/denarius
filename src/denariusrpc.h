@@ -202,6 +202,7 @@ extern json_spirit::Value addmultisigaddress(const json_spirit::Array& params, b
 extern json_spirit::Value addredeemscript(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listreceivedbyaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listreceivedbyaccount(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value deletetransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listtransactions(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listaddressgroupings(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listaddressgroups(const json_spirit::Array& params, bool fHelp);

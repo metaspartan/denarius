@@ -876,10 +876,11 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
     return nMinFee;
 }
 
-bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
-                        bool* pfMissingInputs)
+bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
+                        bool* pfMissingInputs, bool fOnlyCheckWithoutAdding)
 {
     AssertLockHeld(cs_main);
+    printf("CTxMemPool::accept, fCheckInputs = %d, fOnlyCheckWithoutAdding = %d\n", fCheckInputs, fOnlyCheckWithoutAdding);
     if (pfMissingInputs)
         *pfMissingInputs = false;
 
@@ -895,11 +896,15 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
 
     
+#define STANDARD_TX_ONLY
+#ifdef STANDARD_TX_ONLY
     bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
+
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;
     if (!fTestNet && !IsStandardTx(tx, reason) && !isNameTx) //!IsStandardTx(tx, reason)
         return error("CTxMemPool::accept() : nonstandard transaction type");
+#endif
 
     // Do we already have it?
     uint256 hash = tx.GetHash();
@@ -959,10 +964,11 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
                 *pfMissingInputs = true;
             return false;
         }
-
+#ifdef STANDARD_TX_ONLY
             // Check for non-standard pay-to-script-hash in inputs
             if (!AreInputsStandard(tx, mapInputs) && !fTestNet && !isNameTx)
                 return error("CTxMemPool::accept() : nonstandard transaction input");
+#endif
 
             nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
@@ -1033,31 +1039,35 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
             };
         };
 
-    // Store transaction in memory
+    // Do not write to memory if read only mode.
+    if(!fOnlyCheckWithoutAdding)
     {
-        LOCK(cs);
-        if (ptxOld) {
-            printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
-            remove(*ptxOld);
+        // Store transaction in memory
+        {
+            LOCK(cs);
+            if (ptxOld) {
+                printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
+                remove(*ptxOld);
+            }
+            addUnchecked(hash, tx);
         }
-        addUnchecked(hash, tx);
+
+        //Add the TX to our Pending Names in Name DB
+        hooks->AddToPendingNames(tx);
+
+        ///// are we sure this is ok when loading transactions or restoring block txes
+        // If updated, erase old tx from wallet
+        if (ptxOld)
+            EraseFromWallets(ptxOld->GetHash());
+
+        printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     }
-
-    //Add the TX to our Pending Names in Name DB
-    hooks->AddToPendingNames(tx);
-
-    ///// are we sure this is ok when loading transactions or restoring block txes
-    // If updated, erase old tx from wallet
-    if (ptxOld)
-        EraseFromWallets(ptxOld->GetHash());
-
-    printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     return true;
 }
 
-bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs)
+bool CTransaction::AcceptToMemoryPool(CTxDB& txdb,  bool fCheckInputs, bool* pfMissingInputs, bool fOnlyCheckWithoutAdding)
 {
-    return mempool.accept(txdb, *this, pfMissingInputs);
+    return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs, fOnlyCheckWithoutAdding);
 }
 
 bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
