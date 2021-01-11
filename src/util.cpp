@@ -1208,6 +1208,7 @@ void WriteConfigFile(FILE* configFile)
     fputs ("port=33369\n", configFile);
     fputs ("daemon=1\n", configFile);
     fputs ("listen=1\n", configFile);
+    fputs ("ddns=1\n", configFile);
     fputs ("server=1\n", configFile);
     fputs ("fortunastake=0\n", configFile); //input fs=0 by default
     fputs ("fortunastakeaddr=\n", configFile);
