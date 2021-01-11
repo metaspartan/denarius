@@ -1,20 +1,18 @@
 #include <vector>
-using namespace std;
-
+#include "namecoin.h"
 #include "coincontrol.h"
 #include "script.h"
 #include "wallet.h"
+#include "denariusrpc.h"
 
 extern CWallet* pwalletMain;
 extern std::map<uint256, CTransaction> mapTransactions;
-
-#include "namecoin.h"
-#include "hooks.h"
 
 #include <boost/xpressive/xpressive_dynamic.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 
+using namespace std;
 using namespace json_spirit;
 
 template<typename T> void ConvertTo(Value& value, bool fAllowNull=false);
@@ -164,6 +162,31 @@ int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int 
     return txMinFee;
 }
 
+CAmount GetNameOpFee2(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const vector<unsigned char> &vchName, const vector<unsigned char> &vchValue)
+{
+    if (op == OP_NAME_DELETE)
+        return MIN_NAME_FEE;
+
+    const CBlockIndex* lastPoW = GetLastBlockIndex(pindexBlock, false);
+
+    CAmount txMinFee = nRentalDays * lastPoW->nMint / (365 * 100); // 1% PoW per 365 days
+
+    if (op == OP_NAME_NEW)
+        txMinFee += lastPoW->nMint; // +1% PoW per operation itself
+
+    txMinFee = sqrt(txMinFee / CENT) * CENT; // square root is taken of the number of cents.
+    txMinFee += (int)((vchName.size() + vchValue.size()) / 128) * CENT; // 1 cent per 128 bytes
+
+    // Round up to CENT
+    txMinFee += CENT - 1;
+    txMinFee = (txMinFee / CENT) * CENT;
+
+    // Fee should be at least MIN_NAME_FEE
+    txMinFee = max(txMinFee, MIN_NAME_FEE);
+
+    return txMinFee;
+}
+
 bool RemoveNameScriptPrefix(const CScript& scriptIn, CScript& scriptOut)
 {
     NameTxInfo nti;
@@ -176,7 +199,37 @@ bool RemoveNameScriptPrefix(const CScript& scriptIn, CScript& scriptOut)
     return true;
 }
 
-bool SignNameSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL, CScript scriptPrereq=CScript())
+// bool SignNameSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType, CScript scriptPrereq=CScript())
+// {
+//     assert(nIn < txTo.vin.size());
+//     CTxIn& txin = txTo.vin[nIn];
+//     assert(txin.prevout.n < txFrom.vout.size());
+//     const CTxOut& txout = txFrom.vout[txin.prevout.n];
+
+//     // Leave out the signature from the hash, since a signature can't sign itself.
+//     // The checksig op will also drop the signatures from its hash.
+
+//     CScript scriptPubKey;
+//     if (!RemoveNameScriptPrefix(txout.scriptPubKey, scriptPubKey))
+//         return error("SignNameSignature(): failed to remove name script prefix");
+
+//     uint256 hash = SignatureHash(scriptPrereq + txout.scriptPubKey, txTo, nIn, nHashType);
+
+//     txnouttype whichType;
+//     if (!Solver(*pwalletMain, scriptPubKey, hash, nHashType, txin.scriptSig, whichType))
+//         return false;
+
+//     txin.scriptSig = scriptPrereq + txin.scriptSig;
+
+//     // Test solution
+//     if (scriptPrereq.empty())
+//         if (!VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
+//             return false;
+
+//     return true;
+// }
+
+bool SignNameSignatureD(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
 {
     assert(nIn < txTo.vin.size());
     CTxIn& txin = txTo.vin[nIn];
@@ -186,25 +239,46 @@ bool SignNameSignature(const CTransaction& txFrom, CTransaction& txTo, unsigned 
     // Leave out the signature from the hash, since a signature can't sign itself.
     // The checksig op will also drop the signatures from its hash.
 
+    uint256 hash = SignatureHash(txout.scriptPubKey, txTo, nIn, nHashType);
+
     CScript scriptPubKey;
     if (!RemoveNameScriptPrefix(txout.scriptPubKey, scriptPubKey))
-        return error("SignNameSignature(): failed to remove name script prefix");
-
-    uint256 hash = SignatureHash(scriptPrereq + txout.scriptPubKey, txTo, nIn, nHashType);
+        return error("SignNameSignatureD(): failed to remove name script prefix");
 
     txnouttype whichType;
-    if (!Solver(*pwalletMain, scriptPubKey, hash, nHashType, txin.scriptSig, whichType))
+    if (!Solver(keystore, scriptPubKey, hash, nHashType, txin.scriptSig, whichType))
         return false;
 
-    txin.scriptSig = scriptPrereq + txin.scriptSig;
-
     // Test solution
-    if (scriptPrereq.empty())
-        if (!VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
-            return false;
-
-    return true;
+    // return VerifyScript(txin.scriptSig, txout.scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, MutableTransactionSignatureChecker(&txTo, nIn), NULL, txTo.nVersion == NAMECOIN_TX_VERSION);
+    //!VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0))
+    return VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, STANDARD_SCRIPT_VERIFY_FLAGS, 0);
 }
+
+
+// bool SignNameSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
+// {
+//     assert(nIn < txTo.vin.size());
+//     CTxIn& txin = txTo.vin[nIn];
+//     assert(txin.prevout.n < txFrom.vout.size());
+//     const CTxOut& txout = txFrom.vout[txin.prevout.n];
+
+//     // Leave out the signature from the hash, since a signature can't sign itself.
+//     // The checksig op will also drop the signatures from its hash.
+
+//     uint256 hash = SignatureHash(txout.scriptPubKey, txTo, nIn, nHashType);
+
+//     CScript scriptPubKey;
+//     if (!RemoveNameScriptPrefix(txout.scriptPubKey, scriptPubKey))
+//         return error("SignNameSignature(): failed to remove name script prefix");
+
+//     txnouttype whichType;
+//     if (!Solver(keystore, scriptPubKey, hash, nHashType, txin.scriptSig, whichType))
+//         return false;
+
+//     // Test solution
+//     return VerifyScript(txin.scriptSig, txout.scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, MutableTransactionSignatureChecker(&txTo, nIn), NULL, txTo.nVersion == NAMECOIN_TX_VERSION);
+// }
 
 // Just like CreateTransaction, but with addition of having 1 input already addded.
 bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend, CWalletTx& wtxIn, int nTxOut, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, string& strFailReason, int32_t& nChangePos, const CCoinControl* coinControl)
@@ -383,7 +457,7 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
                 {
                     if (coin.first == &wtxIn && coin.second == nTxOut)
                     {
-                        if (!SignNameSignature(*coin.first, wtxNew, nIn++))
+                        if (!SignNameSignatureD(*pwalletMain, *coin.first, wtxNew, nIn++))
                         {
                             strFailReason = _("Signing name input failed");
                             return false;
@@ -564,6 +638,7 @@ bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti,
 bool CNamecoinHooks::IsNameFeeEnough(CTxDB& txdb, const CTransaction &tx)
 {
     if (tx.nVersion != NAMECOIN_TX_VERSION)
+        printf('IsNameFeeEnough() Not Name TX Version, Returning False');
         return false;
 
     NameTxInfo nti;
@@ -793,8 +868,8 @@ Value sendtoname(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
 
     Object res;
-    res.push_back(Pair("sending to", address.ToString()));
-    res.push_back(Pair("transaction", wtx.GetHash().GetHex()));
+    res.push_back(Pair("SENTTO", address.ToString()));
+    res.push_back(Pair("TX", wtx.GetHash().GetHex()));
     return res;
 }
 
@@ -1305,9 +1380,9 @@ Value name_new(const Array& params, bool fHelp)
         throw runtime_error(
                 "name_new <name> <value> <days> [address] [valueAsFilepath]\n"
                 "Creates new key->value pair which expires after specified number of days.\n"
-                "[address] does not currently work but will be added in the future\n"
+                "[address] to register the name to\n"
                 "If [valueAsFilepath] is non-zero it will interpret <value> as a filepath and try to write file contents in binary format\n"
-                "Cost is 1 D - 0.9 To TX Fees and 0.1 To Name Registration."
+                "Cost is 0.9 D To TX Fees and 0.01 To Name Registration."
                 + HelpRequiringPassphrase());
 
     if (!IsSynchronized())
@@ -1316,6 +1391,9 @@ Value name_new(const Array& params, bool fHelp)
     vector<unsigned char> vchName = vchFromValue(params[0]);
     vector<unsigned char> vchValue = vchFromValue(params[1]);
     int nRentalDays = params[2].get_int();
+    string strAddress = "";
+    if (params.size() == 4)
+        string strAddress = params[3].get_str();
 
     bool fValueAsFilepath = false;
     if (params.size() > 4)
@@ -1340,7 +1418,7 @@ Value name_new(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to read file");
     }
 
-    NameTxReturn ret = name_new(vchName, vchValue, nRentalDays);
+    NameTxReturn ret = name_new(vchName, vchValue, nRentalDays, strAddress);
     if (!ret.ok)
         throw JSONRPCError(ret.err_code, ret.err_msg);
     return ret.hex.GetHex();
@@ -1348,7 +1426,7 @@ Value name_new(const Array& params, bool fHelp)
 
 NameTxReturn name_new(const vector<unsigned char> &vchName,
               const vector<unsigned char> &vchValue,
-              const int nRentalDays)
+              const int nRentalDays, string strAddress)
 {
     NameTxReturn ret;
     ret.err_code = RPC_INTERNAL_ERROR; //default value
@@ -1362,7 +1440,7 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
 
     //wtx.mapValue["comment"] = "New Name";
     std::string sNarr = "";
-    wtx.mapValue["to"] = "DDNS";
+    //wtx.mapValue["to"] = "DDNS";
 
     stringstream ss;
     CScript scriptPubKey;
@@ -1385,28 +1463,82 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
             return ret;
         }
 
-        CPubKey vchPubKey;
-        if (!pwalletMain->GetKeyFromPool(vchPubKey, true))
+        // CPubKey vchPubKey;
+        // if (!pwalletMain->GetKeyFromPool(vchPubKey, true))
+        // {
+        //     ret.err_msg = "failed to get key from pool";
+        //     return ret;
+        // }
+        // scriptPubKey.SetDestination(vchPubKey.GetID());
+
+        // grab last tx in name chain and check if it can be spent by us
+        CWalletTx wtxIn = CWalletTx();
+        CNameDB dbName("r");
+        CTransaction prevTx;
+        if (GetLastTxOfName(dbName, vchName, prevTx))
         {
-            ret.err_msg = "failed to get key from pool";
+            ret.err_msg = "Found D Name TX with this name already.";
             return ret;
         }
-        scriptPubKey.SetDestination(vchPubKey.GetID());
+
+        uint256 wtxInHash = prevTx.GetHash();
+        if (pwalletMain->mapWallet.count(wtxInHash))
+        {
+            ret.err_msg = "This D Name TX is in your wallet: " + wtxInHash.GetHex();
+            return ret;
+        }
+
+        wtxIn = pwalletMain->mapWallet[wtxInHash];
+        // int nTxOut = IndexOfNameOutput(wtxIn);
+
+        // if (::IsMine(*pwalletMain, wtxIn.vout[nTxOut].scriptPubKey) != ISMINE_SPENDABLE)
+        // {
+        //     ret.err_msg = "This D Name TX is not yours or is not spendable: " + wtxInHash.GetHex();
+        //     return ret;
+        // }
 
         CScript nameScript;
         if (!createNameScript(nameScript, vchName, vchValue, nRentalDays, OP_NAME_NEW, ret.err_msg))
             return ret;
 
+        // add destination to namescript
+        if (strAddress != "")
+        {
+            CBitcoinAddress address(strAddress);
+            if (!address.IsValid())
+            {
+                ret.err_code = RPC_INVALID_ADDRESS_OR_KEY;
+                ret.err_msg = "Denarius address is invalid";
+                return ret;
+            }
+            scriptPubKey = GetScriptForDestination(address.Get());
+        } else {
+            CPubKey vchPubKey;
+            if(!pwalletMain->GetKeyFromPool(vchPubKey))
+            {
+                ret.err_msg = "failed to get key from pool";
+                return ret;
+            }
+            scriptPubKey = GetScriptForDestination(vchPubKey.GetID());
+        }
+
         nameScript += scriptPubKey;
 		//std::string strError = "CreateNameTransaction() failed.";
         CReserveKey reservekey(pwalletMain);
         int64_t nFeeRequired;
+
+        // CBitcoinAddress address = CBitcoinAddress(vchPubKey.GetID());
+        // nameScript.SetDestination(address);
 		
-        int64_t prevFee = nTransactionFee;
-        nTransactionFee = GetNameOpFee(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
-        std::string strError = pwalletMain->SendMoney(nameScript, CENT, sNarr, wtx, false);
+        //int64_t prevFee = nTransactionFee;
+        //nTransactionFee = GetNameOpFee(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
+        //std::string strError = pwalletMain->SendMoney(nameScript, CENT, sNarr, wtx, false);
+
+        CAmount nameFee = GetNameOpFee2(pindexBest, nRentalDays, OP_NAME_NEW, vchName, vchValue);
+        SendName(nameScript, MIN_TXOUT_AMOUNT, wtx, wtxIn, nameFee);
+        // std::string strError = pwalletMain->SendMoneyToDestination(address.Get(), CENT, sNarr, wtx);
         //string strError = pwalletMain->CreateTransaction(nameScript, CENT, sNarr, wtx, reservekey, nFeeRequired, nullptr);
-        nTransactionFee = prevFee;
+        //nTransactionFee = prevFee;
 
         // if (!pwalletMain->CreateTransaction(nameScript, CENT, sNarr, wtx, reservekey, nFeeRequired, nullptr)) {
         //     if (CENT + nFeeRequired > pwalletMain->GetBalance())
@@ -1417,13 +1549,13 @@ NameTxReturn name_new(const vector<unsigned char> &vchName,
         // if (!pwalletMain->CommitTransaction(wtx, reservekey))
         //     throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
         
-        // return ret;
-        if (strError != "")
-        {
-            ret.err_code = RPC_WALLET_ERROR;
-            ret.err_msg = strError;
-            return ret;
-        }
+
+        // if (strError != "")
+        // {
+        //     ret.err_code = RPC_WALLET_ERROR;
+        //     ret.err_msg = strError;
+        //     return ret;
+        // }
     }
 
     //success! collect info and return

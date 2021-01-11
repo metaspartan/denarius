@@ -992,6 +992,14 @@ bool AppInit2()
     };
     printf(" block index %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
+    //Create Denarius Name index - this must happen before ReacceptWalletTransactions()
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnameindex.dat";
+    extern void createNameIndexFile();
+    if (!filesystem::exists(nameindexfile)) {
+        createNameIndexFile();
+        printf("Created Denarius Name DB");
+    }
+
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
         PrintBlockTree();
@@ -1069,14 +1077,6 @@ bool AppInit2()
             strErrors << _("Error loading wallet.dat") << "\n";
         };
     };
-
-    //Create Denarius Name index - this must happen before ReacceptWalletTransactions()
-    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnameindex.dat";
-    extern void createNameIndexFile();
-    if (!filesystem::exists(nameindexfile)) {
-        createNameIndexFile();
-        printf("Created Denarius Name DB");
-    }
 
     if (GetBoolArg("-upgradewallet", fFirstRun))
     {

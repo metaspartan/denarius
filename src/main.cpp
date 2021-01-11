@@ -16,6 +16,7 @@
 #include "fortunastake.h"
 #include "spork.h"
 #include "smessage.h"
+#include "namecoin.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -41,6 +42,9 @@ set<pair<COutPoint, unsigned int> > setStakeSeen;
 CBigNum bnProofOfWorkLimit(~uint256(0) >> 20);      // "standard" scrypt target limit for proof of work, results with 0,000244140625 proof-of-work difficulty
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
+
+/** Fees smaller than this (in denarii) are considered zero fee (for relaying and mining) */
+// CFeeRate minRelayTxFee = CFeeRate(SUBCENT);
 
 // Block Variables
 
@@ -351,6 +355,27 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
 // CTransaction and CTxIndex
 //
 
+// CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), nLockTime(0) {}
+// CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime) {}
+
+// uint256 CMutableTransaction::GetHash() const
+// {
+//     return SerializeHash(*this);
+// }
+
+// void CTransaction::UpdateHash() const
+// {
+//     *const_cast<uint256*>(&hash) = SerializeHash(*this);
+// }
+
+// CTransaction::CTransaction() : hash(0), nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0) { }
+
+// CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime) {
+//     UpdateHash();
+// }
+
+
+
 bool CTransaction::ReadFromDisk(CTxDB& txdb, COutPoint prevout, CTxIndex& txindexRet)
 {
     SetNull();
@@ -429,7 +454,7 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
 
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
-    if (tx.nVersion > CTransaction::CURRENT_VERSION && tx.nVersion != ANON_TXN_VERSION) {
+    if (tx.nVersion > CTransaction::CURRENT_VERSION && tx.nVersion != ANON_TXN_VERSION && tx.nVersion != NAMECOIN_TX_VERSION) { //WIP
         reason = "version";
         return false;
     }
@@ -894,17 +919,13 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
     // ppcoin: coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
-
     
-#define STANDARD_TX_ONLY
-#ifdef STANDARD_TX_ONLY
-    bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
-
+    //bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
+    bool isNameTx = tx.nVersion == NAMECOIN_TX_VERSION;
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;
     if (!fTestNet && !IsStandardTx(tx, reason) && !isNameTx) //!IsStandardTx(tx, reason)
         return error("CTxMemPool::accept() : nonstandard transaction type");
-#endif
 
     // Do we already have it?
     uint256 hash = tx.GetHash();
@@ -964,11 +985,9 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
                 *pfMissingInputs = true;
             return false;
         }
-#ifdef STANDARD_TX_ONLY
             // Check for non-standard pay-to-script-hash in inputs
             if (!AreInputsStandard(tx, mapInputs) && !fTestNet && !isNameTx)
                 return error("CTxMemPool::accept() : nonstandard transaction input");
-#endif
 
             nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
@@ -999,7 +1018,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
 
             int64_t txMinFee = tx.GetMinFee(1000, feeMode, nSize);
 
-            if (nFees < txMinFee)
+            if (nFees < txMinFee && !isNameTx)
             {
                 return error("CTxMemPool::accept() : not enough fees %s, %" PRId64" < %" PRId64,
                              hash.ToString().c_str(),
@@ -1050,10 +1069,9 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
                 remove(*ptxOld);
             }
             addUnchecked(hash, tx);
+            //Add the TX to our Pending Names in Name DB
+            hooks->AddToPendingNames(tx);
         }
-
-        //Add the TX to our Pending Names in Name DB
-        hooks->AddToPendingNames(tx);
 
         ///// are we sure this is ok when loading transactions or restoring block txes
         // If updated, erase old tx from wallet

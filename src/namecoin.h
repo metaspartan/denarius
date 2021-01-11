@@ -2,6 +2,12 @@
 #include "txdb-leveldb.h"
 #include "denariusrpc.h"
 #include "base58.h"
+#include "main.h"
+#include "hooks.h"
+
+class CBitcoinAddress;
+class CKeyStore;
+struct NameIndexStats;
 
 static const int NAMECOIN_TX_VERSION = 0x0333; //0x0333 is initial version
 static const unsigned int MAX_NAME_LENGTH = 512;
@@ -10,7 +16,7 @@ static const int MAX_RENTAL_DAYS = 100*365; //100 years
 static const int OP_NAME_NEW = 0x01;
 static const int OP_NAME_UPDATE = 0x02;
 static const int OP_NAME_DELETE = 0x03;
-static const unsigned int NAMEINDEX_CHAIN_SIZE = 100;
+static const unsigned int NAMEINDEX_CHAIN_SIZE = 1000;
 
 static const int RELEASE_HEIGHT = 1<<16;
 
@@ -112,6 +118,7 @@ std::vector<unsigned char> vchFromString(const std::string &str);
 std::string nameFromOp(int op);
 
 int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const std::vector<unsigned char> &vchName, const std::vector<unsigned char> &vchValue);
+CAmount GetNameOpFee2(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const std::vector<unsigned char> &vchName, const std::vector<unsigned char> &vchValue);
 
 struct NameTxInfo
 {
@@ -140,6 +147,7 @@ bool DecodeNameTx(const CTransaction& tx, NameTxInfo& nti, bool checkValuesCorre
 void GetNameList(const std::vector<unsigned char> &vchNameUniq, std::map<std::vector<unsigned char>, NameTxInfo> &mapNames, std::map<std::vector<unsigned char>, NameTxInfo> &mapPending);
 bool GetNameValue(const std::vector<unsigned char> &vchName, std::vector<unsigned char> &vchValue, bool checkPending);
 
+bool SignNameSignatureD(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
 struct NameTxReturn
 {
      bool ok;
@@ -150,7 +158,7 @@ struct NameTxReturn
 };
 NameTxReturn name_new(const std::vector<unsigned char> &vchName,
               const std::vector<unsigned char> &vchValue,
-              const int nRentalDays);
+              const int nRentalDays, std::string strAddress);
 NameTxReturn name_update(const std::vector<unsigned char> &vchName,
               const std::vector<unsigned char> &vchValue,
               const int nRentalDays, std::string strAddress = "");

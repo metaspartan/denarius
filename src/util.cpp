@@ -8,7 +8,9 @@
 #include "strlcpy.h"
 #include "version.h"
 #include "state.h"
+#include "main.h"
 #include "ui_interface.h"
+#include "tinyformat.h"
 #include <boost/algorithm/string/join.hpp>
 
 // Work around clang compilation problem in Boost 1.46:

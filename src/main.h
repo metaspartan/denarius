@@ -58,6 +58,7 @@ class CNode;
 
 // General Denarius Block Values
 
+// extern CFeeRate minRelayTxFee;
 static const int LAST_POW_BLOCK = 3000000; // Block 3m Approx. 3 years of Proof of Work before Proof of Stake consensus kicks in
 static const int FAIR_LAUNCH_BLOCK = 210; // Last Block until full block reward starts
 static const unsigned int MAX_BLOCK_SIZE = 1000000; // 1MB block hard limit, double the size of Bitcoin
@@ -76,6 +77,7 @@ static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
 static const int64_t MIN_NAME_FEE = 90000000; // 0.9 D Name OP
 static const int64_t NAME_FEE = 10000000; // 0.1 D Name
+static const CAmount MIN_TXOUT_AMOUNT = NAME_FEE;
 static const int64_t MIN_TX_FEE_ANON = 10000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
 static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 D Denarius Max
@@ -274,6 +276,7 @@ public:
 
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
 
+//struct CMutableTransaction;
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -282,7 +285,7 @@ class CTransaction
 public:
     static const int CURRENT_VERSION=1;
     int nVersion;
-    unsigned int nTime;
+    unsigned int nTime; //Denarius TXs require nTime
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     unsigned int nLockTime;
@@ -295,6 +298,9 @@ public:
     {
         SetNull();
     }
+
+    /** Convert a CMutableTransaction into a CTransaction. */
+    //CTransaction(const CMutableTransaction &tx);
 
     IMPLEMENT_SERIALIZE
     (
@@ -548,7 +554,45 @@ public:
 };
 
 
+/** A mutable version of CTransaction. */
+// struct CMutableTransaction
+// {
+//     int32_t nVersion;
+//     uint32_t nTime;                    // Denarius: transaction timestamp
+//     std::vector<CTxIn> vin;
+//     std::vector<CTxOut> vout;
+//     uint32_t nLockTime;
 
+//     IMPLEMENT_SERIALIZE
+//     (
+//         //nSerSize += SerReadWrite(s, *(CTransaction*)this, nType, nVersion, ser_action); maybe?
+//         READWRITE(this->nVersion);
+//         nVersion = this->nVersion;
+//         READWRITE(nTime);
+//         READWRITE(vin);
+//         READWRITE(vout);
+//         READWRITE(nLockTime);
+//     )
+
+//     CMutableTransaction();
+//     CMutableTransaction(const CTransaction& tx);
+//     CMutableTransaction(int nVersion, unsigned int nTime, const std::vector<CTxIn> vin, const std::vector<CTxOut> vout, unsigned int nLockTime)
+//              : nVersion(nVersion), nTime(nTime), vin(vin), vout(vout), nLockTime(nLockTime)
+//     {
+//     }
+
+//     /** Compute the hash of this CMutableTransaction. This is computed on the
+//      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
+//      */
+//     uint256 GetHash() const;
+
+//     CAmount GetMinFee(size_t nBlockSize=1) const
+//     {
+//         CTransaction tmp(*this);
+//         size_t nBytes = ::GetSerializeSize(tmp, SER_NETWORK, PROTOCOL_VERSION);
+//         return ::GetMinFee(nBytes, nBlockSize);
+//     }
+// };
 
 
 /** A transaction with a merkle branch linking it to the block chain. */
