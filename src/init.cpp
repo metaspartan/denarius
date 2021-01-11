@@ -713,6 +713,7 @@ bool AppInit2()
         fprintf(stdout, "Denarius server starting\n");
 
     int64_t nStart;
+    int64_t nStart2;
 
     // SMSG_RELAY Node Enum
     if (fNoSmsg)
@@ -993,12 +994,17 @@ bool AppInit2()
     printf(" block index %15" PRId64"ms\n", GetTimeMillis() - nStart);
 
     //Create Denarius Name index - this must happen before ReacceptWalletTransactions()
-    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnameindex.dat";
+    uiInterface.InitMessage(_("Loading name index..."));
+    printf("Loading Denarius name index...\n");
+    nStart2 = GetTimeMillis();
     extern void createNameIndexFile();
+    filesystem::path nameindexfile = filesystem::path(GetDataDir()) / "dnameindex.dat";
     if (!filesystem::exists(nameindexfile)) {
         createNameIndexFile();
-        printf("Created Denarius Name DB");
+        printf("Created a new Denarius Name DB File\n");
     }
+    printf("Loaded Name DB %15" PRId64"ms\n", GetTimeMillis() - nStart2);
+
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
@@ -1337,7 +1343,7 @@ bool AppInit2()
         string localcf = GetArg("-ddnslocalcf", "");
         ddns = new DDns(bind_ip.c_str(), port,
         suffix.c_str(), allowed.c_str(), localcf.c_str(), verbose);
-        printf("Denarius DNS Server started on port 5333!\n");
+        printf("Denarius DNS Server started on %d!\n", port);
     }
 
     // ********************************************************* Step 12: finished

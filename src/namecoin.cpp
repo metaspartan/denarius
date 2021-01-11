@@ -1896,10 +1896,8 @@ void createNameIndexFile()
 {
     printf("Scanning Denarius's chain for names to create a fast index...\n");
 
-    // create empty nameindex.dat
-    {
-        CNameDB dbName("cr+");
-    }
+    // create empty dnameindex.dat
+    CNameDB dbName("cr+");
 
     // scan blockchain to fill dnameindex.dat
     CTxDB txdb("r");
@@ -1912,6 +1910,7 @@ void createNameIndexFile()
             pindex = pindex->pnext;
         }
     }
+    printf("Scanned Denarius for names successfully!\n");
 }
 
 // Check that the last entry in name history matches the given tx pos
