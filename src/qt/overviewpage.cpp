@@ -9,6 +9,7 @@
 #include "guiutil.h"
 #include "guiconstants.h"
 #include "marketbrowser.h"
+#include <curl/curl.h>
 
 #include <QAbstractItemDelegate>
 #include <QPainter>
@@ -20,10 +21,10 @@
 #define DECORATION_SIZE 36
 #define NUM_ITEMS 7
 
-const QString BaseURL = "http://denarius.io/dnrusd.php";
-const QString BaseURL2 = "http://denarius.io/dnrbtc.php";
-const QString BaseURL3 = "http://denarius.io/newsfeed.php";
-const QString BaseURL4 = "http://denarius.io/dnreur.php";
+const QString BaseURL = "https://denarius.io/dnrusd.php";
+const QString BaseURL2 = "https://denarius.io/dnrbtc.php";
+const QString BaseURL3 = "https://denarius.io/newsfeed.php";
+const QString BaseURL4 = "https://denarius.io/dnreur.php";
 double denariusx;
 double dnreurx;
 double dnrbtcx;
@@ -118,7 +119,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
 
     PriceRequest();
-	QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
+	//QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
 
 	//Refresh the Est. Balances and News automatically
@@ -149,74 +150,129 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
 void OverviewPage::PriceRequest()
 {
-	getRequest(BaseURL);
-	getRequest(BaseURL2);
-	getRequest(BaseURL3);
-  getRequest(BaseURL4);
+	getRequest1(BaseURL);
+	getRequest2(BaseURL2);
+	getRequest3(BaseURL3);
+    getRequest4(BaseURL4);
     //updateDisplayUnit(); //Segfault Fix
 }
 
-void OverviewPage::getRequest( const QString &urlString )
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
-    QUrl url ( urlString );
-    QNetworkRequest req ( url );
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8");
-    m_nam.get(req);
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
 }
 
-void OverviewPage::parseNetworkResponse(QNetworkReply *finished )
+void OverviewPage::getRequest1( const QString &urlString )
 {
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
 
-    QUrl what = finished->url();
+    curl = curl_easy_init();
+    if(curl) {
+      curl_easy_setopt(curl, CURLOPT_URL, urlString.toStdString().c_str());
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+      res = curl_easy_perform(curl);
+      if(res != CURLE_OK){
+            qWarning("curl_easy_perform() failed: \n");
+      }
+      curl_easy_cleanup(curl);
 
-    if ( finished->error() != QNetworkReply::NoError )
-    {
-        // A communication error has occurred
-        emit networkError( finished->error() );
-        return;
+      //std::cout << readBuffer << std::endl;
+
+      //qDebug(readBuffer);
+      //qDebug("cURL Request: %s", readBuffer.c_str());
+
+        QString denarius = QString::fromStdString(readBuffer);
+        denariusx = (denarius.toDouble());
+        denarius = QString::number(denariusx, 'f', 2);
+
+        dollarg = denarius;
     }
-
-if (what == BaseURL) // Denarius Price
-{
-
-    // QNetworkReply is a QIODevice. So we read from it just like it was a file
-    QString denarius = finished->readAll();
-    denariusx = (denarius.toDouble());
-    denarius = QString::number(denariusx, 'f', 2);
-
-	dollarg = denarius;
 }
-if (what == BaseURL2) // Denarius BTC Price
+
+void OverviewPage::getRequest2( const QString &urlString )
 {
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
 
-    // QNetworkReply is a QIODevice. So we read from it just like it was a file
-    QString dnrbtc = finished->readAll();
-    dnrbtcx = (dnrbtc.toDouble());
-    dnrbtc = QString::number(dnrbtcx, 'f', 8);
+    curl = curl_easy_init();
+    if(curl) {
+      curl_easy_setopt(curl, CURLOPT_URL, urlString.toStdString().c_str());
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+      res = curl_easy_perform(curl);
+      if(res != CURLE_OK){
+            qWarning("curl_easy_perform() failed: \n");
+      }
+      curl_easy_cleanup(curl);
 
-	bitcoing = dnrbtc;
+        QString dnrbtc = QString::fromStdString(readBuffer);
+        dnrbtcx = (dnrbtc.toDouble());
+        dnrbtc = QString::number(dnrbtcx, 'f', 8);
+
+        bitcoing = dnrbtc;
+    }
 }
-if (what == BaseURL3) // Denarius News Feed
+
+void OverviewPage::getRequest3( const QString &urlString )
 {
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
 
-    // QNetworkReply is a QIODevice. So we read from it just like it was a file
-    QString dnewsfeed = finished->readAll();
-    //dnewsfeedx = (dnewsfeed.toDouble());
-    //dnewsfeed = QString::number(dnewsfeedx, 'f', 8);
+    curl = curl_easy_init();
+    if(curl) {
+      curl_easy_setopt(curl, CURLOPT_URL, urlString.toStdString().c_str());
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+      res = curl_easy_perform(curl);
+      if(res != CURLE_OK){
+            qWarning("curl_easy_perform() failed: \n");
+      }
+      curl_easy_cleanup(curl);
 
-	dnrnewsfeed = dnewsfeed;
+
+        QString dnewsfeed = QString::fromStdString(readBuffer);
+        dnrnewsfeed = dnewsfeed;
+    }
 }
-if (what == BaseURL4) // Denarius EUR Price
+
+void OverviewPage::getRequest4( const QString &urlString )
 {
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
 
-    // QNetworkReply is a QIODevice. So we read from it just like it was a file
-    QString dnreur = finished->readAll();
-    dnreurx = (dnreur.toDouble());
-    dnreur = QString::number(dnreurx, 'f', 4);
+    curl = curl_easy_init();
+    if(curl) {
+      curl_easy_setopt(curl, CURLOPT_URL, urlString.toStdString().c_str());
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+      res = curl_easy_perform(curl);
+      if(res != CURLE_OK){
+            qWarning("curl_easy_perform() failed: \n");
+      }
+      curl_easy_cleanup(curl);
 
-	eurog = dnreur;
-}
-finished->deleteLater();
+      //std::cout << readBuffer << std::endl;
+
+      //qDebug(readBuffer);
+      //qDebug("cURL Request: %s", readBuffer.c_str());
+
+        QString dnreur = QString::fromStdString(readBuffer);
+        dnreurx = (dnreur.toDouble());
+        dnreur = QString::number(dnreurx, 'f', 4);
+
+        eurog = dnreur;
+    }
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
