@@ -1771,20 +1771,21 @@ bool createNameIndexFile()
     for (int nHeight=0; nHeight<=maxHeight; nHeight++)
     {
         CBlockIndex* pindex = nHeight;
+        printf("createNameIndex() Block Height: %d\n", nHeight);
         CBlock block;
         // if (!ReadBlockFromDisk(block, pindex))
         //     return error("createNameIndexFile() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
 
-        if(!block.ReadFromDisk(pindex, true)){
-            // Block not found on disk. This could be because we have the block
-            // header in our index but don't have the block (for example if a
-            // non-whitelisted node sends us an unrequested long chain of valid
-            // blocks, we add the headers to our index, but don't accept the
-            // block).
-		    return error("createNameIndexFile() ReadFromDisk Failed, block not found on disk at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
-	    }
+        // if(!block.ReadFromDisk(pindex, true)){
+        //     // Block not found on disk. This could be because we have the block
+        //     // header in our index but don't have the block (for example if a
+        //     // non-whitelisted node sends us an unrequested long chain of valid
+        //     // blocks, we add the headers to our index, but don't accept the
+        //     // block).
+		//     return error("createNameIndexFile() ReadFromDisk Failed, block not found on disk at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
+	    // }
 
-        block.ReadFromDisk(pindex, true);
+        // block.ReadFromDisk(pindex, true);
 
         // collect name tx from block
         vector<nameTempProxy> vName;
