@@ -19,6 +19,7 @@ static const int OP_NAME_DELETE = 0x03;
 static const unsigned int NAMEINDEX_CHAIN_SIZE = 1000;
 
 static const int RELEASE_HEIGHT = 1<<16;
+typedef std::vector<unsigned char> CNameVal;
 
 class CNameIndex
 {
@@ -26,23 +27,23 @@ public:
     CDiskTxPos txPos;
     int nHeight;
     int op;
-    std::vector<unsigned char> vchValue;
+    CNameVal value;
 
     CNameIndex() : nHeight(0), op(0) {}
 
-    CNameIndex(CDiskTxPos txPos, int nHeight, std::vector<unsigned char> vchValue) :
-        txPos(txPos), nHeight(nHeight), vchValue(vchValue) {}
+    CNameIndex(CDiskTxPos txPos, int nHeight, CNameVal value) :
+        txPos(txPos), nHeight(nHeight), value(value) {}
 
     IMPLEMENT_SERIALIZE
     (
         READWRITE(txPos);
         READWRITE(nHeight);
         READWRITE(op);
-        READWRITE(vchValue);
+        READWRITE(value);
     )
 };
 
-// CNameRecord is all the data that is saved (in nameindex.dat) with associated name
+// CNameRecord is all the data that is saved (in denariusnames.dat) with associated name
 class CNameRecord
 {
 public:
@@ -69,38 +70,40 @@ public:
 class CNameDB : public CDB
 {
 public:
-    CNameDB(const char* pszMode="r+") : CDB("dnameindex.dat", pszMode) {}
+    CNameDB(const char* pszMode="r+") : CDB("denariusnames.dat", pszMode) {}
 
-    bool WriteName(const std::vector<unsigned char>& name, const CNameRecord &rec)
+    bool WriteName(const CNameVal& name, const CNameRecord& rec)
     {
         return Write(make_pair(std::string("namei"), name), rec);
     }
 
-    bool ReadName(const std::vector<unsigned char>& name, CNameRecord &rec)
-    {
-        bool ret = Read(make_pair(std::string("namei"), name), rec);
-        int s = rec.vtxPos.size();
-        if (s > 0)
-            assert(s > rec.nLastActiveChainIndex);
-        return ret;
-    }
+    bool ReadName(const CNameVal& name, CNameRecord& rec);
 
-    bool ExistsName(const std::vector<unsigned char>& name)
+    // bool ReadName(const CNameVal& name, CNameRecord &rec)
+    // {
+    //     bool ret = Read(make_pair(std::string("namei"), name), rec);
+    //     int s = rec.vtxPos.size();
+    //     if (s > 0)
+    //         assert(s > rec.nLastActiveChainIndex);
+    //     return ret;
+    // }
+
+    bool ExistsName(const CNameVal& name)
     {
         return Exists(make_pair(std::string("namei"), name));
     }
 
-    bool EraseName(const std::vector<unsigned char>& name)
+    bool EraseName(const CNameVal& name)
     {
         return Erase(make_pair(std::string("namei"), name));
     }
 
     bool ScanNames(
-            const std::vector<unsigned char>& vchName,
+            const CNameVal& name,
             unsigned int nMax,
             std::vector<
                 std::pair<
-                    std::vector<unsigned char>,
+                    CNameVal,
                     std::pair<CNameIndex, int>
                 >
             >& nameScan
@@ -108,22 +111,23 @@ public:
     bool DumpToTextFile();
 };
 
-extern std::map<std::vector<unsigned char>, uint256> mapMyNames;
-extern std::map<std::vector<unsigned char>, std::set<uint256> > mapNamePending;
+// extern std::map<std::vector<unsigned char>, uint256> mapMyNames;
+extern std::map<CNameVal, std::set<uint256> > mapNamePending;
 
 int IndexOfNameOutput(const CTransaction& tx);
-bool GetNameCurrentAddress(const std::vector<unsigned char> &vchName, CBitcoinAddress &address, std::string &error);
-std::string stringFromVch(const std::vector<unsigned char> &vch);
-std::vector<unsigned char> vchFromString(const std::string &str);
-std::string nameFromOp(int op);
+bool GetNameCurrentAddress(const CNameVal& name, CBitcoinAddress &address, std::string &error);
 
-int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const std::vector<unsigned char> &vchName, const std::vector<unsigned char> &vchValue);
-CAmount GetNameOpFee2(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const std::vector<unsigned char> &vchName, const std::vector<unsigned char> &vchValue);
+std::string stringFromNameVal(const CNameVal& nameVal);
+CNameVal nameValFromString(const std::string& str);
+std::string stringFromOp(int op);
+
+int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const CNameVal& name, const CNameVal& value);
+CAmount GetNameOpFee2(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const CNameVal& name, const CNameVal& value);
 
 struct NameTxInfo
 {
-    std::vector<unsigned char> vchName;
-    std::vector<unsigned char> vchValue;
+    CNameVal name;
+    CNameVal value;
     int nRentalDays;
     int op;
     int nOut;
@@ -137,15 +141,18 @@ struct NameTxInfo
     int nExpiresAt;
 
     NameTxInfo(): nRentalDays(-1), op(-1), nOut(-1), fIsMine(false), nExpiresAt(-1) {}
-    NameTxInfo(std::vector<unsigned char> vchName1, std::vector<unsigned char> vchValue1, int nRentalDays1, int op1, int nOut1, std::string err_msg1):
-        vchName(vchName1), vchValue(vchValue1), nRentalDays(nRentalDays1), op(op1), nOut(nOut1), err_msg(err_msg1), fIsMine(false), nExpiresAt(-1) {}
+    NameTxInfo(CNameVal name, CNameVal value, int nRentalDays, int op, int nOut, std::string err_msg):
+        name(name), value(value), nRentalDays(nRentalDays), op(op), nOut(nOut), err_msg(err_msg), fIsMine(false), nExpiresAt(-1) {}
 };
 
-bool DecodeNameScript(const CScript& script, NameTxInfo& ret, bool checkValuesCorrectness = true, bool checkAddressAndIfIsMine = false);
-bool DecodeNameScript(const CScript& script, NameTxInfo& ret, CScript::const_iterator& pc, bool checkValuesCorrectness = true, bool checkAddressAndIfIsMine = false);
-bool DecodeNameTx(const CTransaction& tx, NameTxInfo& nti, bool checkValuesCorrectness = true, bool checkAddressAndIfIsMine = false);
-void GetNameList(const std::vector<unsigned char> &vchNameUniq, std::map<std::vector<unsigned char>, NameTxInfo> &mapNames, std::map<std::vector<unsigned char>, NameTxInfo> &mapPending);
-bool GetNameValue(const std::vector<unsigned char> &vchName, std::vector<unsigned char> &vchValue, bool checkPending);
+bool DecodeNameTx(const CTransaction& tx, NameTxInfo& nti, bool checkAddressAndIfIsMine = false);
+void GetNameList(const CNameVal& nameUniq, std::map<CNameVal, NameTxInfo> &mapNames, std::map<CNameVal, NameTxInfo> &mapPending);
+bool GetNameValue(const CNameVal& name, CNameVal& value);
+
+bool checkNameValues(NameTxInfo& ret);
+bool DecodeNameScript(const CScript& script, NameTxInfo& ret, CScript::const_iterator& pc);
+bool DecodeNameScript(const CScript& script, NameTxInfo& ret);
+bool RemoveNameScriptPrefix(const CScript& scriptIn, CScript& scriptOut);
 
 bool SignNameSignatureD(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
 struct NameTxReturn
@@ -156,19 +163,22 @@ struct NameTxReturn
      std::string address;
      uint256 hex;   // Transaction hash in hex
 };
-NameTxReturn name_new(const std::vector<unsigned char> &vchName,
-              const std::vector<unsigned char> &vchValue,
-              const int nRentalDays, std::string strAddress);
-NameTxReturn name_update(const std::vector<unsigned char> &vchName,
-              const std::vector<unsigned char> &vchValue,
-              const int nRentalDays, std::string strAddress = "");
-NameTxReturn name_delete(const std::vector<unsigned char> &vchName);
+
+NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, const int nRentalDays, const string strAddress, bool fValueAsFilepath = false);
+
+// NameTxReturn name_new(const std::vector<unsigned char> &vchName,
+//               const std::vector<unsigned char> &vchValue,
+//               const int nRentalDays, std::string strAddress);
+// NameTxReturn name_update(const std::vector<unsigned char> &vchName,
+//               const std::vector<unsigned char> &vchValue,
+//               const int nRentalDays, std::string strAddress = "");
+// NameTxReturn name_delete(const std::vector<unsigned char> &vchName);
 
 
 struct nameTempProxy
 {
     unsigned int nTime;
-    std::vector<unsigned char> vchName;
+    CNameVal name;
     int op;
     uint256 hash;
     CNameIndex ind;

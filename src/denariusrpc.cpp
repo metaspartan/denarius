@@ -405,6 +405,8 @@ static const CRPCCommand vRPCCommands[] =
     { "sendtoname",             &sendtoname,             false,  true },
     { "name_list",              &name_list,              false,  false },
     { "name_scan",              &name_scan,              false,  false },
+    { "name_mempool",           &name_mempool,           false,  false },
+    { "name_history",           &name_history,           false,  false },
     { "name_filter",            &name_filter,            false,  false },
     { "name_show",              &name_show,              false,  false },
     { "name_debug",             &name_debug,             false,  false },
