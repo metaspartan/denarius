@@ -2395,9 +2395,8 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fWriteNames)
     }
 
     // denarius: undo name transactions in reverse order
-    if (fWriteNames)
-        for (int i = vtx.size() - 1; i >= 0; i--)
-            hooks->DisconnectInputs(vtx[i]);
+    for (int i = vtx.size() - 1; i >= 0; i--)
+        hooks->DisconnectInputs(vtx[i]);
 
     // ppcoin: clean up wallet after disconnecting coinstake
     BOOST_FOREACH(CTransaction& tx, vtx)
@@ -2649,6 +2648,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         // pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
+        pos.nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
     //int64_t nTime1 = GetTimeMicros(); nTimeConnect += nTime1 - nTimeStart;

@@ -920,7 +920,7 @@ Value name_list(const Array& params, bool fHelp)
                 );
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Emercoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Denarius is downloading blocks...");
 
     CNameVal nameUniq;
     if (params.size() == 1)
@@ -1694,7 +1694,7 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
             if (!address.IsValid())
             {
                 ret.err_code = RPC_INVALID_ADDRESS_OR_KEY;
-                ret.err_msg = "emercoin address is invalid";
+                ret.err_msg = "Denarius address is invalid";
                 return ret;
             }
             scriptPubKey = GetScriptForDestination(address.Get());
