@@ -14,7 +14,7 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
 
-[![Snap Status](https://build.snapcraft.io/badge/carsenk/denarius.svg)](https://build.snapcraft.io/user/carsenk/denarius)
+[![Denarius Snapcraft](https://snapcraft.io/denarius/badge.svg)](https://snapcraft.io/denarius)
 
 ![Code Climate](https://codeclimate.com/github/carsenk/denarius/badges/gpa.svg)
 
