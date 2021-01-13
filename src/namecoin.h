@@ -18,7 +18,7 @@ static const int OP_NAME_UPDATE = 0x02;
 static const int OP_NAME_DELETE = 0x03;
 static const unsigned int NAMEINDEX_CHAIN_SIZE = 1000;
 
-static const int RELEASE_HEIGHT = 1<<16;
+static const int RELEASE_HEIGHT = 4146600; //Old Height: 65536
 typedef std::vector<unsigned char> CNameVal;
 
 class CNameIndex

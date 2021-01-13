@@ -717,7 +717,7 @@ bool CNameDB::ReadName(const CNameVal& name, CNameRecord& rec)
     int s = rec.vtxPos.size();
 
      // check if array index is out of array bounds
-    if (s > 0 && rec.nLastActiveChainIndex >= s)
+    if (s > 0 && rec.nLastActiveChainIndex >= s) //&& rec.nLastActiveChainIndex >= s
     {
         // delete nameindex and kill the application. nameindex should be recreated on next start
         boost::system::error_code err;
@@ -1621,7 +1621,7 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
     {
         LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    // wait until other name operation on this name are completed
+        // wait until other name operation on this name are completed
         if (mapNamePending.count(name) && mapNamePending[name].size())
         {
             ss << "there are " << mapNamePending[name].size() <<
@@ -1630,7 +1630,7 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
             return ret;
         }
 
-    // check if op can be aplied to name remaining time
+        // check if op can be aplied to name remaining time
         if (NameActive(name))
         {
             if (op == OP_NAME_NEW)
