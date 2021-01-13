@@ -9,6 +9,8 @@
 #include <string>
 #include <list>
 #include <map>
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 class CBlockIndex;
 
@@ -18,6 +20,17 @@ class CBlockIndex;
 
 #include "util.h"
 #include "checkpoints.h"
+
+// Denarius Building w/ Boost Support for 1.70.0+
+#if BOOST_VERSION >= 107000
+    #define GetIOService(s) ((boost::asio::io_context&)(s).get_executor().context())
+    #define GetIOServiceFromPtr(s) ((boost::asio::io_context&)(s->get_executor().context()))
+    typedef boost::asio::io_context ioContext;
+#else
+    #define GetIOService(s) ((s).get_io_service())
+    #define GetIOServiceFromPtr(s) ((s)->get_io_service())
+    typedef boost::asio::io_service ioContext;
+#endif
 
 // HTTP status codes
 enum HTTPStatusCode
