@@ -1834,6 +1834,9 @@ bool createNameIndexFile()
             pos.nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);  // set next tx position
         }
 
+        // execute name operations, if any
+        hooks->ConnectBlock(BlockReading, vName);
+
         if (BlockReading->pprev == NULL) { 
             assert(BlockReading); break; 
         }
@@ -1841,8 +1844,6 @@ bool createNameIndexFile()
         BlockReading = BlockReading->pprev;
 
         printf("nameindex finished at %d\n", nHeight);
-        // execute name operations, if any
-        hooks->ConnectBlock(BlockReading, vName);
     }
     return true;
 }
