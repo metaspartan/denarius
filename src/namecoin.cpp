@@ -116,7 +116,7 @@ bool CalculateExpiresAt(CNameRecord& nameRec)
         CTransaction tx;
         // if (!tx.ReadFromTDisk(nameRec.vtxPos[i].txPos)) //ReadFromTDisk
         //     return error("CalculateExpiresAt() : could not read tx from disk");
-        printf('found name');
+        //printf('found name');
 
         NameTxInfo nti;
         if (!DecodeNameTx(tx, nti))
