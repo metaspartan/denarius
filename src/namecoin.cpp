@@ -48,6 +48,23 @@ public:
     virtual bool DumpToTextFile();
 };
 
+bool CTransaction::ReadFromTDisk(const CDiskTxPos& postx)
+{
+    // if (!fTxIndex)
+    //     return false;
+
+    CAutoFile file(OpenBlockFile(postx.nFile, postx.nBlockPos, "rb"), SER_DISK, CLIENT_VERSION); //0
+    // CBlockHeader header;
+    try {
+        // file >> header;
+        fseek(file, postx.nTxPos, SEEK_CUR);
+        file >> *this;
+    } catch (std::exception& e) {
+        return error("%s() : deserialize or I/O error\n%s", __PRETTY_FUNCTION__, e.what());
+    }
+    return true;
+}
+
 CNameVal nameValFromValue(const Value& value) {
     string strName = value.get_str();
     unsigned char *strbeg = (unsigned char*)strName.c_str();
@@ -97,14 +114,15 @@ bool CalculateExpiresAt(CNameRecord& nameRec)
     for(unsigned int i = nameRec.nLastActiveChainIndex; i < nameRec.vtxPos.size(); i++)
     {
         CTransaction tx;
-        if (!tx.ReadFromDisk(nameRec.vtxPos[i].txPos))
-            return error("CalculateExpiresAt() : could not read tx from disk");
+        // if (!tx.ReadFromTDisk(nameRec.vtxPos[i].txPos)) //ReadFromTDisk
+        //     return error("CalculateExpiresAt() : could not read tx from disk");
+        printf('found name');
 
         NameTxInfo nti;
         if (!DecodeNameTx(tx, nti))
             return error("CalculateExpiresAt() : %s is not namecoin tx, this should never happen", tx.GetHash().GetHex().c_str());
 
-        sum += nti.nRentalDays * 175; //days to blocks. 175 is average number of blocks per day
+        sum += nti.nRentalDays * 2880; //days to blocks. 2880 is average number of blocks per day roughly (prev 175)
     }
 
     //limit to INT_MAX value
@@ -741,7 +759,7 @@ bool IsNameFeeEnough(const CTransaction& tx, const NameTxInfo& nti, const CBlock
     //LogPrintf("IsNameFeeEnough(): pindexBlock->nHeight = %d, op = %s, nameSize = %lu, valueSize = %lu, nRentalDays = %d, txFee = %"PRI64d"\n",
     //       lastPoW->nHeight, nameFromOp(nti.op), nti.name.size(), nti.value.size(), nti.nRentalDays, txFee);
     bool txFeePass = false;
-    for (int i = 1; i <= 10000; i++)
+    for (int i = 1; i <= 10000; i++) //Original 10, changed to 10,000 PoW Blocks
     {
         CAmount netFee = GetNameOpFee(lastPoW, nti.nRentalDays, nti.op, nti.name, nti.value);
         //LogPrintf("                 : netFee = %"PRI64d", lastPoW->nHeight = %d\n", netFee, lastPoW->nHeight);
@@ -798,7 +816,7 @@ bool GetFirstTxOfName(CNameDB& dbName, const CNameVal& name, CTransaction& tx)
         return false;
     CNameIndex& txPos = nameRec.vtxPos[nameRec.nLastActiveChainIndex];
 
-    if (!tx.ReadFromDisk(txPos.txPos))
+    if (!tx.ReadFromTDisk(txPos.txPos))
         return error("GetFirstTxOfName() : could not read tx from disk");
     return true;
 }
@@ -812,7 +830,7 @@ bool GetLastTxOfName(CNameDB& dbName,  const CNameVal& name, CTransaction& tx, C
 
     CNameIndex& txPos = nameRec.vtxPos.back();
 
-    if (!tx.ReadFromDisk(txPos.txPos))
+    if (!tx.ReadFromTDisk(txPos.txPos))
         return error("GetLastTxOfName() : could not read tx from disk");
     return true;
 }
@@ -1074,7 +1092,7 @@ Value name_show(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_WALLET_ERROR, "no result returned");
 
         CTransaction tx;
-        if (!tx.ReadFromDisk(nameRec.vtxPos.back().txPos))
+        if (!tx.ReadFromTDisk(nameRec.vtxPos.back().txPos))
             throw JSONRPCError(RPC_WALLET_ERROR, "failed to read from from disk");
 
         if (!DecodeNameTx(tx, nti, true))
@@ -1128,7 +1146,7 @@ Value name_history (const Array& params, bool fHelp)
             "    \"address\": \"xxxx\",         (string) address to which transaction was sent"
             "    \"address_is_mine\": \"xxxx\", (string) shows \"true\" if this is your address, otherwise not visible"
             "    \"operation\": \"xxxx\",       (string) name operation that was performed in this transaction"
-            "    \"days_added\": xxxx,          (numeric) days added (1 day = 175 blocks) to name expiration time, not visible if 0"
+            "    \"days_added\": xxxx,          (numeric) days added (1 day = 2880 blocks) to name expiration time, not visible if 0"
             "    \"value\": xxxx,               (numeric) name value in this transaction; not visible when name_delete was used"
             "  }\n"
             "]\n"
@@ -1160,7 +1178,7 @@ Value name_history (const Array& params, bool fHelp)
     for (unsigned int i = fFullHistory ? 0 : nameRec.nLastActiveChainIndex; i < nameRec.vtxPos.size(); i++)
     {
         CTransaction tx;
-        if (!tx.ReadFromDisk(nameRec.vtxPos[i].txPos))
+        if (!tx.ReadFromTDisk(nameRec.vtxPos[i].txPos))
             throw JSONRPCError(RPC_DATABASE_ERROR, "could not read transaction from disk");
 
         NameTxInfo nti;
@@ -1201,7 +1219,7 @@ Value name_mempool (const Array& params, bool fHelp)
             "    \"address\": \"xxxx\",         (string) address to which transaction was sent"
             "    \"address_is_mine\": \"xxxx\", (string) shows \"true\" if this is your address, otherwise not visible"
             "    \"operation\": \"xxxx\",       (string) name operation that was performed in this transaction"
-            "    \"days_added\": xxxx,          (numeric) days added (1 day = 175 blocks) to name expiration time, not visible if 0"
+            "    \"days_added\": xxxx,          (numeric) days added (1 day = 2880 blocks) to name expiration time, not visible if 0"
             "    \"value\": xxxx,               (numeric) name value in this transaction; not visible when name_delete was used"
             "  }\n"
             "]\n"
@@ -1767,30 +1785,28 @@ bool createNameIndexFile()
     // if (!fTxIndex)
     //     return error("createNameIndexFile() : transaction index not available");
 
-    int maxHeight = pindexBest->nHeight;
-    for (int nHeight=0; nHeight<=maxHeight; nHeight++)
+    const CBlockIndex *BlockReading = pindexBest;
+    int blocksFound = 0;
+    int nHeight = 0;	
+
+    //int maxHeight = pindexBest->nHeight;
+    //for (int nHeight=0; nHeight<=maxHeight; nHeight++)
+    for (int b = 0; BlockReading && BlockReading->nHeight > RELEASE_HEIGHT; b++) //1 originally scan all, now scan from name release height
     {
-        CBlockIndex* pindex = nHeight;
-        printf("createNameIndex() %d\n", nHeight);
+        //CBlockIndex* pindex = nHeight;    
+        printf("createNameIndex() %d\n", b);
         CBlock block;
-        // if (!ReadBlockFromDisk(block, pindex))
-        //     return error("createNameIndexFile() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
 
-        // if(!block.ReadFromDisk(pindex, true)){
-        //     // Block not found on disk. This could be because we have the block
-        //     // header in our index but don't have the block (for example if a
-        //     // non-whitelisted node sends us an unrequested long chain of valid
-        //     // blocks, we add the headers to our index, but don't accept the
-        //     // block).
-		//     return error("createNameIndexFile() ReadFromDisk Failed, block not found on disk at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
-	    // }
-
-        // block.ReadFromDisk(pindex, true);
+        nHeight = BlockReading->nHeight;
+            
+        if(!block.ReadFromDisk(BlockReading, true)) {
+            continue;
+        }
 
         // collect name tx from block
         vector<nameTempProxy> vName;
         //CDiskTxPos pos(pindex->nFile, pindex->nBlockPos, nTxPos);
-        CDiskTxPos pos(pindex->nFile, pindex->nBlockPos, GetSizeOfCompactSize(block.vtx.size()));
+        CDiskTxPos pos(BlockReading->nFile, BlockReading->nBlockPos, GetSizeOfCompactSize(block.vtx.size()));
         //CDiskTxPos pos(pindex->nBlockPos, GetSizeOfCompactSize(block.vtx.size())); // start position
         for (unsigned int i=0; i<block.vtx.size(); i++)
         {
@@ -1814,12 +1830,19 @@ bool createNameIndexFile()
             }
             CAmount fee = input - tx.GetValueOut();
 
-            hooks->CheckInputs(tx, pindex, vName, pos, fee);                    // collect valid name tx to vName
+            hooks->CheckInputs(tx, BlockReading, vName, pos, fee);                    // collect valid name tx to vName
             pos.nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);  // set next tx position
         }
 
+        if (BlockReading->pprev == NULL) { 
+            assert(BlockReading); break; 
+        }
+
+        BlockReading = BlockReading->pprev;
+
+        printf("nameindex finished at %d\n", nHeight);
         // execute name operations, if any
-        hooks->ConnectBlock(pindex, vName);
+        hooks->ConnectBlock(BlockReading, vName);
     }
     return true;
 }
@@ -1947,7 +1970,7 @@ bool CNamecoinHooks::CheckInputs(const CTransaction& tx, const CBlockIndex* pind
     if (!nameRec.vtxPos.empty() && !nameRec.deleted())
     {
         CTransaction lastKnownNameTx;
-        if (!lastKnownNameTx.ReadFromDisk(nameRec.vtxPos.back().txPos))
+        if (!lastKnownNameTx.ReadFromTDisk(nameRec.vtxPos.back().txPos))
             return error("CheckInputsHook() : failed to read from name DB for %s", info.c_str());
         uint256 lasthash = lastKnownNameTx.GetHash();
         if (!DecodeNameTx(lastKnownNameTx, prev_nti))
@@ -2058,7 +2081,7 @@ bool CNamecoinHooks::DisconnectInputs(const CTransaction& tx)
         {
             // check if tx matches last tx in denariusnames.dat
             CTransaction lastTx;
-            lastTx.ReadFromDisk(nameRec.vtxPos.back().txPos);
+            lastTx.ReadFromTDisk(nameRec.vtxPos.back().txPos);
             try {
                 assert(lastTx.GetHash() == tx.GetHash());
             } catch (std::exception &e) {
