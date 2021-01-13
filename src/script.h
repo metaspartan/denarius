@@ -539,8 +539,9 @@ protected:
         }
         else
         {
-            CBigNum bn(n);
-            *this << bn.getvch();
+            // CBigNum bn(n);
+            // *this << bn.getvch();
+            *this << CScriptNum::serialize(n);
         }
         return *this;
     }
@@ -553,8 +554,9 @@ protected:
         }
         else
         {
-            CBigNum bn(n);
-            *this << bn.getvch();
+            // CBigNum bn(n);
+            // *this << bn.getvch();
+            *this << CScriptNum::serialize(n);
         }
         return *this;
     }
