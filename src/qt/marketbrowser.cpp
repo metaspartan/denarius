@@ -43,7 +43,7 @@ MarketBrowser::MarketBrowser(QWidget *parent) :
     setFixedSize(400, 420);
 
 
-requests();
+requests(); //Segfaults 20.04/18.04
 //QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 connect(ui->startButton, SIGNAL(pressed()), this, SLOT( requests()));
 connect(ui->egal, SIGNAL(pressed()), this, SLOT( update()));

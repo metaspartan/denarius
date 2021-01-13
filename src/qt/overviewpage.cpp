@@ -118,7 +118,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
 
 
-    PriceRequest();
+    PriceRequest(); //Segfault 20.04/18.04
 	//QObject::connect(&m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 	connect(ui->refreshButton, SIGNAL(pressed()), this, SLOT( PriceRequest()));
 

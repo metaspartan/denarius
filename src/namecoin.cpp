@@ -1771,7 +1771,7 @@ bool createNameIndexFile()
     for (int nHeight=0; nHeight<=maxHeight; nHeight++)
     {
         CBlockIndex* pindex = nHeight;
-        printf("createNameIndex() Block Height: %d\n", nHeight);
+        printf("createNameIndex() %d\n", nHeight);
         CBlock block;
         // if (!ReadBlockFromDisk(block, pindex))
         //     return error("createNameIndexFile() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());

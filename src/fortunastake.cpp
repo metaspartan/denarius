@@ -1445,7 +1445,7 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
     // - update is called from GetForunstakeRanks which is called with new pindex, or pindexBest
     // we only want to update this on a reorg
     if (force) {
-    LOCK(cs_fortunastakes);
+        LOCK(cs_fortunastakes);
 
         // clear existing pay data
         BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
@@ -1498,7 +1498,7 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
     }
     if (fDebug) printf("Calculating payrates (%d ms)\n",GetTimeMillis() - nStart);
 
-    // do pay rate loops
+    // do pay rate loops, already do this in connectblock()
     BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
     {
         mn.SetPayRate(pindex->nHeight);

@@ -3029,7 +3029,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
     vector<nameTempProxy> vName;
     for (unsigned int i=0; i<vtx.size(); i++)
     {
-        printf("ConnectBlock() CheckInputs() for Name Index\n");
+        if (fDebug) printf("ConnectBlock() for Name Index\n");
         const CTransaction &tx = vtx[i];
         if (!tx.IsCoinBase())
             hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
@@ -3111,7 +3111,6 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
         SyncWithWallets(tx, this, true);
 
     // add names to denariusnames.dat
-    printf('ConnectBlock() Connected Block with Name Indexing\n');
     hooks->ConnectBlock(pindex, vName);
 
     // update the UI about the new block
