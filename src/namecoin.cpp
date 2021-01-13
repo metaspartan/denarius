@@ -1670,11 +1670,11 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
             wtxIn = pwalletMain->mapWallet[wtxInHash];
             int nTxOut = IndexOfNameOutput(wtxIn);
 
-            if (::IsMine(*pwalletMain, wtxIn.vout[nTxOut].scriptPubKey) != ISMINE_SPENDABLE)
-            {
-                ret.err_msg = "this name tx is not yours or is not spendable: " + wtxInHash.GetHex();
-                return ret;
-            }
+            // if (::IsMine(*pwalletMain, wtxIn.vout[nTxOut].scriptPubKey) != MINE_SPENDABLE)
+            // {
+            //     ret.err_msg = "this name tx is not yours or is not spendable: " + wtxInHash.GetHex();
+            //     return ret;
+            // }
         }
 
     // create namescript
