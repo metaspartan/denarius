@@ -539,9 +539,12 @@ protected:
         }
         else
         {
-            // CBigNum bn(n);
-            // *this << bn.getvch();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+            CBigNum bn(n);
+            *this << bn.getvch();
+#else
             *this << CScriptNum::serialize(n);
+#endif
         }
         return *this;
     }
@@ -554,9 +557,12 @@ protected:
         }
         else
         {
-            // CBigNum bn(n);
-            // *this << bn.getvch();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+            CBigNum bn(n);
+            *this << bn.getvch();
+#else
             *this << CScriptNum::serialize(n);
+#endif
         }
         return *this;
     }

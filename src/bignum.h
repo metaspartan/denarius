@@ -57,6 +57,9 @@ public:
 /** C++ wrapper for BIGNUM (OpenSSL bignum) */
 class CBigNum
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+#else
 protected:
     BIGNUM *bn;
 
@@ -64,37 +67,77 @@ protected:
     {
         bn = BN_new();
     }
+#endif
 public:
-    //BIGNUM* pbn;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    BIGNUM* pbn;
+#else
+
+#endif
 
     CBigNum()
     {
-        //this->pbn = BN_new();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        this->pbn = BN_new();
+#else
         init();
+#endif
     }
 
     CBigNum(const CBigNum& b)
     {
-        //this->pbn = BN_new();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        this->pbn = BN_new();
+        if (!BN_copy(this->pbn, b.pbn)) //this->pbn
+        {
+            BN_clear_free(this->pbn);
+            throw bignum_error("CBigNum::CBigNum(const CBigNum&) : BN_copy failed");
+        }
+#else
         init();
         if (!BN_copy(bn, &b)) //this->pbn
         {
             BN_clear_free(bn);
             throw bignum_error("CBigNum::CBigNum(const CBigNum&) : BN_copy failed");
         }
+#endif
     }
 
     CBigNum& operator=(const CBigNum& b)
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_copy(this->pbn, b.pbn))
+            throw bignum_error("CBigNum::operator= : BN_copy failed");
+        return (*this);
+#else
         if (!BN_copy(bn, &b))
             throw bignum_error("CBigNum::operator= : BN_copy failed");
         return (*this);
+#endif
     }
 
     ~CBigNum()
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_clear_free(this->pbn);
+#else   
         BN_clear_free(bn);
+#endif
     }
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    CBigNum(signed char n)        { this->pbn = BN_new(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(short n)              { this->pbn = BN_new(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(int n)                { this->pbn = BN_new(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(long n)               { this->pbn = BN_new(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(long long n)          { this->pbn = BN_new(); setint64(n); }
+    CBigNum(unsigned char n)      { this->pbn = BN_new(); setulong(n); }
+    CBigNum(unsigned short n)     { this->pbn = BN_new(); setulong(n); }
+    CBigNum(unsigned int n)       { this->pbn = BN_new(); setulong(n); }
+    CBigNum(unsigned long n)      { this->pbn = BN_new(); setulong(n); }
+    CBigNum(unsigned long long n) { this->pbn = BN_new(); setuint64(n); }
+    explicit CBigNum(uint256 n)   { this->pbn = BN_new(); setuint256(n); }
+#else
 
     BIGNUM *operator &() const
     {
@@ -113,6 +156,7 @@ public:
     CBigNum(unsigned long long n) { init(); setuint64(n); }
     //CBigNum(long long int n)      { init(); setuint64(n); }
     explicit CBigNum(uint256 n) { init(); setuint256(n); }
+#endif
 
     //CBigNum(char n) is not portable.  Use 'signed char' or 'unsigned char'.
     /* Old OpenSSL
@@ -131,8 +175,11 @@ public:
 
     explicit CBigNum(const std::vector<unsigned char>& vch)
     {
-        //this->pbn = BN_new();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        this->pbn = BN_new();
+#else
         init();
+#endif
         setvch(vch);
     }
 
@@ -144,10 +191,17 @@ public:
     static CBigNum randBignum(const CBigNum& range)
     {
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if(!BN_rand_range(ret.pbn, range.pbn)){
+            throw bignum_error("CBigNum:rand element : BN_rand_range failed");
+        }
+        return ret;
+#else
         if(!BN_rand_range(&ret, &range)){
             throw bignum_error("CBigNum:rand element : BN_rand_range failed");
         }
         return ret;
+#endif
     }
 
     /** Generates a cryptographically secure random k-bit number
@@ -157,11 +211,19 @@ public:
     static CBigNum RandKBitBigum(const uint32_t k)
     {
         CBigNum ret;
-        if(!BN_rand(&ret, k, -1, 0))
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if(!BN_rand(ret.pbn, k, -1, 0))
         {
             throw bignum_error("CBigNum:rand element : BN_rand failed");
         }
         return ret;
+#else
+        if(!BN_rand(&ret, k, -1, 0))
+        {
+            throw bignum_error("CBigNum:rand element : BN_rand failed");
+        }z
+        return ret;
+#endif
     }
 
     /**Returns the size in bits of the underlying bignum.
@@ -169,33 +231,58 @@ public:
      * @return the size
      */
     int bitSize() const{
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        return BN_num_bits(this->pbn);
+#else
         return BN_num_bits(bn);
+#endif
     }
 
 
     void setulong(unsigned long n)
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_set_word(this->pbn, n))
+            throw bignum_error("CBigNum conversion from unsigned long : BN_set_word failed");
+#else
         if (!BN_set_word(bn, n))
             throw bignum_error("CBigNum conversion from unsigned long : BN_set_word failed");
+#endif
     }
 
     unsigned long getulong() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        return BN_get_word(this->pbn);
+#else
         return BN_get_word(bn);
+#endif
     }
 
     unsigned int getuint() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        return BN_get_word(this->pbn);
+#else
         return BN_get_word(bn);
+#endif
     }
 
     int getint() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        unsigned long n = BN_get_word(this->pbn);
+        if (!BN_is_negative(this->pbn))
+            return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : n);
+        else
+            return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::min() : -(int)n);
+#else
         unsigned long n = BN_get_word(bn);
         if (!BN_is_negative(bn))
             return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : n);
         else
             return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::min() : -(int)n);
+#endif
     }
 
     void setint64(int64_t sn)
@@ -242,16 +329,28 @@ public:
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize) & 0xff;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_mpi2bn(pch, p - pch, this->pbn);
+#else
         BN_mpi2bn(pch, p - pch, bn);
+#endif
     }
 
     uint64_t getuint64()
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        unsigned int nSize = BN_bn2mpi(this->pbn, NULL);
+#else
         unsigned int nSize = BN_bn2mpi(bn, NULL);
+#endif
         if (nSize < 4)
             return 0;
         std::vector<unsigned char> vch(nSize);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_bn2mpi(this->pbn, &vch[0]);
+#else
         BN_bn2mpi(bn, &vch[0]);
+#endif
         if (vch.size() > 4)
             vch[4] &= 0x7f;
         uint64_t n = 0;
@@ -284,7 +383,11 @@ public:
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize) & 0xff;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_mpi2bn(pch, p - pch, this->pbn);
+#else
         BN_mpi2bn(pch, p - pch, bn);
+#endif
     }
 
     void setuint256(uint256 n)
@@ -312,16 +415,28 @@ public:
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize >> 0) & 0xff;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_mpi2bn(pch, p - pch, this->pbn);
+#else
         BN_mpi2bn(pch, p - pch, bn);
+#endif
     }
 
     uint256 getuint256() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        unsigned int nSize = BN_bn2mpi(this->pbn, NULL);
+#else
         unsigned int nSize = BN_bn2mpi(bn, NULL);
+#endif
         if (nSize < 4)
             return 0;
         std::vector<unsigned char> vch(nSize);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_bn2mpi(this->pbn, &vch[0]);
+#else
         BN_bn2mpi(bn, &vch[0]);
+#endif
         if (vch.size() > 4)
             vch[4] &= 0x7f;
         uint256 n = 0;
@@ -342,16 +457,28 @@ public:
         vch2[3] = (nSize >> 0) & 0xff;
         // swap data to big endian
         reverse_copy(vch.begin(), vch.end(), vch2.begin() + 4);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_mpi2bn(&vch2[0], vch2.size(), this->pbn);
+#else
         BN_mpi2bn(&vch2[0], vch2.size(), bn);
+#endif
     }
 
     std::vector<unsigned char> getvch() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        unsigned int nSize = BN_bn2mpi(this->pbn, NULL);
+#else
         unsigned int nSize = BN_bn2mpi(bn, NULL);
+#endif
         if (nSize <= 4)
             return std::vector<unsigned char>();
         std::vector<unsigned char> vch(nSize);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_bn2mpi(this->pbn, &vch[0]);
+#else
         BN_bn2mpi(bn, &vch[0]);
+#endif
         vch.erase(vch.begin(), vch.begin() + 4);
         reverse(vch.begin(), vch.end());
         return vch;
@@ -365,16 +492,28 @@ public:
         if (nSize >= 1) vch[4] = (nCompact >> 16) & 0xff;
         if (nSize >= 2) vch[5] = (nCompact >> 8) & 0xff;
         if (nSize >= 3) vch[6] = (nCompact >> 0) & 0xff;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_mpi2bn(&vch[0], vch.size(), this->pbn);
+#else
         BN_mpi2bn(&vch[0], vch.size(), bn);
+#endif
         return *this;
     }
 
     unsigned int GetCompact() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        unsigned int nSize = BN_bn2mpi(this->pbn, NULL);
+#else
         unsigned int nSize = BN_bn2mpi(bn, NULL);
+#endif
         std::vector<unsigned char> vch(nSize);
         nSize -= 4;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        BN_bn2mpi(this->pbn, &vch[0]);
+#else
         BN_bn2mpi(bn, &vch[0]);
+#endif
         unsigned int nCompact = nSize << 24;
         if (nSize >= 1) nCompact |= (vch[4] << 16);
         if (nSize >= 2) nCompact |= (vch[5] << 8);
@@ -414,6 +553,31 @@ public:
 
     std::string ToString(int nBase=10) const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        CAutoBN_CTX pctx;
+        CBigNum bnBase = nBase;
+        CBigNum bn0 = 0;
+        std::string str;
+        CBigNum bn = *this;
+        BN_set_negative(bn.pbn, false);
+        CBigNum dv;
+        CBigNum rem;
+        if (BN_cmp(bn.pbn, bn0.pbn) == 0)
+            return "0";
+        while (BN_cmp(bn.pbn, bn0.pbn) > 0)
+        {
+            if (!BN_div(dv.pbn, rem.pbn, bn.pbn, bnBase.pbn, pctx))
+                throw bignum_error("CBigNum::ToString() : BN_div failed");
+            bn = dv;
+            unsigned int c = rem.getulong();
+            str += "0123456789abcdef"[c];
+        }
+
+        if (BN_is_negative(this->pbn))
+            str += "-";
+        reverse(str.begin(), str.end());
+        return str;
+#else
         CAutoBN_CTX pctx;
         CBigNum bnBase = nBase;
         CBigNum bn0 = 0;
@@ -437,6 +601,7 @@ public:
             str += "-";
         reverse(str.begin(), str.end());
         return str;
+#endif
     }
 
     std::string GetHex() const
@@ -480,9 +645,15 @@ public:
     CBigNum pow(const CBigNum& e) const {
         CAutoBN_CTX pctx;
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_exp(ret.pbn, this->pbn, e.pbn, pctx))
+            throw bignum_error("CBigNum::pow : BN_exp failed");
+        return ret;
+#else
         if (!BN_exp(&ret, bn, &e, pctx))
             throw bignum_error("CBigNum::pow : BN_exp failed");
         return ret;
+#endif
     }
 
     /**
@@ -493,10 +664,17 @@ public:
     CBigNum mul_mod(const CBigNum& b, const CBigNum& m) const {
         CAutoBN_CTX pctx;
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_mod_mul(ret.pbn, this->pbn, b.pbn, m.pbn, pctx))
+            throw bignum_error("CBigNum::mul_mod : BN_mod_mul failed");
+
+        return ret;
+#else
         if (!BN_mod_mul(&ret, bn, &b, &m, pctx))
             throw bignum_error("CBigNum::mul_mod : BN_mod_mul failed");
 
         return ret;
+#endif
     }
 
     /**
@@ -511,6 +689,15 @@ public:
             // g^-x = (g^-1)^x
             CBigNum inv = this->inverse(m);
             CBigNum posE = e * -1;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+            if (!BN_mod_exp(ret.pbn, inv.pbn, posE.pbn, m.pbn, pctx))
+                throw bignum_error("CBigNum::pow_mod: BN_mod_exp failed on negative exponent");
+        } else
+            if (!BN_mod_exp(ret.pbn, this->pbn, e.pbn, m.pbn, pctx))
+                throw bignum_error("CBigNum::pow_mod : BN_mod_exp failed");
+
+        return ret;
+#else
             if (!BN_mod_exp(&ret, &inv, &posE, &m, pctx))
                 throw bignum_error("CBigNum::pow_mod: BN_mod_exp failed on negative exponent");
         } else
@@ -518,6 +705,7 @@ public:
                 throw bignum_error("CBigNum::pow_mod : BN_mod_exp failed");
 
         return ret;
+#endif
     }
 
     /**
@@ -529,9 +717,15 @@ public:
     CBigNum inverse(const CBigNum& m) const {
         CAutoBN_CTX pctx;
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_mod_inverse(ret.pbn, this->pbn, m.pbn, pctx))
+            throw bignum_error("CBigNum::inverse*= :BN_mod_inverse");
+        return ret;
+#else
         if (!BN_mod_inverse(&ret, bn, &m, pctx))
             throw bignum_error("CBigNum::inverse*= :BN_mod_inverse");
         return ret;
+#endif
     }
 
     /**
@@ -543,9 +737,15 @@ public:
     static CBigNum generatePrime(const unsigned int numBits, bool safe = false)
     {
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if(!BN_generate_prime_ex(ret.pbn, numBits, (safe == true), NULL, NULL, NULL))
+            throw bignum_error("CBigNum::generatePrime*= :BN_generate_prime_ex");
+        return ret;
+#else
         if(!BN_generate_prime_ex(&ret, numBits, (safe == true), NULL, NULL, NULL))
             throw bignum_error("CBigNum::generatePrime*= :BN_generate_prime_ex");
         return ret;
+#endif
     }
 
     /**
@@ -556,9 +756,15 @@ public:
     CBigNum gcd( const CBigNum& b) const{
         CAutoBN_CTX pctx;
         CBigNum ret;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_gcd(ret.pbn, this->pbn, b.pbn, pctx))
+            throw bignum_error("CBigNum::gcd*= :BN_gcd");
+        return ret;
+#else
         if (!BN_gcd(&ret, bn, &b, pctx))
             throw bignum_error("CBigNum::gcd*= :BN_gcd");
         return ret;
+#endif
     }
 
     /**
@@ -569,7 +775,11 @@ public:
     */
     bool isPrime(const int checks=BN_prime_checks) const {
         CAutoBN_CTX pctx;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        int ret = BN_is_prime_ex(this->pbn, checks, pctx, NULL);
+#else
         int ret = BN_is_prime_ex(bn, checks, pctx, NULL);
+#endif
         if (ret < 0) {
             throw bignum_error("CBigNum::isPrime :BN_is_prime");
         }
@@ -577,20 +787,34 @@ public:
     }
 
     bool isOne() const {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        return BN_is_one(this->pbn);
+#else
         return BN_is_one(bn);
+#endif
     }
 
 
     bool operator!() const
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        return BN_is_zero(this->pbn);
+#else
         return BN_is_zero(bn);
+#endif
     }
 
     CBigNum& operator+=(const CBigNum& b)
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_add(this->pbn, this->pbn, b.pbn))
+            throw bignum_error("CBigNum::operator+= : BN_add failed");
+        return *this;
+#else
         if (!BN_add(bn, bn, &b))
             throw bignum_error("CBigNum::operator+= : BN_add failed");
         return *this;
+#endif
     }
 
     CBigNum& operator-=(const CBigNum& b)
@@ -602,9 +826,15 @@ public:
     CBigNum& operator*=(const CBigNum& b)
     {
         CAutoBN_CTX pctx;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_mul(this->pbn, this->pbn, b.pbn, pctx))
+            throw bignum_error("CBigNum::operator*= : BN_mul failed");
+        return *this;
+#else
         if (!BN_mul(bn, bn, &b, pctx))
             throw bignum_error("CBigNum::operator*= : BN_mul failed");
         return *this;
+#endif
     }
 
     CBigNum& operator/=(const CBigNum& b)
@@ -621,9 +851,15 @@ public:
 
     CBigNum& operator<<=(unsigned int shift)
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_lshift(this->pbn, this->pbn, shift))
+            throw bignum_error("CBigNum:operator<<= : BN_lshift failed");
+        return *this;
+#else
         if (!BN_lshift(bn, bn, shift))
             throw bignum_error("CBigNum:operator<<= : BN_lshift failed");
         return *this;
+#endif
     }
 
     CBigNum& operator>>=(unsigned int shift)
@@ -632,6 +868,17 @@ public:
         //   if built on ubuntu 9.04 or 9.10, probably depends on version of OpenSSL
         CBigNum a = 1;
         a <<= shift;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (BN_cmp(a.pbn, this->pbn) > 0)
+        {
+            *this = 0;
+            return *this;
+        }
+
+        if (!BN_rshift(this->pbn, this->pbn, shift))
+            throw bignum_error("CBigNum:operator>>= : BN_rshift failed");
+        return *this;
+#else
         if (BN_cmp(&a, bn) > 0)
         {
             *this = 0;
@@ -641,15 +888,23 @@ public:
         if (!BN_rshift(bn, bn, shift))
             throw bignum_error("CBigNum:operator>>= : BN_rshift failed");
         return *this;
+#endif
     }
 
 
     CBigNum& operator++()
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        // prefix operator
+        if (!BN_add(this->pbn, this->pbn, BN_value_one()))
+            throw bignum_error("CBigNum::operator++ : BN_add failed");
+        return *this;
+#else
         // prefix operator
         if (!BN_add(bn, bn, BN_value_one()))
             throw bignum_error("CBigNum::operator++ : BN_add failed");
         return *this;
+#endif
     }
 
     const CBigNum operator++(int)
@@ -664,10 +919,17 @@ public:
     {
         // prefix operator
         CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+        if (!BN_sub(r.pbn, this->pbn, BN_value_one()))
+            throw bignum_error("CBigNum::operator-- : BN_sub failed");
+        *this = r;
+        return *this;
+#else
         if (!BN_sub(&r, bn, BN_value_one()))
             throw bignum_error("CBigNum::operator-- : BN_sub failed");
         *this = r;
         return *this;
+#endif
     }
 
     const CBigNum operator--(int)
@@ -691,59 +953,100 @@ public:
 inline const CBigNum operator+(const CBigNum& a, const CBigNum& b)
 {
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_add(r.pbn, a.pbn, b.pbn))
+        throw bignum_error("CBigNum::operator+ : BN_add failed");
+    return r;
+#else
     if (!BN_add(&r, &a, &b))
         throw bignum_error("CBigNum::operator+ : BN_add failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator-(const CBigNum& a, const CBigNum& b)
 {
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_sub(r.pbn, a.pbn, b.pbn))
+        throw bignum_error("CBigNum::operator- : BN_sub failed");
+    return r;
+#else
     if (!BN_sub(&r, &a, &b))
         throw bignum_error("CBigNum::operator- : BN_sub failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator-(const CBigNum& a)
 {
     CBigNum r(a);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    BN_set_negative(r.pbn, !BN_is_negative(r.pbn));
+    return r;
+#else
     BN_set_negative(&r, !BN_is_negative(&r));
     return r;
+#endif
 }
 
 inline const CBigNum operator*(const CBigNum& a, const CBigNum& b)
 {
     CAutoBN_CTX pctx;
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_mul(r.pbn, a.pbn, b.pbn, pctx))
+        throw bignum_error("CBigNum::operator* : BN_mul failed");
+    return r;
+#else
     if (!BN_mul(&r, &a, &b, pctx))
         throw bignum_error("CBigNum::operator* : BN_mul failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator/(const CBigNum& a, const CBigNum& b)
 {
     CAutoBN_CTX pctx;
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_div(r.pbn, NULL, a.pbn, b.pbn, pctx))
+        throw bignum_error("CBigNum::operator/ : BN_div failed");
+    return r;
+#else
     if (!BN_div(&r, NULL, &a, &b, pctx))
         throw bignum_error("CBigNum::operator/ : BN_div failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator%(const CBigNum& a, const CBigNum& b)
 {
     CAutoBN_CTX pctx;
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_nnmod(r.pbn, a.pbn, b.pbn, pctx))
+        throw bignum_error("CBigNum::operator% : BN_div failed");
+    return r;
+#else
     if (!BN_nnmod(&r, &a, &b, pctx))
         throw bignum_error("CBigNum::operator% : BN_div failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator<<(const CBigNum& a, unsigned int shift)
 {
     CBigNum r;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    if (!BN_lshift(r.pbn, a.pbn, shift))
+        throw bignum_error("CBigNum:operator<< : BN_lshift failed");
+    return r;
+#else
     if (!BN_lshift(&r, &a, shift))
         throw bignum_error("CBigNum:operator<< : BN_lshift failed");
     return r;
+#endif
 }
 
 inline const CBigNum operator>>(const CBigNum& a, unsigned int shift)
@@ -753,12 +1056,21 @@ inline const CBigNum operator>>(const CBigNum& a, unsigned int shift)
     return r;
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+inline bool operator==(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.pbn, b.pbn) == 0); }
+inline bool operator!=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.pbn, b.pbn) != 0); }
+inline bool operator<=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.pbn, b.pbn) <= 0); }
+inline bool operator>=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(a.pbn, b.pbn) >= 0); }
+inline bool operator<(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(a.pbn, b.pbn) < 0); }
+inline bool operator>(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(a.pbn, b.pbn) > 0); }
+#else
 inline bool operator==(const CBigNum& a, const CBigNum& b) { return (BN_cmp(&a, &b) == 0); }
 inline bool operator!=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(&a, &b) != 0); }
 inline bool operator<=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(&a, &b) <= 0); }
 inline bool operator>=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(&a, &b) >= 0); }
 inline bool operator<(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(&a, &b) < 0); }
 inline bool operator>(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(&a, &b) > 0); }
+#endif
 
 inline std::ostream& operator<<(std::ostream &strm, const CBigNum &b) { return strm << b.ToString(10); }
 
