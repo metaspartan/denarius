@@ -9,6 +9,7 @@
 #include <QWidget>
 #include <QObject>
 #include <QtNetwork/QtNetwork>
+#include <curl/curl.h>
 
 
 extern QString bitcoing;
@@ -34,18 +35,21 @@ public:
     void setModel(ClientModel *model);
 
 private:
-    void getRequest( const QString &url );
+    void getRequest1( const QString &url );
+    void getRequest2( const QString &url );
+    void getRequest3( const QString &url );
+    void getRequest4( const QString &url );
 
 signals:
-    void networkError( QNetworkReply::NetworkError err );
+    //void networkError( QNetworkReply::NetworkError err );
 
 public slots:
-    void parseNetworkResponse(QNetworkReply *finished );
+    //void parseNetworkResponse(QNetworkReply *finished );
     void requests();
     void update();
 
 private:
-    QNetworkAccessManager m_nam;
+    //QNetworkAccessManager m_nam;
     Ui::MarketBrowser *ui;
     ClientModel *model;
 

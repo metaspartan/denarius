@@ -58,6 +58,7 @@ class CNode;
 
 // General Denarius Block Values
 
+// extern CFeeRate minRelayTxFee;
 static const int LAST_POW_BLOCK = 3000000; // Block 3m Approx. 3 years of Proof of Work before Proof of Stake consensus kicks in
 static const int FAIR_LAUNCH_BLOCK = 210; // Last Block until full block reward starts
 static const unsigned int MAX_BLOCK_SIZE = 1000000; // 1MB block hard limit, double the size of Bitcoin
@@ -74,6 +75,9 @@ static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100; //Was 10k, lets
 static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750; //Default 750, Lets handle 1000 maybe?
 static const unsigned int MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
+static const int64_t MIN_NAME_FEE = 9000000; // 0.09 D Name OP Miner Fee
+static const int64_t NAME_FEE = 1000000; // 0.01 D Name
+static const CAmount MIN_TXOUT_AMOUNT = NAME_FEE;
 static const int64_t MIN_TX_FEE_ANON = 10000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
 static const int64_t MAX_MONEY = 10000000 * COIN; // 10,000,000 D Denarius Max
@@ -185,6 +189,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees);
 unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime);
 unsigned int ComputeMinStake(unsigned int nBase, int64_t nTime, unsigned int nBlockTime);
 int GetNumBlocksOfPeers();
+bool IsSynchronized();
 bool IsInitialBlockDownload();
 std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s=false);
@@ -271,6 +276,7 @@ public:
 
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
 
+//struct CMutableTransaction;
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -279,7 +285,7 @@ class CTransaction
 public:
     static const int CURRENT_VERSION=1;
     int nVersion;
-    unsigned int nTime;
+    unsigned int nTime; //Denarius TXs require nTime
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     unsigned int nLockTime;
@@ -292,6 +298,9 @@ public:
     {
         SetNull();
     }
+
+    /** Convert a CMutableTransaction into a CTransaction. */
+    //CTransaction(const CMutableTransaction &tx);
 
     IMPLEMENT_SERIALIZE
     (
@@ -431,6 +440,8 @@ public:
 
     int64_t GetMinFee(unsigned int nBlockSize=1, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
 
+    bool ReadFromTDisk(const CDiskTxPos& postx);
+
     bool ReadFromDisk(CDiskTxPos pos, FILE** pfileRet=NULL)
     {
         CAutoFile filein = CAutoFile(OpenBlockFile(pos.nFile, 0, pfileRet ? "rb+" : "rb"), SER_DISK, CLIENT_VERSION);
@@ -506,6 +517,7 @@ public:
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout, CTxIndex& txindexRet);
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout);
     bool ReadFromDisk(COutPoint prevout);
+
     bool DisconnectInputs(CTxDB& txdb);
 
     /** Fetch from memory and/or disk. inputsRet keys are transaction hashes.
@@ -538,14 +550,52 @@ public:
                        std::map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx,
                        const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags = STANDARD_SCRIPT_VERIFY_FLAGS, bool fValidateSig = true);
     bool CheckTransaction() const;
-    bool AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs=NULL);
+    bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true, bool* pfMissingInputs=NULL, bool fOnlyCheckWithoutAdding=false);
     bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
 
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
 };
 
 
+/** A mutable version of CTransaction. */
+// struct CMutableTransaction
+// {
+//     int32_t nVersion;
+//     uint32_t nTime;                    // Denarius: transaction timestamp
+//     std::vector<CTxIn> vin;
+//     std::vector<CTxOut> vout;
+//     uint32_t nLockTime;
 
+//     IMPLEMENT_SERIALIZE
+//     (
+//         //nSerSize += SerReadWrite(s, *(CTransaction*)this, nType, nVersion, ser_action); maybe?
+//         READWRITE(this->nVersion);
+//         nVersion = this->nVersion;
+//         READWRITE(nTime);
+//         READWRITE(vin);
+//         READWRITE(vout);
+//         READWRITE(nLockTime);
+//     )
+
+//     CMutableTransaction();
+//     CMutableTransaction(const CTransaction& tx);
+//     CMutableTransaction(int nVersion, unsigned int nTime, const std::vector<CTxIn> vin, const std::vector<CTxOut> vout, unsigned int nLockTime)
+//              : nVersion(nVersion), nTime(nTime), vin(vin), vout(vout), nLockTime(nLockTime)
+//     {
+//     }
+
+//     /** Compute the hash of this CMutableTransaction. This is computed on the
+//      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
+//      */
+//     uint256 GetHash() const;
+
+//     CAmount GetMinFee(size_t nBlockSize=1) const
+//     {
+//         CTransaction tmp(*this);
+//         size_t nBytes = ::GetSerializeSize(tmp, SER_NETWORK, PROTOCOL_VERSION);
+//         return ::GetMinFee(nBytes, nBlockSize);
+//     }
+// };
 
 
 /** A transaction with a merkle branch linking it to the block chain. */
@@ -933,8 +983,8 @@ public:
     }
 
 
-    bool DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex);
-    bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck=false);
+    bool DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fWriteNames = true);
+    bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck=false, bool fWriteNames = true);
     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
     bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);
     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProof);
@@ -950,7 +1000,8 @@ private:
 };
 
 
-
+// bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos);
+// bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex);
 
 
 
@@ -1495,6 +1546,7 @@ public:
 class CTxMemPool
 {
 private:
+    // CTransaction tx;
     unsigned int nTransactionsUpdated;
 public:
     mutable CCriticalSection cs;
@@ -1504,7 +1556,7 @@ public:
     std::map<std::vector<uint8_t>, CKeyImageSpent> mapKeyImage;
 
     bool accept(CTxDB& txdb, CTransaction &tx,
-                bool* pfMissingInputs);
+                bool fCheckInputs, bool* pfMissingInputs, bool fOnlyCheckWithoutAdding=false);
     bool addUnchecked(const uint256& hash, CTransaction &tx);
     bool remove(const CTransaction &tx, bool fRecursive = false);
     bool removeConflicts(const CTransaction &tx);

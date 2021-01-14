@@ -16,6 +16,7 @@
 #include "fortunastake.h"
 #include "spork.h"
 #include "smessage.h"
+#include "namecoin.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -41,6 +42,9 @@ set<pair<COutPoint, unsigned int> > setStakeSeen;
 CBigNum bnProofOfWorkLimit(~uint256(0) >> 20);      // "standard" scrypt target limit for proof of work, results with 0,000244140625 proof-of-work difficulty
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
+
+/** Fees smaller than this (in denarii) are considered zero fee (for relaying and mining) */
+// CFeeRate minRelayTxFee = CFeeRate(SUBCENT);
 
 // Block Variables
 
@@ -90,6 +94,8 @@ unsigned int nCoinCacheSize = 5000;
 extern enum Checkpoints::CPMode CheckpointsMode;
 
 std::set<uint256> setValidatedTx;
+
+CHooks* hooks; // This adds Denarius Name DB hooks which allow splicing of code inside standard Denarius functions.
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -349,6 +355,27 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
 // CTransaction and CTxIndex
 //
 
+// CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), nLockTime(0) {}
+// CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime) {}
+
+// uint256 CMutableTransaction::GetHash() const
+// {
+//     return SerializeHash(*this);
+// }
+
+// void CTransaction::UpdateHash() const
+// {
+//     *const_cast<uint256*>(&hash) = SerializeHash(*this);
+// }
+
+// CTransaction::CTransaction() : hash(0), nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0) { }
+
+// CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime) {
+//     UpdateHash();
+// }
+
+
+
 bool CTransaction::ReadFromDisk(CTxDB& txdb, COutPoint prevout, CTxIndex& txindexRet)
 {
     SetNull();
@@ -427,7 +454,7 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
 
 bool IsStandardTx(const CTransaction& tx, string& reason)
 {
-    if (tx.nVersion > CTransaction::CURRENT_VERSION && tx.nVersion != ANON_TXN_VERSION) {
+    if (tx.nVersion > CTransaction::CURRENT_VERSION && tx.nVersion != ANON_TXN_VERSION && tx.nVersion != NAMECOIN_TX_VERSION) { //WIP
         reason = "version";
         return false;
     }
@@ -830,7 +857,7 @@ bool CTransaction::CheckTransaction() const
 			}
 	}
 	*/
-
+    //return hooks->CheckTransaction(*this);
     return true;
 }
 
@@ -874,10 +901,11 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
     return nMinFee;
 }
 
-bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
-                        bool* pfMissingInputs)
+bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
+                        bool* pfMissingInputs, bool fOnlyCheckWithoutAdding)
 {
     AssertLockHeld(cs_main);
+    printf("CTxMemPool::accept, fCheckInputs = %d, fOnlyCheckWithoutAdding = %d\n", fCheckInputs, fOnlyCheckWithoutAdding);
     if (pfMissingInputs)
         *pfMissingInputs = false;
 
@@ -891,10 +919,12 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
     // ppcoin: coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
-
+    
+    //bool isNameTx = hooks->IsNameFeeEnough(txdb, tx); //accept name tx with correct fee.
+    bool isNameTx = tx.nVersion == NAMECOIN_TX_VERSION;
     // Rather not work on nonstandard transactions (unless -testnet)
     string reason;
-    if (!fTestNet && !IsStandardTx(tx, reason)) //!IsStandardTx(tx, reason)
+    if (!fTestNet && !IsStandardTx(tx, reason) && !isNameTx) //!IsStandardTx(tx, reason)
         return error("CTxMemPool::accept() : nonstandard transaction type");
 
     // Do we already have it?
@@ -955,9 +985,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
                 *pfMissingInputs = true;
             return false;
         }
-
             // Check for non-standard pay-to-script-hash in inputs
-            if (!AreInputsStandard(tx, mapInputs) && !fTestNet)
+            if (!AreInputsStandard(tx, mapInputs) && !fTestNet && !isNameTx)
                 return error("CTxMemPool::accept() : nonstandard transaction input");
 
             nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
@@ -989,7 +1018,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
 
             int64_t txMinFee = tx.GetMinFee(1000, feeMode, nSize);
 
-            if (nFees < txMinFee)
+            if (nFees < txMinFee && !isNameTx)
             {
                 return error("CTxMemPool::accept() : not enough fees %s, %" PRId64" < %" PRId64,
                              hash.ToString().c_str(),
@@ -1029,28 +1058,34 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
             };
         };
 
-    // Store transaction in memory
+    // Do not write to memory if read only mode.
+    if(!fOnlyCheckWithoutAdding)
     {
-        LOCK(cs);
-        if (ptxOld) {
-            printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
-            remove(*ptxOld);
+        // Store transaction in memory
+        {
+            LOCK(cs);
+            if (ptxOld) {
+                printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
+                remove(*ptxOld);
+            }
+            addUnchecked(hash, tx);
+            //Add the TX to our Pending Names in Name DB
+            hooks->AddToPendingNames(tx);
         }
-        addUnchecked(hash, tx);
+
+        ///// are we sure this is ok when loading transactions or restoring block txes
+        // If updated, erase old tx from wallet
+        if (ptxOld)
+            EraseFromWallets(ptxOld->GetHash());
+
+        printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     }
-
-    ///// are we sure this is ok when loading transactions or restoring block txes
-    // If updated, erase old tx from wallet
-    if (ptxOld)
-        EraseFromWallets(ptxOld->GetHash());
-
-    printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     return true;
 }
 
-bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool* pfMissingInputs)
+bool CTransaction::AcceptToMemoryPool(CTxDB& txdb,  bool fCheckInputs, bool* pfMissingInputs, bool fOnlyCheckWithoutAdding)
 {
-    return mempool.accept(txdb, *this, pfMissingInputs);
+    return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs, fOnlyCheckWithoutAdding);
 }
 
 bool AcceptableInputs(CTxMemPool& pool, const CTransaction &txo, bool fLimitFree,
@@ -1474,6 +1509,39 @@ bool TxnHashInSystem(CTxDB* ptxdb, uint256& txnHash)
 // CBlock and CBlockIndex
 //
 
+// bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
+// {
+//     block.SetNull();
+
+//     // Open history file to read
+//     CAutoFile filein(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION);
+//     if (filein.IsNull())
+//         return error("ReadBlockFromDisk : OpenBlockFile failed");
+
+//     // Read block
+//     try {
+//         filein >> block;
+//     }
+//     catch (std::exception &e) {
+//         return error("%s : Deserialize or I/O error - %s", __func__, e.what());
+//     }
+
+//     // Check the header
+//     if (block.IsProofOfWork() && !CheckProofOfWork(block.GetHash(), block.nBits))
+//         return error("ReadBlockFromDisk : Errors in block header");
+
+//     return true;
+// }
+
+// bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex)
+// {
+//     if (!ReadBlockFromDisk(block, pindex->nBlockPos))
+//         return false;
+//     if (block.GetHash() != pindex->GetBlockHash())
+//         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*) : GetHash() doesn't match index");
+//     return true;
+// }
+
 static CBlockIndex* pblockindexFBBHLast;
 CBlockIndex* FindBlockByHeight(int nHeight)
 {
@@ -1714,6 +1782,12 @@ int GetNumBlocksOfPeers()
     return std::max(cPeerBlockCounts.median(), Checkpoints::GetTotalBlocksEstimate());
 }
 
+bool IsSynchronized() {
+  static bool rc = false;
+  if(rc == false) rc = !IsInitialBlockDownload();
+  return rc;
+}
+
 bool IsInitialBlockDownload()
 {
     if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate() || nBestHeight < (GetNumBlocksOfPeers() - nCoinbaseMaturity*2))
@@ -1807,6 +1881,8 @@ void Misbehaving(NodeId pnode, int howmuch)
 
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
+    //hooks->DisconnectInputs(*this); //Disconnect Name DB Inputs
+
     // Relinquish previous transactions' spent pointers
     if (!IsCoinBase())
     {
@@ -2164,6 +2240,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     // ... both are false when called from CTransaction::AcceptToMemoryPool
     if (!IsCoinBase())
     {
+        // vector<CTransaction> vTxPrev;
+        // vector<CTxIndex> vTxindex;
         int64_t nValueIn = 0;
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
@@ -2253,7 +2331,15 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             {
                 mapTestPool[prevout.hash] = txindex;
             }
+            //Push txPrev and txindex to vTxPrev and VTxIndex
+            // vTxPrev.push_back(txPrev);
+            // vTxindex.push_back(txindex);
         }
+
+        //If it can't connect inputs return false to the Name DB
+        // if (!hooks->ConnectInputs(txdb, mapTestPool, *this, posThisTx, pindexBlock, fBlock, fMiner, flags)) {
+        //     return false;
+        // }
 
         if (nVersion == ANON_TXN_VERSION)
         {
@@ -2291,7 +2377,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     return true;
 }
 
-bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
+bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fWriteNames)
 {
     // Disconnect in reverse order
     for (int i = vtx.size()-1; i >= 0; i--)
@@ -2307,6 +2393,10 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
         if (!txdb.WriteBlockIndex(blockindexPrev))
             return error("DisconnectBlock() : WriteBlockIndex failed");
     }
+
+    // denarius: undo name transactions in reverse order
+    for (int i = vtx.size() - 1; i >= 0; i--)
+        hooks->DisconnectInputs(vtx[i]);
 
     // ppcoin: clean up wallet after disconnecting coinstake
     BOOST_FOREACH(CTransaction& tx, vtx)
@@ -2422,7 +2512,13 @@ void CBlock::RebuildAddressIndex(CTxDB& txdb)
     }
 }
 
-bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
+static int64_t nTimeVerify = 0;
+static int64_t nTimeConnect = 0;
+static int64_t nTimeIndex = 0;
+static int64_t nTimeCallbacks = 0;
+static int64_t nTimeTotal = 0;
+
+bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, bool fWriteNames)
 {
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (!CheckBlock(!fJustCheck, !fJustCheck, false))
@@ -2450,6 +2546,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     else
         nTxPos = pindex->nBlockPos + ::GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(vtx.size());
 
+    int64_t nTimeStart = GetTimeMicros();
     map<uint256, CTxIndex> mapQueuedChanges;
     int64_t nFees = 0;
     int64_t nValueIn = 0;
@@ -2457,8 +2554,18 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     int64_t nAmountBurned = 0;
     int64_t nStakeReward = 0;
     unsigned int nSigOps = 0;
-    BOOST_FOREACH(CTransaction& tx, vtx)
+
+    //DiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(vtx.size()));
+    CDiskTxPos pos(pindex->nFile, pindex->nBlockPos, nTxPos);
+    std::vector<std::pair<uint256, CDiskTxPos> > vPos;
+    vPos.reserve(vtx.size());
+
+    std::vector<CAmount> vFees (vtx.size(), 0);
+    
+    //BOOST_FOREACH(CTransaction& tx, vtx)
+    for (unsigned int i = 0; i < vtx.size(); i++)
     {
+        const CTransaction &tx = vtx[i];
         uint256 hashTx = tx.GetHash();
 
         // Do not allow blocks that contain transactions which 'overwrite' older transactions,
@@ -2526,8 +2633,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
               if(out.scriptPubKey.IsUnspendable())
                 nAmountBurned += out.nValue;
             }
-            if (!tx.IsCoinStake())
+            if (!tx.IsCoinStake()) {
+                vFees[i] = nTxValueIn - nTxValueOut;
                 nFees += nTxValueIn - nTxValueOut;
+            }
             if (tx.IsCoinStake())
                 nStakeReward = nTxValueOut - nTxValueIn;
 
@@ -2536,7 +2645,20 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         }
 
         mapQueuedChanges[hashTx] = CTxIndex(posThisTx, tx.vout.size());
+
+        vPos.push_back(std::make_pair(tx.GetHash(), pos));
+        // pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
+        pos.nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
+
+    //int64_t nTime1 = GetTimeMicros(); nTimeConnect += nTime1 - nTimeStart;
+    //LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)vtx.size(), 0.001 * (nTime1 - nTimeStart), 0.001 * (nTime1 - nTimeStart) / vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime1 - nTimeStart) / (nInputs-1), nTimeConnect * 0.000001);
+
+    // if (!control.Wait())
+    //     return state.DoS(100, false);
+    // int64_t nTime2 = GetTimeMicros(); nTimeVerify += nTime2 - nTimeStart;
+    // LogPrint("bench", "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs]\n", nInputs - 1, 0.001 * (nTime2 - nTimeStart), nInputs <= 1 ? 0 : 0.001 * (nTime2 - nTimeStart) / (nInputs-1), nTimeVerify * 0.000001);
+
 
     if (IsProofOfWork())
     {
@@ -2901,6 +3023,18 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
     pindex->nMoneySupply -= nAmountBurned;
     assert(pindex->nMoneySupply >= 0);
+
+    // denarius: collect valid name tx
+    // NOTE: tx.UpdateCoins should not affect this loop, probably...
+    vector<nameTempProxy> vName;
+    for (unsigned int i=0; i<vtx.size(); i++)
+    {
+        if (fDebug) printf("ConnectBlock() for Name Index\n");
+        const CTransaction &tx = vtx[i];
+        if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
+            hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
+    }
+
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
         return error("Connect() : WriteBlockIndex for pindex failed");
 
@@ -2971,6 +3105,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (!txdb.WriteBlockIndex(blockindexPrev))
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
+
+    // add names to denariusnames.dat
+    hooks->ConnectBlock(pindex, vName);
 
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)

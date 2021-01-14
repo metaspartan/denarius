@@ -216,6 +216,11 @@ Value listunspent(const Array& params, bool fHelp)
                 continue;
         }
 
+        // Ignore Denarius Name TxOut
+        if (hooks->IsNameTx(out.tx->nVersion) && hooks->IsNameScript(out.tx->vout[out.i].scriptPubKey)) {
+            continue;
+        }
+
         int64_t nValue = out.tx->vout[out.i].nValue;
         const CScript& pk = out.tx->vout[out.i].scriptPubKey;
         Object entry;

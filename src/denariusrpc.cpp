@@ -291,6 +291,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getreceivedbyaccount",   &getreceivedbyaccount,   false,  false },
     { "listreceivedbyaddress",  &listreceivedbyaddress,  false,  false },
     { "listreceivedbyaccount",  &listreceivedbyaccount,  false,  false },
+    { "deletetransaction",      &deletetransaction,      false,  false },
     { "backupwallet",           &backupwallet,           true,   false },
     { "keypoolrefill",          &keypoolrefill,          true,   false },
     { "walletpassphrase",       &walletpassphrase,       true,   false },
@@ -397,6 +398,18 @@ static const CRPCCommand vRPCCommands[] =
     { "jupitergetblock",      &jupitergetblock,          false,  false },
     { "jupitergetstat",       &jupitergetstat,           false,  false },
 
+    // Denarius Name Commands
+    { "name_new",               &name_new,               false,  true },
+    { "name_update",            &name_update,            false,  true },
+    { "name_delete",            &name_delete,            false,  true },
+    { "sendtoname",             &sendtoname,             false,  true },
+    { "name_list",              &name_list,              false,  false },
+    { "name_scan",              &name_scan,              false,  false },
+    { "name_mempool",           &name_mempool,           false,  false },
+    { "name_history",           &name_history,           false,  false },
+    { "name_filter",            &name_filter,            false,  false },
+    { "name_show",              &name_show,              false,  false },
+    { "name_debug",             &name_debug,             false,  false },
 
 
 };
@@ -690,7 +703,7 @@ public:
     }
     bool connect(const std::string& server, const std::string& port)
     {
-        ip::tcp::resolver resolver(stream.get_io_service());
+        ip::tcp::resolver resolver(GetIOService(stream));
         ip::tcp::resolver::query query(server.c_str(), port.c_str());
         ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         ip::tcp::resolver::iterator end;
@@ -812,7 +825,7 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketA
 #endif
 {
     // Accept connection
-    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
+    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(GetIOServiceFromPtr(acceptor), context, fUseSSL);
 
     acceptor->async_accept(
             conn->sslStream.lowest_layer(),
@@ -1413,6 +1426,16 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "scanforstealthtxns"     && n > 0) ConvertTo<int64_t>(params[0]);
 
     if (strMethod == "setbestblockbyheight"   && n > 0) ConvertTo<int64_t>(params[0]);
+
+    //Denarius Name Commands
+    if (strMethod == "name_new"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_new"               && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_update"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_update"            && n > 4) ConvertTo<boost::int64_t>(params[4]);
+    if (strMethod == "name_filter"            && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "name_filter"            && n > 2) ConvertTo<boost::int64_t>(params[2]);
+    if (strMethod == "name_filter"            && n > 3) ConvertTo<boost::int64_t>(params[3]);
+    if (strMethod == "sendtoname"             && n > 1) ConvertTo<double>(params[1]);
 
     return params;
 }
