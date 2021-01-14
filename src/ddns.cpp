@@ -65,7 +65,7 @@ int inet_pton(int af, const char *src, void *dst)
   strncpy (src_copy, src, INET6_ADDRSTRLEN+1);
   src_copy[INET6_ADDRSTRLEN] = 0;
 
-  if (WSAStringToAddress(src_copy, af, NULL, (struct sockaddr *)&ss, &size) == 0) {
+  if (WSAStringToAddressA(src_copy, af, NULL, (struct sockaddr *)&ss, &size) == 0) {
     switch(af) {
       case AF_INET:
     *(struct in_addr *)dst = ((struct sockaddr_in *)&ss)->sin_addr;
@@ -76,6 +76,21 @@ int inet_pton(int af, const char *src, void *dst)
     }
   }
   return 0;
+}
+
+char *strsep(char **s, const char *ct)
+{
+    char *sstart = *s;
+    char *end;
+
+    if (sstart == NULL)
+        return NULL;
+
+    end = strpbrk(sstart, ct);
+    if (end)
+        *end++ = '\0';
+    *s = end;
+    return sstart;
 }
 #endif
 

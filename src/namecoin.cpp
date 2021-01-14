@@ -1779,8 +1779,8 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
 
 bool createNameIndexFile()
 {
-    LogPrintf("Scanning Denarius blockchain for names to create a fast index...\n");
-    //CNameDB dbName("cr+");
+    printf("Scanning Denarius blockchain for names to create a fast index...\n");
+    CNameDB dbName("cr+");
 
     // if (!fTxIndex)
     //     return error("createNameIndexFile() : transaction index not available");
@@ -1796,7 +1796,7 @@ bool createNameIndexFile()
         return true;
     int reportDone = 0;
 
-    for (int nHeight=0; nHeight<=maxHeight; nHeight++)
+    for (int nHeight=RELEASE_HEIGHT; nHeight<=maxHeight; nHeight++) // Change from Height 0 as start to RELEASE_HEIGHT of names
     //for (int b = 0; BlockReading && BlockReading->nHeight > RELEASE_HEIGHT; b++) //1 originally scan all, now scan from name release height
     {
         //CBlockIndex* pindex = nHeight;
