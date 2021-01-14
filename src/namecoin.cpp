@@ -1791,6 +1791,7 @@ bool createNameIndexFile()
 //    int nHeight = 0;
 
     int maxHeight = pindexBest->nHeight;
+    //const CBlockIndex* pindex;
     if (maxHeight <= 0)
         return true;
     int reportDone = 0;
@@ -1807,9 +1808,9 @@ bool createNameIndexFile()
             printf("[%d%%]...\n", percentageDone);
             reportDone = percentageDone/10;
         }
-        uiInterface.InitMessage(strprintf("Creating name index... %i", percentageDone));
+        //uiInterface.InitMessage(strprintf("Creating name index... %i", percentageDone));
 
-        CBlockIndex* pindex; //nHeight maybe should be = pindexBest->nHeight
+        CBlockIndex* pindex = pindexBest; //nHeight maybe should be = pindexBest
 
         CBlock block;
 
