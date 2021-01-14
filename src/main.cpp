@@ -3031,7 +3031,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
     {
         if (fDebug) printf("ConnectBlock() for Name Index\n");
         const CTransaction &tx = vtx[i];
-        if (!tx.IsCoinBase())
+        if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
             hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
     }
 
@@ -3106,12 +3106,12 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
 
+    // add names to denariusnames.dat
+    hooks->ConnectBlock(pindex, vName);
+
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)
         SyncWithWallets(tx, this, true);
-
-    // add names to denariusnames.dat
-    hooks->ConnectBlock(pindex, vName);
 
     // update the UI about the new block
     uiInterface.NotifyRanksUpdated();
