@@ -3160,6 +3160,7 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
     for (int i = 0; i < 32; i+=4)
         memcpy(civ+i, &nonse, 4);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     HMAC_CTX ctx;
     HMAC_CTX_init(&ctx);
 
@@ -3193,6 +3194,41 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
         }
     }
     HMAC_CTX_cleanup(&ctx);
+#else
+    HMAC_CTX *ctx;
+    ctx = HMAC_CTX_new();
+
+    unsigned int nBytes;
+    if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), NULL)
+        || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
+        || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
+        || !HMAC_Update(ctx, pPayload, nPayload)
+        || !HMAC_Final(ctx, sha256Hash, &nBytes)
+        || nBytes != 32)
+    {
+        if (fDebugSmsg)
+            printf("HMAC error.\n");
+        rv = 1; // error
+    } else
+    {
+        if (sha256Hash[31] == 0
+            && sha256Hash[30] == 0
+            && (~(sha256Hash[29]) & ((1<<0) || (1<<1) || (1<<2)) ))
+        {
+            if (fDebugSmsg)
+                printf("Hash Valid.\n");
+            rv = 0; // smsg is valid
+        };
+
+        if (memcmp(psmsg->hash, sha256Hash, 4) != 0)
+        {
+            if (fDebugSmsg)
+                printf("Checksum mismatch.\n");
+            rv = 3; // checksum mismatch
+        }
+    }
+    HMAC_CTX_free(ctx);
+#endif
 
     return rv;
 };
@@ -3220,6 +3256,7 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     //vchHash.resize(32);
 
     bool found = false;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     HMAC_CTX ctx;
     HMAC_CTX_init(&ctx);
 
@@ -3284,6 +3321,72 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     };
 
     HMAC_CTX_cleanup(&ctx);
+#else
+    HMAC_CTX *ctx;
+    ctx = HMAC_CTX_new();
+
+    uint32_t nonse = 0;
+
+    //CBigNum bnTarget(2);
+    //bnTarget = bnTarget.pow(256 - 40);
+
+    // -- break for HMAC_CTX_cleanup
+    for (;;)
+    {
+        if (!fSecMsgEnabled)
+            break;
+
+        //psmsg->timestamp = GetTime();
+        //memcpy(&psmsg->timestamp, &now, 8);
+        memcpy(&psmsg->nonse[0], &nonse, 4);
+
+        for (int i = 0; i < 32; i+=4)
+            memcpy(civ+i, &nonse, 4);
+
+        unsigned int nBytes;
+        if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), NULL)
+            || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
+            || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
+            || !HMAC_Update(ctx, pPayload, nPayload)
+            || !HMAC_Final(ctx, sha256Hash, &nBytes)
+            //|| !HMAC_Final(&ctx, &vchHash[0], &nBytes)
+            || nBytes != 32)
+            break;
+
+        /*
+        if (CBigNum(vchHash) <= bnTarget)
+        {
+            found = true;
+            if (fDebugSmsg)
+                printf("Match %u\n", nonse);
+            break;
+        };
+        */
+
+        if (sha256Hash[31] == 0
+            && sha256Hash[30] == 0
+            && (~(sha256Hash[29]) & ((1<<0) || (1<<1) || (1<<2)) ))
+            //    && sha256Hash[29] == 0)
+        {
+            found = true;
+            //if (fDebugSmsg)
+            //    printf("Match %u\n", nonse);
+            break;
+        }
+
+        //if (nonse >= UINT32_MAX)
+        if (nonse >= 4294967295U)
+        {
+            if (fDebugSmsg)
+                printf("No match %u\n", nonse);
+            break;
+            //return 1;
+        }
+        nonse++;
+    };
+
+    HMAC_CTX_free(ctx);
+#endif
 
     if (!fSecMsgEnabled)
     {
@@ -3431,7 +3534,11 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
     //printf("secret_len %d.\n", secret_len);
 
     // -- ECDH_compute_key returns the same P if fed compressed or uncompressed public keys
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     ECDH_set_method(pkeyr, ECDH_OpenSSL());
+#else
+     EC_KEY_set_method(pkeyr, EC_KEY_OpenSSL());
+#endif
     int lenP = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyK), pkeyr, NULL);
 
     if (lenP != 32)
@@ -3564,6 +3671,7 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
     //    Message authentication code, (hash of timestamp + destination + payload)
     bool fHmacOk = true;
     unsigned int nBytes = 32;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     HMAC_CTX ctx;
     HMAC_CTX_init(&ctx);
 
@@ -3575,6 +3683,19 @@ int SecureMsgEncrypt(SecureMessage& smsg, std::string& addressFrom, std::string&
         fHmacOk = false;
 
     HMAC_CTX_cleanup(&ctx);
+#else
+    HMAC_CTX *ctx;
+    ctx = HMAC_CTX_new();
+
+    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), NULL)
+        || !HMAC_Update(ctx, (unsigned char*) &smsg.timestamp, sizeof(smsg.timestamp))
+        || !HMAC_Update(ctx, &vchCiphertext[0], vchCiphertext.size())
+        || !HMAC_Final(ctx, smsg.mac, &nBytes)
+        || nBytes != 32)
+        fHmacOk = false;
+
+    HMAC_CTX_free(ctx);
+#endif
 
     if (!fHmacOk)
     {
@@ -3840,7 +3961,11 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     EC_KEY* pkeyk = ecKeyDest.GetECKey();
     EC_KEY* pkeyR = ecKeyR.GetECKey();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     ECDH_set_method(pkeyk, ECDH_OpenSSL());
+#else
+     EC_KEY_set_method(pkeyk, EC_KEY_OpenSSL());
+#endif
     int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, NULL);
 
     if (lenPdec != 32)
@@ -3863,6 +3988,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     unsigned char MAC[32];
     bool fHmacOk = true;
     unsigned int nBytes = 32;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     HMAC_CTX ctx;
     HMAC_CTX_init(&ctx);
 
@@ -3874,6 +4000,19 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
         fHmacOk = false;
 
     HMAC_CTX_cleanup(&ctx);
+#else
+    HMAC_CTX *ctx;
+    ctx = HMAC_CTX_new();
+
+    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), NULL)
+        || !HMAC_Update(ctx, (unsigned char*) &psmsg->timestamp, sizeof(psmsg->timestamp))
+        || !HMAC_Update(ctx, pPayload, nPayload)
+        || !HMAC_Final(ctx, MAC, &nBytes)
+        || nBytes != 32)
+        fHmacOk = false;
+
+    HMAC_CTX_free(ctx);
+#endif
 
     if (!fHmacOk)
     {

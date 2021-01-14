@@ -6,6 +6,9 @@
 #include "clientmodel.h"
 
 #include <QPainter>
+#if QT_VERSION >= 5
+#include <QPainterPath>
+#endif
 #include <QColor>
 #include <QTimer>
 

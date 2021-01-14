@@ -561,11 +561,19 @@ void CECKey::GetSecretBytes(unsigned char vch[32]) const {
 }
 
 void CECKey::SetSecretBytes(const unsigned char vch[32]) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     BIGNUM bn;
     BN_init(&bn);
     assert(BN_bin2bn(vch, 32, &bn));
     assert(EC_KEY_regenerate_key(pkey, &bn));
     BN_clear_free(&bn);
+#else
+    BIGNUM *bn;
+    bn = BN_new();
+    assert(BN_bin2bn(vch, 32, bn));
+    assert(EC_KEY_regenerate_key(pkey, bn));
+    BN_clear_free(bn);
+#endif
 }
 
 void CECKey::GetPrivKey(CPrivKey &privkey, bool fCompressed) {
@@ -619,11 +627,13 @@ bool CECKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) {
     const EC_GROUP *group = EC_KEY_get0_group(pkey);
     BIGNUM *order = BN_CTX_get(ctx);
     BIGNUM *halforder = BN_CTX_get(ctx);
+    BIGNUM *s = 0;
     EC_GROUP_get_order(group, order, ctx);
     BN_rshift1(halforder, order);
-    if (BN_cmp(sig->s, halforder) > 0) {
+    ECDSA_SIG_get0(sig, (const BIGNUM **)&s, 0);
+    if (BN_cmp(s, halforder) > 0) {
         // enforce low S values, by negating the value (modulo the order) if above order/2.
-        BN_sub(sig->s, order, sig->s);
+        BN_sub(s, order, s);
     }
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);

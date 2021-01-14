@@ -1780,33 +1780,49 @@ NameTxReturn name_operation(const int op, const CNameVal& name, CNameVal value, 
 bool createNameIndexFile()
 {
     LogPrintf("Scanning Denarius blockchain for names to create a fast index...\n");
-    CNameDB dbName("cr+");
+    //CNameDB dbName("cr+");
 
     // if (!fTxIndex)
     //     return error("createNameIndexFile() : transaction index not available");
 
-    const CBlockIndex *BlockReading = pindexBest;
-    int blocksFound = 0;
-    int nHeight = 0;	
+    LOCK(cs_main);
 
-    //int maxHeight = pindexBest->nHeight;
-    //for (int nHeight=0; nHeight<=maxHeight; nHeight++)
-    for (int b = 0; BlockReading && BlockReading->nHeight > RELEASE_HEIGHT; b++) //1 originally scan all, now scan from name release height
+//    const CBlockIndex *BlockReading = pindexBest;
+//    int nHeight = 0;
+
+    int maxHeight = pindexBest->nHeight;
+    if (maxHeight <= 0)
+        return true;
+    int reportDone = 0;
+
+    for (int nHeight=0; nHeight<=maxHeight; nHeight++)
+    //for (int b = 0; BlockReading && BlockReading->nHeight > RELEASE_HEIGHT; b++) //1 originally scan all, now scan from name release height
     {
-        //CBlockIndex* pindex = nHeight;    
-        printf("createNameIndex() %d\n", b);
+        //CBlockIndex* pindex = nHeight;
+        //printf("createNameIndex() %d\n", nHeight);
+
+        int percentageDone = (100*nHeight / maxHeight);
+        if (reportDone < percentageDone/10) {
+            // report every 10% step
+            printf("[%d%%]...\n", percentageDone);
+            reportDone = percentageDone/10;
+        }
+        uiInterface.InitMessage(strprintf("Creating name index... %i", percentageDone));
+
+        CBlockIndex* pindex; //nHeight maybe should be = pindexBest->nHeight
+
         CBlock block;
 
-        nHeight = BlockReading->nHeight;
+//        nHeight = BlockReading->nHeight;
             
-        if(!block.ReadFromDisk(BlockReading, true)) {
+        if(!block.ReadFromDisk(pindex, true)) { // shouldn't really happen
             continue;
         }
 
         // collect name tx from block
         vector<nameTempProxy> vName;
         //CDiskTxPos pos(pindex->nFile, pindex->nBlockPos, nTxPos);
-        CDiskTxPos pos(BlockReading->nFile, BlockReading->nBlockPos, GetSizeOfCompactSize(block.vtx.size()));
+        CDiskTxPos pos(pindex->nFile, pindex->nBlockPos, GetSizeOfCompactSize(block.vtx.size()));
         //CDiskTxPos pos(pindex->nBlockPos, GetSizeOfCompactSize(block.vtx.size())); // start position
         for (unsigned int i=0; i<block.vtx.size(); i++)
         {
@@ -1830,20 +1846,21 @@ bool createNameIndexFile()
             }
             CAmount fee = input - tx.GetValueOut();
 
-            hooks->CheckInputs(tx, BlockReading, vName, pos, fee);                    // collect valid name tx to vName
+            hooks->CheckInputs(tx, pindex, vName, pos, fee);                    // collect valid name tx to vName
             pos.nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);  // set next tx position
         }
 
         // execute name operations, if any
-        hooks->ConnectBlock(BlockReading, vName);
+        if (!vName.empty())
+            hooks->ConnectBlock(pindex, vName);
 
-        if (BlockReading->pprev == NULL) { 
-            assert(BlockReading); break; 
-        }
+//        if (BlockReading->pprev == NULL) {
+//            assert(BlockReading); break;
+//        }
 
-        BlockReading = BlockReading->pprev;
+//        BlockReading = BlockReading->pprev;
 
-        printf("nameindex finished at %d\n", nHeight);
+//        printf("nameindex finished at %d\n", nHeight);
     }
     return true;
 }

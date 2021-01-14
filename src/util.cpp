@@ -1377,7 +1377,7 @@ std::string bytesReadable(uint64_t nBytes)
     if (nBytes >= 1024)
         snprintf(buffer, sizeof(buffer), "%.2f KB", nBytes/1024.0);
     else
-        snprintf(buffer, sizeof(buffer), "%"PRIu64" B", nBytes);
+        snprintf(buffer, sizeof(buffer), "%" PRIu64" B", nBytes);
     return std::string(buffer);
 };
 
