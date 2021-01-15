@@ -162,7 +162,7 @@ int getOldKeyImage(CPubKey &publicKey, ec_point &keyImage)
 
     try { keyImage.resize(EC_COMPRESSED_SIZE); } catch (std::exception& e)
     {
-        LogPrintf("%s: keyImage.resize threw: %s.\n", __func__, e.what());
+        printf("%s: keyImage.resize threw: %s.\n", __func__, e.what());
         rv = 1; goto End;
     }
 
@@ -240,7 +240,7 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
 
     try { keyImage.resize(EC_COMPRESSED_SIZE); } catch (std::exception& e)
     {
-        LogPrintf("%s: keyImage.resize threw: %s.\n", __func__, e.what());
+        printf("%s: keyImage.resize threw: %s.\n", __func__, e.what());
         rv = 1; goto End;
     }
 
@@ -251,7 +251,7 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
         goto End;
 
     if (fDebugRingSig)
-        LogPrintf("keyImage %s\n", HexStr(keyImage).c_str());
+        printf("keyImage %s\n", HexStr(keyImage).c_str());
 
     End:
     EC_POINT_free(hG);
@@ -264,7 +264,7 @@ int generateKeyImage(ec_point &publicKey, ec_secret secret, ec_point &keyImage)
 int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, int nSecretOffset, ec_secret secret, const uint8_t *pPubkeys, uint8_t *pSigc, uint8_t *pSigr)
 {
      if (fDebugRingSig)
-        LogPrintf("%s: Ring size %d.\n", __func__, nRingSize);
+        printf("%s: Ring size %d.\n", __func__, nRingSize);
 
     int rv = 0;
     int nBytes;
@@ -305,14 +305,14 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     if (!bnKS || !(BN_bin2bn(&scData1.e[0], EC_SECRET_SIZE, bnKS)))
     {
-        LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+        printf("%s: BN_bin2bn failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // zero sum
     if (!bnSum || !(BN_zero(bnSum)))
     {
-        LogPrintf("%s: BN_zero failed.\n", __func__);
+        printf("%s: BN_zero failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -324,7 +324,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         || !(ptL  = EC_POINT_new(ecGrp))
         || !(ptR  = EC_POINT_new(ecGrp)))
     {
-        LogPrintf("%s: EC_POINT_new failed.\n", __func__);
+        printf("%s: EC_POINT_new failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -343,19 +343,19 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
             if (!EC_POINT_mul(ecGrp, ptL, bnKS, NULL, NULL, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             if (hashToEC(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT, ptT1) != 0)
             {
-                LogPrintf("%s: hashToEC failed.\n", __func__);
+                printf("%s: hashToEC failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             if (!EC_POINT_mul(ecGrp, ptR, NULL, ptT1, bnKS, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
@@ -373,7 +373,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
                 || GenerateRandomSecret(scData2) != 0
                 || !bnK2 || !(BN_bin2bn(&scData2.e[0], EC_SECRET_SIZE, bnK2)))
             {
-                LogPrintf("%s: k1 and k2 failed.\n", __func__);
+                printf("%s: k1 and k2 failed.\n", __func__);
                 rv = 1; goto End;
             }
 
@@ -381,56 +381,56 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
             if (!(bnT = BN_bin2bn(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT))
                 || !(ptPk) || !(ptPk = EC_POINT_bn2point(ecGrp, bnT, ptPk, bnCtx)))
             {
-                LogPrintf("%s: extract ptPk failed.\n", __func__);
+                printf("%s: extract ptPk failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptT1 = k1 * Pi
             if (!EC_POINT_mul(ecGrp, ptT1, NULL, ptPk, bnK1, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptT2 = k2 * G
             if (!EC_POINT_mul(ecGrp, ptT2, bnK2, NULL, NULL, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptL = ptT1 + ptT2
             if (!EC_POINT_add(ecGrp, ptL, ptT1, ptT2, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+                printf("%s: EC_POINT_add failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptT3 = Hp(Pi)
             if (hashToEC(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT, ptT3) != 0)
             {
-                LogPrintf("%s: hashToEC failed.\n", __func__);
+                printf("%s: hashToEC failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptT1 = k1 * I
             if (!EC_POINT_mul(ecGrp, ptT1, NULL, ptKi, bnK1, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptT2 = k2 * ptT3
             if (!EC_POINT_mul(ecGrp, ptT2, NULL, ptT3, bnK2, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+                printf("%s: EC_POINT_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             // ptR = ptT1 + ptT2
             if (!EC_POINT_add(ecGrp, ptR, ptT1, ptT2, bnCtx))
             {
-                LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+                printf("%s: EC_POINT_add failed.\n", __func__);
                 rv = 1; goto End;
             }
 
@@ -440,7 +440,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
             // sum = (sum + sigc) % N , sigc == bnK1
             if (!BN_mod_add(bnSum, bnSum, bnK1, bnOrder, bnCtx))
             {
-                LogPrintf("%s: BN_mod_add failed.\n", __func__);
+                printf("%s: BN_mod_add failed.\n", __func__);
                 rv = 1; goto End;
             }
         }
@@ -449,7 +449,7 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         if (   !(EC_POINT_point2oct(ecGrp, ptL, POINT_CONVERSION_COMPRESSED, &tempData[0],  33, bnCtx) == (int) EC_COMPRESSED_SIZE)
             || !(EC_POINT_point2oct(ecGrp, ptR, POINT_CONVERSION_COMPRESSED, &tempData[33], 33, bnCtx) == (int) EC_COMPRESSED_SIZE))
         {
-            LogPrintf("%s: extract ptL and ptR failed.\n", __func__);
+            printf("%s: extract ptL and ptR failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -460,28 +460,28 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     if (!(bnH) || !(bnH = BN_bin2bn(commitHash.begin(), EC_SECRET_SIZE, bnH)))
     {
-        LogPrintf("%s: commitHash -> bnH failed.\n", __func__);
+        printf("%s: commitHash -> bnH failed.\n", __func__);
         rv = 1; goto End;
     }
 
 
     if (!BN_mod(bnH, bnH, bnOrder, bnCtx)) // this is necessary
     {
-        LogPrintf("%s: BN_mod failed.\n", __func__);
+        printf("%s: BN_mod failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // sigc[nSecretOffset] = (bnH - bnSum) % N
     if (!BN_mod_sub(bnT, bnH, bnSum, bnOrder, bnCtx))
     {
-        LogPrintf("%s: BN_mod_sub failed.\n", __func__);
+        printf("%s: BN_mod_sub failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if ((nBytes = BN_num_bytes(bnT)) > (int)EC_SECRET_SIZE
         || BN_bn2bin(bnT, &pSigc[nSecretOffset * EC_SECRET_SIZE + (EC_SECRET_SIZE-nBytes)]) != nBytes)
     {
-        LogPrintf("%s: bnT -> pSigc failed.\n", __func__);
+        printf("%s: bnT -> pSigc failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -489,27 +489,27 @@ int generateRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
     // reuse bnH for bnSecret
     if (!bnH || !(BN_bin2bn(&secret.e[0], EC_SECRET_SIZE, bnH)))
     {
-        LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+        printf("%s: BN_bin2bn failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // bnT = sigc[nSecretOffset] * bnSecret , TODO: mod N ?
     if (!BN_mul(bnT, bnT, bnH, bnCtx))
     {
-        LogPrintf("%s: BN_mul failed.\n", __func__);
+        printf("%s: BN_mul failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if (!BN_mod_sub(bnT, bnKS, bnT, bnOrder, bnCtx))
     {
-        LogPrintf("%s: BN_mod_sub failed.\n", __func__);
+        printf("%s: BN_mod_sub failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if ((nBytes = BN_num_bytes(bnT)) > (int) EC_SECRET_SIZE
         || BN_bn2bin(bnT, &pSigr[nSecretOffset * EC_SECRET_SIZE + (EC_SECRET_SIZE-nBytes)]) != nBytes)
     {
-        LogPrintf("%s: bnT -> pSigr failed.\n", __func__);
+        printf("%s: bnT -> pSigr failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -555,7 +555,7 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
     // zero sum
     if (!bnSum || !(BN_zero(bnSum)))
     {
-        LogPrintf("%s: BN_zero failed.\n", __func__);
+        printf("%s: BN_zero failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -567,7 +567,7 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
         || !(ptL  = EC_POINT_new(ecGrp))
         || !(ptR  = EC_POINT_new(ecGrp)))
     {
-        LogPrintf("%s: EC_POINT_new failed.\n", __func__);
+        printf("%s: EC_POINT_new failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -584,7 +584,7 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
         if (   !bnC || !(bnC = BN_bin2bn(&pSigc[i * EC_SECRET_SIZE], EC_SECRET_SIZE, bnC))
             || !bnR || !(bnR = BN_bin2bn(&pSigr[i * EC_SECRET_SIZE], EC_SECRET_SIZE, bnR)))
         {
-            LogPrintf("%s: extract bnC and bnR failed.\n", __func__);
+            printf("%s: extract bnC and bnR failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -592,63 +592,63 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
         if (!(bnT = BN_bin2bn(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT))
             || !(ptPk) || !(ptPk = EC_POINT_bn2point(ecGrp, bnT, ptPk, bnCtx)))
         {
-            LogPrintf("%s: extract ptPk failed.\n", __func__);
+            printf("%s: extract ptPk failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT1 = ci * Pi
         if (!EC_POINT_mul(ecGrp, ptT1, NULL, ptPk, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT2 = ri * G
         if (!EC_POINT_mul(ecGrp, ptT2, bnR, NULL, NULL, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptL = ptT1 + ptT2
         if (!EC_POINT_add(ecGrp, ptL, ptT1, ptT2, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+            printf("%s: EC_POINT_add failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT3 = Hp(Pi)
         if (hashToEC(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT, ptT3) != 0)
         {
-            LogPrintf("%s: hashToEC failed.\n", __func__);
+            printf("%s: hashToEC failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT1 = k1 * I
         if (!EC_POINT_mul(ecGrp, ptT1, NULL, ptKi, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT2 = k2 * ptT3
         if (!EC_POINT_mul(ecGrp, ptT2, NULL, ptT3, bnR, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptR = ptT1 + ptT2
         if (!EC_POINT_add(ecGrp, ptR, ptT1, ptT2, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+            printf("%s: EC_POINT_add failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // sum = (sum + ci) % N
         if (!BN_mod_add(bnSum, bnSum, bnC, bnOrder, bnCtx))
         {
-            LogPrintf("%s: BN_mod_add failed.\n", __func__);
+            printf("%s: BN_mod_add failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -656,7 +656,7 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
         if (!(EC_POINT_point2oct(ecGrp, ptL, POINT_CONVERSION_COMPRESSED, &tempData[0],  33, bnCtx) == (int) EC_COMPRESSED_SIZE)
           ||!(EC_POINT_point2oct(ecGrp, ptR, POINT_CONVERSION_COMPRESSED, &tempData[33], 33, bnCtx) == (int) EC_COMPRESSED_SIZE))
         {
-            LogPrintf("%s: extract ptL and ptR failed.\n", __func__);
+            printf("%s: extract ptL and ptR failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -667,27 +667,27 @@ int verifyRingSignature(data_chunk &keyImage, uint256 &txnHash, int nRingSize, c
 
     if (!(bnH) || !(bnH = BN_bin2bn(commitHash.begin(), EC_SECRET_SIZE, bnH)))
     {
-        LogPrintf("%s: commitHash -> bnH failed.\n", __func__);
+        printf("%s: commitHash -> bnH failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if (!BN_mod(bnH, bnH, bnOrder, bnCtx))
     {
-        LogPrintf("%s: BN_mod failed.\n", __func__);
+        printf("%s: BN_mod failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // bnT = (bnH - bnSum) % N
     if (!BN_mod_sub(bnT, bnH, bnSum, bnOrder, bnCtx))
     {
-        LogPrintf("%s: BN_mod_sub failed.\n", __func__);
+        printf("%s: BN_mod_sub failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // test bnT == 0  (bnSum == bnH)
     if (!BN_is_zero(bnT))
     {
-        LogPrintf("%s: signature does not verify.\n", __func__);
+        printf("%s: signature does not verify.\n", __func__);
         rv = 2;
     }
 
@@ -712,7 +712,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     // https://bitcointalk.org/index.php?topic=972541.msg10619684
 
     if (fDebugRingSig)
-        LogPrintf("%s: Ring size %d.\n", __func__, nRingSize);
+        printf("%s: Ring size %d.\n", __func__, nRingSize);
 
     assert(nRingSize < 200);
 
@@ -782,7 +782,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
       ||!(ptT3 = EC_POINT_new(ecGrp))
       ||!(ptT4 = EC_POINT_new(ecGrp)))
     {
-        LogPrintf("%s: EC_POINT_new failed.\n", __func__);
+        printf("%s: EC_POINT_new failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -794,14 +794,14 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     // c_{j+1} = h(P_1,...,P_n,alpha*G,alpha*H(P_j))
     if (!bnA || !(BN_bin2bn(&sAlpha.e[0], EC_SECRET_SIZE, bnA)))
     {
-        LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+        printf("%s: BN_bin2bn failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // ptT1 = alpha * G
     if (!EC_POINT_mul(ecGrp, ptT1, bnA, NULL, NULL, bnCtx))
     {
-        LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+        printf("%s: EC_POINT_mul failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -809,7 +809,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
 
     if (hashToEC(&pPubkeys[nSecretOffset * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT2, ptT3) != 0)
     {
-        LogPrintf("%s: hashToEC failed.\n", __func__);
+        printf("%s: hashToEC failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -819,14 +819,14 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     // ptT2 = alpha * ptT3
     if (!EC_POINT_mul(ecGrp, ptT2, NULL, ptT3, bnA, bnCtx))
     {
-        LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+        printf("%s: EC_POINT_mul failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if (   !(EC_POINT_point2oct(ecGrp, ptT1, POINT_CONVERSION_COMPRESSED, &tempData[0],  33, bnCtx) == (int) EC_COMPRESSED_SIZE)
         || !(EC_POINT_point2oct(ecGrp, ptT2, POINT_CONVERSION_COMPRESSED, &tempData[33], 33, bnCtx) == (int) EC_COMPRESSED_SIZE))
     {
-        LogPrintf("%s: extract ptL and ptR failed.\n", __func__);
+        printf("%s: extract ptL and ptR failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -836,7 +836,7 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
     if (!bnC || !(BN_bin2bn(tmpHash.begin(), EC_SECRET_SIZE, bnC)) // bnC lags i by 1
         || !BN_mod(bnC, bnC, bnOrder, bnCtx))
     {
-        LogPrintf("%s: hash -> bnC failed.\n", __func__);
+        printf("%s: hash -> bnC failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -851,26 +851,26 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
             // s_j = alpha - c_j*x_j mod n.
             if (!bnT || !BN_bin2bn(&secret.e[0], EC_SECRET_SIZE, bnT))
             {
-                LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+                printf("%s: BN_bin2bn failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             if (!BN_mul(bnT2, bnCj, bnT, bnCtx))
             {
-                LogPrintf("%s: BN_mul failed.\n", __func__);
+                printf("%s: BN_mul failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             if (!BN_mod_sub(bnS, bnA, bnT2, bnOrder, bnCtx))
             {
-                LogPrintf("%s: BN_mod_sub failed.\n", __func__);
+                printf("%s: BN_mod_sub failed.\n", __func__);
                 rv = 1; goto End;
             }
 
             if (!bnS || (nBytes = BN_num_bytes(bnS)) > (int) EC_SECRET_SIZE
                 || BN_bn2bin(bnS, &pSigS[nSecretOffset * EC_SECRET_SIZE + (EC_SECRET_SIZE-nBytes)]) != nBytes)
             {
-                LogPrintf("%s: bnS -> pSigS failed.\n", __func__);
+                printf("%s: bnS -> pSigS failed.\n", __func__);
                 rv = 1; goto End;
             }
 
@@ -880,21 +880,21 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
 
         if (!bnS || !(BN_bin2bn(&pSigS[ib * EC_SECRET_SIZE], EC_SECRET_SIZE, bnS)))
         {
-            LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+            printf("%s: BN_bin2bn failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // bnC is from last round (ib)
         if (!EC_POINT_oct2point(ecGrp, ptPk, &pPubkeys[ib * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_oct2point failed.\n", __func__);
+            printf("%s: EC_POINT_oct2point failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT1 = s_{j+1}*G+c_{j+1}*P_{j+1}
         if (!EC_POINT_mul(ecGrp, ptT1, bnS, ptPk, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -902,35 +902,35 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
 
         if (hashToEC(&pPubkeys[ib * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT2, ptT2) != 0)
         {
-            LogPrintf("%s: hashToEC failed.\n", __func__);
+            printf("%s: hashToEC failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT3 = s_{j+1}*H(P_{j+1})
         if (!EC_POINT_mul(ecGrp, ptT3, NULL, ptT2, bnS, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT4 = c_{j+1}*I_j
         if (!EC_POINT_mul(ecGrp, ptT4, NULL, ptKi, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT2 = ptT3 + ptT4
         if (!EC_POINT_add(ecGrp, ptT2, ptT3, ptT4, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+            printf("%s: EC_POINT_add failed.\n", __func__);
             rv = 1; goto End;
         }
 
         if (!(EC_POINT_point2oct(ecGrp, ptT1, POINT_CONVERSION_COMPRESSED, &tempData[0],  33, bnCtx) == (int) EC_COMPRESSED_SIZE)
           ||!(EC_POINT_point2oct(ecGrp, ptT2, POINT_CONVERSION_COMPRESSED, &tempData[33], 33, bnCtx) == (int) EC_COMPRESSED_SIZE))
         {
-            LogPrintf("%s: extract ptL and ptR failed.\n", __func__);
+            printf("%s: extract ptL and ptR failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -956,12 +956,12 @@ int generateRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSiz
             if ((nBytes = BN_num_bytes(bnC)) > (int) EC_SECRET_SIZE
                 || BN_bn2bin(bnC, &tempData[0 + (EC_SECRET_SIZE-nBytes)]) != nBytes)
             {
-                LogPrintf("%s: bnC -> sigC failed.\n", __func__);
+                printf("%s: bnC -> sigC failed.\n", __func__);
                 rv = 1; goto End;
             }
             try { sigC.resize(32); } catch (std::exception& e)
             {
-                LogPrintf("%s: sigC.resize failed.\n", __func__);
+                printf("%s: sigC.resize failed.\n", __func__);
                 rv = 1; goto End;
             }
             memcpy(&sigC[0], tempData, EC_SECRET_SIZE);
@@ -1030,7 +1030,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
       ||!(ptT4 = EC_POINT_new(ecGrp))
       ||!(ptPk = EC_POINT_new(ecGrp)))
     {
-        LogPrintf("%s: EC_POINT_new failed.\n", __func__);
+        printf("%s: EC_POINT_new failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -1049,13 +1049,13 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 
     if (!bnC1 || !BN_bin2bn(&sigC[0], EC_SECRET_SIZE, bnC1))
     {
-        LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+        printf("%s: BN_bin2bn failed.\n", __func__);
         rv = 1; goto End;
     }
 
     if (!BN_copy(bnC, bnC1))
     {
-        LogPrintf("%s: BN_copy failed.\n", __func__);
+        printf("%s: BN_copy failed.\n", __func__);
         rv = 1; goto End;
     }
 
@@ -1067,27 +1067,27 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
     {
         if (!bnS || !(BN_bin2bn(&pSigS[i * EC_SECRET_SIZE], EC_SECRET_SIZE, bnS)))
         {
-            LogPrintf("%s: BN_bin2bn failed.\n", __func__);
+            printf("%s: BN_bin2bn failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT2 <- pk
         if (!EC_POINT_oct2point(ecGrp, ptPk, &pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_oct2point failed.\n", __func__);
+            printf("%s: EC_POINT_oct2point failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT1 = e_i=s_i*G+c_i*P_i
         if (!EC_POINT_mul(ecGrp, ptT1, bnS, ptPk, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         if (!(EC_POINT_point2oct(ecGrp, ptT1, POINT_CONVERSION_COMPRESSED, &tempData[0],  33, bnCtx) == (int) EC_COMPRESSED_SIZE))
         {
-            LogPrintf("%s: extract ptT1 failed.\n", __func__);
+            printf("%s: extract ptT1 failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -1096,34 +1096,34 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         // ptT2 =H(P_i)
         if (hashToEC(&pPubkeys[i * EC_COMPRESSED_SIZE], EC_COMPRESSED_SIZE, bnT, ptT2) != 0)
         {
-            LogPrintf("%s: hashToEC failed.\n", __func__);
+            printf("%s: hashToEC failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT3 = s_i*ptT2
         if (!EC_POINT_mul(ecGrp, ptT3, NULL, ptT2, bnS, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT1 = c_i*I_j
         if (!EC_POINT_mul(ecGrp, ptT1, NULL, ptKi, bnC, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_mul failed.\n", __func__);
+            printf("%s: EC_POINT_mul failed.\n", __func__);
             rv = 1; goto End;
         }
 
         // ptT2 = ptT3 + ptT1
         if (!EC_POINT_add(ecGrp, ptT2, ptT3, ptT1, bnCtx))
         {
-            LogPrintf("%s: EC_POINT_add failed.\n", __func__);
+            printf("%s: EC_POINT_add failed.\n", __func__);
             rv = 1; goto End;
         }
 
         if (!(EC_POINT_point2oct(ecGrp, ptT2, POINT_CONVERSION_COMPRESSED, &tempData[33], 33, bnCtx) == (int) EC_COMPRESSED_SIZE))
         {
-            LogPrintf("%s: extract ptT2 failed.\n", __func__);
+            printf("%s: extract ptT2 failed.\n", __func__);
             rv = 1; goto End;
         }
 
@@ -1135,7 +1135,7 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
         if (!bnC || !(BN_bin2bn(tmpHash.begin(), EC_SECRET_SIZE, bnC))
             || !BN_mod(bnC, bnC, bnOrder, bnCtx))
         {
-            LogPrintf("%s: tmpHash -> bnC failed.\n", __func__);
+            printf("%s: tmpHash -> bnC failed.\n", __func__);
             rv = 1; goto End;
         }
         printf("\n RingDbg: Iteration %d, so bnC%d follows\n", i, i+1);
@@ -1146,14 +1146,14 @@ int verifyRingSignatureAB(data_chunk &keyImage, uint256 &txnHash, int nRingSize,
 	// bnT = (bnC - bnC1) % N
     if (!BN_mod_sub(bnT, bnC, bnC1, bnOrder, bnCtx))
     {
-        LogPrintf("%s: BN_mod_sub failed.\n", __func__);
+        printf("%s: BN_mod_sub failed.\n", __func__);
         rv = 1; goto End;
     }
 
     // test bnT == 0  (bnC == bnC1)
     if (!BN_is_zero(bnT))
     {
-        LogPrintf("%s: signature does not verify.\n", __func__);
+        printf("%s: signature does not verify.\n", __func__);
         rv = 2;
     }
 

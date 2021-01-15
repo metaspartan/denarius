@@ -546,7 +546,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool forTunaMaster
                   ConnectSocket(addrConnect, hSocket, nConnectTimeout, &proxyConnectionFailed))
     {
         if (!IsSelectableSocket(hSocket)) {
-            LogPrintf("Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\n");
+            printf("Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\n");
             closesocket(hSocket);
             return NULL;
         }
@@ -767,7 +767,7 @@ void CNode::SetMaxOutboundTarget(uint64_t limit)
     nMaxOutboundLimit = limit;
 
     if (limit < recommendedMinimum)
-        LogPrintf("Max outbound target is very small (%s) and will be overshot. Recommended minimum is %s\n.", nMaxOutboundLimit, recommendedMinimum);
+        printf("Max outbound target is very small (%s) and will be overshot. Recommended minimum is %s\n.", nMaxOutboundLimit, recommendedMinimum);
 }
 
 uint64_t CNode::GetMaxOutboundTarget()
@@ -1171,7 +1171,7 @@ void ThreadSocketHandler2(void* parg)
             }
             else if (!IsSelectableSocket(hSocket))
             {
-                LogPrintf("connection from %s dropped: non-selectable socket\n", addr.ToString());
+                printf("connection from %s dropped: non-selectable socket\n", addr.ToString().c_str());
                 closesocket(hSocket);
             }
             else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
@@ -2164,7 +2164,7 @@ bool BindListenPort(const CService &addrBind, string& strError)
     if (!IsSelectableSocket(hListenSocket))
     {
         strError = "Error: Couldn't create a listenable socket for incoming connections";
-        LogPrintf("%s\n", strError);
+        printf("%s\n", strError.c_str());
         return false;
     }
 

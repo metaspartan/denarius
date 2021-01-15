@@ -19,8 +19,6 @@ using namespace json_spirit;
 
 template<typename T> void ConvertTo(Value& value, bool fAllowNull=false);
 
-//map<vector<unsigned char>, uint256> mapMyNames;
-//map<vector<unsigned char>, set<uint256> > mapNamePending; // for pending tx
 map<CNameVal, set<uint256> > mapNamePending; // for pending tx
 
 extern uint256 SignatureHash(CScript scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType);
@@ -681,7 +679,9 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
 // }
 
 // scans denariusnames.dat and return names with their last CNameIndex
-bool CNameDB::ScanNames(const CNameVal& name, unsigned int nMax,
+bool CNameDB::ScanNames(
+        const CNameVal& name, 
+        unsigned int nMax,
         vector<
             pair<
                 CNameVal,
@@ -740,7 +740,7 @@ bool CNameDB::ReadName(const CNameVal& name, CNameRecord& rec)
         // delete nameindex and kill the application. nameindex should be recreated on next start
         boost::system::error_code err;
         boost::filesystem::remove(GetDataDir() / this->strFile, err);
-        LogPrintf("denariusnames.dat is corrupt! It will be recreated on next start.");
+        printf("denariusnames.dat is corrupt! It will be recreated on next start.");
         assert(rec.nLastActiveChainIndex < s);
     }
     return ret;
@@ -756,13 +756,13 @@ bool IsNameFeeEnough(const CTransaction& tx, const NameTxInfo& nti, const CBlock
 {
     // scan last 10 PoW block for tx fee that matches the one specified in tx
     const CBlockIndex* lastPoW = GetLastBlockIndex(pindexBlock, false);
-    //LogPrintf("IsNameFeeEnough(): pindexBlock->nHeight = %d, op = %s, nameSize = %lu, valueSize = %lu, nRentalDays = %d, txFee = %"PRI64d"\n",
+    //printf("IsNameFeeEnough(): pindexBlock->nHeight = %d, op = %s, nameSize = %lu, valueSize = %lu, nRentalDays = %d, txFee = %"PRI64d"\n",
     //       lastPoW->nHeight, nameFromOp(nti.op), nti.name.size(), nti.value.size(), nti.nRentalDays, txFee);
     bool txFeePass = false;
     for (int i = 1; i <= 10000; i++) //Original 10, changed to 10,000 PoW Blocks
     {
         CAmount netFee = GetNameOpFee(lastPoW, nti.nRentalDays, nti.op, nti.name, nti.value);
-        //LogPrintf("                 : netFee = %"PRI64d", lastPoW->nHeight = %d\n", netFee, lastPoW->nHeight);
+        //printf("                 : netFee = %"PRI64d", lastPoW->nHeight = %d\n", netFee, lastPoW->nHeight);
         if (txFee >= netFee)
         {
             txFeePass = true;
@@ -1043,25 +1043,25 @@ Value name_debug(const Array& params, bool fHelp)
             "name_debug\n"
             "Dump pending transactions id in the debug file.\n");
 
-    LogPrintf("Pending:\n----------------------------\n");
+    printf("Pending:\n----------------------------\n");
 
     {
         LOCK(cs_main);
         BOOST_FOREACH(const PAIRTYPE(CNameVal, set<uint256>) &pairPending, mapNamePending)
         {
             string name = stringFromNameVal(pairPending.first);
-            LogPrintf("%s :\n", name);
+            printf("%s :\n", name.c_str());
             uint256 hash;
             BOOST_FOREACH(hash, pairPending.second)
             {
-                LogPrintf("    ");
+                printf("    ");
                 if (!pwalletMain->mapWallet.count(hash))
-                    LogPrintf("foreign ");
-                LogPrintf("    %s\n", hash.GetHex());
+                    printf("foreign ");
+                printf("%s\n", hash.GetHex().c_str());
             }
         }
     }
-    LogPrintf("----------------------------\n");
+    printf("----------------------------\n");
     return true;
 }
 
@@ -2229,7 +2229,7 @@ bool CNamecoinHooks::ConnectBlock(CBlockIndex* pindex, const vector<nameTempProx
             return error("ConnectBlockHook() : failed to write to name DB");
         if  (i.op == OP_NAME_NEW)
             sNameNew.insert(i.name);
-        LogPrintf("ConnectBlockHook(): writing %s %s in block %d to denariusnames.dat\n", stringFromOp(i.op), stringFromNameVal(i.name), pindex->nHeight);
+        printf("ConnectBlockHook(): writing %s %s in block %d to denariusnames.dat\n", stringFromOp(i.op).c_str(), stringFromNameVal(i.name).c_str(), pindex->nHeight);
 
         {
             // remove from pending names list

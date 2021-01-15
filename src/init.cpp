@@ -1001,7 +1001,7 @@ bool AppInit2()
     extern bool createNameIndexFile();
     if (!filesystem::exists(GetDataDir() / "denariusnames.dat") && !createNameIndexFile())
     {
-        LogPrintf("Fatal error: Failed to create denariusnames.dat\n");
+        printf("Fatal error: Failed to create denariusnames.dat\n");
         return false;
     }
 

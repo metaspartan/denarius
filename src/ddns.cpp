@@ -196,7 +196,7 @@ DDns::DDns(const char *bind_ip, uint16_t port_no,
       if(p[1] > 040) { // if allowed domain is not empty - save it into ht
         step |= 1;
         if(m_verbose > 3)
-          LogPrintf("\tDDns::DDns: Insert TLD=%s: pos=%u step=%u\n", p + 1, pos, step);
+          printf("\tDDns::DDns: Insert TLD=%s: pos=%u step=%u\n", p + 1, pos, step);
         do
           pos += step;
             while(m_ht_offset[pos] != 0);
@@ -227,7 +227,7 @@ DDns::DDns(const char *bind_ip, uint16_t port_no,
         } // while
     step |= 1;
     if(m_verbose > 3)
-      LogPrintf("\tDDns::DDns: Insert Local:[%s]->[%s] pos=%u step=%u\n", p, p_eq, pos, step);
+      printf("\tDDns::DDns: Insert Local:[%s]->[%s] pos=%u step=%u\n", p, p_eq, pos, step);
     do
       pos += step;
         while(m_ht_offset[pos] != 0);
@@ -237,7 +237,7 @@ DDns::DDns(const char *bind_ip, uint16_t port_no,
     } //  if(local_len)
 
     if(m_verbose > 0)
-     LogPrintf("DDns::DDns: Created/Attached: %s:%u; Qty=%u:%u\n",
+     printf("DDns::DDns: Created/Attached: %s:%u; Qty=%u:%u\n",
          m_address.sin_addr.s_addr == INADDR_ANY? "INADDR_ANY" : bind_ip,
          port_no, m_allowed_qty, local_qty);
 
@@ -257,7 +257,7 @@ DDns::~DDns() {
     free(m_value);
     free(m_dap_ht);
     if(m_verbose > 0)
-     LogPrintf("DDns::~DDns: Destroyed OK\n");
+     printf("DDns::~DDns: Destroyed OK\n");
 } // DDns::~DDns
 
 
@@ -271,7 +271,7 @@ void DDns::StatRun(void *p) {
 
 /*---------------------------------------------------*/
 void DDns::Run() {
-  if(m_verbose > 2) LogPrintf("DDns::Run: started\n");
+  if(m_verbose > 2) printf("DDns::Run: started\n");
 
   while(m_status == 0)
       MilliSleep(133);
@@ -297,14 +297,14 @@ void DDns::Run() {
     } // dap check
   } // for
 
-  if(m_verbose > 2) LogPrintf("DDns::Run: Received Exit packet_len=%d\n", m_rcvlen);
+  if(m_verbose > 2) printf("DDns::Run: Received Exit packet_len=%d\n", m_rcvlen);
 
 } //  DDns::Run
 
 /*---------------------------------------------------*/
 
 void DDns::HandlePacket() {
-  if(m_verbose > 2) LogPrintf("DDns::HandlePacket: Handle packet_len=%d\n", m_rcvlen);
+  if(m_verbose > 2) printf("DDns::HandlePacket: Handle packet_len=%d\n", m_rcvlen);
 
   m_hdr = (DNSHeader *)m_buf;
   // Decode input header from network format
@@ -314,12 +314,12 @@ void DDns::HandlePacket() {
   m_rcvend = m_snd = m_buf + m_rcvlen;
 
   if(m_verbose > 3) {
-    LogPrintf("\tDDns::HandlePacket: msgID  : %d\n", m_hdr->msgID);
-    LogPrintf("\tDDns::HandlePacket: Bits   : %04x\n", m_hdr->Bits);
-    LogPrintf("\tDDns::HandlePacket: QDCount: %d\n", m_hdr->QDCount);
-    LogPrintf("\tDDns::HandlePacket: ANCount: %d\n", m_hdr->ANCount);
-    LogPrintf("\tDDns::HandlePacket: NSCount: %d\n", m_hdr->NSCount);
-    LogPrintf("\tDDns::HandlePacket: ARCount: %d\n", m_hdr->ARCount);
+    printf("\tDDns::HandlePacket: msgID  : %d\n", m_hdr->msgID);
+    printf("\tDDns::HandlePacket: Bits   : %04x\n", m_hdr->Bits);
+    printf("\tDDns::HandlePacket: QDCount: %d\n", m_hdr->QDCount);
+    printf("\tDDns::HandlePacket: ANCount: %d\n", m_hdr->ANCount);
+    printf("\tDDns::HandlePacket: NSCount: %d\n", m_hdr->NSCount);
+    printf("\tDDns::HandlePacket: ARCount: %d\n", m_hdr->ARCount);
   }
   // Assert following 3 counters and bits are zero
 //*  uint16_t zCount = m_hdr->ANCount | m_hdr->NSCount | m_hdr->ARCount | (m_hdr->Bits & (m_hdr->QR_MASK | m_hdr->TC_MASK));
@@ -408,13 +408,13 @@ uint16_t DDns::HandleQuery() {
   *--key_end = 0; // Remove last dot, set EOLN
 
   if(m_verbose > 3)
-    LogPrintf("DDns::HandleQuery: Translated domain name: [%s]; DomainsQty=%d\n", key, (int)(domain_ndx_p - domain_ndx));
+    printf("DDns::HandleQuery: Translated domain name: [%s]; DomainsQty=%d\n", key, (int)(domain_ndx_p - domain_ndx));
 
   uint16_t qtype  = *m_rcv++; qtype  = (qtype  << 8) + *m_rcv++;
   uint16_t qclass = *m_rcv++; qclass = (qclass << 8) + *m_rcv++;
 
   if(m_verbose > 0)
-    LogPrintf("DDns::HandleQuery: Key=%s QType=%x QClass=%x\n", key, qtype, qclass);
+    printf("DDns::HandleQuery: Key=%s QType=%x QClass=%x\n", key, qtype, qclass);
 
   if(qclass != 1)
     return 4; // Not implemented - support INET only
@@ -448,7 +448,7 @@ uint16_t DDns::HandleQuery() {
   uint8_t *p = key_end;
 
   if(m_verbose > 3)
-    LogPrintf("DDns::HandleQuery: After TLD-suffix cut: [%s]\n", key);
+    printf("DDns::HandleQuery: After TLD-suffix cut: [%s]\n", key);
 
   while(p > key) {
     uint8_t c = *--p;
@@ -472,7 +472,7 @@ uint16_t DDns::HandleQuery() {
     if(m_allowed_qty) { // Activated TLD-filter
       if(*p != '.') {
         if(m_verbose > 3)
-      LogPrintf("DDns::HandleQuery: TLD-suffix=[.%s] is not specified in given key=%s; return NXDOMAIN\n", p, key);
+      printf("DDns::HandleQuery: TLD-suffix=[.%s] is not specified in given key=%s; return NXDOMAIN\n", p, key);
     return 3; // TLD-suffix is not specified, so NXDOMAIN
       }
       p++; // Set PTR after dot, to the suffix
@@ -480,7 +480,7 @@ uint16_t DDns::HandleQuery() {
         pos += step;
         if(m_ht_offset[pos] == 0) {
           if(m_verbose > 3)
-        LogPrintf("DDns::HandleQuery: TLD-suffix=[.%s] in given key=%s is not allowed; return NXDOMAIN\n", p, key);
+        printf("DDns::HandleQuery: TLD-suffix=[.%s] in given key=%s is not allowed; return NXDOMAIN\n", p, key);
       return 3; // Reached EndOfList, so NXDOMAIN
         }
       } while(m_ht_offset[pos] < 0 || strcmp((const char *)p, m_allowed_base + m_ht_offset[pos]) != 0);
@@ -556,7 +556,7 @@ int DDns::TryMakeref(uint16_t label_ref) {
   m_label_ref = orig_label_ref;
   m_hdr->NSCount = m_hdr->ANCount;
   m_hdr->ANCount = 0;
-  LogPrintf("DDns::TryMakeref: Generated REF NS=%u\n", m_hdr->NSCount);
+  printf("DDns::TryMakeref: Generated REF NS=%u\n", m_hdr->NSCount);
   return m_hdr->NSCount;
 } //  DDns::TryMakeref
 /*---------------------------------------------------*/
@@ -576,7 +576,7 @@ int DDns::Tokenize(const char *key, const char *sep2, char **tokens, char *buf) 
   for(char *token = strtok(buf, mainsep);
     token != NULL;
       token = strtok(NULL, mainsep)) {
-      // LogPrintf("Token:%s\n", token);
+      // printf("Token:%s\n", token);
       char *val = strchr(token, '=');
       if(val == NULL)
       continue;
@@ -587,7 +587,7 @@ int DDns::Tokenize(const char *key, const char *sep2, char **tokens, char *buf) 
       }
       val++;
       // Uplevel token found, tokenize value if needed
-      // LogPrintf("Found: key=%s; val=%s\n", key, val);
+      // printf("Found: key=%s; val=%s\n", key, val);
       if(sep2 == NULL || *sep2 == 0) {
     tokens[tokensN++] = val;
     break;
@@ -605,7 +605,7 @@ int DDns::Tokenize(const char *key, const char *sep2, char **tokens, char *buf) 
       for(token = strtok(val, sep2);
      token != NULL && tokensN < MAX_TOK;
        token = strtok(NULL, sep2)) {
-      // LogPrintf("Subtoken=%s\n", token);
+      // printf("Subtoken=%s\n", token);
       tokens[tokensN++] = token;
       }
       break;
@@ -631,7 +631,7 @@ void DDns::Answer_ALL(uint16_t qtype, char *buf) {
   char *tokens[MAX_TOK];
   int tokQty = Tokenize(key, ",", tokens, buf);
 
-  if(m_verbose > 0) LogPrintf("DDns::Answer_ALL(QT=%d, key=%s); TokenQty=%d\n", qtype, key, tokQty);
+  if(m_verbose > 0) printf("DDns::Answer_ALL(QT=%d, key=%s); TokenQty=%d\n", qtype, key, tokQty);
 
   // Shuffle tokens for randomization output order
   for(int i = tokQty; i > 1; ) {
@@ -644,7 +644,7 @@ void DDns::Answer_ALL(uint16_t qtype, char *buf) {
 
   for(int tok_no = 0; tok_no < tokQty; tok_no++) {
       if(m_verbose > 1)
-    LogPrintf("\tDDns::Answer_ALL: Token:%u=[%s]\n", tok_no, tokens[tok_no]);
+    printf("\tDDns::Answer_ALL: Token:%u=[%s]\n", tok_no, tokens[tok_no]);
       Out2(m_label_ref);
       Out2(qtype); // A record, or maybe something else
       Out2(1); //  INET
@@ -731,7 +731,7 @@ void DDns::Fill_RD_DName(char *txt, uint8_t mxsz, int8_t txtcor) {
 
 int DDns::Search(uint8_t *key) {
   if(m_verbose > 1)
-    LogPrintf("DDns::Search(%s)\n", key);
+    printf("DDns::Search(%s)\n", key);
 
   string value;
   if (!hooks->getNameValue(string("dns:") + (const char *)key, value))
@@ -745,12 +745,12 @@ int DDns::Search(uint8_t *key) {
 
 int DDns::LocalSearch(const uint8_t *key, uint8_t pos, uint8_t step) {
   if(m_verbose > 1)
-    LogPrintf("DDns::LocalSearch(%s, %u, %u) called\n", key, pos, step);
+    printf("DDns::LocalSearch(%s, %u, %u) called\n", key, pos, step);
     do {
       pos += step;
       if(m_ht_offset[pos] == 0) {
         if(m_verbose > 3)
-      LogPrintf("DDns::LocalSearch: Local key=[%s] not found; go to nameindex search\n", key);
+      printf("DDns::LocalSearch: Local key=[%s] not found; go to nameindex search\n", key);
          return 0; // Reached EndOfList
       }
     } while(m_ht_offset[pos] > 0 || strcmp((const char *)key, m_local_base - m_ht_offset[pos]) != 0);
