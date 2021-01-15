@@ -221,7 +221,7 @@ public:
         if(!BN_rand(&ret, k, -1, 0))
         {
             throw bignum_error("CBigNum:rand element : BN_rand failed");
-        }z
+        }
         return ret;
 #endif
     }
