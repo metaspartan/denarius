@@ -96,7 +96,7 @@ extern CDBEnv bitdb;
 /** RAII class that provides access to a Berkeley database */
 class CDB
 {
-//friend class CNameDB; //Denarius Name Database
+friend class CNameDB; //Denarius Name Database
 protected:
     Db* pdb;
     std::string strFile;

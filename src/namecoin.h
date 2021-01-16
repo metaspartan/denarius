@@ -4,6 +4,7 @@
 #include "base58.h"
 #include "main.h"
 #include "hooks.h"
+#include "core.h"
 
 class CBitcoinAddress;
 class CKeyStore;
@@ -20,6 +21,27 @@ static const unsigned int NAMEINDEX_CHAIN_SIZE = 1000;
 
 static const int RELEASE_HEIGHT = 4146600; //Old Height: 65536
 typedef std::vector<unsigned char> CNameVal;
+
+struct NameTxInfo
+{
+    CNameVal name;
+    CNameVal value;
+    int nRentalDays;
+    int op;
+    int nOut;
+    std::string err_msg; //in case function that takes this as argument have something to say about it
+
+    //used only by DecodeNameScript()
+    std::string strAddress;
+    bool fIsMine;
+
+    //used only by GetNameList()
+    int nExpiresAt;
+
+    NameTxInfo(): nRentalDays(-1), op(-1), nOut(-1), fIsMine(false), nExpiresAt(-1) {}
+    NameTxInfo(CNameVal name, CNameVal value, int nRentalDays, int op, int nOut, std::string err_msg):
+        name(name), value(value), nRentalDays(nRentalDays), op(op), nOut(nOut), err_msg(err_msg), fIsMine(false), nExpiresAt(-1) {}
+};
 
 class CNameIndex
 {
@@ -106,7 +128,7 @@ public:
                     CNameVal,
                     std::pair<CNameIndex, int>
                 >
-            >& nameScan
+            > &nameScan
             );
     bool DumpToTextFile();
 };
@@ -121,29 +143,8 @@ std::string stringFromNameVal(const CNameVal& nameVal);
 CNameVal nameValFromString(const std::string& str);
 std::string stringFromOp(int op);
 
-int64_t GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const CNameVal& name, const CNameVal& value);
+CAmount GetNameOpFee(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const CNameVal& name, const CNameVal& value);
 CAmount GetNameOpFee2(const CBlockIndex* pindexBlock, const int nRentalDays, int op, const CNameVal& name, const CNameVal& value);
-
-struct NameTxInfo
-{
-    CNameVal name;
-    CNameVal value;
-    int nRentalDays;
-    int op;
-    int nOut;
-    std::string err_msg; //in case function that takes this as argument have something to say about it
-
-    //used only by DecodeNameScript()
-    std::string strAddress;
-    bool fIsMine;
-
-    //used only by GetNameList()
-    int nExpiresAt;
-
-    NameTxInfo(): nRentalDays(-1), op(-1), nOut(-1), fIsMine(false), nExpiresAt(-1) {}
-    NameTxInfo(CNameVal name, CNameVal value, int nRentalDays, int op, int nOut, std::string err_msg):
-        name(name), value(value), nRentalDays(nRentalDays), op(op), nOut(nOut), err_msg(err_msg), fIsMine(false), nExpiresAt(-1) {}
-};
 
 bool DecodeNameTx(const CTransaction& tx, NameTxInfo& nti, bool checkAddressAndIfIsMine = false);
 void GetNameList(const CNameVal& nameUniq, std::map<CNameVal, NameTxInfo> &mapNames, std::map<CNameVal, NameTxInfo> &mapPending);

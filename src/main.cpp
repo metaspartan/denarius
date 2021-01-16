@@ -2246,8 +2246,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
         {
-            if (nVersion == ANON_TXN_VERSION
-                && vin[i].IsAnonInput())
+            if (nVersion == ANON_TXN_VERSION && vin[i].IsAnonInput())
                 continue;
             COutPoint prevout = vin[i].prevout;
             assert(inputs.count(prevout.hash) > 0);
@@ -2335,9 +2334,9 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             // vTxPrev.push_back(txPrev);
             // vTxindex.push_back(txindex);
         }
-
+        //vector<nameTempProxy>& vName
         //If it can't connect inputs return false to the Name DB
-        // if (!hooks->ConnectInputs(txdb, mapTestPool, *this, posThisTx, pindexBlock, fBlock, fMiner, flags)) {
+        // if (!hooks->ConnectInputs(txdb, mapTestPool, *this, posThisTx, pindexBlock, fBlock, fMiner, flags, vName)) {
         //     return false;
         // }
 
@@ -3033,8 +3032,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
     {
         if (fDebug) printf("ConnectBlock() for Name Index\n");
         const CTransaction &tx = vtx[i];
-        if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
-            hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
+        //if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
+        hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
+        // hooks->CheckInputs(txdb, mapTestPool, tx, vPos[i].second, pindexBlock)
     }
 
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
@@ -3109,7 +3109,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
     }
 
     // add names to denariusnames.dat
-    hooks->ConnectBlock(pindex, vName);
+    hooks->ConnectBlock(txdb, pindex, vName);
 
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)
