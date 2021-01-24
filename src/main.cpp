@@ -1627,9 +1627,11 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
         else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
             nSubsidy = 1 * COIN/2;
         else if (pindexBest->nHeight <= 4000)
-            nSubsidy = 3 * COIN;
+            nSubsidy = 3 * COIN; //300000000
         else if (pindexBest->nHeight > 4000) // Block 4000 Testnet PoW Rewards End
-            nSubsidy = 0; // PoW Reward Ends
+            nSubsidy = 0; // PoW Reward 0.0001 
+        //else if (pindexBest->nHeight > 10000)
+            //nSubsidy = 10000; // PoW Reward 0.0001 
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1647,7 +1649,9 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
         else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
             nSubsidy = 3 * COIN;
         else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
-            nSubsidy = 0; // PoW Reward Ends
+            nSubsidy = 0; // PoW Reward 
+        //else if (pindexBest->nHeight > 4300000) // Block 4.3m, Start PoW Rewards again as 0.0001 D per block, ~100 D per year
+            //nSubsidy = 10000; // PoW Reward 0.0001 D
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1661,7 +1665,7 @@ const int YEARLY_BLOCKCOUNT = 1051896; // Amount of Blocks per year
 // Proof of Stake miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
-	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // Over 9000 years.
+	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // It's Over 9000 Years!
         return nFees;
 
     int64_t nRewardCoinYear;
@@ -2246,8 +2250,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); i++)
         {
-            if (nVersion == ANON_TXN_VERSION
-                && vin[i].IsAnonInput())
+            if (nVersion == ANON_TXN_VERSION && vin[i].IsAnonInput())
                 continue;
             COutPoint prevout = vin[i].prevout;
             assert(inputs.count(prevout.hash) > 0);
@@ -2335,9 +2338,9 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             // vTxPrev.push_back(txPrev);
             // vTxindex.push_back(txindex);
         }
-
+        //vector<nameTempProxy>& vName
         //If it can't connect inputs return false to the Name DB
-        // if (!hooks->ConnectInputs(txdb, mapTestPool, *this, posThisTx, pindexBlock, fBlock, fMiner, flags)) {
+        // if (!hooks->ConnectInputs(txdb, mapTestPool, *this, posThisTx, pindexBlock, fBlock, fMiner, flags, vName)) {
         //     return false;
         // }
 
@@ -2562,10 +2565,9 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
 
     std::vector<CAmount> vFees (vtx.size(), 0);
     
-    //BOOST_FOREACH(CTransaction& tx, vtx)
-    for (unsigned int i = 0; i < vtx.size(); i++)
+    BOOST_FOREACH(CTransaction& tx, vtx)
     {
-        const CTransaction &tx = vtx[i];
+        //const CTransaction &tx = vtx[i];
         uint256 hashTx = tx.GetHash();
 
         // Do not allow blocks that contain transactions which 'overwrite' older transactions,
@@ -2634,7 +2636,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
                 nAmountBurned += out.nValue;
             }
             if (!tx.IsCoinStake()) {
-                vFees[i] = nTxValueIn - nTxValueOut;
+                for (unsigned int i = 0; i < vtx.size(); i++)
+                {
+                    vFees[i] = nTxValueIn - nTxValueOut;
+                }
                 nFees += nTxValueIn - nTxValueOut;
             }
             if (tx.IsCoinStake())
@@ -3026,14 +3031,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
 
     // denarius: collect valid name tx
     // NOTE: tx.UpdateCoins should not affect this loop, probably...
-    vector<nameTempProxy> vName;
-    for (unsigned int i=0; i<vtx.size(); i++)
-    {
-        if (fDebug) printf("ConnectBlock() for Name Index\n");
-        const CTransaction &tx = vtx[i];
-        if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
-            hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
-    }
+    // vector<nameTempProxy> vName;
+    // for (unsigned int i=0; i<vtx.size(); i++)
+    // {
+    //     if (fDebug) printf("ConnectBlock() for Name Index\n");
+    //     const CTransaction &tx = vtx[i];
+    //     //if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
+    //     //hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
+    //     // hooks->CheckInputs(txdb, mapTestPool, tx, vPos[i].second, pindexBlock)
+    // }
 
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
         return error("Connect() : WriteBlockIndex for pindex failed");
@@ -3106,8 +3112,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
 
-    // add names to denariusnames.dat
-    hooks->ConnectBlock(pindex, vName);
+    // add names to denariusnamesindex.dat
+    hooks->ConnectBlock(txdb, pindex);
 
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)

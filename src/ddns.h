@@ -37,7 +37,7 @@ struct DNSAP {		// DNS Amplifier Protector ExpDecay structure
 class DDns {
   public:
      DDns(const char *bind_ip, uint16_t port_no,
-	    const char *gw_suffix, const char *allowed_suff, const char *local_fname, uint8_t verbose);
+        const char *gw_suffix, const char *allowed_suff, const char *local_fname, uint8_t verbose);
     ~DDns();
 
     void Run();

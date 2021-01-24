@@ -60,7 +60,9 @@ UI_DIR = build
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
     # Mac: compile for maximum compatibility (10.6, 32-bit)
-    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.6 -arch x86_64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk
+    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=11 -arch x86_64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/
+
+
 
     !windows:!macx {
         # Linux: static link
@@ -419,7 +421,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
-	src/qt/intro.h \
+    src/qt/intro.h \
     src/qt/transactiontablemodel.h \
     src/qt/addresstablemodel.h \
     src/qt/peertablemodel.h \
@@ -472,7 +474,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/stealth.h \
     src/ddns.h \
     src/hooks.h \
-	src/namecoin.h \
+    src/namecoin.h \
     src/fortuna.h \
     src/activefortunastake.h \
     src/fortunastake.h \
@@ -782,8 +784,8 @@ macx:ICON = src/qt/res/icons/denarius.icns
 macx:TARGET = "Denarius"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
-macx:QMAKE_MAC_SDK = macosx10.14
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11
+macx:QMAKE_MAC_SDK = macosx11.1
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
 macx:QMAKE_RPATHDIR = @executable_path/../Frameworks
 macx:QMAKE_CXXFLAGS += -stdlib=libc++

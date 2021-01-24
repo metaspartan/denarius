@@ -190,7 +190,7 @@ Value jupiterpod(const Array& params, bool fHelp)
 
             if(userFile == "")
             { 
-            return;
+                return 0;
             }
 
             std::string filename = userFile.c_str();
@@ -286,7 +286,7 @@ Value jupiterpod(const Array& params, bool fHelp)
 
                 if(userFile == "")
                 { 
-                return;
+                    return 0;
                 }
 
                 std::string filename = userFile.c_str();
@@ -393,7 +393,7 @@ Value jupiterupload(const Array& params, bool fHelp)
 
             if(userFile == "")
             { 
-            return;
+                return 0;
             }
 
             std::string filename = userFile.c_str();
@@ -438,7 +438,7 @@ Value jupiterupload(const Array& params, bool fHelp)
 
                 if(userFile == "")
                 { 
-                return;
+                    return 0;
                 }
 
                 std::string filename = userFile.c_str();
@@ -516,7 +516,7 @@ Value jupiterduo(const Array& params, bool fHelp)
 
             if(userFile == "")
             { 
-            return;
+                return 0;
             }
 
             std::string filename = userFile.c_str();
@@ -563,7 +563,7 @@ Value jupiterduo(const Array& params, bool fHelp)
 
                 if(userFile == "")
                 { 
-                return;
+                    return 0;
                 }
 
                 std::string filename = userFile.c_str();
@@ -648,7 +648,7 @@ Value jupiterduopod(const Array& params, bool fHelp)
 
             if(userFile == "")
             { 
-            return;
+                return 0;
             }
 
             std::string filename = userFile.c_str();
@@ -734,7 +734,7 @@ Value jupiterduopod(const Array& params, bool fHelp)
 
                 if(userFile == "")
                 { 
-                return;
+                    return 0;
                 }
 
                 std::string filename = userFile.c_str();

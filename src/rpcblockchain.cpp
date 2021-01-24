@@ -226,7 +226,7 @@ Value proofofdata(const Array& params, bool fHelp)
 
     if(userFile == "")
     { 
-        return;
+        return 0; //return with no value prev
     }
 
     std::string filename = userFile.c_str();
