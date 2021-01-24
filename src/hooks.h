@@ -29,12 +29,11 @@ struct nameTempProxy;
 class CHooks
 {
 public:
-    virtual bool IsNameFeeEnough(const CTransaction& tx, const CAmount& txFee) = 0;
-    virtual bool IsNameFeeEnoughOld(CTxDB& txdb, const CTransaction& tx) = 0;
-    virtual bool CheckInputs(const CTransaction& tx, const CBlockIndex* pindexBlock, std::vector<nameTempProxy> &vName, const CDiskTxPos& pos, const CAmount& txFee) = 0;
-    //virtual bool ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx, const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags, vector<nameTempProxy>& vName) = 0;
+    virtual bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx) = 0;
+    //virtual bool CheckInputs(const CTransactionRef& tx, const CBlockIndex* pindexBlock, std::vector<nameTempProxy> &vName, const CDiskTxPos& pos, const CAmount& txFee) = 0;
+    //virtual bool ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx, const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags, bool fValidateSig) = 0;
     virtual bool DisconnectInputs(const CTransaction& tx) = 0;
-    virtual bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, const std::vector<nameTempProxy> &vName) = 0;
+    virtual bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex) = 0;
     virtual bool ExtractAddress(const CScript& script, std::string& address) = 0;
     virtual void AddToPendingNames(const CTransaction& tx) = 0;
     virtual bool IsMine(const CTxOut& txout) = 0;

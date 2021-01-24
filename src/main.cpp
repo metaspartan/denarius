@@ -1627,9 +1627,11 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
         else if (pindexBest->nHeight <= FAIR_LAUNCH_BLOCK) // Block 210, Instamine prevention
             nSubsidy = 1 * COIN/2;
         else if (pindexBest->nHeight <= 4000)
-            nSubsidy = 3 * COIN;
+            nSubsidy = 3 * COIN; //300000000
         else if (pindexBest->nHeight > 4000) // Block 4000 Testnet PoW Rewards End
-            nSubsidy = 0; // PoW Reward Ends
+            nSubsidy = 0; // PoW Reward 0.0001 
+        //else if (pindexBest->nHeight > 10000)
+            //nSubsidy = 10000; // PoW Reward 0.0001 
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1647,7 +1649,9 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
         else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
             nSubsidy = 3 * COIN;
         else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
-            nSubsidy = 0; // PoW Reward Ends
+            nSubsidy = 0; // PoW Reward 
+        //else if (pindexBest->nHeight > 4300000) // Block 4.3m, Start PoW Rewards again as 0.0001 D per block, ~100 D per year
+            //nSubsidy = 10000; // PoW Reward 0.0001 D
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1661,7 +1665,7 @@ const int YEARLY_BLOCKCOUNT = 1051896; // Amount of Blocks per year
 // Proof of Stake miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
-	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // Over 9000 years.
+	if (pindexBest->nHeight > (YEARLY_BLOCKCOUNT*9000)) // It's Over 9000 Years!
         return nFees;
 
     int64_t nRewardCoinYear;
@@ -3027,15 +3031,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
 
     // denarius: collect valid name tx
     // NOTE: tx.UpdateCoins should not affect this loop, probably...
-    vector<nameTempProxy> vName;
-    for (unsigned int i=0; i<vtx.size(); i++)
-    {
-        if (fDebug) printf("ConnectBlock() for Name Index\n");
-        const CTransaction &tx = vtx[i];
-        //if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
-        hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
-        // hooks->CheckInputs(txdb, mapTestPool, tx, vPos[i].second, pindexBlock)
-    }
+    // vector<nameTempProxy> vName;
+    // for (unsigned int i=0; i<vtx.size(); i++)
+    // {
+    //     if (fDebug) printf("ConnectBlock() for Name Index\n");
+    //     const CTransaction &tx = vtx[i];
+    //     //if (!tx.IsCoinBase()) //|| !tx.IsCoinStake()
+    //     //hooks->CheckInputs(tx, pindex, vName, vPos[i].second, vFees[i]); // collect valid name tx to vName
+    //     // hooks->CheckInputs(txdb, mapTestPool, tx, vPos[i].second, pindexBlock)
+    // }
 
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
         return error("Connect() : WriteBlockIndex for pindex failed");
@@ -3108,8 +3112,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
 
-    // add names to denariusnames.dat
-    hooks->ConnectBlock(txdb, pindex, vName);
+    // add names to denariusnamesindex.dat
+    hooks->ConnectBlock(txdb, pindex);
 
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)

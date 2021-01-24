@@ -999,9 +999,9 @@ bool AppInit2()
     nStart2 = GetTimeMillis();
 
     extern bool createNameIndexFile();
-    if (!filesystem::exists(GetDataDir() / "denariusnames.dat") && !createNameIndexFile())
+    if (!filesystem::exists(GetDataDir() / "denariusnamesindex.dat") && !createNameIndexFile())
     {
-        printf("Fatal error: Failed to create denariusnames.dat\n");
+        printf("Fatal error: Failed to create denariusnamesindex.dat\n");
         return false;
     }
 
