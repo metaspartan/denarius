@@ -1,4 +1,5 @@
 #include "transactiontablemodel.h"
+#include "nametablemodel.h"
 #include "guiutil.h"
 #include "transactionrecord.h"
 #include "guiconstants.h"

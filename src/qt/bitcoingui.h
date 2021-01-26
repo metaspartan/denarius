@@ -12,6 +12,7 @@ class WalletModel;
 class MessageModel;
 class TransactionView;
 class MintingView;
+class ManageNamesPage;
 class FortunastakeManager;
 class MultisigDialog;
 class OverviewPage;
@@ -96,6 +97,7 @@ private:
     OverviewPage *overviewPage;
 	StatisticsPage *statisticsPage;
 	BlockBrowser *blockBrowser;
+    ManageNamesPage *manageNamesPage;
 	MarketBrowser *marketBrowser;
     QWidget *transactionsPage;
 	QWidget *mintingPage;
@@ -131,6 +133,7 @@ private:
 	QAction *multisigAction;
     QAction *proofOfImageAction;
     QAction *jupiterAction;
+    QAction *manageNamesAction;
 	QAction *fortunastakeManagerAction;
     QAction *quitAction;
     QAction *sendCoinsAction;
@@ -222,6 +225,8 @@ private slots:
     void gotoBlockBrowser();
 	/** Switch to market*/
     void gotoMarketBrowser();
+    /** Switch to manage names page */
+    void gotoManageNamesPage();
 	/** Switch to minting page */
     void gotoMintingPage();
     /** Switch to history (transactions) page */

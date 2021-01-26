@@ -545,7 +545,7 @@ string SendMoneyWithInputTx(CScript scriptPubKey, int64_t nValue, int64_t nNetFe
     return "";
 }
 
-// scans nameindex.dat and return names with their last CNameIndex
+// scans denariusnamesindex.dat and return names with their last CNameIndex
 bool CNameDB::ScanNames(
         const vector<unsigned char>& vchName,
         unsigned int nMax,
@@ -1317,7 +1317,7 @@ Value name_scan(const Array& params, bool fHelp)
 
     vector<unsigned char> vchName;
     int nMax = 500;
-    int mMaxShownValue = -1;
+    int mMaxShownValue = 10; //-1 for unlimited values
     if (params.size() > 0)
     {
         vchName = vchFromValue(params[0]);
@@ -1356,7 +1356,7 @@ Value name_scan(const Array& params, bool fHelp)
         vector<unsigned char> vchValue = txName.vchValue;
 
         string value = stringFromVch(vchValue);
-        oName.push_back(Pair("value", limitString(value, mMaxShownValue, "\n...(value too large - use name_show to see full value)")));
+        oName.push_back(Pair("value", limitString(value, mMaxShownValue, "\n...(value redacted - use name_show to see full value)")));
         oName.push_back(Pair("expires_in", nExpiresAt - pindexBest->nHeight));
         if (nExpiresAt - pindexBest->nHeight <= 0)
             oName.push_back(Pair("expired", true));
@@ -2380,7 +2380,7 @@ bool CNamecoinHooks::DisconnectInputs(const CTransaction& tx)
         // be empty, since a reorg cannot go that far back.  Be safe anyway and do not try to pop if empty.
         if (nameRec.vtxPos.size() > 0)
         {
-            // check if tx matches last tx in nameindex.dat
+            // check if tx matches last tx in denariusnamesindex.dat
             CTransaction lastTx;
             lastTx.ReadFromDisk(nameRec.vtxPos.back().txPos);
             assert(lastTx.GetHash() == tx.GetHash());
