@@ -38,6 +38,7 @@
 #include "termsofuse.h"
 #include "proofofimage.h"
 #include "jupiter.h"
+#include "managenamespage.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -191,6 +192,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	multisigPage = new MultisigDialog(this);
     proofOfImagePage = new ProofOfImage(this);
     jupiterPage = new Jupiter(this);
+    manageNamesPage = new ManageNamesPage(this);
 	//chatWindow = new ChatWindow(this);
 
     transactionsPage = new QWidget(this);
@@ -220,6 +222,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
 	centralWidget->addWidget(mintingPage);
+    centralWidget->addWidget(manageNamesPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
@@ -353,6 +356,12 @@ void BitcoinGUI::createActions()
     marketAction->setCheckable(true);
     tabGroup->addAction(marketAction);
 
+    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage NVS"), this);
+    manageNamesAction->setToolTip(tr("Manage Denarius NVS"));
+    manageNamesAction->setCheckable(true);
+    manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(manageNamesAction);
+
 	//chatAction = new QAction(QIcon(":/icons/msg"), tr("&Social"), this);
     //chatAction->setToolTip(tr("View chat"));
     //chatAction->setCheckable(true);
@@ -432,6 +441,8 @@ void BitcoinGUI::createActions()
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(gotoReceiveCoinsPage()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(manageNamesAction, SIGNAL(triggered()), this, SLOT(gotoManageNamesPage()));
 	connect(mintingAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(fortunastakeManagerAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -585,8 +596,9 @@ void BitcoinGUI::createToolBars()
     mainToolbar->addAction(addressBookAction);
     mainToolbar->addAction(statisticsAction);
     mainToolbar->addAction(fortunastakeManagerAction);
-    mainToolbar->addAction(proofOfImageAction);
+    mainToolbar->addAction(manageNamesAction);
     mainToolbar->addAction(jupiterAction);
+    mainToolbar->addAction(proofOfImageAction);
     mainToolbar->addAction(marketAction);
     mainToolbar->addAction(blockAction);
     mainToolbar->addAction(messageAction);
@@ -696,6 +708,7 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 		marketBrowser->setModel(clientModel);
         fortunastakeManagerPage->setWalletModel(walletModel);
 		multisigPage->setModel(walletModel);
+        manageNamesPage->setModel(walletModel);
 		//chatWindow->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
@@ -1155,6 +1168,16 @@ void BitcoinGUI::gotoMarketBrowser()
     exportAction->setEnabled(false);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 
+}
+
+void BitcoinGUI::gotoManageNamesPage()
+{
+    manageNamesAction->setChecked(true);
+    centralWidget->setCurrentWidget(manageNamesPage);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), manageNamesPage, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoProofOfImagePage()

@@ -3112,8 +3112,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
 
-    // add names to denariusnamesindex.dat
-    hooks->ConnectBlock(txdb, pindex);
+    // Check Name Release Height to Connect Blocks
+    if (pindex->nHeight >= RELEASE_HEIGHT) {
+        // add names to denariusnamesindex.dat
+        hooks->ConnectBlock(txdb, pindex);
+    }
 
     // Watch for transactions paying to me
     BOOST_FOREACH(CTransaction& tx, vtx)
