@@ -608,9 +608,9 @@ bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti,
 // Note: if fBlock and fMiner equal false then FetchInputs will search mempool
     int64_t txFee;
     MapPrevTx mapInputs;
-    bool fInvalid = false;
-    if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
-        return false;
+//    bool fInvalid = false;
+//    if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
+//        return false;
     txFee = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
 
