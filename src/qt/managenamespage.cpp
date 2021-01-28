@@ -356,9 +356,9 @@ void ManageNamesPage::on_submitNameButton_clicked()
     QString txType = ui->txTypeSelector->currentText();
     QString newAddress = ui->registerAddress->text();
     QString address = ui->registerAddress->text();
-    if (txType == "NAME_UPDATE")
+    if (txType == "name_update")
         newAddress = ui->registerAddress->text();
-    if (txType == "NAME_NEW")
+    if (txType == "name_new")
         address = ui->registerAddress->text();
 
     if (name == "")
@@ -367,7 +367,7 @@ void ManageNamesPage::on_submitNameButton_clicked()
         return;
     }
 
-    if (vchValue.empty() && (txType == "NAME_NEW" || txType == "NAME_UPDATE"))
+    if (vchValue.empty() && (txType == "name_new" || txType == "name_update"))
     {
         QMessageBox::critical(this, tr("Value is empty"), tr("Enter value please"));
         return;
@@ -391,9 +391,9 @@ void ManageNamesPage::on_submitNameButton_clicked()
         string strName = name.toStdString();
         vector<unsigned char> vchName(strName.begin(), strName.end());
 
-        if (txType == "NAME_NEW")
+        if (txType == "name_new")
             txFee = GetNameOpFee(pindexBest, days, OP_NAME_NEW, vchName, vchValue);
-        else if (txType == "NAME_UPDATE")
+        else if (txType == "name_update")
             txFee = GetNameOpFee(pindexBest, days, OP_NAME_UPDATE, vchName, vchValue);
     }
 
@@ -416,19 +416,19 @@ void ManageNamesPage::on_submitNameButton_clicked()
         NameTxReturn res;
         int nHeight;
         ChangeType status;
-        if (txType == "NAME_NEW")
+        if (txType == "name_new")
         {
             nHeight = NameTableEntry::NAME_NEW;
             status = CT_NEW;
             res = walletModel->nameNew(name, vchValue, days, address);
         }
-        else if (txType == "NAME_UPDATE")
+        else if (txType == "name_update")
         {
             nHeight = NameTableEntry::NAME_UPDATE;
             status = CT_UPDATED;
             res = walletModel->nameUpdate(name, vchValue, days, newAddress);
         }
-        else if (txType == "NAME_DELETE")
+        else if (txType == "name_delete")
         {
             nHeight = NameTableEntry::NAME_DELETE;
             status = CT_UPDATED; //we still want to display this name until it is deleted
@@ -596,19 +596,19 @@ void ManageNamesPage::exportClicked()
 
 void ManageNamesPage::on_txTypeSelector_currentIndexChanged(const QString &txType)
 {
-    if (txType == "NAME_NEW")
+    if (txType == "name_new")
     {
         ui->registerDays->setEnabled(true);
         ui->registerAddress->setEnabled(true);
         ui->registerValue->setEnabled(true);
     }
-    else if (txType == "NAME_UPDATE")
+    else if (txType == "name_update")
     {
         ui->registerDays->setEnabled(true);
         ui->registerAddress->setEnabled(true);
         ui->registerValue->setEnabled(true);
     }
-    else if (txType == "NAME_DELETE")
+    else if (txType == "name_delete")
     {
         ui->registerDays->setDisabled(true);
         ui->registerAddress->setDisabled(true);
