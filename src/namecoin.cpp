@@ -604,13 +604,13 @@ CHooks* InitHook()
 // version for connectInputs. Used when accepting blocks.
 bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti, const CBlockIndex* pindexBlock, const map<uint256, CTxIndex>& mapTestPool, bool fBlock, bool fMiner)
 {
-// get tx fee
-// Note: if fBlock and fMiner equal false then FetchInputs will search mempool
+    // get tx fee
+    // Note: if fBlock and fMiner equal false then FetchInputs will search mempool
     int64_t txFee;
     MapPrevTx mapInputs;
-//    bool fInvalid = false;
-//    if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
-//        return false;
+    bool fInvalid = false;
+    if (!tx.FetchInputs(txdb, mapTestPool, fBlock, fMiner, mapInputs, fInvalid))
+        return false;
     txFee = tx.GetValueIn(mapInputs) - tx.GetValueOut();
 
 
