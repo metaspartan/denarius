@@ -356,7 +356,7 @@ void BitcoinGUI::createActions()
     marketAction->setCheckable(true);
     tabGroup->addAction(marketAction);
 
-    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&Manage NVS"), this);
+    manageNamesAction = new QAction(QIcon(":/icons/names"), tr("&NVS"), this);
     manageNamesAction->setToolTip(tr("Manage Denarius NVS"));
     manageNamesAction->setCheckable(true);
     manageNamesAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
