@@ -29,7 +29,7 @@ struct nameTempProxy;
 class CHooks
 {
 public:
-    virtual bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx) = 0;
+    virtual bool IsNameFeeEnough(CTxDB& txdb, CTransaction &tx) = 0;
     //virtual bool CheckInputs(const CTransactionRef& tx, const CBlockIndex* pindexBlock, std::vector<nameTempProxy> &vName, const CDiskTxPos& pos, const CAmount& txFee) = 0;
     //virtual bool ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTxIndex>& mapTestPool, const CDiskTxPos& posThisTx, const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, unsigned int flags, bool fValidateSig) = 0;
     virtual bool DisconnectInputs(const CTransaction& tx) = 0;

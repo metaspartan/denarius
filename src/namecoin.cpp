@@ -30,7 +30,7 @@ extern std::string _(const char* psz);
 class CNamecoinHooks : public CHooks
 {
 public:
-	virtual bool IsNameFeeEnough(CTxDB& txdb, const CTransaction &tx);
+    virtual bool IsNameFeeEnough(CTxDB& txdb, CTransaction &tx);
     //virtual bool CheckInputs(const CTransactionRef& tx, const CBlockIndex* pindexBlock, vector<nameTempProxy> &vName, const CDiskTxPos& pos, const CAmount& txFee);
     //virtual bool ConnectInputs(CTxDB& txdb, map<uint256, CTxIndex>& mapTestPool, const CTransaction& tx, vector<CTransaction>& vTxPrev, vector<CTxIndex>& vTxindex, const CBlockIndex* pindexBlock, const CDiskTxPos& txPos, vector<nameTempProxy>& vName);
     virtual bool DisconnectInputs(const CTransaction& tx);
@@ -602,7 +602,7 @@ CHooks* InitHook()
 }
 
 // version for connectInputs. Used when accepting blocks.
-bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti, const CBlockIndex* pindexBlock, const map<uint256, CTxIndex>& mapTestPool, bool fBlock, bool fMiner)
+bool IsNameFeeEnough(CTxDB& txdb, CTransaction &tx, const NameTxInfo& nti, const CBlockIndex* pindexBlock, const map<uint256, CTxIndex>& mapTestPool, bool fBlock, bool fMiner)
 {
     // get tx fee
     // Note: if fBlock and fMiner equal false then FetchInputs will search mempool
@@ -635,7 +635,7 @@ bool IsNameFeeEnough(CTxDB& txdb, const CTransaction& tx, const NameTxInfo& nti,
 }
 
 // version for mempool::accept. Used to check newly submited transaction that has yet to get in a block.
-bool CNamecoinHooks::IsNameFeeEnough(CTxDB& txdb, const CTransaction &tx)
+bool CNamecoinHooks::IsNameFeeEnough(CTxDB& txdb, CTransaction &tx)
 {
     if (tx.nVersion != NAMECOIN_TX_VERSION)
         printf("IsNameFeeEnough() Not Name TX Version, Returning False");
@@ -2234,7 +2234,7 @@ void CNamecoinHooks::AddToPendingNames(const CTransaction& tx)
 // returns false if tx is invalid name tx
 bool ConnectInputs(CTxDB& txdb,
         map<uint256, CTxIndex>& mapTestPool,
-        const CTransaction& tx,
+        CTransaction &tx,
         vector<CTransaction>& vTxPrev, //vector of all input transactions
         vector<CTxIndex>& vTxindex,
         const CBlockIndex* pindexBlock,
