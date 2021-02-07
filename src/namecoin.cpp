@@ -1267,7 +1267,7 @@ Value name_filter(const Array& params, bool fHelp)
             oName.push_back(Pair("name", name));
 
             string value = stringFromVch(txName.vchValue);
-            oName.push_back(Pair("value", limitString(value, 300, "\n...(value too large - use name_show to see full value)")));
+            oName.push_back(Pair("value", limitString(value, -1, "\n...(value too large - use name_show to see full value)")));
 
             oName.push_back(Pair("registered_at", nHeight)); // pos = 2 in comparison function (above name_filter)
 
