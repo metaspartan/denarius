@@ -35,7 +35,7 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
     str.reserve((pend - pbegin) * 138 / 100 + 1);
     CBigNum dv;
     CBigNum rem;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
     while (bn > bn0)
     {
         if (!BN_div(dv.pbn, rem.pbn, bn.pbn, bn58.pbn, pctx))
@@ -44,16 +44,7 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
         unsigned int c = rem.getulong();
         str += pszBase58[c];
     }
-#else
-    while (bn > bn0)
-    {
-        if (!BN_div(&dv, &rem, &bn, &bn58, pctx))
-            throw bignum_error("EncodeBase58 : BN_div failed");
-        bn = dv;
-        unsigned int c = rem.getulong();
-        str += pszBase58[c];
-    }
-#endif
+
 
     // Leading zeroes encoded as base58 zeros
     for (const unsigned char* p = pbegin; p < pend && *p == 0; p++)
@@ -81,7 +72,7 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
     CBigNum bnChar;
     while (isspace(*psz))
         psz++;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
     // Convert big endian string to bignum
     for (const char* p = psz; *p; p++)
     {
@@ -99,25 +90,6 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
             throw bignum_error("DecodeBase58 : BN_mul failed");
         bn += bnChar;
     }
-#else
-    // Convert big endian string to bignum
-    for (const char* p = psz; *p; p++)
-    {
-        const char* p1 = strchr(pszBase58, *p);
-        if (p1 == NULL)
-        {
-            while (isspace(*p))
-                p++;
-            if (*p != '\0')
-                return false;
-            break;
-        }
-        bnChar.setulong(p1 - pszBase58);
-        if (!BN_mul(&bn, &bn, &bn58, pctx))
-            throw bignum_error("DecodeBase58 : BN_mul failed");
-        bn += bnChar;
-    }
-#endif
 
     // Get bignum as little endian data
     std::vector<unsigned char> vchTmp = bn.getvch();

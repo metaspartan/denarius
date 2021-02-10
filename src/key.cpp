@@ -104,6 +104,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #else
     const BIGNUM *pr = NULL;
     const BIGNUM *ps = NULL;
+    BIGNUM *s = 0;
 #endif
     int n = 0;
     int i = recid / 2;
@@ -119,8 +120,8 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_add(x, x, ecsig->r)) { ret=-1; goto err; }
 #else
-    ECDSA_SIG_get0(ecsig, &pr, &ps);
-    if (!BN_add(x, x, pr)) { ret=-1; goto err; }
+    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&s, 0);
+    if (!BN_add(x, x, s)) { ret=-1; goto err; }
 #endif
     field = BN_CTX_get(ctx);
     if (!EC_GROUP_get_curve_GFp(group, field, NULL, NULL, ctx)) { ret=-2; goto err; }
@@ -145,13 +146,15 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_mod_inverse(rr, ecsig->r, order, ctx)) { ret=-1; goto err; }
 #else
-    if (!BN_mod_inverse(rr, pr, order, ctx)) { ret=-1; goto err; } //Was ->s?
+    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&s, 0);
+    if (!BN_mod_inverse(rr, s, order, ctx)) { ret=-1; goto err; } //Was ->s?
 #endif
     sor = BN_CTX_get(ctx);
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_mod_mul(sor, ecsig->s, rr, order, ctx)) { ret=-1; goto err; }
 #else
-    if (!BN_mod_mul(sor, ps, rr, order, ctx)) { ret=-1; goto err; }
+    ECDSA_SIG_get0(ecsig, 0, (const BIGNUM **)&s);
+    if (!BN_mod_mul(sor, s, rr, order, ctx)) { ret=-1; goto err; }
 #endif
     eor = BN_CTX_get(ctx);
     if (!BN_mod_mul(eor, e, rr, order, ctx)) { ret=-1; goto err; }
