@@ -17,6 +17,7 @@
 #include <QScrollBar>
 #include <QFileDialog>
 #include <QTimer>
+#include <QClipboard>
 
 //
 // NameFilterProxyModel
@@ -133,8 +134,8 @@ ManageNamesPage::ManageNamesPage(QWidget *parent) :
     connect(ui->tableView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
     ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    // connect(ui->tableView_2, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
-    // ui->tableView_2->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // connect(ui->tableWidget, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
+    // ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Reset gui sizes and visibility (for name new)
     ui->registerAddress->setEnabled(true);
@@ -513,6 +514,34 @@ void ManageNamesPage::onCopyAddressAction()
     GUIUtil::copyEntryData(ui->tableView, NameTableModel::Address);
 }
 
+void ManageNamesPage::on_copyNameButton_clicked()
+{
+    QItemSelectionModel* selectionModel = ui->tableWidget->selectionModel();
+    QModelIndexList selected = selectionModel->selectedRows();
+    if(selected.count() == 0)
+        return;
+
+    QModelIndex index = selected.at(0);
+    int r = index.row();
+    std::string sNameSel = ui->tableWidget->item(r, 0)->text().toStdString(); //Name Col is 0
+
+    QApplication::clipboard()->setText(QString::fromStdString(sNameSel));
+}
+
+void ManageNamesPage::on_copyValueButton_clicked()
+{
+    QItemSelectionModel* selectionModel = ui->tableWidget->selectionModel();
+    QModelIndexList selected = selectionModel->selectedRows();
+    if(selected.count() == 0)
+        return;
+
+    QModelIndex index = selected.at(0);
+    int r = index.row();
+    std::string sValueSel = ui->tableWidget->item(r, 2)->text().toStdString(); //Value Col is 2
+
+    QApplication::clipboard()->setText(QString::fromStdString(sValueSel));
+}
+
 void ManageNamesPage::onCopyAllAction()
 {
     if(!ui->tableView || !ui->tableView->selectionModel())
@@ -685,5 +714,5 @@ void ManageNamesPage::on_registerValue_textChanged()
     else
         byteSize = importedAsBinaryFile.size();
 
-    ui->labelValue->setText(tr("value(%1%)").arg(int(100 * byteSize / MAX_VALUE_LENGTH)));
+    ui->labelValue->setText(tr("Value (%1%)").arg(int(100 * byteSize / MAX_VALUE_LENGTH)));
 }

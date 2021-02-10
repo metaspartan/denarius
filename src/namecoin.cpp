@@ -1367,6 +1367,37 @@ Value name_scan(const Array& params, bool fHelp)
     return oRes;
 }
 
+Value name_count(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+                "name_count\n"
+                "Scan all names and return the current total count\n"
+                );
+
+    if (!IsSynchronized())
+        throw runtime_error("Blockchain is still downloading - wait until it is done.");
+
+    vector<unsigned char> vchName;
+    int nMax = 100000000; // Maximum names to scan -1 for unlimited
+
+    CNameDB dbName("r");
+
+    vector<pair<vector<unsigned char>, pair<CNameIndex,int> > > nameScan;
+    if (!dbName.ScanNames(vchName, nMax, nameScan))
+        throw JSONRPCError(RPC_WALLET_ERROR, "count scan failed");
+
+    //Object oNameCount;
+    int nCount = 0;
+    pair<vector<unsigned char>, pair<CNameIndex,int> > pairScan;
+    BOOST_FOREACH(pairScan, nameScan)
+    {
+        nCount++;
+    }
+    //oNameCount.push_back(Pair("count", nCount));
+    return nCount;
+}
+
 bool createNameScript(CScript& nameScript, const vector<unsigned char> &vchName, const vector<unsigned char> &vchValue, int nRentalDays, int op, string& err_msg)
 {
     if (op == OP_NAME_DELETE)
