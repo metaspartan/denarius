@@ -105,6 +105,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     const BIGNUM *pr = NULL;
     const BIGNUM *ps = NULL;
     BIGNUM *s = 0;
+    BIGNUM *r = 0;
 #endif
     int n = 0;
     int i = recid / 2;
@@ -120,8 +121,8 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_add(x, x, ecsig->r)) { ret=-1; goto err; }
 #else
-    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&s, 0);
-    if (!BN_add(x, x, s)) { ret=-1; goto err; }
+    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&r, 0);
+    if (!BN_add(x, x, r)) { ret=-1; goto err; }
 #endif
     field = BN_CTX_get(ctx);
     if (!EC_GROUP_get_curve_GFp(group, field, NULL, NULL, ctx)) { ret=-2; goto err; }
@@ -146,8 +147,8 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_mod_inverse(rr, ecsig->r, order, ctx)) { ret=-1; goto err; }
 #else
-    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&s, 0);
-    if (!BN_mod_inverse(rr, s, order, ctx)) { ret=-1; goto err; } //Was ->s?
+    ECDSA_SIG_get0(ecsig, (const BIGNUM **)&r, 0);
+    if (!BN_mod_inverse(rr, r, order, ctx)) { ret=-1; goto err; } //Was ->s?
 #endif
     sor = BN_CTX_get(ctx);
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -772,12 +773,12 @@ bool CECKey::Recover(const uint256 &hash, const unsigned char *p64, int rec)
     if (rec<0 || rec>=3)
         return false;
     ECDSA_SIG *sig = ECDSA_SIG_new();
-    BIGNUM *pr = NULL;
-    BIGNUM *ps = NULL;
-    BN_bin2bn(&p64[0],  32, pr);
-    BN_bin2bn(&p64[32], 32, ps);
-    ECDSA_SIG_set0(sig, pr, ps);
-    bool ret = ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), rec, 0) == 1;
+    BIGNUM *sig_r = BN_bin2bn(&p64[0],  32, nullptr);
+    BIGNUM *sig_s = BN_bin2bn(&p64[32], 32, nullptr);
+    assert(sig && sig_r && sig_s);
+    bool ret = ECDSA_SIG_set0(sig, sig_r, sig_s);
+    assert(ret);
+    ret = ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), rec, 0) == 1;
     ECDSA_SIG_free(sig);
     return ret;
 #endif
