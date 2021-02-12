@@ -5,7 +5,7 @@
 #include "init.h"
 #include "walletdb.h"
 #include "guiutil.h"
-#include "ringsig.h"
+//#include "ringsig.h"
 
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
@@ -46,7 +46,7 @@ void OptionsModel::Init()
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
-    nReserveBalance = settings.value("nReserveBalance").toLongLong();
+    //nReserveBalance = settings.value("nReserveBalance").toLongLong();
     language = settings.value("language", "").toString();
 
     // These are shared with core Bitcoin; we want
