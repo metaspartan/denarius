@@ -102,8 +102,6 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     BIGNUM *zero = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #else
-    const BIGNUM *pr = NULL;
-    const BIGNUM *ps = NULL;
     BIGNUM *s = 0;
     BIGNUM *r = 0;
 #endif

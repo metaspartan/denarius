@@ -767,7 +767,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                 case OP_DEPTH:
                 {
                     // -- stacksize
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
                     CBigNum bn(stack.size());
+#else
+                    CBigNum bn((unsigned int)stack.size());
+#endif
                     stack.push_back(bn.getvch());
                 }
                 break;
@@ -923,7 +927,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                     // (in -- in size)
                     if (stack.size() < 1)
                         return false;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
                     CBigNum bn(stacktop(-1).size());
+#else
+                    CBigNum bn((unsigned int)stacktop(-1).size());
+#endif
                     stack.push_back(bn.getvch());
                 }
                 break;
@@ -1075,18 +1083,33 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         break;
 
                     case OP_MUL:
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
                         if (!BN_mul(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                             return false;
+#else
+                        if (!BN_mul(&bn, &bn1, &bn2, pctx))
+                            return false;
+#endif
                         break;
 
                     case OP_DIV:
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
                         if (!BN_div(bn.pbn, NULL, bn1.pbn, bn2.pbn, pctx))
                             return false;
+#else
+                        if (!BN_div(&bn, NULL, &bn1, &bn2, pctx))
+                            return false;
+#endif
                         break;
 
                     case OP_MOD:
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
                         if (!BN_mod(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                             return false;
+#else
+                        if (!BN_mod(&bn, &bn1, &bn2, pctx))
+                            return false;
+#endif
                         break;
 
                     case OP_LSHIFT:

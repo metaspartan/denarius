@@ -38,8 +38,13 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
 
     while (bn > bn0)
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
         if (!BN_div(dv.pbn, rem.pbn, bn.pbn, bn58.pbn, pctx))
             throw bignum_error("EncodeBase58 : BN_div failed");
+#else
+        if (!BN_div(&dv, &rem, &bn, &bn58, pctx))
+            throw bignum_error("EncodeBase58 : BN_div failed");
+#endif
         bn = dv;
         unsigned int c = rem.getulong();
         str += pszBase58[c];
@@ -86,8 +91,13 @@ bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
             break;
         }
         bnChar.setulong(p1 - pszBase58);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
         if (!BN_mul(bn.pbn, bn.pbn, bn58.pbn, pctx))
             throw bignum_error("DecodeBase58 : BN_mul failed");
+#else
+        if (!BN_mul(&bn, &bn, &bn58, pctx))
+                    throw bignum_error("DecodeBase58 : BN_mul failed");
+#endif
         bn += bnChar;
     }
 
