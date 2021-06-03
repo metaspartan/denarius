@@ -21,6 +21,7 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
 		( 1701527, 0xb64daf99 )
         ( 2487918, 0x518704f3 )
         ( 3692427, 0x20a869c0 )
+        ( 4662797, 0xa7d6f2de )
         //( 640106, 0x491697be ) Example of bad modifier checkpoint, must have proof-of-stake flag
     ;
 
