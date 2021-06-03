@@ -27,8 +27,8 @@ Denarius is a true optionally anonymous, untraceable, and secure hybrid cryptocu
 
 Ticker: D
 
-Denarius [D] is an anonymous, untraceable, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
-10,000,000 D will be created in approx. about 3 years during the PoW phase.
+Denarius [D] is an optionally anonymous, decentralized, energy efficient, Proof-of-Work (New Tribus Algorithm) and Proof-of-Stake cryptocurrency.
+10,000,000 D max with Denarius Domain Names via the Denarius NVS.
 
 Supported Operating Systems
 ==========================
@@ -68,6 +68,8 @@ Specifications
 Technology
 ==========================
 * Hybrid PoW/PoS Fortuna Stakes
+* Decentralized Domain Names within the Denarius NVS (.bitcoin, .btc, .d, .dnr, .denarii, .ipfs, .sys, .king, and more)
+* Name Registration is 0.1 D, 0.09 D goes to miners and stakers
 * Stealth addresses
 * Ring Signatures (16 Recommended)
 * Native Optional Tor Onion Node (-nativetor=1)

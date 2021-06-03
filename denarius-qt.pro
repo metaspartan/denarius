@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = Denarius
-VERSION = 3.3.9.11
+VERSION = 3.3.9.12
 INCLUDEPATH += src src/json src/qt src/qt/plugins/mrichtexteditor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB
 CONFIG += no_include_pwd
@@ -107,7 +107,7 @@ contains(USE_IPFS, -) {
 # use: qmake "USE_NATIVETOR=1" ( enabled by default; default)
 #  or: qmake "USE_NATIVETOR=0" (disabled by default)
 #  or: qmake "USE_NATIVETOR=-" (not supported)
-# D E N A R I U S Native Tor - USE_NATIVETOR=- to not compile with the Tor C Library by Tor Project located in src/tor
+# D E N A R I U S Native Tor - USE_NATIVETOR=- to not compile with the Tor C Library by Tor Project located in src/tor OpenSSL 1.1 Compat not available with Native Tor
 contains(USE_NATIVETOR, -) {
     message(Building without Native Tor support)
 } else {

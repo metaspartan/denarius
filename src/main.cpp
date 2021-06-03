@@ -1630,8 +1630,8 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
             nSubsidy = 3 * COIN; //300000000
         else if (pindexBest->nHeight > 4000) // Block 4000 Testnet PoW Rewards End
             nSubsidy = 0; // PoW Reward 0.0001 
-        //else if (pindexBest->nHeight > 10000)
-            //nSubsidy = 10000; // PoW Reward 0.0001 
+        else if (pindexBest->nHeight > 30000)
+            nSubsidy = 10000; // PoW Reward 0.0001 
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1648,10 +1648,10 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
             nSubsidy = 4 * COIN;
         else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
             nSubsidy = 3 * COIN;
-        else if (pindexBest->nHeight > LAST_POW_BLOCK) // Block 3m
+        else if (pindexBest->nHeight > ZERO_POW_BLOCK) // Block 3m
             nSubsidy = 0; // PoW Reward 
-        //else if (pindexBest->nHeight > 4300000) // Block 4.3m, Start PoW Rewards again as 0.0001 D per block, ~100 D per year
-            //nSubsidy = 10000; // PoW Reward 0.0001 D
+        else if (pindexBest->nHeight > 4683333) // Block 4683333, Start PoW Rewards again as 0.0001 D per block, Less than ~100 D per year to prevent unspendable UTXOs
+            nSubsidy = 10000; // PoW Reward 0.0001 D
 
         if (fDebug && GetBoolArg("-printcreation"))
             printf("GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -3628,9 +3628,6 @@ bool CBlock::AcceptBlock()
         return DoS(10, error("AcceptBlock() : prev block not found"));
     CBlockIndex* pindexPrev = (*mi).second;
     int nHeight = pindexPrev->nHeight+1;
-
-    //if (IsProofOfWork() && nHeight > LAST_POW_BLOCK)
-        //return DoS(100, error("AcceptBlock() : reject proof-of-work at height %d", nHeight));
 
     // Check proof-of-work or proof-of-stake
     if (nBits != GetNextTargetRequired(pindexPrev, IsProofOfStake()))
