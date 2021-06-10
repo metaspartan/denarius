@@ -80,9 +80,9 @@ void StatisticsPage::updateStatistics()
     {
         subsidy = "3 D per block";
     }
-    else if (nHeight > 3000000)
+    else if (nHeight > 4693333)
     {
-        subsidy = "No PoW Reward";
+        subsidy = "0.0001 D per block";
     }
     QString hardness = QString::number(pHardness, 'f', 6);
     QString hardness2 = QString::number(pHardness2, 'f', 6);

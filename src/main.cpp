@@ -1648,9 +1648,7 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
             nSubsidy = 4 * COIN;
         else if (pindexBest->nHeight <= 3000000) // Block 3m ~ 3m D
             nSubsidy = 3 * COIN;
-        else if (pindexBest->nHeight > ZERO_POW_BLOCK) // Block 3m
-            nSubsidy = 0; // PoW Reward 
-        else if (pindexBest->nHeight > 4683333) // Block 4683333, Start PoW Rewards again as 0.0001 D per block, Less than ~100 D per year to prevent unspendable UTXOs
+        else if (pindexBest->nHeight > 4693333) // Block 4693333, Start PoW Rewards again as 0.0001 D per block, Less than ~100 D per year to prevent unspendable UTXOs
             nSubsidy = 10000; // PoW Reward 0.0001 D
 
         if (fDebug && GetBoolArg("-printcreation"))
