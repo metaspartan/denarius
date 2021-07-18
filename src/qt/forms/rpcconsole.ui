@@ -17,7 +17,7 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>3</number>
+      <number>4</number>
      </property>
      <widget class="QWidget" name="tab_info">
       <attribute name="title">
@@ -1345,10 +1345,10 @@
       <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>10</x>
          <y>100</y>
-         <width>711</width>
-         <height>341</height>
+         <width>691</width>
+         <height>311</height>
         </rect>
        </property>
        <property name="title">

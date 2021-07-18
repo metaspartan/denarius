@@ -34,6 +34,9 @@ extern "C" {
 }
 #endif
 
+// Dump data of peers.dat and banlist.dat every 15 minutes (900s)
+#define DUMP_DATA_INTERVAL 900
+
 static const int MAX_OUTBOUND_CONNECTIONS = 16;
 
 void ThreadMessageHandler2(void* parg);
@@ -1810,12 +1813,22 @@ void DumpAddresses()
            addrman.size(), GetTimeMillis() - nStart);
 }
 
+// Dump the peers.dat and banlist.dat together
+void DumpData()
+{
+    DumpAddresses();
+
+    if (CNode::BannedSetIsDirty())
+        DumpBanlist();
+
+}
+
 void ThreadDumpAddress2(void* parg)
 {
     vnThreadsRunning[THREAD_DUMPADDRESS]++;
     while (!fShutdown)
     {
-        DumpAddresses();
+        DumpData();
         vnThreadsRunning[THREAD_DUMPADDRESS]--;
         MilliSleep(600000);
         vnThreadsRunning[THREAD_DUMPADDRESS]++;
@@ -2639,6 +2652,9 @@ void StartNode(void* parg)
     else
         if (!NewThread(ThreadStakeMiner, pwalletMain))
             printf("Error: NewThread(ThreadStakeMiner) failed\n");
+
+    // Dump network addresses and bans upon bootup
+    DumpData();
 }
 
 bool StopNode()
@@ -2676,7 +2692,7 @@ bool StopNode()
     while (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || vnThreadsRunning[THREAD_RPCHANDLER] > 0)
         MilliSleep(20);
     MilliSleep(50);
-    DumpAddresses();
+    DumpData();
     return true;
 }
 
@@ -2967,6 +2983,6 @@ void DumpBanlist()
     if (bandb.Write(banmap))
         CNode::SetBannedSetDirty(false);
 
-    LogPrint("net", "Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
+    printf("Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
              banmap.size(), GetTimeMillis() - nStart);
 }
