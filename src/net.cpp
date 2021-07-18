@@ -2580,7 +2580,7 @@ void StartNode(void* parg)
         CNode::SetBannedSetDirty(false); // no need to write down, just read data
         CNode::SweepBanned(); // sweep out unused entries
 
-        printf("Loaded %d banned node ips/subnets from banlist.dat  %dms\n",
+        printf("Loaded %d banned node ips/subnets from banlist.dat %" PRId64"ms\n",
                  banmap.size(), GetTimeMillis() - nStart);
     } else {
         printf("Invalid or missing banlist.dat...recreating\n");

@@ -27,8 +27,8 @@ std::string DurationToDHMS(int64_t nDurationTime)
     int hours = nDurationTime % 24;
     int days = nDurationTime / 24;
     if (days)
-        return printf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
+        return strprintf("%dd %02dh:%02dm:%02ds", days, hours, minutes, seconds);
     if (hours)
-        return printf("%02dh:%02dm:%02ds", hours, minutes, seconds);
-    return printf("%02dm:%02ds", minutes, seconds);
+        return strprintf("%02dh:%02dm:%02ds", hours, minutes, seconds);
+    return strprintf("%02dm:%02ds", minutes, seconds);
 }
