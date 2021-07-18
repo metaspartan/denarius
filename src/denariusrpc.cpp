@@ -273,6 +273,9 @@ static const CRPCCommand vRPCCommands[] =
     { "getnetworkinfo",         &getnetworkinfo,         true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
     { "addnode",                &addnode,                true,   true },
+    { "setban",                 &setban,                 true,   true },
+    { "listbanned",             &listbanned,             true,   true },
+    { "clearbanned",            &clearbanned,            true,   true },
     { "dumpbootstrap",          &dumpbootstrap,          false,  false },
     { "getdifficulty",          &getdifficulty,          true,   false },
     { "getinfo",                &getinfo,                true,   false },
@@ -1361,7 +1364,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getbalance"             && n > 1) ConvertTo<int64_t>(params[1]);
     if (strMethod == "getbalance"             && n > 2) ConvertTo<bool>(params[2]);
     if (strMethod == "getblock"               && n > 1) ConvertTo<bool>(params[1]);
-	  if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
+	if (strMethod == "getblockheader"         && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblock_old"           && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
@@ -1407,6 +1410,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "gettxout"               && n == 3) { ConvertTo<int64_t>(params[1]); ConvertTo<bool>(params[2]); }
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
 	if (strMethod == "importprivkey"          && n > 2) ConvertTo<bool>(params[2]);
+
+    if (strMethod == "setban"                 && n == 4) ConvertTo<bool>(params[3]);
 
     if (strMethod == "senddtoanon"         	  && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "sendanontoanon"         && n > 1) ConvertTo<double>(params[1]);

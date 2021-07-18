@@ -1166,3 +1166,184 @@ void CService::SetPort(unsigned short portIn)
 {
     port = portIn;
 }
+
+
+#ifdef WIN32
+std::string NetworkErrorString(int err)
+{
+    char buf[256];
+    buf[0] = 0;
+    if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+            NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            buf, sizeof(buf), NULL)) {
+        return strprintf("%s (%d)", buf, err);
+    } else {
+        return strprintf("Unknown error (%d)", err);
+    }
+}
+#else
+std::string NetworkErrorString(int err)
+{
+    char buf[256];
+    const char* s = buf;
+    buf[0] = 0;
+/* Too bad there are two incompatible implementations of the
+     * thread-safe strerror. */
+#ifdef STRERROR_R_CHAR_P /* GNU variant can return a pointer outside the passed buffer */
+    s = strerror_r(err, buf, sizeof(buf));
+#else                    /* POSIX variant always returns message in buffer */
+    if (strerror_r(err, buf, sizeof(buf)))
+        buf[0] = 0;
+#endif
+    return strprintf("%s (%d)", s, err);
+}
+#endif
+
+bool CloseSocket(SOCKET& hSocket)
+{
+    if (hSocket == INVALID_SOCKET)
+        return false;
+#ifdef WIN32
+    int ret = closesocket(hSocket);
+#else
+    int ret = close(hSocket);
+#endif
+    hSocket = INVALID_SOCKET;
+    return ret != SOCKET_ERROR;
+}
+
+bool SetSocketNonBlocking(SOCKET& hSocket, bool fNonBlocking)
+{
+    if (fNonBlocking) {
+#ifdef WIN32
+        u_long nOne = 1;
+        if (ioctlsocket(hSocket, FIONBIO, &nOne) == SOCKET_ERROR) {
+#else
+        int fFlags = fcntl(hSocket, F_GETFL, 0);
+        if (fcntl(hSocket, F_SETFL, fFlags | O_NONBLOCK) == SOCKET_ERROR) {
+#endif
+            CloseSocket(hSocket);
+            return false;
+        }
+    } else {
+#ifdef WIN32
+        u_long nZero = 0;
+        if (ioctlsocket(hSocket, FIONBIO, &nZero) == SOCKET_ERROR) {
+#else
+        int fFlags = fcntl(hSocket, F_GETFL, 0);
+        if (fcntl(hSocket, F_SETFL, fFlags & ~O_NONBLOCK) == SOCKET_ERROR) {
+#endif
+            CloseSocket(hSocket);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+CSubNet::CSubNet() : valid(false)
+{
+    memset(netmask, 0, sizeof(netmask));
+}
+
+CSubNet::CSubNet(const std::string& strSubnet, bool fAllowLookup)
+{
+    size_t slash = strSubnet.find_last_of('/');
+    std::vector<CNetAddr> vIP;
+
+    valid = true;
+    // Default to /32 (IPv4) or /128 (IPv6), i.e. match single address
+    memset(netmask, 255, sizeof(netmask));
+
+    std::string strAddress = strSubnet.substr(0, slash);
+    if (LookupHost(strAddress.c_str(), vIP, 1, fAllowLookup)) {
+        network = vIP[0];
+        if (slash != strSubnet.npos) {
+            std::string strNetmask = strSubnet.substr(slash + 1);
+            int32_t n;
+            // IPv4 addresses start at offset 12, and first 12 bytes must match, so just offset n
+            const int astartofs = network.IsIPv4() ? 12 : 0;
+            
+            if (ParseInt32(strNetmask, &n)) // If valid number, assume /24 symtex
+            {
+                if (n >= 0 && n <= (128 - astartofs * 8)) // Only valid if in range of bits of address
+                {
+                    n += astartofs * 8;
+                    // Clear bits [n..127]
+                    for (; n < 128; ++n)
+                        netmask[n >> 3] &= ~(1 << (7 - (n & 7)));
+                } else {
+                    valid = false;
+                }
+            } else // If not a valid number, try full netmask syntax
+            {
+                if (LookupHost(strNetmask.c_str(), vIP, 1, false)) // Never allow lookup for netmask
+                {
+                    // Copy only the *last* four bytes in case of IPv4, the rest of the mask should stay 1's as
+                    // we don't want pchIPv4 to be part of the mask.
+                    for (int x = astartofs; x < 16; ++x)
+                        netmask[x] = vIP[0].ip[x];
+                } else {
+                    valid = false;
+                }
+            }
+        }
+    } else {
+        valid = false;
+    }
+
+    // Normalize network according to netmask
+    for (int x = 0; x < 16; ++x)
+        network.ip[x] &= netmask[x];
+}
+
+CSubNet::CSubNet(const CNetAddr &addr):
+        valid(addr.IsValid())
+{
+    memset(netmask, 255, sizeof(netmask));
+    network = addr;
+}
+
+bool CSubNet::Match(const CNetAddr& addr) const
+{
+    if (!valid || !addr.IsValid())
+        return false;
+    for (int x = 0; x < 16; ++x)
+        if ((addr.ip[x] & netmask[x]) != network.ip[x])
+            return false;
+    return true;
+}
+
+std::string CSubNet::ToString() const
+{
+    std::string strNetmask;
+    if (network.IsIPv4())
+        strNetmask = strprintf("%u.%u.%u.%u", netmask[12], netmask[13], netmask[14], netmask[15]);
+    else
+        strNetmask = strprintf("%x:%x:%x:%x:%x:%x:%x:%x",
+            netmask[0] << 8 | netmask[1], netmask[2] << 8 | netmask[3],
+            netmask[4] << 8 | netmask[5], netmask[6] << 8 | netmask[7],
+            netmask[8] << 8 | netmask[9], netmask[10] << 8 | netmask[11],
+            netmask[12] << 8 | netmask[13], netmask[14] << 8 | netmask[15]);
+    return network.ToString() + "/" + strNetmask;
+}
+
+bool CSubNet::IsValid() const
+{
+    return valid;
+}
+
+bool operator==(const CSubNet& a, const CSubNet& b)
+{
+    return a.valid == b.valid && a.network == b.network && !memcmp(a.netmask, b.netmask, 16);
+}
+
+bool operator!=(const CSubNet& a, const CSubNet& b)
+{
+    return !(a == b);
+}
+
+bool operator<(const CSubNet& a, const CSubNet& b)
+{
+    return (a.network < b.network || (a.network == b.network && memcmp(a.netmask, b.netmask, 16) < 0));
+}

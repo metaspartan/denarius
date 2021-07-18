@@ -8,6 +8,7 @@
 #include "wallet.h"
 #include "db.h"
 #include "walletdb.h"
+#include "ui_interface.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -116,7 +117,8 @@ Value addnode(const Array& params, bool fHelp)
     {
         CNode* pnode = FindNode(strNode);
         if(pnode) {
-            CNode::Ban(pnode->addr);
+            int bantime;
+            CNode::Ban(pnode->addr, BanReasonManuallyAdded, bantime);
             pnode->CloseSocketDisconnect();
         } else {
             throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Error: Node is not connected.");
@@ -457,4 +459,109 @@ Value sendalert(const Array& params, bool fHelp)
     if (alert.nCancel > 0)
         result.push_back(Pair("nCancel", alert.nCancel));
     return result;
+}
+
+Value setban(const Array& params, bool fHelp)
+{
+    string strCommand;
+    if (params.size() >= 2)
+        strCommand = params[1].get_str();
+    if (fHelp || params.size() < 2 ||
+        (strCommand != "add" && strCommand != "remove"))
+        throw runtime_error(
+                "setban \"ip(/netmask)\" \"add|remove\" (bantime) (absolute)\n"
+                "\nAttempts add or remove a IP/Subnet from the banned list.\n"
+                "\nArguments:\n"
+                "1. \"ip(/netmask)\" (string, required) The IP/Subnet (see getpeerinfo for nodes ip) with a optional netmask (default is /32 = single ip)\n"
+                "2. \"command\"      (string, required) 'add' to add a IP/Subnet to the list, 'remove' to remove a IP/Subnet from the list\n"
+                "3. \"bantime\"      (numeric, optional) time in seconds how long (or until when if [absolute] is set) the ip is banned (0 or empty means using the default time of 24h which can also be overwritten by the -bantime startup argument)\n"
+                "4. \"absolute\"     (boolean, optional) If set, the bantime must be a absolute timestamp in seconds since epoch (Jan 1 1970 GMT)\n"
+        );
+
+    CSubNet subNet;
+    CNetAddr netAddr;
+    bool isSubnet = false;
+
+    if (params[0].get_str().find("/") != string::npos)
+        isSubnet = true;
+
+    if (!isSubnet)
+        netAddr = CNetAddr(params[0].get_str());
+    else
+        subNet = CSubNet(params[0].get_str());
+
+    if (! (isSubnet ? subNet.IsValid() : netAddr.IsValid()) )
+        throw JSONRPCError(RPC_CLIENT_NODE_ALREADY_ADDED, "Error: Invalid IP/Subnet");
+
+    if (strCommand == "add")
+    {
+        if (isSubnet ? CNode::IsBanned(subNet) : CNode::IsBanned(netAddr))
+            throw JSONRPCError(RPC_CLIENT_NODE_ALREADY_ADDED, "Error: IP/Subnet already banned");
+
+        int64_t banTime = 0; //use standard bantime if not specified
+        if (params.size() >= 3 && !(params[2] == NULL))
+            banTime = params[2].get_int64();
+
+        bool absolute = false;
+        if (params.size() == 4)
+            absolute = params[3].get_bool();
+
+        isSubnet ? CNode::Ban(subNet, BanReasonManuallyAdded, banTime, absolute) : CNode::Ban(netAddr, BanReasonManuallyAdded, banTime, absolute);
+
+        //disconnect possible nodes
+        while(CNode *bannedNode = (isSubnet ? FindNode(subNet) : FindNode(netAddr)))
+            bannedNode->fDisconnect = true;
+    }
+    else if(strCommand == "remove")
+    {
+        if (!( isSubnet ? CNode::Unban(subNet) : CNode::Unban(netAddr) ))
+            throw JSONRPCError(RPC_MISC_ERROR, "Error: Unban failed");
+    }
+
+    DumpBanlist(); //store banlist to disk
+    uiInterface.BannedListChanged();
+
+    return Value::null;
+}
+
+Value listbanned(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+                "listbanned\n"
+                "\nList all banned IPs/Subnets.\n"
+        );
+
+    banmap_t banMap;
+    CNode::GetBanned(banMap);
+
+    Array bannedAddresses;
+    for (banmap_t::iterator it = banMap.begin(); it != banMap.end(); it++)
+    {
+        CBanEntry banEntry = (*it).second;
+        Object rec;
+        rec.push_back(Pair("address", (*it).first.ToString()));
+        rec.push_back(Pair("banned_until", banEntry.nBanUntil));
+        rec.push_back(Pair("ban_created", banEntry.nCreateTime));
+        rec.push_back(Pair("ban_reason", banEntry.banReasonToString()));
+
+        bannedAddresses.push_back(rec);
+    }
+
+    return bannedAddresses;
+}
+
+Value clearbanned(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "clearbanned\n"
+            "\nClear all banned IPs.\n");
+
+    CNode::ClearBanned();
+    DumpBanlist(); //store banlist to disk
+    uiInterface.BannedListChanged();
+
+
+    return Value::null;
 }

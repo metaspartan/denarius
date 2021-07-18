@@ -30,6 +30,10 @@ bool NodeLessThan::operator()(const CNodeCombinedStats &left, const CNodeCombine
         return pLeft->addrName.compare(pRight->addrName) < 0;
     case PeerTableModel::Subversion:
         return pLeft->strSubVer.compare(pRight->strSubVer) < 0;
+    case PeerTableModel::BytesSent:
+        return pLeft->nSendBytes < pRight->nSendBytes;
+    case PeerTableModel::BytesRecv:
+        return pLeft->nRecvBytes < pRight->nRecvBytes;
     case PeerTableModel::Ping:
         return pLeft->dPingTime < pRight->dPingTime;
     }
@@ -116,13 +120,13 @@ PeerTableModel::PeerTableModel(ClientModel *parent) :
     clientModel(parent),
     timer(nullptr) // Fix QTimer error with int, needs nullptr or 0
 {
-    columns << tr("Address/Hostname") << tr("User Agent") << tr("Ping Time");
-    priv = new PeerTablePriv();
+    columns << tr("Address:Port") << tr("User Agent") << tr("Sent") << tr("Recv") << tr("Ping");
+    priv.reset(new PeerTablePriv());
     // default to unsorted
     priv->sortColumn = -1;
 
     // set up timer for auto refresh
-    timer = new QTimer();
+    timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), SLOT(refresh()));
     timer->start(5000); //Just auto refresh every 5 secs by itself without waiting for rpcconsole
 
@@ -152,6 +156,18 @@ int PeerTableModel::columnCount(const QModelIndex &parent) const
     return columns.length();;
 }
 
+QString PeerTableModel::FormatBytes(quint64 bytes)
+{
+    if(bytes < 1024)
+        return QString(tr("%1 B")).arg(bytes);
+    if(bytes < 1024 * 1024)
+        return QString(tr("%1 KB")).arg(bytes / 1024);
+    if(bytes < 1024 * 1024 * 1024)
+        return QString(tr("%1 MB")).arg(bytes / 1024 / 1024);
+
+    return QString(tr("%1 GB")).arg(bytes / 1024 / 1024 / 1024);
+}
+
 QVariant PeerTableModel::data(const QModelIndex &index, int role) const
 {
     if(!index.isValid())
@@ -166,6 +182,10 @@ QVariant PeerTableModel::data(const QModelIndex &index, int role) const
             return QString::fromStdString(rec->nodeStats.addrName);
         case Subversion:
             return QString::fromStdString(rec->nodeStats.strSubVer);
+        case BytesSent:
+            return FormatBytes(rec->nodeStats.nSendBytes);
+        case BytesRecv:
+            return FormatBytes(rec->nodeStats.nRecvBytes);
         case Ping:
             return GUIUtil::formatPingTime(rec->nodeStats.dPingTime);
         }
@@ -239,4 +259,8 @@ void PeerTableModel::sort(int column, Qt::SortOrder order)
     priv->sortColumn = column;
     priv->sortOrder = order;
     refresh();
+}
+
+PeerTableModel::~PeerTableModel()
+{
 }

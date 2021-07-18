@@ -64,8 +64,8 @@ void ProcessFortunastakeConnections(){
 void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
 
-    if (strCommand == "dsee") { //ForTuna Election Entry
-        //if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
+    if (strCommand == "dsee") { // ForTuna Election Entry
+        // if (nBestHeight < (GetNumBlocksOfPeers() - 300)) return; // don't process these until near completion
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
 

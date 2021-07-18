@@ -259,6 +259,38 @@ void copyEntryData(QAbstractItemView *view, int column, int role)
     }
 }
 
+void copyEntryDataFromList(QAbstractItemView *view, int role)
+{
+    if(!view || !view->selectionModel())
+        return;
+    QModelIndexList selection = view->selectionModel()->selectedIndexes();
+
+    if(!selection.isEmpty())
+    {
+        // Copy first item
+        setClipboard(selection.at(0).data(role).toString());
+    }
+}
+
+void setClipboard(const QString& str)
+{
+    QApplication::clipboard()->setText(str, QClipboard::Clipboard);
+    QApplication::clipboard()->setText(str, QClipboard::Selection);
+}
+
+QString getEntryData(QAbstractItemView *view, int column, int role)
+{
+    if(!view || !view->selectionModel())
+        return QString();
+    QModelIndexList selection = view->selectionModel()->selectedRows(column);
+
+    if(!selection.isEmpty()) {
+        // Return first item
+        return (selection.at(0).data(role).toString());
+    }
+return QString();
+}
+
 QString getSaveFileName(QWidget *parent, const QString &caption,
                                  const QString &dir,
                                  const QString &filter,

@@ -178,6 +178,9 @@ extern json_spirit::Value getaddednodeinfo(const json_spirit::Array& params, boo
 extern json_spirit::Value getnettotals(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getnetworkinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value disconnectnode(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value setban(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value listbanned(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value clearbanned(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value dumpwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importwallet(const json_spirit::Array& params, bool fHelp);

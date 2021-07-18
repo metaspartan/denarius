@@ -96,6 +96,9 @@ public:
      * @note called with lock cs_mapAlerts held.
      */
     boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
+
+    /** Banlist did change. */
+    boost::signals2::signal<void (void)> BannedListChanged;
 };
 
 extern CClientUIInterface uiInterface;

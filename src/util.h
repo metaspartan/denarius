@@ -47,6 +47,21 @@ static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 static const CAmount SUBCENT = 100;
 
+/**
+ * Convert string to signed 32-bit integer with strict parse error feedback.
+ * @returns true if the entire string could be parsed as valid integer,
+ *   false if not the entire string could be parsed or when overflow or underflow occurred.
+ */
+
+bool ParseInt32(const std::string& str, int32_t *out);
+
+/**
+ * Convert string to signed 64-bit integer with strict parse error feedback.
+ * @returns true if the entire string could be parsed as valid integer,
+ *   false if not the entire string could be parsed or when overflow or underflow occurred.
+ */
+bool ParseInt64(const std::string& str, int64_t *out);
+
 //#define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))

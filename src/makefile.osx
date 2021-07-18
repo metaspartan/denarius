@@ -293,6 +293,7 @@ OBJS= \
     obj/state.o \
     obj/ipfs.o \
     obj/ipfscurl.o  \
+	obj/utiltime.o \
     obj/stun.o 
 else
 OBJS= \
@@ -353,6 +354,7 @@ OBJS= \
     obj/namecoin.o \
     obj/ipfs.o \
     obj/ipfscurl.o  \
+	obj/utiltime.o \
     obj/stun.o
 
 ifndef USE_UPNP

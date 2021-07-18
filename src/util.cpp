@@ -1197,6 +1197,50 @@ static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
     return nMin + rand() % (nMax - nMin) + 1;
 }
 
+
+static bool ParsePrechecks(const std::string& str)
+{
+    if (str.empty()) // No empty string allowed
+        return false;
+    if (str.size() >= 1 && (isspace(str[0]) || isspace(str[str.size()-1]))) // No padding allowed
+        return false;
+    if (str.size() != strlen(str.c_str())) // No embedded NUL characters allowed
+        return false;
+    return true;
+}
+
+bool ParseInt32(const std::string& str, int32_t *out)
+{
+	if (!ParsePrechecks(str))
+		return false;
+	char *endp = NULL;
+
+    errno = 0; // strtol will not set errno if valid
+    long int n = strtol(str.c_str(), &endp, 10);
+    if(out) *out = (int32_t)n;
+    // Note that strtol returns a *long int*, so even if strtol doesn't report a over/underflow
+    // we still have to check that the returned value is within the range of an *int32_t*. On 64-bit
+    // platforms the size of these types may be different.
+    return endp && *endp == 0 && !errno &&
+        n >= std::numeric_limits<int32_t>::min() &&
+        n <= std::numeric_limits<int32_t>::max();
+}
+
+bool ParseInt64(const std::string& str, int64_t *out)
+{
+    if (!ParsePrechecks(str))
+        return false;
+    char *endp = NULL;
+    errno = 0; // strtoll will not set errno if valid
+    long long int n = strtoll(str.c_str(), &endp, 10);
+    if(out) *out = (int64_t)n;
+    // Note that strtoll returns a *long long int*, so even if strtol doesn't report a over/underflow
+    // we still have to check that the returned value is within the range of an *int64_t*.
+    return endp && *endp == 0 && !errno &&
+        n >= std::numeric_limits<int64_t>::min() &&
+        n <= std::numeric_limits<int64_t>::max();
+}
+
 void WriteConfigFile(FILE* configFile)
 {
     std::string sRPCpassword = "rpcpassword=" + GenerateRandomString(RandomIntegerRange(18, 24)) + "\n";
@@ -1224,14 +1268,12 @@ void WriteConfigFile(FILE* configFile)
     fputs ("addnode=83.84.1.24:33369\n", configFile);
     fputs ("addnode=185.107.47.215\n", configFile);
     fputs ("addnode=161.97.116.177\n", configFile);
-    fputs ("addnode=83.221.211.116:33369\n", configFile);
     fputs ("addnode=188.134.76.173:33369\n", configFile);
     fputs ("addnode=lewjorvej47sd4ad.onion:33369\n", configFile);
     fputs ("addnode=185.244.20.142\n", configFile);
     fputs ("addnode=72.203.101.202\n", configFile);
     fputs ("addnode=95.111.226.75\n", configFile);
     fputs ("addnode=116.202.132.28\n", configFile);
-    fputs ("addnode=83.221.211.116:33369\n", configFile);
     fputs ("addnode=46.166.162.45\n", configFile);
     fputs ("addnode=161.97.91.249\n", configFile); //denarii.cloud
     fclose(configFile);

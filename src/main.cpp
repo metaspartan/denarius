@@ -4613,15 +4613,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
             oldVersion = true;
 
-        if (oldVersion == true)
-        {
-          printf("Partner %s using obsolete version %i; DISCONNECTING\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
-          pfrom->fDisconnect = true;
-          if (pfrom->fForTunaMaster)
-              printf("Masternode hosting node version was obsolete. This masternode should be removed from the list\n");
-          return false;
-        }
-
         /*
         if (pfrom->nVersion < PROTO_VERSION)
         {
@@ -4639,6 +4630,23 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             vRecv >> pfrom->strSubVer;
         if (!vRecv.empty())
             vRecv >> pfrom->nChainHeight;
+
+        // Disconnect if the peer's subversion is < /Denarii:3.3.9.14/
+        // Leaving this out for now until new update is out for a bit
+        // if (pfrom->strSubVer != "/Denarii:3.3.9.14/")
+        //     oldVersion = true;
+
+        // print the current pfrom->strSubVer
+        printf("ProcessMessage(): peer=%s using SubVer=%s, oldVersion=%s\n", pfrom->addr.ToString().c_str(), pfrom->strSubVer.c_str(), oldVersion ? "true" : "false");
+
+        if (oldVersion == true)
+        {
+          printf("Partner %s using obsolete version %i; DISCONNECTING\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+          pfrom->fDisconnect = true;
+          if (pfrom->fForTunaMaster)
+              printf("Masternode hosting node version was obsolete. This masternode should be removed from the list\n");
+          return false;
+        }
 
         if (pfrom->fInbound && addrMe.IsRoutable())
         {
@@ -4860,7 +4868,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                 printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
             if (!fAlreadyHave)
-                pfrom->AskFor(inv);
+                pfrom->AskFor(inv);                
             else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {
                 pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
 				//PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
@@ -4872,6 +4880,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 				//PushGetBlocks(pfrom, mapBlockIndex[inv.hash], uint256(0));
                 if (fDebugNet)
                     printf("force request: %s\n", inv.ToString().c_str());
+            }
+
+            // Don't bother if send buffer is too full to respond anyway
+            if (pfrom->nSendSize >= SendBufferSize()) {
+                pfrom->Misbehaving(50);
+                return error("send buffer size() = %" PRIszu"", pfrom->nSendSize);
             }
 
             // Track requests for our stuff
@@ -5454,7 +5468,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
 
 
-		      // Start block sync
+		// Start block sync
         if (pto->fStartSync && !fImporting && !fReindex) {
             pto->fStartSync = false;
             pto->PushGetBlocks(pindexBest, uint256(0));
@@ -5500,7 +5514,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         {
             vector<CAddress> vAddr;
             vAddr.reserve(pto->vAddrToSend.size());
-            BOOST_FOREACH(const CAddress& addr, pto->vAddrToSend)
+            for (const CAddress& addr : pto->vAddrToSend)
             {
                 // returns true if wasn't already contained in the set
                 if (pto->setAddrKnown.insert(addr).second)
@@ -5518,7 +5532,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             if (!vAddr.empty())
                 pto->PushMessage("addr", vAddr);
         }
-
 
         //
         // Message: getblocks

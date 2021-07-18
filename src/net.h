@@ -31,7 +31,7 @@ static const int PING_INTERVAL = 2 * 60;
 /** Time after which to disconnect, after waiting for a ping response (or inactivity). */
 static const int TIMEOUT_INTERVAL = 20 * 60;
 
-inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 1*1000); }
+inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
 
 void AddOneShot(std::string strDest);
@@ -39,13 +39,14 @@ bool RecvLine(SOCKET hSocket, std::string& strLine);
 bool GetMyExternalIP(CNetAddr& ipRet);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
+CNode* FindNode(const CSubNet& subNet);
 CNode* FindNode(const std::string& addrName);
 CNode* FindNode(const CService& ip);
 //CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);
 CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL, bool forTunaMaster=false);
 void MapPort();
 unsigned short GetListenPort();
-bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));
+bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()), bool fWhitelisted = false);
 void StartTor(void* parg);
 void StartNode(void* parg);
 bool StopNode();
@@ -194,6 +195,7 @@ public:
     int nChainHeight;
     int nMisbehavior;
     bool fSyncNode;
+    bool fWhitelisted;
     double dPingTime;
     double dPingWait;
     std::string addrLocal;
@@ -267,6 +269,68 @@ public:
 
 };
 
+typedef enum BanReason
+{
+    BanReasonUnknown          = 0,
+    BanReasonNodeMisbehaving  = 1,
+    BanReasonManuallyAdded    = 2
+} BanReason;
+
+class CBanEntry
+{
+public:
+    static const int CURRENT_VERSION=1;
+    int nVersion;
+    int64_t nCreateTime;
+    int64_t nBanUntil;
+    uint8_t banReason;
+
+    CBanEntry()
+    {
+        SetNull();
+    }
+
+    CBanEntry(int64_t nCreateTimeIn)
+    {
+        SetNull();
+        nCreateTime = nCreateTimeIn;
+    }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        unsigned int nSerSize = 0;
+        READWRITE(this->nVersion);
+        nVersion = this->nVersion;
+        READWRITE(nCreateTime);
+        READWRITE(nBanUntil);
+        READWRITE(banReason);
+    }
+
+    void SetNull()
+    {
+        nVersion = CBanEntry::CURRENT_VERSION;
+        nCreateTime = 0;
+        nBanUntil = 0;
+        banReason = BanReasonUnknown;
+    }
+
+    std::string banReasonToString()
+    {
+        switch (banReason) {
+            case BanReasonNodeMisbehaving:
+                return "node misbehaving";
+            case BanReasonManuallyAdded:
+                return "manually added";
+            default:
+                return "unknown";
+        }
+    }
+};
+
+typedef std::map<CSubNet, CBanEntry> banmap_t;
+
 /** Information about a peer */
 class CNode
 {
@@ -279,7 +343,7 @@ public:
     size_t nSendOffset; // offset inside the first vSendMsg already sent
     std::deque<CSerializeData> vSendMsg;
     CCriticalSection cs_vSend;
-
+    CCriticalSection cs_vRecv;
 	std::deque<CInv> vRecvGetData;
     std::deque<CNetMessage> vRecvMsg;
     CCriticalSection cs_vRecvMsg;
@@ -299,7 +363,7 @@ public:
     CService addrLocal;
     int nVersion;
     std::string strSubVer;
-    //bool fWhitelisted; // This peer can bypass DoS banning.
+    bool fWhitelisted; // This peer can bypass DoS banning.
     bool fOneShot;
     bool fClient;
     bool fInbound;
@@ -317,11 +381,16 @@ public:
     int nRefCount;
 	NodeId id;
 protected:
-
     // Denial-of-service detection/prevention
     // Key is IP address, value is banned-until-time
-    static std::map<CNetAddr, int64_t> setBanned;
+    static banmap_t setBanned;
     static CCriticalSection cs_setBanned;
+    static bool setBannedIsDirty;
+
+    // Whitelisted ranges. Any node connecting from these is automatically
+    // whitelisted (as well as those connecting to whitelisted binds).
+    static std::vector<CSubNet> vWhitelistedRange;
+    static CCriticalSection cs_vWhitelistedRange;
 
     // Whitelisted ranges. Any node connecting from these is automatically
     // whitelisted (as well as those connecting to whitelisted binds).
@@ -386,6 +455,7 @@ public:
         fClient = false; // set by version message
         fInbound = fInboundIn;
         fVerified = false;
+        fWhitelisted = false;
         fNetworkNode = false;
         fSuccessfullyConnected = false;
         fDisconnect = false;
@@ -809,9 +879,27 @@ template<typename T1, typename T2, typename T3, typename T4, typename T5, typena
     // new code.
     static void ClearBanned(); // needed for unit testing
     static bool IsBanned(CNetAddr ip);
-    static bool Ban(const CNetAddr &ip); //new addnode ban command
+    static bool IsBanned(CSubNet subnet);
+    static void Ban(const CNetAddr &ip, const BanReason &banReason, int64_t bantimeoffset = 0, bool sinceUnixEpoch = false);
+    static void Ban(const CSubNet &subNet, const BanReason &banReason, int64_t bantimeoffset = 0, bool sinceUnixEpoch = false);
+    static bool Unban(const CNetAddr &ip);
+    static bool Unban(const CSubNet &ip);
+    static void GetBanned(banmap_t &banmap);
+    static void SetBanned(const banmap_t &banmap);
+
+    //!check is the banlist has unwritten changes
+    static bool BannedSetIsDirty();
+    //!set the "dirty" flag for the banlist
+    static void SetBannedSetDirty(bool dirty=true);
+    //!clean unused entires (if bantime has expired)
+    static void SweepBanned();
+
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
+
     void copyStats(CNodeStats &stats);
+
+    static bool IsWhitelistedRange(const CNetAddr& ip);
+    static void AddWhitelistedRange(const CSubNet& subnet);
 
     // Network stats
     static void RecordBytesRecv(uint64_t bytes);
@@ -865,5 +953,19 @@ void RelayForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned c
 void SendForTunaElectionEntryPing(const CTxIn vin, const std::vector<unsigned char> vchSig, const int64_t nNow, const bool stop);
 void RelayForTunaCompletedTransaction(const int sessionID, const bool error, const std::string errorMessage);
 void RelayForTunaFortunaStakeContestant();
+
+
+/** Access to the banlist database (banlist.dat) */
+class CBanDB
+{
+private:
+    boost::filesystem::path pathBanlist;
+public:
+    CBanDB();
+    bool Write(const banmap_t& banSet);
+    bool Read(banmap_t& banSet);
+};
+
+void DumpBanlist();
 
 #endif

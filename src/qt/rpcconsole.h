@@ -8,14 +8,20 @@
 
 #include <QDialog>
 #include <QCompleter>
+#include <QThread>
+#include <QWidget>
 
+class QMenu;
 class ClientModel;
+class PlatformStyle;
+class RPCTimerInterface;
 
 namespace Ui {
     class RPCConsole;
 }
 
 QT_BEGIN_NAMESPACE
+class QMenu;
 class QItemSelection;
 QT_END_NAMESPACE
 
@@ -63,6 +69,14 @@ private slots:
     void resizeEvent(QResizeEvent *event);
     void showEvent(QShowEvent *event);
     void hideEvent(QHideEvent *event);
+    /** Show custom context menu on Peers tab */
+    void showPeersTableContextMenu(const QPoint& point);
+    /** Show custom context menu on Bans tab */
+    void showBanTableContextMenu(const QPoint& point);
+    /** Hides ban table if no bans are present */
+    void showOrHideBanTableIfRequired();
+    /** clear the selected node */
+    void clearSelectedNode();
 
 public slots:
     void clear();
@@ -77,8 +91,24 @@ public slots:
     void scrollToEnd();
     /** Handle selection of peer in peers list */
     void peerSelected(const QItemSelection &selected, const QItemSelection &deselected);
+    /** Handle selection caching before update */
+    void peerLayoutAboutToChange();
     /** Handle updated peer information */
     void peerLayoutChanged();
+     /** Disconnect a selected node on the Peers tab */
+    void disconnectSelectedNode();
+    /** Ban a selected node on the Peers tab */
+    void banSelectedNode(int bantime);
+    /** Unban a selected node on the Bans tab */
+    void unbanSelectedNode();
+
+    /** Wallet repair options */
+    void walletSalvage();
+    void walletRescan();
+    void walletZaptxes1();
+    void walletZaptxes2();
+    void walletUpgrade();
+    void walletReindex();
 
 	/** set which tab has the focus (is visible) */
     void setTabFocus(enum TabTypes tabType);
@@ -86,26 +116,42 @@ signals:
     // For RPC command executor
     void stopExecutor();
     void cmdRequest(const QString &command);
+    /** Get restart command-line parameters and handle restart */
+    void handleRestart(QStringList args);
 
 private:
     static QString FormatBytes(quint64 bytes);
     void setTrafficGraphRange(int mins);
     /** show detailed information on ui about selected node */
     void updateNodeDetail(const CNodeCombinedStats *stats);
+    /** Update UI with latest network info from model. */
+    void updateNetworkState();
+    /** Build parameter list for restart */
+    void buildParameterlist(QString arg);
 
     enum ColumnWidths
     {
-        ADDRESS_COLUMN_WIDTH = 200,
-        SUBVERSION_COLUMN_WIDTH = 100,
-        PING_COLUMN_WIDTH = 80
+        ADDRESS_COLUMN_WIDTH = 120,
+        SUBVERSION_COLUMN_WIDTH = 110,
+        PING_COLUMN_WIDTH = 40, // 120
+        BYTES_COLUMN_WIDTH = 50, // 80
+        BANSUBNET_COLUMN_WIDTH = 150,
+        BANTIME_COLUMN_WIDTH = 300
     };
 
     Ui::RPCConsole *ui;
     ClientModel *clientModel;
+    QList<NodeId> cachedNodeids;
+    QString cmdBeforeBrowsing;
     QStringList history;
+    NodeId cachedNodeid;
     int historyPtr;
     QCompleter *autoCompleter;
-    NodeId cachedNodeid;
+    QThread thread;
+    QMenu* peersTableContextMenu;
+    QMenu* banTableContextMenu;
+    const PlatformStyle* platformStyle;
+    RPCTimerInterface* rpcTimerInterface;
     void startExecutor();
 };
 
