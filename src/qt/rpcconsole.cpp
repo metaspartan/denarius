@@ -315,6 +315,7 @@ void RPCConsole::setClientModel(ClientModel *model)
         QAction* banAction24h       = new QAction(tr("&Ban Node for") + " " + tr("&24 hours"), this);
         QAction* banAction7d        = new QAction(tr("&Ban Node for") + " " + tr("&7 days"), this);
         QAction* banAction365d      = new QAction(tr("&Ban Node for") + " " + tr("&1 year"), this);
+        QAction* banActionPerma      = new QAction(tr("&Ban Node for") + " " + tr("&Perma Ban"), this);
 
 
         // create context menu
@@ -324,6 +325,7 @@ void RPCConsole::setClientModel(ClientModel *model)
         peersTableContextMenu->addAction(banAction24h);
         peersTableContextMenu->addAction(banAction7d);
         peersTableContextMenu->addAction(banAction365d);
+        peersTableContextMenu->addAction(banActionPerma);
 
 
         //add a signal mapping, use int instead of int64_t for bantime because signalmapper only supports int or objects
@@ -333,10 +335,12 @@ void RPCConsole::setClientModel(ClientModel *model)
         signalMapper->setMapping(banAction24h, 60*60*24);
         signalMapper->setMapping(banAction7d, 60*60*24*7);
         signalMapper->setMapping(banAction365d, 60*60*24*365);
+        signalMapper->setMapping(banActionPerma, 60*60*24*999999); // 2,700 years, basically perma kek
         connect(banAction1h, SIGNAL(triggered()), signalMapper, SLOT(map()));
         connect(banAction24h, SIGNAL(triggered()), signalMapper, SLOT(map()));
         connect(banAction7d, SIGNAL(triggered()), signalMapper, SLOT(map()));
         connect(banAction365d, SIGNAL(triggered()), signalMapper, SLOT(map()));
+        connect(banActionPerma, SIGNAL(triggered()), signalMapper, SLOT(map()));
         connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(banSelectedNode(int))) ;
 
         // peer table context menu signals
