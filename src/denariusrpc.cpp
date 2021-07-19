@@ -1411,6 +1411,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "importaddress"          && n > 2) ConvertTo<bool>(params[2]);
 	if (strMethod == "importprivkey"          && n > 2) ConvertTo<bool>(params[2]);
 
+    if (strMethod == "setban"                 && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "setban"                 && n == 4) ConvertTo<bool>(params[3]);
 
     if (strMethod == "senddtoanon"         	  && n > 1) ConvertTo<double>(params[1]);
