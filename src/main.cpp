@@ -4463,10 +4463,12 @@ void static ProcessGetData(CNode* pfrom)
 
             if (inv.type == MSG_BLOCK)
             {
+                bool send = false;
                 // Send block from disk
                 map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
                 if (mi != mapBlockIndex.end())
                 {
+                    send = true;
                     CBlock block;
                     block.ReadFromDisk((*mi).second);
                     pfrom->PushMessage("block", block);
@@ -4485,13 +4487,18 @@ void static ProcessGetData(CNode* pfrom)
                 }
                 // disconnect node in case we have reached the outbound limit for serving historical blocks
                 static const int nOneWeek = 7 * 24 * 60 * 60; // assume > 1 week = historical
-                if (send && CNode::OutboundTargetReached(true) && ( ((pindexBest != NULL) && (pindexBest->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek))) )
+                if (send && CNode::OutboundTargetReached(true) && 
+                ( 
+                    ((pindexBest != NULL) && 
+                    (pindexBest->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek)) || 
+                    inv.type == MSG_BLOCK
+                    ) && !pfrom->fWhitelisted)                
                 {
                     printf("net historical block serving limit reached, disconnected peer=%d\n", pfrom->GetId());
 
                     //disconnect node
                     pfrom->fDisconnect = true;
-                    bool send = false;
+                    send = false;
                 }
             }
             else if (inv.IsKnownType())
@@ -4592,6 +4599,21 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         return true;
     }
 
+    // Loop through current peer nodes and check their current Sent Bytes, should be okay on performance even with lots of peers
+    // If peer node has sent over 10MB of data, then disconnect it and add it to our banned list for 24 hours
+    LOCK(cs_vNodes);
+    for (CNode* pnode : vNodes)
+    {
+        if (pnode->nSendBytes >= GetArg("-maxpp", 10000000)) //10000000 = 10MB -maxpp=10000000 flag default
+        {
+            printf("Disconnecting and Banning Node: %s, Too Many SendBytes = %" PRIszu"\n", pnode->addr.ToString().c_str(), pnode->nSendBytes);
+            pnode->fDisconnect = true;
+            int bantime = 60*60*24*99999999;
+            CNode::Ban(pnode->addr, BanReasonNodeMisbehaving, bantime);
+            pnode->CloseSocketDisconnect();
+        }
+    }
+
     if (strCommand == "version")
     {
         // Each connection can only send one version message
@@ -4647,6 +4669,14 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
               printf("Masternode hosting node version was obsolete. This masternode should be removed from the list\n");
           return false;
         }
+        
+        // if (pfrom->nSendBytes >= 1000000) // New arg flag per peer 1MB 1000000 bytes
+        // {
+        //     printf("data sent by peer = %i, disconnecting\n", pfrom->nSendBytes);
+        //     printf("disconnecting node from max outbound per peer target: %s\n", pfrom->addr.ToString().c_str());
+        //     pfrom->fDisconnect = true;
+        //     return false;
+        // }    
 
         if (pfrom->fInbound && addrMe.IsRoutable())
         {
@@ -4898,6 +4928,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     {
         vector<CInv> vInv;
         vRecv >> vInv;
+        printf("received getdata (%" PRIszu" invsz)\n", vInv.size());
         if (vInv.size() > MAX_INV_SZ)
         {
             pfrom->Misbehaving(20);

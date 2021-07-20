@@ -67,7 +67,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
     Array ret;
 
-    BOOST_FOREACH(const CNodeStats& stats, vstats) {
+    for (const CNodeStats& stats : vstats) {
         Object obj;
 
         obj.push_back(Pair("addr", stats.addrName));

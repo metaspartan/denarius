@@ -917,7 +917,24 @@ void CNode::SetMaxOutboundTarget(uint64_t limit)
     nMaxOutboundLimit = limit;
 
     if (limit < recommendedMinimum)
-        printf("Max outbound target is very small (%s) and will be overshot. Recommended minimum is %s\n.", nMaxOutboundLimit, recommendedMinimum);
+        printf("Max outbound target is very small (%d) and will be overshot. Recommended minimum is %d\n.", nMaxOutboundLimit, recommendedMinimum);
+
+    // disconnect nodes until they are below the limit if nTotalBytesSent is greater than nMaxOutboundLimit
+    if (nTotalBytesSent > nMaxOutboundLimit)
+    {
+        printf("disconnecting nodes that are sending too much\n");
+        LOCK(cs_vNodes);
+        for (CNode* pnode : vNodes)
+        {
+            if (pnode->fWhitelisted)
+                continue;
+            if (pnode->nSendBytes > GetArg("-maxperpeer", 1000000)) // New arg flag per peer 1MB 1000000 bytes
+            {
+                printf("disconnecting node from max outbound target: %s\n", pnode->addr.ToString().c_str());
+                pnode->fDisconnect = true;
+            }
+        }
+    }
 }
 
 uint64_t CNode::GetMaxOutboundTarget()
