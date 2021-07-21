@@ -61,6 +61,7 @@ struct ListenSocket {
 //
 bool fDiscover = true;
 bool fUseUPnP = false;
+bool fAddressesInitialized = false;
 uint64_t nLocalServices = NODE_NETWORK;
 CCriticalSection cs_mapLocalHost;
 map<CNetAddr, LocalServiceInfo> mapLocalHost;
@@ -1819,6 +1820,7 @@ void DumpData()
     DumpAddresses();
 
     if (CNode::BannedSetIsDirty())
+        printf("Banned set is dirty, writing banlist...\n");
         DumpBanlist();
 
 }
@@ -2588,6 +2590,8 @@ void StartNode(void* parg)
         DumpBanlist();
     }
 
+    fAddressesInitialized = true;
+
     if (semOutbound == NULL) {
         // initialize semaphore
         int nMaxOutbound = min(MAX_OUTBOUND_CONNECTIONS, (int)GetArg("-maxconnections", 125));
@@ -2654,7 +2658,7 @@ void StartNode(void* parg)
             printf("Error: NewThread(ThreadStakeMiner) failed\n");
 
     // Dump network addresses and bans upon bootup
-    DumpData();
+    // DumpData();
 }
 
 bool StopNode()
@@ -2666,6 +2670,12 @@ bool StopNode()
     if (semOutbound)
         for (int i=0; i<MAX_OUTBOUND_CONNECTIONS; i++)
             semOutbound->post();
+
+    if (fAddressesInitialized) {
+        DumpData();
+        fAddressesInitialized = false;
+    }
+
     do
     {
         int nThreadsRunning = 0;
@@ -2692,7 +2702,7 @@ bool StopNode()
     while (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || vnThreadsRunning[THREAD_RPCHANDLER] > 0)
         MilliSleep(20);
     MilliSleep(50);
-    DumpData();
+
     return true;
 }
 
@@ -2983,6 +2993,6 @@ void DumpBanlist()
     if (bandb.Write(banmap))
         CNode::SetBannedSetDirty(false);
 
-    printf("Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
+    printf("Flushed %d banned node ips/subnets to banlist.dat  %" PRId64"ms\n",
              banmap.size(), GetTimeMillis() - nStart);
 }
