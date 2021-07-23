@@ -134,7 +134,7 @@ Value fortunastake(const Array& params, bool fHelp)
 		Object statusObj;
 		statusObj.push_back(Pair("alias", alias));
 
-    	BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry mne, fortunastakeConfig.getEntries()) {
+    	for (CFortunastakeConfig::CFortunastakeEntry mne : fortunastakeConfig.getEntries()) {
     		if(mne.getAlias() == alias) {
     			found = true;
     			std::string errorMessage;
@@ -226,7 +226,7 @@ Value fortunastake(const Array& params, bool fHelp)
         }
 
         Object obj;
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
+        for (CFortunaStake mn : vecFortunastakes) {
             mn.Check();
 
             if(strCommand == "active"){
@@ -628,7 +628,7 @@ Value fortunastake(const Array& params, bool fHelp)
                 mnObj.push_back(Pair("local",localObj));
             }
 
-            BOOST_FOREACH(CFortunastakeConfig::CFortunastakeEntry& mne, fortunastakeConfig.getEntries()) {
+            for (CFortunastakeConfig::CFortunastakeEntry& mne : fortunastakeConfig.getEntries()) {
                 Object remoteObj;
                 std::string address = mne.getIp();
 
@@ -682,7 +682,7 @@ Value fortunastake(const Array& params, bool fHelp)
                 //DENARIUS - Q0FSU0VOIEtMT0NL
 
                 bool mnfound = false;
-                BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                for (CFortunaStake& mn : vecFortunastakes)
                 {
                     if (mn.addr.ToString() == mne.getIp()) {
                         //remoteObj.push_back(Pair("status", "online"));

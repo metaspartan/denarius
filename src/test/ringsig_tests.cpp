@@ -11,8 +11,12 @@
 
 #include <ctime>
 
-#include "ringsig.h"
-#include "main.h"
+#include "../ringsig.h"
+#include "../main.h"
+
+#if BOOST_VERSION > 105300
+#define BOOST_MESSAGE(msg) BOOST_TEST_MESSAGE(msg)
+#endif
 
 using namespace boost::chrono;
 

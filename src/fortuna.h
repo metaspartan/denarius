@@ -88,7 +88,7 @@ public:
     {
         if(isSet){return false;}
 
-        BOOST_FOREACH(const CTxIn v, vinIn) {
+        for (const CTxIn v : vinIn) {
             CForTunaEntryVin s = CForTunaEntryVin();
             s.vin = v;
             sev.push_back(s);
@@ -104,7 +104,7 @@ public:
 
     bool AddSig(const CTxIn& vin)
     {
-        BOOST_FOREACH(CForTunaEntryVin& s, sev) {
+        for (CForTunaEntryVin& s : sev) {
             if(s.vin.prevout == vin.prevout && s.vin.nSequence == vin.nSequence){
                 if(s.isSigSet){return false;}
                 s.vin.scriptSig = vin.scriptSig;
@@ -159,7 +159,7 @@ public:
 
     bool GetAddress(CService &addr)
     {
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
+        for (CFortunaStake mn : vecFortunastakes) {
             if(mn.vin == vin){
                 addr = mn.addr;
                 return true;
@@ -170,7 +170,7 @@ public:
 
     bool GetProtocolVersion(int &protocolVersion)
     {
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
+        for (CFortunaStake mn : vecFortunastakes) {
             if(mn.vin == vin){
                 protocolVersion = mn.protocolVersion;
                 return true;

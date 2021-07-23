@@ -20,6 +20,14 @@
 #include <QFont>
 #include <QColor>
 
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+#else
+#include <boost/bind.hpp>
+#endif
+
 Q_DECLARE_METATYPE(std::vector<unsigned char>);
 
 QList<QString> ambiguous; /**< Specifies Ambiguous addresses */

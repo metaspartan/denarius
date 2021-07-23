@@ -146,7 +146,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     result.push_back(Pair("modifier", strprintf("%016" PRIx64, blockindex->nStakeModifier)));
     result.push_back(Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
     Array txinfo;
-    BOOST_FOREACH (const CTransaction& tx, block.vtx)
+    for (const CTransaction& tx : block.vtx)
     {
         if (fPrintTransactionDetail)
         {
@@ -345,7 +345,7 @@ Value getrawmempool(const Array& params, bool fHelp)
     mempool.queryHashes(vtxid);
 
     Array a;
-    BOOST_FOREACH(const uint256& hash, vtxid)
+    for (const uint256& hash : vtxid)
         a.push_back(hash.ToString());
 
     return a;
@@ -700,9 +700,9 @@ Value gettxout(const Array& params, bool fHelp)
             CBlock block;
             CBlockIndex* pblockindex = mapBlockIndex[p->GetBlockHash()];
             block.ReadFromDisk(pblockindex, true);
-            BOOST_FOREACH(const CTransaction& tx, block.vtx)
+            for (const CTransaction& tx : block.vtx)
             {
-              BOOST_FOREACH(const CTxIn& txin, tx.vin)
+              for (const CTxIn& txin : tx.vin)
               {
                 if( hash == txin.prevout.hash &&
                    (int64_t)txin.prevout.n )

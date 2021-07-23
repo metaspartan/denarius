@@ -691,7 +691,7 @@ void ThreadSecureMsg(void* parg)
                                 printf("Lock on bucket %" PRId64" for peer %u timed out.\n", it->first, nPeerId);
                             // -- look through the nodes for the peer that locked this bucket
                             LOCK(cs_vNodes);
-                            BOOST_FOREACH(CNode* pnode, vNodes)
+                            for (CNode* pnode : vNodes)
                             {
                                 if (pnode->smsgData.nPeerId != nPeerId)
                                     continue;

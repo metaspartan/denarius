@@ -20,6 +20,14 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+#else
+#include <boost/bind.hpp>
+#endif
+
 using namespace std;
 
 unsigned int nStakeSplitAge = 1 * 24 * 60 * 60;

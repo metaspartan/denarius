@@ -284,7 +284,7 @@ bool SignNameSignatureD(const CKeyStore& keystore, const CTransaction& txFrom, C
 bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend, CWalletTx& wtxIn, int nTxOut, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, string& strFailReason, int32_t& nChangePos, const CCoinControl* coinControl)
 {
     int64_t nValue = 0;
-    BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+    for (const PAIRTYPE(CScript, int64_t)& s : vecSend)
     {
         if (nValue < 0)
         {
@@ -330,7 +330,7 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
                 // vouts to the payees with UTXO splitter - D E N A R I U S
                 if(coinControl && !coinControl->fSplitBlock)
                 {
-                    BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+                    for (const PAIRTYPE(CScript, int64_t)& s : vecSend)
                     {
                         wtxNew.vout.push_back(CTxOut(s.second, s.first));
                     }
@@ -343,7 +343,7 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
                     else
                         nSplitBlock = 1;
 
-                    BOOST_FOREACH (const PAIRTYPE(CScript, int64_t)& s, vecSend)
+                    for (const PAIRTYPE(CScript, int64_t)& s : vecSend)
                     {
                         for(int i = 0; i < nSplitBlock; i++)
                         {
@@ -369,7 +369,7 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
                 
                 vector<pair<const CWalletTx*, unsigned int> > vecCoins(setCoins.begin(), setCoins.end());
 
-                BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
+                for (PAIRTYPE(const CWalletTx*, unsigned int) pcoin : setCoins)
                 {
                     //Fix priority calculation in CreateTransaction
                     //Make this projection of priority in 1 block match the
@@ -448,12 +448,12 @@ bool CreateTransactionWithInputTx(const vector<pair<CScript, int64_t> >& vecSend
                     reservekey.ReturnKey();
 
                 // Fill vin
-                BOOST_FOREACH(PAIRTYPE(const CWalletTx*,unsigned int)& coin, vecCoins)
+                for (PAIRTYPE(const CWalletTx*,unsigned int)& coin : vecCoins)
                     wtxNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
 
                 // Sign
                 int nIn = 0;
-                BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int)& coin, vecCoins)
+                for (PAIRTYPE(const CWalletTx*, unsigned int)& coin : vecCoins)
                 {
                     if (coin.first == &wtxIn && coin.second == nTxOut)
                     {
@@ -961,7 +961,7 @@ void GetNameList(const vector<unsigned char> &vchNameUniq, map<vector<unsigned c
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     // add all names from wallet tx that are in blockchain
-    BOOST_FOREACH(PAIRTYPE(const uint256, CWalletTx)& item, pwalletMain->mapWallet)
+    for (PAIRTYPE(const uint256, CWalletTx)& item : pwalletMain->mapWallet)
     {
         NameTxInfo ntiWalllet;
         if (!DecodeNameTx(item.second, ntiWalllet, false, false))
@@ -990,7 +990,7 @@ void GetNameList(const vector<unsigned char> &vchNameUniq, map<vector<unsigned c
     }
 
     // add all pending names
-    BOOST_FOREACH(PAIRTYPE(const vector<unsigned char>, set<uint256>)& item, mapNamePending)
+    for (PAIRTYPE(const vector<unsigned char>, set<uint256>)& item : mapNamePending)
     {
         if (!item.second.size())
             continue;
@@ -999,7 +999,7 @@ void GetNameList(const vector<unsigned char> &vchNameUniq, map<vector<unsigned c
         CTransaction tx;
         tx.nTime = 0;
         bool found = false;
-        BOOST_FOREACH(uint256 hash, item.second)
+        for (uint256 hash : item.second)
         {
             if (!mempool.exists(hash))
                 continue;
@@ -1144,7 +1144,7 @@ Value name_mempool (const Array& params, bool fHelp)
     BOOST_FOREACH(const PAIRTYPE(vector<unsigned char>, set<uint256>) &pairPending, mapNamePending)
     {
         string sName = stringFromVch(pairPending.first);
-        BOOST_FOREACH(const uint256& hash, pairPending.second)
+        for (const uint256& hash : pairPending.second)
         {
             if (!mempool.exists(hash))
                 continue;
@@ -2050,7 +2050,7 @@ bool createNameIndexFile()
 
             // calculate tx fee
             CAmount input = 0;
-            BOOST_FOREACH(const CTxIn& txin, tx.vin)
+            for (const CTxIn& txin : tx.vin)
             {
                 CTransaction txPrev;
                 uint256 hashBlock = 0;
@@ -2482,7 +2482,7 @@ bool CNamecoinHooks::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)
     CTxIndex txindex;
     // NOTE: all tx in block have been validated by upper function, so it is safe to iterate over them
     vector<nameTempProxy> vName;
-    BOOST_FOREACH(CTransaction& tx, block.vtx)
+    for (CTransaction& tx : block.vtx)
     {
         if (tx.nVersion != NAMECOIN_TX_VERSION)
             continue;
@@ -2535,7 +2535,7 @@ bool CNamecoinHooks::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)
     // All of these name ops should succed. If there is an error - denariusnamesindex.dat is probably corrupt.
     CNameDB dbName("cr+");
     set< vector<unsigned char> > sNameNew;
-    BOOST_FOREACH(const nameTempProxy &i, vName)
+    for (const nameTempProxy &i : vName)
     {
         string info = "ConnectBlock(): trying to write " + nameFromOp(i.op) + " " + stringFromVch(i.vchName) +
             " in block " + boost::lexical_cast<string>(pindex->nHeight) + " to D name index...";
@@ -2653,7 +2653,7 @@ bool GetPendingNameValue(const vector<unsigned char> &vchName, vector<unsigned c
     CTransaction tx;
     tx.nTime = 0;
     bool found = false;
-    BOOST_FOREACH(uint256 hash, mapNamePending[vchName])
+    for (uint256 hash : mapNamePending[vchName])
     {
         if (!mempool.exists(hash))
             continue;

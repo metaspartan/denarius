@@ -72,7 +72,7 @@ int GetInputFortunaRounds(CTxIn in, int rounds)
         if(rounds == 0 && !pwalletMain->IsDenominatedAmount(tx.vout[in.prevout.n].nValue)) return -2; //NOT DENOM
 
         bool found = false;
-        BOOST_FOREACH(CTxOut out, tx.vout)
+        for (CTxOut out : tx.vout)
         {
             found = pwalletMain->IsDenominatedAmount(out.nValue);
             if(found) break; // no need to loop more
@@ -80,7 +80,7 @@ int GetInputFortunaRounds(CTxIn in, int rounds)
         if(!found) return rounds - 1; //NOT FOUND, "-1" because of the pre-mixing creation of denominated amounts
 
         // find my vin and look that up
-        BOOST_FOREACH(CTxIn in2, tx.vin)
+        for (CTxIn in2 : tx.vin)
         {
             if(pwalletMain->IsMine(in2))
             {
@@ -153,7 +153,7 @@ bool CForTunaPool::SetCollateralAddress(std::string strAddress){
 // Unlock coins after Fortuna fails or succeeds
 //
 void CForTunaPool::UnlockCoins(){
-    BOOST_FOREACH(CTxIn v, lockedCoins)
+    for (CTxIn v : lockedCoins)
         pwalletMain->UnlockCoin(v.prevout);
 
     lockedCoins.clear();
@@ -267,11 +267,11 @@ bool CForTunaPool::SignatureValid(const CScript& newSig, const CTxIn& newVin){
     CScript sigPubKey = CScript();
     unsigned int i = 0;
 
-    BOOST_FOREACH(CForTunaEntry e, entries) {
-        BOOST_FOREACH(const CTxOut out, e.vout)
+    for (CForTunaEntry e : entries) {
+        for (const CTxOut out : e.vout)
             txNew.vout.push_back(out);
 
-        BOOST_FOREACH(const CForTunaEntryVin s, e.sev){
+        for (const CForTunaEntryVin s : e.sev){
             txNew.vin.push_back(s.vin);
 
             if(s.vin == newVin){
@@ -305,7 +305,7 @@ bool CForTunaPool::IsCollateralValid(const CTransaction& txCollateral){
     int64_t nValueOut = 0;
     bool missingTx = false;
 
-    BOOST_FOREACH(const CTxOut o, txCollateral.vout){
+    for (const CTxOut o : txCollateral.vout){
         nValueOut += o.nValue;
 
         if(!o.scriptPubKey.IsNormalPaymentScript()){
@@ -314,7 +314,7 @@ bool CForTunaPool::IsCollateralValid(const CTransaction& txCollateral){
         }
     }
 
-    BOOST_FOREACH(const CTxIn i, txCollateral.vin){
+    for (const CTxIn i : txCollateral.vin){
         CTransaction tx2;
         uint256 hash;
         //if(GetTransaction(i.prevout.hash, tx2, hash, true)){
@@ -358,7 +358,7 @@ bool CForTunaPool::IsCollateralValid(const CTransaction& txCollateral){
 bool CForTunaPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& nAmount, const CTransaction& txCollateral, const std::vector<CTxOut>& newOutput, std::string& error){
     if (!fFortunaStake) return false;
 
-    BOOST_FOREACH(CTxIn in, newInput) {
+    for (CTxIn in : newInput) {
         if (in.prevout.IsNull() || nAmount < 0) {
             if(fDebug) printf("CForTunaPool::AddEntry - input not valid!\n");
             error = _("Input is not valid.");
@@ -381,10 +381,10 @@ bool CForTunaPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& n
         return false;
     }
 
-    BOOST_FOREACH(CTxIn in, newInput) {
+    for (CTxIn in : newInput) {
         if(fDebug) printf("looking for vin -- %s\n", in.ToString().c_str());
-        BOOST_FOREACH(const CForTunaEntry v, entries) {
-            BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
+        for (const CForTunaEntry v : entries) {
+            for (const CForTunaEntryVin s : v.sev){
                 if(s.vin == in) {
                     if(fDebug) printf("CForTunaPool::AddEntry - found in vin\n");
                     error = _("Already have that input.");
@@ -415,8 +415,8 @@ bool CForTunaPool::AddEntry(const std::vector<CTxIn>& newInput, const int64_t& n
 bool CForTunaPool::AddScriptSig(const CTxIn newVin){
     if(fDebug) printf("CForTunaPool::AddScriptSig -- new sig  %s\n", newVin.scriptSig.ToString().substr(0,24).c_str());
 
-    BOOST_FOREACH(const CForTunaEntry v, entries) {
-        BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
+    for (const CForTunaEntry v : entries) {
+        for (const CForTunaEntryVin s : v.sev){
             if(s.vin.scriptSig == newVin.scriptSig) {
                 printf("CForTunaPool::AddScriptSig - already exists \n");
                 return false;
@@ -432,7 +432,7 @@ bool CForTunaPool::AddScriptSig(const CTxIn newVin){
     if(fDebug) printf("CForTunaPool::AddScriptSig -- sig %s\n", newVin.ToString().c_str());
 
     if(state == POOL_STATUS_SIGNING) {
-        BOOST_FOREACH(CTxIn& vin, finalTransaction.vin){
+        for (CTxIn& vin : finalTransaction.vin){
             if(newVin.prevout == vin.prevout && vin.nSequence == newVin.nSequence){
                 vin.scriptSig = newVin.scriptSig;
                 vin.prevPubKey = newVin.prevPubKey;
@@ -453,8 +453,8 @@ bool CForTunaPool::AddScriptSig(const CTxIn newVin){
 
 // check to make sure everything is signed
 bool CForTunaPool::SignaturesComplete(){
-    BOOST_FOREACH(const CForTunaEntry v, entries) {
-        BOOST_FOREACH(const CForTunaEntryVin s, v.sev){
+    for (const CForTunaEntry v : entries) {
+        for (const CForTunaEntryVin s : v.sev){
             if(!s.isSigSet) return false;
         }
     }
@@ -526,8 +526,8 @@ bool CForTunaPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode
     vector<CTxIn> sigs;
 
     //make sure my inputs/outputs are present, otherwise refuse to sign
-    BOOST_FOREACH(const CForTunaEntry e, myEntries) {
-        BOOST_FOREACH(const CForTunaEntryVin s, e.sev) {
+    for (const CForTunaEntry e : myEntries) {
+        for (const CForTunaEntryVin s : e.sev) {
             /* Sign my transaction and all outputs */
             int mine = -1;
             CScript prevPubKey = CScript();
@@ -547,7 +547,7 @@ bool CForTunaPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode
                 int64_t nValue2 = 0;
 
                 for(unsigned int i = 0; i < finalTransaction.vout.size(); i++){
-                    BOOST_FOREACH(const CTxOut o, e.vout) {
+                    for (const CTxOut o : e.vout) {
                         if(finalTransaction.vout[i] == o){
                             foundOutputs++;
                             nValue1 += finalTransaction.vout[i].nValue;
@@ -555,7 +555,7 @@ bool CForTunaPool::SignFinalTransaction(CTransaction& finalTransactionNew, CNode
                     }
                 }
 
-                BOOST_FOREACH(const CTxOut o, e.vout)
+                for (const CTxOut o : e.vout)
                     nValue2 += o.nValue;
 
                 int targetOuputs = e.vout.size();
@@ -706,13 +706,13 @@ int CForTunaPool::GetDenominations(const std::vector<CTxOut>& vout){
     std::vector<pair<int64_t, int> > denomUsed;
 
     // make a list of denominations, with zero uses
-    BOOST_FOREACH(int64_t d, forTunaDenominations)
+    for (int64_t d : forTunaDenominations)
         denomUsed.push_back(make_pair(d, 0));
 
     // look for denominations and update uses to 1
-    BOOST_FOREACH(CTxOut out, vout){
+    for (CTxOut out : vout){
         bool found = false;
-        BOOST_FOREACH (PAIRTYPE(int64_t, int)& s, denomUsed){
+        for (PAIRTYPE(int64_t, int)& s : denomUsed){
             if (out.nValue == s.first){
                 s.second = 1;
                 found = true;
@@ -725,7 +725,7 @@ int CForTunaPool::GetDenominations(const std::vector<CTxOut>& vout){
     int c = 0;
     // if the denomination is used, shift the bit on.
     // then move to the next
-    BOOST_FOREACH (PAIRTYPE(int64_t, int)& s, denomUsed)
+    for (PAIRTYPE(int64_t, int)& s : denomUsed)
         denom |= s.second << c++;
 
     // Function returns as follows:
@@ -908,7 +908,7 @@ bool CFortunaQueue::Relay()
 {
 
     //LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes){
+    for (CNode* pnode : vNodes){
         // always relay to everyone
         pnode->PushMessage("dsq", (*this));
     }
@@ -918,7 +918,7 @@ bool CFortunaQueue::Relay()
 
 bool CFortunaQueue::CheckSignature()
 {
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    for (CFortunaStake& mn : vecFortunastakes) {
 
         if(mn.vin == vin) {
             std::string strMessage = vin.ToString() + boost::lexical_cast<std::string>(nDenom) + boost::lexical_cast<std::string>(time) + boost::lexical_cast<std::string>(ready);
@@ -995,7 +995,7 @@ void ThreadCheckForTunaPool(void* parg)
             bool fIsInitialDownload = IsInitialBlockDownload();
             if(!fIsInitialDownload) {
                 LOCK(cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, vNodes)
+                for (CNode* pnode : vNodes)
                 {
                     if (pnode->nVersion >= forTunaPool.PROTOCOL_VERSION) {
 

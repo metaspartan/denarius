@@ -229,7 +229,13 @@ RPCConsole::RPCConsole(QWidget *parent) :
     connect(ui->btnClearTrafficGraph, SIGNAL(clicked()), ui->trafficGraph, SLOT(clear()));
 
     // set OpenSSL version label
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) //WIP OpenSSL 1.0.x only, OpenSSL 1.1 not supported yet
     ui->openSSLVersion->setText(SSLeay_version(SSLEAY_VERSION));
+#else
+    ui->openSSLVersion->setText(OpenSSL_version(OPENSSL_VERSION));
+#endif
+
+    ui->boostVersion->setText(QString("%1 . %2 . %3").arg(BOOST_VERSION / 100000).arg(BOOST_VERSION / 100 % 1000).arg(BOOST_VERSION % 100));
 
     startExecutor();
     setTrafficGraphRange(INITIAL_TRAFFIC_GRAPH_MINS);

@@ -17,6 +17,17 @@
 #include <QTimer>
 #include <QDebug>
 
+#if BOOST_VERSION >= 107300
+#include <boost/bind/bind.hpp>
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+using boost::placeholders::_3;
+using boost::placeholders::_4;
+using boost::placeholders::_5;
+#else
+#include <boost/bind.hpp>
+#endif
+
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
     transactionTableModel(0),

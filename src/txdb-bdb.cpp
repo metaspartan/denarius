@@ -180,13 +180,13 @@ bool CTxDB::LoadBlockIndex()
     // Calculate nChainTrust
     vector<pair<int, CBlockIndex*> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
-    BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex)
+    for (const PAIRTYPE(uint256, CBlockIndex*)& item : mapBlockIndex)
     {
         CBlockIndex* pindex = item.second;
         vSortedByHeight.push_back(make_pair(pindex->nHeight, pindex));
     }
     sort(vSortedByHeight.begin(), vSortedByHeight.end());
-    BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex*)& item, vSortedByHeight)
+    for (const PAIRTYPE(int, CBlockIndex*)& item : vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
         pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
@@ -251,7 +251,7 @@ bool CTxDB::LoadBlockIndex()
         {
             pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);
             mapBlockPos[pos] = pindex;
-            BOOST_FOREACH(const CTransaction &tx, block.vtx)
+            for (const CTransaction &tx : block.vtx)
             {
                 uint256 hashTx = tx.GetHash();
                 CTxIndex txindex;
