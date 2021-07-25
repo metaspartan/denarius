@@ -46,7 +46,7 @@ int64_t nAveragePayCount;
 void ProcessFortunastakeConnections(){
     LOCK(cs_vNodes);
 
-    BOOST_FOREACH(CNode* pnode, vNodes)
+    for (CNode* pnode : vNodes)
     {
         //if it's our fortunastake, let it be
         if(forTunaPool.submittedToFortunastake == pnode->addr) continue;
@@ -133,7 +133,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         //search existing fortunastake list, this is where we update existing fortunastakes with new dsee broadcasts
         LOCK(cs_fortunastakes);
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+        for (CFortunaStake& mn : vecFortunastakes) {
             if(mn.vin.prevout == vin.prevout) {
                 // count == -1 when it's a new entry
                 //   e.g. We don't want the entry relayed/time updated when we're syncing the list
@@ -246,7 +246,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
 
         // see if we have this fortunastake
 	      LOCK(cs_fortunastakes);
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+        for (CFortunaStake& mn : vecFortunastakes) {
             if(mn.vin.prevout == vin.prevout) {
             	// printf("dseep - Found corresponding mn for vin: %s\n", vin.ToString().c_str());
             	// take this only if it's newer
@@ -331,7 +331,7 @@ void ProcessMessageFortunastake(CNode* pfrom, std::string& strCommand, CDataStre
         int count = vecFortunastakes.size();
         int i = 0;
 
-        BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
+        for (CFortunaStake mn : vecFortunastakes) {
 
             if(mn.addr.IsRFC1918()) continue; //local network
 
@@ -486,7 +486,7 @@ int CountFortunastakesAboveProtocol(int protocolVersion)
 {
     int i = 0;
     LOCK(cs_fortunastakes);
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    for (CFortunaStake& mn : vecFortunastakes) {
         if(mn.protocolVersion < protocolVersion) continue;
         i++;
     }
@@ -499,7 +499,7 @@ int GetFortunastakeByVin(CTxIn& vin)
 {
     int i = 0;
     LOCK(cs_fortunastakes);
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    for (CFortunaStake& mn : vecFortunastakes) {
         if (mn.vin == vin) return i;
         i++;
     }
@@ -515,7 +515,7 @@ int GetCurrentFortunaStake(int mod, int64_t nBlockHeight, int minProtocol)
     int winner = -1;
     LOCK(cs_fortunastakes);
     // scan for winner
-    BOOST_FOREACH(CFortunaStake mn, vecFortunastakes) {
+    for (CFortunaStake mn : vecFortunastakes) {
         mn.Check();
         if(mn.protocolVersion < minProtocol) continue;
         if(!mn.IsEnabled()) {
@@ -552,7 +552,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
         // if ScoresList was calculated for the current pindex hash, then just use that list
         // TODO: make a vector of these somehow
         if (fDebug) printf(" STARTCOPY (%" PRId64"ms)", GetTimeMillis() - nStartTime);
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakeScoresList)
+        for (CFortunaStake& mn : vecFortunastakeScoresList)
         {
             i++;
             vecFortunastakeScores.push_back(make_pair(i, &mn));
@@ -566,7 +566,7 @@ bool GetFortunastakeRanks(CBlockIndex* pindex)
 
         // now we build the list for sorting
         if (fDebug) printf(" STARTLOOP (%" PRId64"ms)", GetTimeMillis() - nStartTime);
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+        for (CFortunaStake& mn : vecFortunastakes) {
 
             mn.Check();
             if(mn.protocolVersion < MIN_MN_PROTO_VERSION) continue;
@@ -808,7 +808,7 @@ int CFortunaStake::SetPayRate(int nHeight)
          // printf(" (payInfo:%d@%f)...", payCount, payRate);
          int64_t amount = 0;
          int matches = 0;
-         BOOST_FOREACH(CFortunaPayData &item, payData)
+         for (CFortunaPayData &item : payData)
          {
              if (item.height > nHeight - scanBack && mapBlockIndex.count(item.hash)) { // find payments in last scanrange
                 amount += item.amount;
@@ -840,7 +840,7 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
         //printf("(payInfo:%d@%f)...", payCount, payRate);
         int64_t amount = 0;
         int matches = 0;
-        BOOST_FOREACH(CFortunaPayData &item, payData)
+        for (CFortunaPayData &item : payData)
         {
             if (item.height > pindex->nHeight - nMaxBlocksToScanBack && mapBlockIndex.count(item.hash)) { // find payments in last scanrange
                amount += item.amount;
@@ -864,14 +864,14 @@ int CFortunaStake::GetPaymentAmount(const CBlockIndex *pindex, int nMaxBlocksToS
 
             if (block.IsProofOfWork())
             {
-                BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
+                for (CTxOut txout : block.vtx[0].vout)
                     if(mnpayee == txout.scriptPubKey) {
                         blocksFound++;
                         totalValue += txout.nValue / COIN;
                     }
             } else if (block.IsProofOfStake())
             {
-                BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
+                for (CTxOut txout : block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
                         blocksFound++;
                         totalValue += txout.nValue / COIN;
@@ -916,7 +916,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
                 }
         */
         // all of that doesn't matter if we pay attention to the hash of the payment!
-        BOOST_FOREACH(CFortunaPayData &item, payData)
+        for (CFortunaPayData &item : payData)
         {
             if (mapBlockIndex.count(item.hash)) {
                 if (item.height > pindex->nHeight - nMaxBlocksToScanBack) { // find payments in last scanrange
@@ -956,7 +956,7 @@ int CFortunaStake::UpdateLastPaidAmounts(const CBlockIndex *pindex, int nMaxBloc
             // if it's a legit block, then count it against this node and record it in a vector
             if (block.IsProofOfWork() || block.IsProofOfStake())
             {
-                BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                for (CTxOut txout : block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
                 {
 
                     if(mnpayee == txout.scriptPubKey) {
@@ -1040,7 +1040,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
             if (block.IsProofOfWork())
             {
                 // TODO HERE: Scan the block for fortunastake payment amount
-                BOOST_FOREACH(CTxOut txout, block.vtx[0].vout)
+                for (CTxOut txout : block.vtx[0].vout)
                     if(mnpayee == txout.scriptPubKey) {
                         nBlockLastPaid = BlockReading->nHeight;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
@@ -1052,7 +1052,7 @@ void CFortunaStake::UpdateLastPaidBlock(const CBlockIndex *pindex, int nMaxBlock
             } else if (block.IsProofOfStake())
             {
                 // TODO HERE: Scan the block for fortunastake payment amount
-                BOOST_FOREACH(CTxOut txout, block.vtx[1].vout)
+                for (CTxOut txout : block.vtx[1].vout)
                     if(mnpayee == txout.scriptPubKey) {
                         nBlockLastPaid = BlockReading->nHeight;
                         int lastPay = pindexBest->nHeight - nBlockLastPaid;
@@ -1230,12 +1230,12 @@ uint64_t CFortunastakePayments::CalculateScore(uint256 blockHash, CTxIn& vin)
 
 bool CFortunastakePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 {
-    BOOST_FOREACH(CFortunastakePaymentWinner& winner, vWinning){
+    for (CFortunastakePaymentWinner& winner : vWinning){
         if(winner.nBlockHeight == nBlockHeight) {
             CTransaction tx;
             uint256 hash;
             if(GetTransaction(winner.vin.prevout.hash, tx, hash)){
-                BOOST_FOREACH(CTxOut out, tx.vout){
+                for (CTxOut out : tx.vout){
                     if(out.nValue == GetMNCollateral()*COIN){
                         payee = out.scriptPubKey;
                         return true;
@@ -1250,7 +1250,7 @@ bool CFortunastakePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 
 bool CFortunastakePayments::GetWinningFortunastake(int nBlockHeight, CTxIn& vinOut)
 {
-    BOOST_FOREACH(CFortunastakePaymentWinner& winner, vWinning){
+    for (CFortunastakePaymentWinner& winner : vWinning){
         if(winner.nBlockHeight == nBlockHeight) {
             vinOut = winner.vin;
             return true;
@@ -1270,7 +1270,7 @@ bool CFortunastakePayments::AddWinningFortunastake(CFortunastakePaymentWinner& w
     winnerIn.score = CalculateScore(blockHash, winnerIn.vin);
 
     bool foundBlock = false;
-    BOOST_FOREACH(CFortunastakePaymentWinner& winner, vWinning){
+    for (CFortunastakePaymentWinner& winner : vWinning){
         if(winner.nBlockHeight == winnerIn.nBlockHeight) {
             foundBlock = true;
             if(winner.score < winnerIn.score){
@@ -1318,7 +1318,7 @@ int CFortunastakePayments::LastPayment(CFortunaStake& mn)
 
     int ret = mn.GetFortunastakeInputAge();
 
-    BOOST_FOREACH(CFortunastakePaymentWinner& winner, vWinning){
+    for (CFortunastakePaymentWinner& winner : vWinning){
         if(winner.vin == mn.vin && pindexBest->nHeight - winner.nBlockHeight < ret)
             ret = pindexBest->nHeight - winner.nBlockHeight;
     }
@@ -1341,9 +1341,9 @@ bool CFortunastakePayments::ProcessBlock(int nBlockHeight)
     }
 
     std::random_shuffle ( vecFortunastakes.begin(), vecFortunastakes.end() );
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes) {
+    for (CFortunaStake& mn : vecFortunastakes) {
         bool found = false;
-        BOOST_FOREACH(CTxIn& vin, vecLastPayments)
+        for (CTxIn& vin : vecLastPayments)
             if(mn.vin == vin) found = true;
 
         if(found) continue;
@@ -1387,7 +1387,7 @@ void CFortunastakePayments::Relay(CFortunastakePaymentWinner& winner)
     vector<CInv> vInv;
     vInv.push_back(inv);
     LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes){
+    for (CNode* pnode : vNodes){
         pnode->PushMessage("inv", vInv);
     }
 }
@@ -1395,7 +1395,7 @@ void CFortunastakePayments::Relay(CFortunastakePaymentWinner& winner)
 void CFortunastakePayments::Sync(CNode* node)
 {
     int a = 0;
-    BOOST_FOREACH(CFortunastakePaymentWinner& winner, vWinning)
+    for (CFortunastakePaymentWinner& winner : vWinning)
         if(winner.nBlockHeight >= pindexBest->nHeight-10 && winner.nBlockHeight <= pindexBest->nHeight + 20)
             node->PushMessage("mnw", winner, a);
 }
@@ -1448,7 +1448,7 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
         LOCK(cs_fortunastakes);
 
         // clear existing pay data
-        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+        for (CFortunaStake& mn : vecFortunastakes)
         {
             mn.payData.clear();
         }
@@ -1464,9 +1464,9 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
                 // if it's a legit block, then count it against this node and record it in a vector
                 if (block.IsProofOfWork() || block.IsProofOfStake())
                 {
-                    BOOST_FOREACH(CTxOut txout, block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
+                    for (CTxOut txout : block.vtx[block.IsProofOfWork() ? 0 : 1].vout)
                     {
-                        BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+                        for (CFortunaStake& mn : vecFortunastakes)
                         {
                             if (GetScriptForDestination(mn.pubkey.GetID()) == txout.scriptPubKey)
                             {
@@ -1499,7 +1499,7 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
     if (fDebug) printf("Calculating payrates (%d ms)\n",GetTimeMillis() - nStart);
 
     // do pay rate loops, already do this in connectblock()
-    BOOST_FOREACH(CFortunaStake& mn, vecFortunastakes)
+    for (CFortunaStake& mn : vecFortunastakes)
     {
         mn.SetPayRate(pindex->nHeight);
     }
@@ -1526,9 +1526,9 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
 
             if (block.IsProofOfWork() || block.IsProofOfStake())
             {
-                BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                for (const CTransaction& tx : block.vtx) {
                     int n = 0;
-                    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+                    for (const CTxOut& txout : tx.vout)
                     {
                         if(txout.nValue == GetMNCollateral() * COIN) {
                             COutPoint cout = COutPoint(tx.GetHash(),n);
@@ -1583,9 +1583,9 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
 
                 if (block.IsProofOfWork() || block.IsProofOfStake())
                 {
-                    BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                    for (const CTransaction& tx : block.vtx) {
                         int n = 0;
-                        BOOST_FOREACH(const CTxOut& txout, tx.vout)
+                        for (const CTxOut& txout : tx.vout)
                         {
                             if(txout.nValue == GetMNCollateral() * COIN) {
                                 COutPoint cout = COutPoint(tx.GetHash(),n);
@@ -1633,7 +1633,7 @@ bool CFortunaPayments::initialize(const CBlockIndex *pindex)
     }
     if (fDebug){
         printf("finished at height %d\n-----------%d collaterals------------",nHeight,vCollaterals.size());
-        BOOST_FOREACH(CFortunaCollateral& rec, vCollaterals)
+        for (CFortunaCollateral& rec : vCollaterals)
         {
             CTxDestination address1;
             ExtractDestination(rec.scriptPubKey, address1);
@@ -1663,10 +1663,10 @@ bool FindFSPayment(CScript& payee, CBlockIndex* pindex)
             if (block.IsProofOfWork() || block.IsProofOfStake())
             {
                 bool found = false;
-                BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                for (const CTransaction& tx : block.vtx) {
                     if (tx.IsCoinBase()) continue;
                     int n = 0;
-                    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+                    for (const CTxOut& txout : tx.vout)
                     {
                         if(payee == txout.scriptPubKey && txout.nValue == GetMNCollateral() * COIN) {
                             if (fDebug) printf("Found FS payment at height %d - to %s\n",nHeight,txout.ToString().c_str());
@@ -1720,9 +1720,9 @@ bool FindFSPayments(CScript& payee, CBlockIndex* pindex)
 
                 if (block.IsProofOfWork() || block.IsProofOfStake())
                 {
-                    BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                    for (const CTransaction& tx : block.vtx) {
                         int n = 0;
-                        BOOST_FOREACH(const CTxOut& txout, tx.vout)
+                        for (const CTxOut& txout : tx.vout)
                         {
                             if(payee == txout.scriptPubKey && txout.nValue == GetMNCollateral() * COIN) {
                                 if (fDebug) printf("Found FS payment at height %d - to %s\n",nHeight,txout.ToString().c_str());
@@ -1759,9 +1759,9 @@ bool FindFSPayments(CScript& payee, CBlockIndex* pindex)
 
                 if (block.IsProofOfWork() || block.IsProofOfStake())
                 {
-                    BOOST_FOREACH(const CTransaction& tx, block.vtx) {
+                    for (const CTransaction& tx : block.vtx) {
                         int n = 0;
-                        BOOST_FOREACH(const CTxOut& txout, tx.vout)
+                        for (const CTxOut& txout : tx.vout)
                         {
                             if(payee == txout.scriptPubKey && txout.nValue == GetMNCollateral() * COIN) {
                                 if (fDebug) printf("Found FS payment at height %d - to %s\n",nHeight,txout.ToString().c_str());
