@@ -1500,7 +1500,11 @@ void CFortunaPayments::update(const CBlockIndex *pindex, bool force)
 
     // do pay rate loops, already do this in connectblock()
     for (CFortunaStake& mn : vecFortunastakes)
-    {
+    {                      
+        CFortunaPayData data;
+        data.height = pindex->nHeight;
+        data.hash = pindex->GetBlockHash();
+        mn.payData.push_back(data);
         mn.SetPayRate(pindex->nHeight);
     }
 
