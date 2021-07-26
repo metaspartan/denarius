@@ -11,7 +11,7 @@ QT += core gui network widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
-QMAKE_CXXFLAGS += -fpermissive -Wno-literal-suffix
+QMAKE_CXXFLAGS += -fpermissive -Wno-literal-suffix -DUSE_SECP256K1
 QMAKE_CFLAGS += -std=c99
 
 greaterThan(QT_MAJOR_VERSION, 4) {
@@ -41,6 +41,10 @@ LIBEVENT_INCLUDE_PATH=C:/deps/libevent/include
 LIBEVENT_LIB_PATH=C:/deps/libevent/.libs
 LIBCURL_INCLUDE_PATH=C:/deps/libcurl/include
 LIBCURL_LIB_PATH=C:/deps/libcurl/lib
+SECP256K1_LIB_PATH=C:/deps/libsecp256k1/.libs
+SECP256K1_INCLUDE_PATH=C:/deps/libsecp256k1/include
+LIBGMP_INCLUDE_PATH=C:/deps/gmp-6.2.1
+LIBGMP_LIB_PATH=C:/deps/gmp-6.2.1/.libs
 }
 
 # for boost 1.37, add -mt to the boost libraries
@@ -806,10 +810,10 @@ macx:QMAKE_CXXFLAGS += -stdlib=libc++
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH $$LIBCURL_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,) $$join(LIBCURL_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH $$LIBCURL_INCLUDE_PATH $$SECP256K1_INCLUDE_PATH $$LIBGMP_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,) $$join(LIBCURL_LIB_PATH,,-L,) $$join(SECP256K1_LIB_PATH,,-L,) $$join(LIBGMP_LIB_PATH,,-L,)
 LIBS += -lcurl -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
-LIBS += -lz -levent
+LIBS += -lz -levent -lgmp -lsecp256k1
 
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32

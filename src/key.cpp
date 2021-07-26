@@ -5,7 +5,9 @@
 
 #include <map>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 #include <openssl/ecdsa.h>
+#endif
 #include <openssl/rand.h>
 #include <openssl/obj_mac.h>
 #include <openssl/bn.h>
@@ -13,6 +15,15 @@
 
 #include "key.h"
 #include "hash.h"
+
+#include <secp256k1.h>
+#include <secp256k1_recovery.h>
+
+namespace
+{
+/* Global secp256k1_context object used for verification. */
+secp256k1_context* secp256k1_context_verify = nullptr;
+} // namespace
 
 // Order of secp256k1's generator minus 1.
 const unsigned char vchMaxModOrder[32] = {
@@ -87,6 +98,14 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 {
     if (!eckey) return 0;
 
+    const BIGNUM *sig_r, *sig_s;
+#if OPENSSL_VERSION_NUMBER > 0x1000ffffL
+    ECDSA_SIG_get0(ecsig, &sig_r, &sig_s);
+#else
+    sig_r = ecsig->r;
+    sig_s = ecsig->s;
+#endif
+
     int ret = 0;
     BN_CTX *ctx = NULL;
 
@@ -101,11 +120,8 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     EC_POINT *Q = NULL;
     BIGNUM *rr = NULL;
     BIGNUM *zero = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-#else
-    const BIGNUM *r = NULL;
-    const BIGNUM *s = NULL;
-#endif
+
+
     int n = 0;
     int i = recid / 2;
 
@@ -120,8 +136,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_add(x, x, ecsig->r)) { ret=-1; goto err; }
 #else
-    ECDSA_SIG_get0(ecsig, &r, &s);
-    if (!BN_add(x, x, r)) { ret=-1; goto err; }
+    if (!BN_add(x, x, sig_r)) { ret=-1; goto err; }
 #endif
     field = BN_CTX_get(ctx);
     if (!EC_GROUP_get_curve_GFp(group, field, NULL, NULL, ctx)) { ret=-2; goto err; }
@@ -146,13 +161,13 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_mod_inverse(rr, ecsig->r, order, ctx)) { ret=-1; goto err; }
 #else
-    if (!BN_mod_inverse(rr, r, order, ctx)) { ret=-1; goto err; } //Was ->s?
+    if (!BN_mod_inverse(rr, sig_r, order, ctx)) { ret=-1; goto err; } //Was ->s?
 #endif
     sor = BN_CTX_get(ctx);
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (!BN_mod_mul(sor, ecsig->s, rr, order, ctx)) { ret=-1; goto err; }
 #else
-    if (!BN_mod_mul(sor, s, rr, order, ctx)) { ret=-1; goto err; }
+    if (!BN_mod_mul(sor, sig_s, rr, order, ctx)) { ret=-1; goto err; }
 #endif
     eor = BN_CTX_get(ctx);
     if (!BN_mod_mul(eor, e, rr, order, ctx)) { ret=-1; goto err; }
@@ -532,17 +547,14 @@ bool CPubKey::IsFullyValid() const {
 bool CPubKey::Decompress() {
     if (!IsValid())
         return false;
-#ifdef USE_SECP256K1
-    int clen = size();
-    int ret = secp256k1_ec_pubkey_decompress(instance_of_csecp256k1.ctx, (unsigned char*)begin(), &clen);
-    assert(ret);
-    assert(clen == (int)size());
-#else
-    CECKey key;
-    if (!key.SetPubKey(*this))
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_parse(secp256k1_context_verify, &pubkey, &(*this)[0], size())) {
         return false;
-    key.GetPubKey(*this, false);
-#endif
+    }
+    unsigned char pub[65];
+    size_t publen = 65;
+    secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED);
+    Set(pub, pub + publen);
     return true;
 }
 
@@ -682,8 +694,7 @@ bool CECKey::SignCompact(const uint256 &hash, unsigned char *p64, int &rec) {
     bool fOk = false;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #else
-    const BIGNUM *s = NULL;
-    const BIGNUM *r = NULL;
+    const BIGNUM *s, *r;
 #endif
     ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
     if (sig==NULL)
@@ -733,11 +744,8 @@ bool CECKey::Recover(const uint256 &hash, const unsigned char *p64, int rec)
 {
     if (rec<0 || rec>=3)
         return false;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-
-#else
-    const BIGNUM *s = NULL;
-    const BIGNUM *r = NULL;
+#if OPENSSL_VERSION_NUMBER > 0x10100000L
+    BIGNUM *s, *r;
 #endif
     ECDSA_SIG *sig = ECDSA_SIG_new();
 #if OPENSSL_VERSION_NUMBER < 0x10100000L

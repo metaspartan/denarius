@@ -1079,7 +1079,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         if (!BN_mul(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                             return false;
 #else
-                        if (!BN_mul(&bn, &bn1, &bn2, pctx))
+                        if (!BN_mul(bn.get(), bn1.getc(), bn2.getc(), pctx))
                             return false;
 #endif
                         break;
@@ -1089,7 +1089,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         if (!BN_div(bn.pbn, NULL, bn1.pbn, bn2.pbn, pctx))
                             return false;
 #else
-                        if (!BN_div(&bn, NULL, &bn1, &bn2, pctx))
+                        if (!BN_div(bn.get(), NULL, bn1.getc(), bn2.getc(), pctx))
                             return false;
 #endif
                         break;
@@ -1099,7 +1099,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         if (!BN_mod(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                             return false;
 #else
-                        if (!BN_mod(&bn, &bn1, &bn2, pctx))
+                        if (!BN_mod(bn.get(), bn1.getc(), bn2.getc(), pctx))
                             return false;
 #endif
                         break;
