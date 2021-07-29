@@ -19,6 +19,8 @@ addons:
     - libqt5gui5 
     - libqt5core5a 
     - libqt5dbus5 
+    - libgmp-dev
+    - libsecp256k1-dev
     - qttools5-dev
     - qttools5-dev-tools
     - libtool

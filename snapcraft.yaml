@@ -80,6 +80,8 @@ parts:
       - unzip
       - curl
       - build-essential
+      - libgmp-dev
+      - libsecp256k1-dev
       - apt-transport-https
       - zlib1g-dev
       - libdb++-dev
@@ -97,6 +99,8 @@ parts:
       - unzip
       - curl
       - build-essential
+      - libgmp-dev
+      - libsecp256k1-dev
       - apt-transport-https
       - zlib1g-dev
       - libdb++-dev
@@ -148,6 +152,8 @@ parts:
       - unzip
       - curl
       - build-essential
+      - libgmp-dev
+      - libsecp256k1-dev
       - apt-transport-https
       - zlib1g-dev
       - libdb++-dev
@@ -172,6 +178,8 @@ parts:
       - unzip
       - curl
       - build-essential
+      - libgmp-dev
+      - libsecp256k1-dev
       - apt-transport-https
       - zlib1g-dev
       - libdb++-dev

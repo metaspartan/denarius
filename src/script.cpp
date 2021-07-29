@@ -402,6 +402,7 @@ bool static IsLowDERSignature(const valtype &vchSig) {
     if (!IsDERSignature(vchSig)) {
         return false;
     }
+    #ifdef WIN32
     unsigned int nLenR = vchSig[3];
     unsigned int nLenS = vchSig[5+nLenR];
     const unsigned char *S = &vchSig[6+nLenR];
@@ -412,6 +413,10 @@ bool static IsLowDERSignature(const valtype &vchSig) {
         return error("Non-canonical signature: S value is unnecessarily high");
 
     return true;
+    #else
+    std::vector<unsigned char> vchSigCopy(vchSig.begin(), vchSig.begin() + vchSig.size() - 1);
+    return CPubKey::CheckLowS(vchSigCopy);
+    #endif
 }
 
 bool static IsDefinedHashtypeSignature(const valtype &vchSig) {
