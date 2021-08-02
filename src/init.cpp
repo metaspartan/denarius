@@ -140,6 +140,7 @@ void Shutdown(void* parg)
         MilliSleep(50);
         #ifdef WIN32
         #else
+        ECC_Stop();
         globalVerifyHandle.reset();
         #endif
         printf("Denarius exited\n\n");
@@ -541,6 +542,8 @@ bool AppInit2()
 
     #ifdef WIN32
     #else
+    // Initialize elliptic curve code
+    ECC_Start();
     globalVerifyHandle.reset(new ECCVerifyHandle()); // Init LibSecp256k1 verify handle
     #endif
 
