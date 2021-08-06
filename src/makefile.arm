@@ -41,7 +41,8 @@ LIBS += \
    -l curl \
    -l ssl \
    -l crypto \
-   -l event
+   -l event \
+   -l secp256k1
 
 ifndef USE_NATIVETOR
   override USE_NATIVETOR = -
