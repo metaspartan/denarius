@@ -3,23 +3,23 @@ Tribus Algo PoW/PoS Hybrid Cryptocurrency
 
 ![logo](http://i.imgur.com/gIe5vnw.png)
 
-[![GitHub version](https://img.shields.io/github/release/carsenk/denarius.svg)](https://badge.fury.io/gh/carsenk%2Fdenarius)
-[![License: GPL v3](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/carsenk/denarius/blob/master/COPYING)
-[![Denarius downloads](https://img.shields.io/github/downloads/carsenk/denarius/total.svg)](https://github.com/carsenk/denarius/releases)
-[![Denarius lateat release downloads](https://img.shields.io/github/downloads/carsenk/denarius/latest/total)](https://github.com/carsenk/denarius/releases)
+[![GitHub version](https://img.shields.io/github/release/metaspartan/denarius.svg)](https://badge.fury.io/gh/metaspartan%2Fdenarius)
+[![License: GPL v3](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/metaspartan/denarius/blob/master/COPYING)
+[![Denarius downloads](https://img.shields.io/github/downloads/metaspartan/denarius/total.svg)](https://github.com/carsenk/denarius/releases)
+[![Denarius lateat release downloads](https://img.shields.io/github/downloads/metaspartan/denarius/latest/total)](https://github.com/metaspartan/denarius/releases)
 [![Join the chat at https://discord.gg/AcThv2y](https://img.shields.io/badge/Discord-Chat-blue.svg?logo=discord)](https://discord.gg/AcThv2y)
 
 <a href="https://discord.gg/UPpQy3n"><img src="https://discordapp.com/api/guilds/334361453320732673/embed.png" alt="Discord server" /></a>
 
-![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/carsenk/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/carsenk/denarius.svg)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/metaspartan/denarius.svg) ![GitHub repo size in bytes](https://img.shields.io/github/repo-size/metaspartan/denarius.svg)
 
 [![Denarius Snapcraft](https://snapcraft.io/denarius/badge.svg)](https://snapcraft.io/denarius)
 
-![Code Climate](https://codeclimate.com/github/carsenk/denarius/badges/gpa.svg)
+![Code Climate](https://codeclimate.com/github/metaspartan/denarius/badges/gpa.svg)
 
-[![Build Status](https://travis-ci.org/carsenk/denarius.svg?branch=master)](https://travis-ci.org/carsenk/denarius)
+[![Build Status](https://travis-ci.org/metaspartan/denarius.svg?branch=master)](https://travis-ci.org/metaspartan/denarius)
 
-[![Build history](https://buildstats.info/travisci/chart/carsenk/denarius?branch=master)](https://travis-ci.org/carsenk/denarius?branch=master)
+[![Build history](https://buildstats.info/travisci/chart/metaspartan/denarius?branch=master)](https://travis-ci.org/metaspartan/denarius?branch=master)
 
 Intro
 ==========================
