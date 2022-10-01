@@ -2964,7 +2964,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck, boo
                                     paymentOK = true;
                                     break;
                                 } else if (payee == burnPayee) {
-                                    printf("CheckBlock-POW() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[1].vout[i].nValue).c_str());
+                                    printf("CheckBlock-POW() : Found fortunastake payment: %s D to burn address.\n", FormatMoney(vtx[0].vout[i].nValue).c_str());
                                     foundPayee = true;
                                 }
                             }
